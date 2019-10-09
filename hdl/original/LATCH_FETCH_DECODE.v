@@ -4,7 +4,6 @@ module LATCH_FETCH_DECODE(
 input 					CLK,
 input 					RST,
 input 					lock_PIPELINE,
-input 					lock_FETCH,
 input 					FLUSH_P1,
 input 					FLUSH_P2,
 

@@ -2,7 +2,6 @@
 
 module INT_REGISTER_FILE(
 input  						CLK,
-input 						lock,
 
 input 						write_enable1,
 input  			[4:0]		write_addr1,
@@ -18,7 +17,6 @@ output 	 	   `WORD_DATA	read_data2
 
 BANK BANK_1(
 .CLK            (CLK),
-.lock           (lock),
 
 .write_enable   (write_enable1),
 .write_addr     (write_addr1),
@@ -30,7 +28,6 @@ BANK BANK_1(
 
 BANK BANK_2(
 .CLK            (CLK),
-.lock           (lock),
 
 .write_enable   (write_enable1),
 .write_addr     (write_addr1),
@@ -45,7 +42,6 @@ endmodule
 
 module BANK(
 input  						CLK,
-input 						lock,
 
 input 						write_enable,
 input  			[4:0]		write_addr,

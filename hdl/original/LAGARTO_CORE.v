@@ -73,12 +73,15 @@ output   `ADDR              DMEM_REQ_BITS_ADDR,
 output   [7:0]              DMEM_REQ_BITS_TAG,
 output                      DMEM_REQ_INVALIDATE_LR,
 output                      DMEM_REQ_BITS_KILL,
-
 input                       DMEM_ORDERED,
-input                       DMEM_REPLAY_NEXT_VALID,
+//TODO: commented due: declared but not read
+//input                       DMEM_REPLAY_NEXT_VALID,
 input                       DMEM_REQ_READY,
-input    `WORD_DATA         DMEM_RESP_BITS_DATA,
-input                       DMEM_RESP_BITS_HAS_DATA,
+//TODO: commented due: declared but not read
+//input    `WORD_DATA         DMEM_RESP_BITS_DATA,
+input    `WORD_DATA         DMEM_RESP_BITS_DATA_SUBW,
+//TODO: commented due: declared but not read
+//input                       DMEM_RESP_BITS_HAS_DATA,
 input                       DMEM_RESP_BITS_NACK,
 input                       DMEM_RESP_BITS_REPLAY,
 input                       DMEM_RESP_VALID,
@@ -197,7 +200,6 @@ output                      io_core_pmu_new_instruction
     input [63:0] io_csr_pcr_req_bits_data,
     output[63:0] io_counter_wb,
     //Refactor unused
-    input    `WORD_DATA         DMEM_RESP_BITS_DATA_SUBW,
     input    [7:0]              DMEM_RESP_BITS_TAG,
     input                       CSR_CSR_REPLAY,
     input [39:0] io_dmem_resp_bits_addr,
@@ -220,7 +222,9 @@ output                      io_core_pmu_new_instruction
     input [4:0] io_fpu_sboard_clra
     `endif   
 );
+`ifdef CHISEL
 assign io_dmem_req_bits_phys = 1'b0; 
+`endif   
 //--------------------------------------------------------------------------------------------------------------------------
 // LOCKS
 //--------------------------------------------------------------------------------------------------------------------------
@@ -261,8 +265,6 @@ wire        `WORD_DATA      WB_XCPT_CAUSE;
 
 wire                        FETCH_XCPT_MISALIGNED;
 
-wire 						EXCEPCION_DIV_BY_0;				
-wire						EXCEPCION_DIV_OVER;
 //--------------------------------------------------------------------------------------------------------------------------
 // FETCH SIGNALS
 //--------------------------------------------------------------------------------------------------------------------------
@@ -368,7 +370,11 @@ wire 						EXE_INT1_READY;
 wire 		`WORD_DATA	    EXE_INT1_RESULT;
 wire 		[4:0]			EXE_INT1_WRITE_ADDR;
 
-wire                        EXE_EXCEPCION_INVALID_INST; // THIS SIGNAL IS NOT CONSIDERED NOW ... SHOULD BE CONSIDERED... 
+//TODO:Remove if possible.
+//TODO: Commented due to: Variables set but not read
+//wire                      EXE_EXCEPCION_INVALID_INST;
+//wire 						EXCEPCION_DIV_BY_0;				
+//wire						EXCEPCION_DIV_OVER;
 
 wire                        EXE_CSR_ENABLE;
 // BRANCH UNIT
@@ -376,10 +382,14 @@ wire 		[11:0] 		    IMM12_BRANCH;
 wire 		`ADDR			EXE_BRANCH_offset;
 			
 wire 						EXE_BRANCH;
-wire 						EXE_BRANCH_TNT;
+//TODO:Remove if possible.
+//Commented due to: Variable 'EXE_BRANCH_TNT' set but not read
+//wire 						EXE_BRANCH_TNT;
 wire		`ADDR			EXE_BRANCH_target;
 wire		`ADDR			EXE_BRANCH_result;
-wire 						EXE_BRANCH_invalid;
+//TODO:Remove if possible.
+//Commented due to: Variable 'EXE_BRANCH_invalid' set but not read
+//wire 						EXE_BRANCH_invalid;
 wire						EXE_MISS_PREDICTION;
 
 // MEMORY OPERATIONS LOAD/STORE/AMO	
@@ -394,7 +404,9 @@ wire 						EXE_STORE;
 wire 		[11:0]		    EXE_IMM12_LOAD;
 wire 		[11:0]		    EXE_IMM12_STORE;
 
-wire		`ADDR			EXE_PC_LOAD;
+//TODO:Remove if possible.
+//Commented due to: Variable 'EXE_PC_LOAD' set but not read
+//wire		`ADDR			EXE_PC_LOAD;
 wire 						EXE_LOAD_READY;
 wire		`WORD_DATA	    EXE_LOAD_DATA;
 wire		[4:0]			EXE_LOAD_WRITE_ADDR;
@@ -413,7 +425,7 @@ wire                        WB_CSR_ENABLE;
 wire                        WB_FETCH_CAUSE;
 wire                        WB_DMEM_CAUSE;
 
-wire                        WB_BRANCH;
+//wire                        WB_BRANCH;
 
 wire						WB_WE;	
 wire		`WORD_DATA	    WB_DATA_TO_CSR;	
@@ -619,7 +631,6 @@ LATCH_FETCH_DECODE LATCH_FETCH_DECODE(
 	.CLK						 (CLK),
 	.RST						 (RST),
 	.lock_PIPELINE			     (lock_DEC),
-	.lock_FETCH					 (lock_FETCH),
 	.FLUSH_P1					 (FETCH_DEC_flush_P1),
 	.FLUSH_P2					 (FETCH_DEC_flush_P2),
 	
@@ -661,7 +672,6 @@ LATCH_FETCH_DECODE LATCH_FETCH_DECODE(
 // AMO		    2000		1			0		    0			0			0			0			0			0			0			0			0			0			0			0	//
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 DECODE DECODE (
-.CLK						(CLK),
 .valid_inst                 (DEC_PC_VALID),
 .opcode						(DEC_INST[6:0]),
 .Control_Signal				(DEC_Control_Signal),
@@ -734,7 +744,6 @@ assign reg_read_addr = (RR_Src1_FIELD & {5{!IO_REG_READ}}) | (IO_REG_ADDR & {5{I
 
 INT_REGISTER_FILE	INT_REGISTER_FILE(
 	.CLK						    (CLK),
-	.lock							(lock_EXE),
 	
 	.write_enable1					(reg_write), /*(WB_WE_TO_RF)*/
 	.write_addr1					(reg_write_addr), /*(WB_ADDR_TO_RF)*/
@@ -748,12 +757,8 @@ INT_REGISTER_FILE	INT_REGISTER_FILE(
 
 );
 
+//TODO:As it is does nothing, remove it
 CONTROL_DEPENDENCY CONTROL_DEPENDENCY(
-.RR_Control_Signal	    (RR_Control_Signal),
-.RR_Src1_FIELD			(RR_Src1_FIELD),
-.RR_Src2_FIELD			(RR_Src2_FIELD),
-.EXE_Control_Signal	    (EXE_Control_Signal),
-.EXE_DST_FIELD			(EXE_DST_FIELD),
 .LOCK_PIPELINE			(RR_EXE_LOCK_PIPELINE_BY_DEPENDENCY)
 );
 
@@ -875,11 +880,6 @@ EXE_INTEGER_UNIT EXE_INTEGER_UNIT(
 	.Ready								(EXE_INT1_READY),
 	.ALUresult							(EXE_INT1_RESULT),
 	.Addr_write							(EXE_INT1_WRITE_ADDR),
-	
-	.EXCEPCION_ILLEGAL_INST				(EXE_EXCEPCION_INVALID_INST),
-	.EXCEPCION_DIV_BY_0					(EXCEPCION_DIV_BY_0),
-	.EXCEPCION_DIV_OVER					(EXCEPCION_DIV_OVER),
-	
 	.jal_valid							(EXE_JAL_VALID),
 	.jalr_valid							(EXE_JALR_VALID),
 	.jalr_ADDR							(EXE_jalr_target_addr),
@@ -903,10 +903,10 @@ EXE_BRANCH_UNIT EXE_BRANCH_UNIT(
 .Source1								(EXE_Src1_Data_BYPASS),
 .Source2								(EXE_Src2_Data_BYPASS),
 
-.Take_Branch							(EXE_BRANCH_TNT),
+//.Take_Branch							(EXE_BRANCH_TNT),
 .Branch_target							(EXE_BRANCH_target),
-.Branch_Result							(EXE_BRANCH_result),
-.Invalid_branch							(EXE_BRANCH_invalid)
+.Branch_Result							(EXE_BRANCH_result)
+//.Invalid_branch							(EXE_BRANCH_invalid)
 );
 
 assign EXE_MISS_PREDICTION = (EXE_BRANCH && ~PREDICTOR_hit) ;
@@ -921,9 +921,6 @@ assign          EXE_AMO_FUNCT = EXE_INST[31:27];
 EXE_LOAD_STORE_UNIT EXE_LOAD_STORE_UNIT(
 .CLK									(CLK),
 .RST									(RST),
-.lock_EXE								(lock_EXE),
-.PC										(EXE_PC),
-.PC_Valid                               (EXE_PC_VALID),
 .Funct3_FIELD							(EXE_FUNCT3),
 .WB_EXCEPTION                           (WB_XCPT),
 .CSR_ERET                               (CSR_ERET),
@@ -949,8 +946,6 @@ EXE_LOAD_STORE_UNIT EXE_LOAD_STORE_UNIT(
 .STORE									(EXE_STORE),
 // DCACHE Answer
 .DMEM_RESP_BITS_REPLAY                  (DMEM_RESP_BITS_REPLAY),
-.DMEM_REPLAY_NEXT_VALID                 (DMEM_REPLAY_NEXT_VALID),
-.DMEM_RESP_BITS_HAS_DATA                (DMEM_RESP_BITS_HAS_DATA),
 .DMEM_RESP_BITS_DATA					(DMEM_RESP_BITS_DATA_SUBW),
 .DMEM_REQ_READY						    (DMEM_REQ_READY),
 .DMEM_RESP_VALID                        (DMEM_RESP_VALID),
@@ -961,7 +956,7 @@ EXE_LOAD_STORE_UNIT EXE_LOAD_STORE_UNIT(
 .DMEM_XCPT_PF_LD                        (DMEM_XCPT_PF_LD),
 
 // OUTPUT TO WB
-.MEM_PC								    (EXE_PC_LOAD),
+//.MEM_PC								    (EXE_PC_LOAD),
 .MEM_READY								(EXE_LOAD_READY),
 .MEM_DATA								(EXE_LOAD_DATA),
 .WRITE_ADDR						        (EXE_LOAD_WRITE_ADDR),
@@ -1022,8 +1017,6 @@ LATCH_EXE_WB LATCH_EXE_WB(
 	.RST								(RST),
 	.lock								(lock_EXE), 
 	.FLUSH								(WB_XCPT | CSR_ERET),
-	.EXE_BRANCH                         (EXE_BRANCH | EXE_JALR_VALID),
-	.WB_BRANCH                          (WB_BRANCH),
 	
 	.PC_FROM_EXE						(EXE_PC),
 	.PC_VALID_FROM_EXE                  (EXE_PC_VALID),

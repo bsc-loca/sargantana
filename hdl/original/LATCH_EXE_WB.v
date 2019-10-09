@@ -6,8 +6,11 @@ input 						RST,
 input 						lock,
 input 						FLUSH,
 
-input                       EXE_BRANCH,
-output  reg                 WB_BRANCH,
+//TODO: commented due to TODO #1
+//input                       EXE_BRANCH,
+//TODO: #1 WB_BRANCH is ignored in instance . Remove it and
+//associated logic or do something with result
+//output  reg                 WB_BRANCH,
 
 input 			`ADDR		PC_FROM_EXE,
 input                       PC_VALID_FROM_EXE,
@@ -70,7 +73,8 @@ if(~RST)
 	WB_XCPT                 <=	1'b0;
     WB_XCPT_CAUSE           <=  64'b0;
     
-    WB_BRANCH               <=	1'b0;
+//TODO: commented due to TODO #1
+//    WB_BRANCH               <=	1'b0;
     
     WB_REQ_BITS_ADDR        <=	`WORD_ZERO_40; 
 	end 
@@ -88,7 +92,8 @@ else if (lock)
         WB_XCPT                     <=    WB_XCPT;
         WB_XCPT_CAUSE               <=  WB_XCPT_CAUSE;
         
-        WB_BRANCH                   <=	WB_BRANCH;
+//TODO: commented due to TODO #1
+// WB_BRANCH                   <=	WB_BRANCH;
         
         WB_REQ_BITS_ADDR            <=	WB_REQ_BITS_ADDR; 
         end
@@ -106,7 +111,8 @@ else if (lock)
                 WB_XCPT                     <=	1'b0;
                 WB_XCPT_CAUSE               <=  64'b0;
                 
-                WB_BRANCH                   <=	1'b0;
+//TODO: commented due to TODO #1
+// WB_BRANCH                   <=	1'b0;
                 WB_REQ_BITS_ADDR            <=	`WORD_ZERO_40; 
                 end
            else 
@@ -123,7 +129,8 @@ else if (lock)
                 WB_XCPT                     <=    EXE_XCPT;
                 WB_XCPT_CAUSE               <=    EXE_XCPT_CAUSE;
                 
-                WB_BRANCH                   <=	  EXE_BRANCH;
+//TODO: commented due to TODO #1
+// WB_BRANCH                   <=	  EXE_BRANCH;
                 WB_REQ_BITS_ADDR            <=	  DMEM_REQ_BITS_ADDR; 
                 end
 					

@@ -47,12 +47,12 @@ input					jalr_valid,
 output	     `ADDR		jalr_ADDR,
 output					jalr_ready,
 
-output					lock_EXT_M,
+output					lock_EXT_M
 
-
-output					EXCEPCION_ILLEGAL_INST,
-output 					EXCEPCION_DIV_BY_0,
-output					EXCEPCION_DIV_OVER
+//TODO: #1 Commented  beacuse signal is unused in instance EXE_INTEGER_UNIT
+//      Remove it or do something useful with it
+//,
+//output					EXCEPCION_ILLEGAL_INST
 );
 
 wire		`WORD_DATA	Source_1;						
@@ -63,7 +63,8 @@ assign      Source_2 = (INT_32) ? {32'h0,Data_Source_2[31:0]} : Data_Source_2;
 
 reg 		`WORD_DATA	ALUresult_aux;
 reg 					Ready_aux;
-reg 					Illegal_Inst_Exception_aux;
+//TODO: commented due to TODO #1
+//reg 					Illegal_Inst_Exception_aux;
 wire 		`WORD_DATA	Source2_Immediate_64;
 wire 		`WORD_DATA	Source2_Immediate_64_AUX;
 wire 		[5:0]		shamt;
@@ -174,24 +175,28 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 + Source_2;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						// Subtract Word - SUB
 						7'b0100000:	begin
 										ALUresult_aux= Source_1 - Source_2;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						// Multiply word, Low part, Signed - MUL , MULW
 						7'b0000001:	begin
 										ALUresult_aux= mul_result;
 										Ready_aux= ready_mul;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end	
@@ -203,18 +208,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 << shiftWord ;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						// Multiply word, High part, Signed - MULH
 						7'b0000001:	begin
 										ALUresult_aux= mul_result;
 										Ready_aux= ready_mul;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end
@@ -227,18 +235,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= ( $signed(Source_1) < $signed(Source_2))  ? `WORD_ONE_64 : `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						// Multiply word, High part, SignedxUnsigned - MULHSU
 						7'b0000001:	begin
 										ALUresult_aux= mul_result;
 										Ready_aux= ready_mul;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end
@@ -250,18 +261,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= ( Source_1 < Source_2)  ? `WORD_ONE_64 : `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						//	Multiply word, High part, Unsigned Unsigned MULHU
 						7'b0000001:	begin
 										ALUresult_aux= mul_result;
 										Ready_aux= ready_mul;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end	
@@ -272,18 +286,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 ^ Source_2;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						//	Divide words, Signed DIV
 						7'b0000001:	begin
 										ALUresult_aux= div_result;
 										Ready_aux= ready_DIV_REM;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end						
@@ -294,24 +311,28 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 >> shiftWord;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						//Shift Word Right Arithmetic - SRA
 						7'b0100000:	begin
 										ALUresult_aux= Shift_Right_Arith;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end				
 						//	Divide words, Unsigned DIV 
 						7'b0000001:	begin
 										ALUresult_aux= div_result;
 										Ready_aux= ready_DIV_REM;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end								
@@ -321,18 +342,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 | Source_2;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						//	Remider, Signed - REM
 						7'b0000001:	begin
 										ALUresult_aux= rem_result;
 										Ready_aux= ready_DIV_REM;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end					
@@ -343,18 +367,21 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 						7'b0000000:	begin
 										ALUresult_aux= Source_1 & Source_2;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end
 						//	Remider, Unsigned - REMU
 						7'b0000001:	begin
 										ALUresult_aux= rem_result;
 										Ready_aux= ready_DIV_REM;
-										Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b0;
 										end	
 						default:		begin
 										ALUresult_aux= `WORD_ZERO_64;
 										Ready_aux= 1'b1;
-										Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//										Illegal_Inst_Exception_aux = 1'b1;
 										end
 						endcase
 					end								
@@ -366,7 +393,8 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 	5'b11000:  	begin	
 					ALUresult_aux= Source_1 + Source2_Immediate_64;
 					Ready_aux= 1'b1;
-					Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//					Illegal_Inst_Exception_aux = 1'b0;
 
 					end	
 	// Shift Word Left Logical Immediate - SLLI , SLLIW
@@ -375,32 +403,37 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 							begin
 							ALUresult_aux= Source_1 << shamt;
 							Ready_aux= 1'b1;
-							Illegal_Inst_Exception_aux = INT_32 & shamt[5];
+//TODO: commented due to TODO #1
+//							Illegal_Inst_Exception_aux = INT_32 & shamt[5];
 							end
 						else
 							begin
 							ALUresult_aux=  `WORD_ZERO_64;
 							Ready_aux= 1'b1;
-							Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//							Illegal_Inst_Exception_aux = 1'b1;
 							end
 					end
 	// Set on Less Than immediate - SLTI			
 	5'b11010:  	begin		
 					ALUresult_aux= ( $signed(Source_1) < $signed(Source2_Immediate_64))  ? `WORD_ONE_64 : `WORD_ZERO_64;
 					Ready_aux= 1'b1;
-					Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//					Illegal_Inst_Exception_aux = 1'b0;
 					end	
     // Set on Less Than immediate Unsigned - SLTIU			
     5'b11011:      begin        
                     ALUresult_aux= ( Source_1 < Source2_Immediate_64)  ? `WORD_ONE_64 : `WORD_ZERO_64;
                     Ready_aux= 1'b1;
-                    Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//                    Illegal_Inst_Exception_aux = 1'b0;
                     end    
 	// XOR Immediate - XORI
 	5'b11100:  	begin		
 					ALUresult_aux= Source_1 ^ Source2_Immediate_64;
 					Ready_aux= 1'b1;
-					Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//					Illegal_Inst_Exception_aux = 1'b0;
 					end
 	//Shift Word Right Logical Imediate, Shift Word Right Arithmetic Imediate - SRLI , SRAI , SRLIW , SRAIW
 	5'b11101:  begin		
@@ -408,37 +441,43 @@ case ({valid_inst,Immediate,Funct3_FIELD})
 							begin
 							ALUresult_aux= Source_1 >> shamt;
 							Ready_aux= 1'b1;
-							Illegal_Inst_Exception_aux = INT_32 & shamt[5];
+//TODO: commented due to TODO #1
+//							Illegal_Inst_Exception_aux = INT_32 & shamt[5];
 							end
 						else	if(Funct7_FIELD[6:1] == 6'b010000)
 									begin
 									ALUresult_aux= Shift_Right_Arith;
 									Ready_aux= 1'b1;
-									Illegal_Inst_Exception_aux = INT_32 & shamt[5];
+//TODO: commented due to TODO #1
+//									Illegal_Inst_Exception_aux = INT_32 & shamt[5];
 									end
 								else
 									begin
 									ALUresult_aux= `WORD_ZERO_64;
 									Ready_aux= 1'b1;
-									Illegal_Inst_Exception_aux = 1'b1;
+//TODO: commented due to TODO #1
+//									Illegal_Inst_Exception_aux = 1'b1;
 									end
 					end	
 	// OR Immediate - ORI
 	5'b11110:  	begin		
 					ALUresult_aux= Source_1 | Source2_Immediate_64;
 					Ready_aux= 1'b1;
-					Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//					Illegal_Inst_Exception_aux = 1'b0;
 					end	
 	// And Immediate - ANDI
 	5'b11111:  	begin		
 					ALUresult_aux= Source_1 & Source2_Immediate_64;
 					Ready_aux= 1'b1;
-					Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//					Illegal_Inst_Exception_aux = 1'b0;
 					end					
 	default:  	begin
 						ALUresult_aux= `WORD_ZERO_64;
 						Ready_aux= 1'b0;
-						Illegal_Inst_Exception_aux = 1'b0;
+//TODO: commented due to TODO #1
+//						Illegal_Inst_Exception_aux = 1'b0;
 					end
 					
 endcase
@@ -482,9 +521,9 @@ assign Ready = 			( (jal_valid | jalr_valid) & (RD_FIELD > 5'b00000)) ? 1'b1:(va
 assign Addr_write=		(valid_inst | jalr_valid | jal_valid | valid_opcode) ?  RD_FIELD:5'b0;
 assign ALUresult = 		( jalr_valid | jal_valid) ?  {{24{PC[39]}},PC} + 64'h4 :(valid_opcode) ? ALUresult_aux2: (INT_32) ? {{32{ALUresult_aux[31]}},ALUresult_aux[31:0]}:ALUresult_aux;
 
-assign 	EXCEPCION_ILLEGAL_INST = 	Illegal_Inst_Exception_aux;
-assign	EXCEPCION_DIV_BY_0 = 1'b0;
-assign	EXCEPCION_DIV_OVER = 1'b0;
+//TODO: Commented due to TODO #1
+//TODO: commented due to TODO #1
+////assign 	EXCEPCION_ILLEGAL_INST = 	Illegal_Inst_Exception_aux;
 
 
 wire 	`ADDR	 jalr_ADDR_aux;

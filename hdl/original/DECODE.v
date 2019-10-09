@@ -21,7 +21,6 @@
 // AMO		    2000		1			0		    0			0			0			0			0			0			0			0			0			0			0			0	//
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 module DECODE (
-input 				CLK,
 input               valid_inst,
 input 		[6:0]	opcode,
 
@@ -33,28 +32,24 @@ output              DEC_XCPT_ILLEGAL_INST
 
 wire [15:0]Control_Signal_0;
 Decoder_0 Decoder_0(
-.CLK					(CLK),
 .tag					(opcode[4:2]),
 .Control_Signal	(Control_Signal_0)
 );
 
 wire [15:0]Control_Signal_1;
 Decoder_1 Decoder_1(
-.CLK					(CLK),
 .tag					(opcode[4:2]),
 .Control_Signal	(Control_Signal_1)
 );
 
 wire [15:0]Control_Signal_2;
 Decoder_2 Decoder_2(
-.CLK					(CLK),
 .tag					(opcode[4:2]),
 .Control_Signal	(Control_Signal_2)
 );
 
 wire [15:0]Control_Signal_3;
 Decoder_3 Decoder_3(
-.CLK					(CLK),
 .tag					(opcode[4:2]),
 .Control_Signal	(Control_Signal_3)
 );
@@ -82,7 +77,6 @@ endmodule
 //								Decoder_0
 //-----------------------------------------------------------------------
 module Decoder_0(
-input CLK,
 input [2:0]tag,
 output reg [15:0]Control_Signal
 );
@@ -108,7 +102,6 @@ endmodule
 //								Decoder_1
 //-----------------------------------------------------------------------
 module Decoder_1(
-input CLK,
 input [2:0]tag,
 output reg [15:0]Control_Signal
 );
@@ -137,7 +130,6 @@ endmodule
 //								Decoder_2
 //-----------------------------------------------------------------------
 module Decoder_2(
-input CLK,
 input [2:0]tag,
 output reg [15:0]Control_Signal
 );
@@ -163,7 +155,6 @@ endmodule
 //								Decoder_3
 //-----------------------------------------------------------------------
 module Decoder_3(
-input CLK,
 input [2:0]tag,
 output reg [15:0]Control_Signal
 );

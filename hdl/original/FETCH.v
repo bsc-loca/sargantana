@@ -66,7 +66,6 @@ wire    `ADDR               PC_NEXT;
 //--------------------------------------------------------------------------------------------------------------------------
 
 assign PC_NEXT = FETCH_PC + 40'h004;
-//assign PC_PREDICTED = (EXE_MISS_PREDICTION) ? EXE_branch_addr:(EXE_jalr) ? jalr_addr: (DEC_JAL) ? jal_addr: (PREDICTOR_TAKE_BRANCH) ? PREDICTOR_branch_addr: (lock_FETCH | CORE_lock) ? FETCH_PC:PC_NEXT;
 /* julian pavon rivera */
 assign PC_PREDICTED = (EXE_MISS_PREDICTION) ? EXE_branch_addr:(EXE_jalr) ? jalr_addr: (DEC_JAL) ? jal_addr: (PREDICTOR_TAKE_BRANCH) ? PREDICTOR_branch_addr: (FETCH_PC_UPDATE) ? FETCH_PC_VALUE : (lock_FETCH | CORE_lock) ? FETCH_PC:PC_NEXT;
 
@@ -136,14 +135,14 @@ assign  ICACHE_REQ_BITS_IDX = FETCH_PC[11:0];
 assign  ICACHE_INVALIDATE = FENCE_I & ~FETCH_REQ_Kill;
 assign  ICACHE_REQ_BITS_KILL = FETCH_REQ_Kill | TLB_RESP_MISS | TLB_RESP_XCPT_IF | PTWINVALIDATE ; // | ICACHE_MISS
 
-assign  TLB_REQ_VALID = ~CORE_lock /* & ~lock_FETCH*/;
+assign  TLB_REQ_VALID = ~CORE_lock;
 
 wire FETCH_XCPT;
 assign  FETCH_XCPT = TLB_RESP_XCPT_IF | FETCH_XCPT_MISALIGNED;
 //--------------------------------------------------------------------------------------------------------------------------
 // MAQUINA DE ESTADOS - CONTROL DE TIEMPOS PARA COMUNICARSE CON LA ICACHE Y TLB
 //--------------------------------------------------------------------------------------------------------------------------
-reg [2:0]EstadoSiguiente,Edo_Sgte;
+reg [1:0]EstadoSiguiente,Edo_Sgte;
 reg ICACHE_MISS;
 parameter   NO_REQ       = 2'b00,
 		    REQ_VALID    = 2'b01,

@@ -3,11 +3,10 @@
 module EXE_LOAD_STORE_UNIT(
 input						CLK,
 input						RST,
-input						lock_EXE,
 input                       WB_EXCEPTION,
 input                       CSR_ERET,
-input		`ADDR			PC,		
-input                       PC_Valid,									
+//TODO: commented due to TODO #1
+//input		`ADDR			PC,		
 input		[2:0]			Funct3_FIELD,							
 	
 input		[11:0]			Immediate_load,						
@@ -30,8 +29,6 @@ input						LOAD,
 
 // DCACHE Answer
 input                       DMEM_RESP_BITS_REPLAY,
-input                       DMEM_REPLAY_NEXT_VALID,
-input                       DMEM_RESP_BITS_HAS_DATA,
 input		`WORD_DATA		DMEM_RESP_BITS_DATA,
 input						DMEM_REQ_READY,
 input                       DMEM_RESP_VALID,
@@ -42,8 +39,9 @@ input                       DMEM_XCPT_PF_ST,
 input                       DMEM_XCPT_PF_LD,
 
 // DCACHE Answer to WB
-output	     `ADDR			MEM_PC,
-//output                    Load_PC_Valid,
+//TODO: #1 MEM_PC is ignored in instance . Remove it and
+//associated logic or do something with result
+//output	     `ADDR			MEM_PC,
 output						MEM_READY,
 output	     `WORD_DATA		MEM_DATA,
 output	     [4:0]			WRITE_ADDR,
@@ -153,7 +151,7 @@ assign  KILL_IO_RESP =  IO_ADDRESS_SPACE &  STORE ;
 wire KILL_MEM_OPE;
 assign   KILL_MEM_OPE = DMEM_XCPT | WB_EXCEPTION | CSR_ERET;
 
-reg [2:0]EstadoSiguiente,Edo_Sgte;
+reg [1:0]EstadoSiguiente,Edo_Sgte;
 reg ICACHE_MISS;
 parameter   REQ_VALID    = 2'b00,
 			RESP_READY   = 2'b01,
@@ -210,28 +208,12 @@ begin
                             Edo_Sgte = REQ_VALID;
                             DMEM_LOCK = 1'b1;
                             end 
-                        /*
-                         else if(DMEM_REPLAY_NEXT_VALID)
+                        else
                             begin
-                            MEM_REQ_VALID = 1'b0; 
-                            Edo_Sgte = REQ_VALID;
-                            DMEM_LOCK = 1'b1;
-                            end  
-                         */
-                         /*
-                         else if(DMEM_REPLAY)
-                               begin
-                               MEM_REQ_VALID = 1'b0; 
-                               Edo_Sgte = REQ_VALID;
-                               DMEM_LOCK = 1'b1;
-                               end  
-                         */
-                            else
-                                begin
-                                MEM_REQ_VALID = 1'b0;
-                                Edo_Sgte = (KILL_MEM_OPE /*MEM_REQ_BITS_KILL*/ | KILL_IO_RESP) ? REQ_VALID : RESP_VALID;
-                                DMEM_LOCK = (KILL_MEM_OPE /*MEM_REQ_BITS_KILL*/ | KILL_IO_RESP) ? 1'b0: 1'b1;
-                                end
+                            MEM_REQ_VALID = 1'b0;
+                            Edo_Sgte = (KILL_MEM_OPE /*MEM_REQ_BITS_KILL*/ | KILL_IO_RESP) ? REQ_VALID : RESP_VALID;
+                            DMEM_LOCK = (KILL_MEM_OPE /*MEM_REQ_BITS_KILL*/ | KILL_IO_RESP) ? 1'b0: 1'b1;
+                            end
                     end
         default: begin
           MEM_REQ_VALID = 1'b0;
@@ -241,7 +223,8 @@ begin
 	endcase
 end
 
-assign 	MEM_PC			= PC;
+//TODO: commented due to TODO #1
+//assign 	MEM_PC			= PC;
 assign 	MEM_DATA 		= DMEM_RESP_BITS_DATA;
 assign 	WRITE_ADDR      = DST_FIELD;
 assign 	MEM_READY 		= DMEM_RESP_VALID & (LOAD | AMO);
