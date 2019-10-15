@@ -42,14 +42,14 @@ always_comb begin
     decode_instr_o.rd  = decode_i.inst.common.rd;
     // By default all enables to zero
     decode_instr_o.change_pc_ena = 1'b0;
-    decode_instr_o.regfile_we = 1'b0;
+    decode_instr_o.regfile_we    = 1'b0;
     decode_instr_o.regfile_w_sel = SEL_FROM_ALU;
     // does not really matter
     decode_instr_o.alu_rs1_sel = SEL_SRC1_REGFILE;
     decode_instr_o.alu_rs2_sel = SEL_SRC2_REGFILE;
     
     decode_instr_o.alu_op = ALU_ADD;
-    decode_instr_o.unit = UNIT_ALU;
+    decode_instr_o.unit   = UNIT_ALU;
     // not sure if we should have this
     //decode_instr_o.instr_type;
     // By default use the imm value then it will change along the process
@@ -58,68 +58,78 @@ always_comb begin
 
     case (decode_i.inst.common.opcode)
         // Load Upper immediate
-        riscv_pkg::OP_LUI: begin
+        OP_LUI: begin
+            decode_instr_o.regfile_we  = 1'b1;
+            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.rs1 = '0;
+            decode_instr_o.alu_op = ALU_OR;
+        end
+        OP_AUIPC:begin
+            decode_instr_o.regfile_we  = 1'b1;
+            decode_instr_o.alu_rs1_sel = SEL_PC;
+            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.alu_op = ALU_ADD;          
+        end
+        OP_JAL: begin
+            // TODO: to be fixed
             decode_instr_o.regfile_we = 1'b1;
-          
+            decode_instr_o.change_pc_ena = 1'b1;
+            decode_instr_o.alu_rs1_sel = SEL_PC_4;
+            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.alu_op = ALU_ADD;
         end
-        riscv_pkg::OP_AUIPC:begin
-            
-        end
-        riscv_pkg::OP_JAL: begin
-            
-        end
-        riscv_pkg::OP_JALR: begin
+        OP_JALR: begin
             decode_instr_o.regfile_we = 1'b1;
             
         end
-        riscv_pkg::OP_BRANCH: begin
+        OP_BRANCH: begin
             
         end
-        riscv_pkg::OP_LOAD:begin
+        OP_LOAD:begin
             decode_instr_o.regfile_we = 1'b1;
             
         end
-        riscv_pkg::OP_STORE: begin
+        OP_STORE: begin
             
         end
-        riscv_pkg::OP_ALU_I: begin
+        OP_ALU_I: begin
             decode_instr_o.alu_rs2_sel = SEL_IMM;
             decode_instr_o.regfile_we = 1'b1;
             // we don't need a default cause all cases are there
             unique case (decode_i.inst.itype.func3)
-                riscv_pkg::F3_ADDI: begin
+                F3_ADDI: begin
                    decode_instr_o.alu_op = ALU_ADD;
                 end
-                riscv_pkg::F3_SLTI: begin
+                F3_SLTI: begin
                     decode_instr_o.alu_op = ALU_SLT;
                 end
-                riscv_pkg::F3_SLTIU: begin
+                F3_SLTIU: begin
                     decode_instr_o.alu_op = ALU_SLTU;
                 end
-                riscv_pkg::F3_XORI: begin
+                F3_XORI: begin
                     decode_instr_o.alu_op = ALU_XOR;
                 end
-                riscv_pkg::F3_ORI: begin
+                F3_ORI: begin
                     decode_instr_o.alu_op = ALU_OR;
                 end
-                riscv_pkg::F3_ANDI: begin
+                F3_ANDI: begin
                     decode_instr_o.alu_op = ALU_AND;
                 end
-                riscv_pkg::F3_SLLI: begin
+                F3_SLLI: begin
                     decode_instr_o.alu_op = ALU_SLL;
                     // check for illegal isntruction
-                    if (decode_i.inst.rtype.func7 != riscv_pkg::F7_NORMAL) begin
+                    if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
                         illegal_instruction = 1'b1;
                     end else begin
                         illegal_instruction = 1'b0;
                     end
                 end
-                riscv_pkg::F3_SRLAI: begin
+                F3_SRLAI: begin
                     case (decode_i.inst.rtype.func7)
-                        riscv_pkg::F7_SRAI_SUB_SRA: begin
+                        F7_SRAI_SUB_SRA: begin
                             decode_instr_o.alu_op = ALU_SRA;
                         end
-                        riscv_pkg::F7_NORMAL: begin
+                        F7_NORMAL: begin
                             decode_instr_o.alu_op = ALU_SRL;
                         end
                         default: begin // check illegal instruction
@@ -130,17 +140,17 @@ always_comb begin
             endcase
             
         end
-        riscv_pkg::OP_ALU: begin
+        OP_ALU: begin
             decode_instr_o.regfile_we = 1'b1;
             // we don't need a default cause all cases are there
             // TODO: should we check in decoder all possibilities of illegal instruction?
             unique case (decode_i.inst.rtype.func3)
-                riscv_pkg::F3_ADD_SUB: begin
+                F3_ADD_SUB: begin
                     case (decode_i.inst.rtype.func7)
-                        riscv_pkg::F7_SRAI_SUB_SRA: begin
+                        F7_SRAI_SUB_SRA: begin
                             decode_instr_o.alu_op = ALU_SUB;
                         end
-                        riscv_pkg::F7_NORMAL: begin
+                        F7_NORMAL: begin
                             decode_instr_o.alu_op = ALU_ADD;
                         end
                         default: begin // check illegal instruction
@@ -148,24 +158,24 @@ always_comb begin
                         end
                     endcase
                 end
-                riscv_pkg::F3_SLL: begin
+                F3_SLL: begin
                     decode_instr_o.alu_op = ALU_SLT;
                 end
-                riscv_pkg::F3_SLT: begin
+                F3_SLT: begin
                     decode_instr_o.alu_op = ALU_SLTU;
                 end
-                riscv_pkg::F3_SLTU: begin
+                F3_SLTU: begin
                     decode_instr_o.alu_op = ALU_SLTU;
                 end
-                riscv_pkg::F3_XOR: begin
+                F3_XOR: begin
                     decode_instr_o.alu_op = ALU_XOR;
                 end
-                riscv_pkg::F3_SRL_SRA: begin
+                F3_SRL_SRA: begin
                     case (decode_i.inst.rtype.func7)
-                        riscv_pkg::F7_SRAI_SUB_SRA: begin
+                        F7_SRAI_SUB_SRA: begin
                             decode_instr_o.alu_op = ALU_SRA;
                         end
-                        riscv_pkg::F7_NORMAL: begin
+                        F7_NORMAL: begin
                             decode_instr_o.alu_op = ALU_SRL;
                         end
                         default: begin // check illegal instruction
@@ -173,28 +183,28 @@ always_comb begin
                         end
                     endcase                        
                 end
-                riscv_pkg::F3_OR: begin
+                F3_OR: begin
                     decode_instr_o.alu_op = ALU_OR;
                 end
-                riscv_pkg::F3_AND: begin
+                F3_AND: begin
                     decode_instr_o.alu_op = ALU_AND;
                 end
             endcase
             
         end
-        riscv_pkg::OP_ALU_I_W: begin
+        OP_ALU_I_W: begin
             decode_instr_o.alu_rs2_sel = SEL_IMM;
             decode_instr_o.regfile_we = 1'b1;
             
         end
-        riscv_pkg::OP_ALU_W: begin
+        OP_ALU_W: begin
             decode_instr_o.regfile_we = 1'b1;
             
         end
-        riscv_pkg::OP_FENCE: begin
+        OP_FENCE: begin
             // Not sure what we should do
         end
-        riscv_pkg::OP_SYSTEM: begin
+        OP_SYSTEM: begin
             
         end
         default: begin
