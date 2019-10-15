@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------
 * Project Name   : DRAC
 * File           : immediate.sv
