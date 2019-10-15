@@ -74,14 +74,8 @@ output   [7:0]              DMEM_REQ_BITS_TAG,
 output                      DMEM_REQ_INVALIDATE_LR,
 output                      DMEM_REQ_BITS_KILL,
 input                       DMEM_ORDERED,
-//TODO: commented due: declared but not read
-//input                       DMEM_REPLAY_NEXT_VALID,
 input                       DMEM_REQ_READY,
-//TODO: commented due: declared but not read
-//input    `WORD_DATA         DMEM_RESP_BITS_DATA,
 input    `WORD_DATA         DMEM_RESP_BITS_DATA_SUBW,
-//TODO: commented due: declared but not read
-//input                       DMEM_RESP_BITS_HAS_DATA,
 input                       DMEM_RESP_BITS_NACK,
 input                       DMEM_RESP_BITS_REPLAY,
 input                       DMEM_RESP_VALID,
@@ -219,7 +213,10 @@ output                      io_core_pmu_new_instruction
     input  io_fpu_dec_ren3,
     input  io_fpu_sboard_set,
     input  io_fpu_sboard_clr,
-    input [4:0] io_fpu_sboard_clra
+    input [4:0] io_fpu_sboard_clra,
+    input                       DMEM_REPLAY_NEXT_VALID,
+    input    `WORD_DATA         DMEM_RESP_BITS_DATA,
+    input                       DMEM_RESP_BITS_HAS_DATA
     `endif   
 );
 `ifdef CHISEL
