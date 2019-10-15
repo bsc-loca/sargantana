@@ -1,0 +1,246 @@
+/* -----------------------------------------------
+* Project Name   : DRAC
+* File           : tb_icache_interface.v
+* Organization   : Barcelona Supercomputing Center
+* Author(s)      : Guillem Lopez Paradis
+* Email(s)       : guillem.lopez@bsc.es
+* References     : 
+* -----------------------------------------------
+* Revision History
+*  Revision   | Author     | Commit | Description
+*  0.1        | Guillem.LP | 
+* -----------------------------------------------
+*/
+import riscv_pkg::*;
+
+package drac_pkg;
+
+//parameter XLEN = 64; 
+parameter ICACHELINE_SIZE = 127;
+parameter ADDR_SIZE = 40;
+//parameter INST_SIZE = 32;
+parameter REGFILE_WIDTH = 5;
+parameter ICACHE_IDX_BITS_SIZE = 12;
+parameter ICACHE_VPN_BITS_SIZE = 28;
+// RISCV
+//parameter OPCODE_WIDTH = 6;
+//parameter REG_WIDTH = 5;
+
+typedef logic [63:0] data64_t;
+typedef logic [63:0] bus64_t;
+typedef logic [31:0] bus32_t;
+
+typedef logic [REGFILE_WIDTH-1:0] reg_t;
+typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
+typedef logic [ADDR_SIZE-1:0] addr_t;
+typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
+
+typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
+typedef logic [ICACHELINE_SIZE:0] icache_line_t;
+typedef reg   [ICACHELINE_SIZE:0] icache_line_reg_t;
+typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
+typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
+
+
+typedef enum {
+    NEXT_PC_SEL_PC,
+    NEXT_PC_SEL_PC_4,
+    NEXT_PC_SEL_COMMIT
+} next_pc_sel_t;
+
+typedef enum {
+    NONE,
+    MISALIGNED_FETCH,
+    FAULT_FETCH,
+    ILLEGAL_INST,
+    BREAKPOINT,
+    MISALIGNED_LOAD,
+    FAULT_LOAD,
+    MISALIGNED_STORE,
+    FAULT_STORE,
+    USER_ECALL,
+    SUPERVISOR_ECALL,
+    HYPERVISOR_ECALL,
+    MACHINE_ECALL 
+} exception_cause_t;
+
+typedef enum {
+    NoReq,
+    ReqValid,
+    RespReady
+} icache_state_t;
+
+typedef enum logic {
+    PRED_TAKEN,
+    PRED_NOT_TAKEN
+} branch_pred_decision_t;
+
+typedef struct packed {
+    branch_pred_decision_t decision;
+    addr_t pred_addr;
+} branch_pred_t;
+
+typedef struct packed {
+    exception_cause_t cause;
+    addr_t origin; // this will be the addr or pc but maybe other things?
+    logic valid;
+} exception_t;
+
+// Req coming from ICache
+typedef struct packed {
+    logic  valid;
+    inst_t data;
+    //addr_t req_addr; I think it is not completely necessary
+    exception_t ex;
+} icache_req_out_t;
+
+// Req send to ICache
+typedef struct packed {
+    logic  valid;
+    addr_t vaddr;
+} icache_req_in_t;
+
+typedef enum {
+    SEL_SRC1_REGFILE,
+    SEL_SRC2_REGFILE,
+    SEL_IMM,
+    SEL_PC,
+    SEL_PC_4,
+    SEL_BYPASS
+} alu_sel_t;
+
+typedef enum {
+    UNIT_ALU,
+    UNIT_BU,
+    UNIT_MEM,
+    UNIT_CONTROL
+} unit_t;
+
+typedef enum {
+    SEL_FROM_MEM,
+    SEL_FROM_ALU,
+    SEL_FROM_CONTROL
+} reg_sel_t;
+
+// TODO to be filled
+typedef enum {
+    ADD
+} instr_type_t;
+
+typedef enum {
+    ALU_ADD,
+    ALU_SUB,
+    ALU_SLL,
+    ALU_SLT,
+    ALU_SLTU,
+    ALU_XOR,
+    ALU_SRL,
+    ALU_SRA,
+    ALU_OR,
+    ALU_AND,
+    ALU_MUL,
+    ALU_MULH,
+    ALU_MULHS,
+    ALU_DIV,
+    ALU_DIVU,
+    ALU_REM,
+    ALU_REMU
+} alu_op_t;
+
+typedef enum {
+    B_EQ,
+    B_NE,
+    B_LT,
+    B_GE,
+    B_LTU,
+    B_GEU
+} branch_op_t;
+
+typedef enum {
+    CT_JAL,
+    CT_JALR,
+    CT_BRANCH
+} ctrl_xfer_op_t;
+
+typedef enum {
+    MEM_LOAD,
+    MEM_STORE,
+    MEM_AMO
+} mem_op_t;
+
+typedef enum {
+    BYTE,
+    HALFWORD,
+    WORD,
+    DOUBLEWORD,
+    BYTE_UNSIGNED,
+    HALFWORD_UNSIGNED,
+    WORD_UNSIGNED
+} mem_format_t;
+
+typedef enum {
+    AMO_LR,
+    AMO_SC,
+    AMO_SWAP,
+    AMO_ADD,
+    AMO_XOR,
+    AMO_AND,
+    AMO_OR,
+    AMO_MIN,
+    AMO_MAX,
+    AMO_MINU,
+    AMO_MAXU
+} amo_op_t;
+
+// Fetch Stage
+typedef struct packed {
+    addr_t pc_inst;
+    riscv_pkg::instruction_t inst;
+    logic valid;
+    branch_pred_t bpred;
+    exception_t ex;
+} fetch_out_t;
+
+// This is created by decode
+//
+typedef struct packed {
+    logic valid;
+    addr_t pc;
+    branch_pred_t bpred;
+    exception_t ex;
+    reg_t rs1;
+    reg_t rs2;
+    reg_t rd;
+    logic regfile_we;
+    reg_sel_t regfile_w_sel;
+    alu_sel_t alu_rs1_sel;
+    alu_sel_t alu_rs2_sel;
+    alu_op_t alu_op;
+    unit_t unit;
+    logic change_pc_ena;
+    instr_type_t instr_type;
+    bus64_t result; // it can be used as the immediate
+} instr_entry_t;
+
+typedef struct packed {
+    alu_op_t alu_op;
+    ctrl_xfer_op_t ctrl_xfer_op;
+    branch_op_t branch_op;
+    bus64_t imm;
+} dec_exe_instr_t;
+
+typedef struct packed {
+    logic regfile_we;
+    reg_t rd;
+    logic change_pc_ena;
+} dec_wb_instr_t;
+
+typedef struct packed {
+    bus64_t data_op1;
+    bus64_t data_op2;
+} rr_exe_instr_t;
+
+
+
+
+endpackage
