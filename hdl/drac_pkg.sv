@@ -111,10 +111,10 @@ typedef enum {
 
 typedef enum {
     UNIT_ALU,
-    UNIT_BU,
+    UNIT_BRANCH,
     UNIT_MEM,
     UNIT_CONTROL
-} unit_t;
+} functional_unit_t;
 
 typedef enum {
     SEL_FROM_MEM,
@@ -216,31 +216,57 @@ typedef struct packed {
     logic use_imm;
     logic use_pc;
     alu_op_t alu_op;
-    unit_t unit;
+    functional_unit_t unit;
     logic change_pc_ena;
     instr_type_t instr_type;
     bus64_t result; // it can be used as the immediate
 } instr_entry_t;
 
 typedef struct packed {
+    functional_unit_t functional_unit;
+
+    // ALU signals
     alu_op_t alu_op;
+    logic use_imm;
+    bus64_t imm;
+
+    // Branch unit signals
     ctrl_xfer_op_t ctrl_xfer_op;
     branch_op_t branch_op;
-    bus64_t imm;
+    addr_t pc;
+
+    // Memory unit signals
+    mem_op_t mem_op;
+    logic [2:0] funct3;
+    mem_format_t mem_format;
+    amo_op_t amo_op;
+    reg_t rd;
 } dec_exe_instr_t;
 
 typedef struct packed {
     logic regfile_we;
-    reg_t rd;
     logic change_pc_ena;
 } dec_wb_instr_t;
 
 typedef struct packed {
-    bus64_t data_op1;
-    bus64_t data_op2;
+    reg_t rs1;
+    bus64_t data_rs1;
+    reg_t rs2;
+    bus64_t data_rs2;
 } rr_exe_instr_t;
 
+typedef struct packed {
+    addr_t result_pc;
+    reg_t rd;
+    bus64_t result_rd;
+} exe_wb_instr_t;
 
-
+// For bypass
+typedef struct packed {
+    logic valid;
+    reg_t rd;
+    bus64_t data;
+} wb_exe_instr_t;
 
 endpackage
+
