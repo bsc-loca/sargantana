@@ -27,6 +27,7 @@ parameter ICACHE_VPN_BITS_SIZE = 28;
 //parameter REG_WIDTH = 5;
 
 typedef logic [63:0] data64_t;
+typedef reg   [63:0] reg64_t;
 typedef logic [63:0] bus64_t;
 typedef logic [31:0] bus32_t;
 
