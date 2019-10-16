@@ -213,8 +213,8 @@ typedef struct packed {
     reg_t rd;
     logic regfile_we;
     reg_sel_t regfile_w_sel;
-    alu_sel_t alu_rs1_sel;
-    alu_sel_t alu_rs2_sel;
+    logic use_imm;
+    logic use_pc;
     alu_op_t alu_op;
     unit_t unit;
     logic change_pc_ena;

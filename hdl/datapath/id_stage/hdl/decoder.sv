@@ -45,8 +45,8 @@ always_comb begin
     decode_instr_o.regfile_we    = 1'b0;
     decode_instr_o.regfile_w_sel = SEL_FROM_ALU;
     // does not really matter
-    decode_instr_o.alu_rs1_sel = SEL_SRC1_REGFILE;
-    decode_instr_o.alu_rs2_sel = SEL_SRC2_REGFILE;
+    decode_instr_o.use_imm = 1'b0;
+    decode_instr_o.use_pc  = 1'b0;
     
     decode_instr_o.alu_op = ALU_ADD;
     decode_instr_o.unit   = UNIT_ALU;
@@ -60,22 +60,22 @@ always_comb begin
         // Load Upper immediate
         OP_LUI: begin
             decode_instr_o.regfile_we  = 1'b1;
-            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.use_imm = 1'b1;
             decode_instr_o.rs1 = '0;
             decode_instr_o.alu_op = ALU_OR;
         end
         OP_AUIPC:begin
             decode_instr_o.regfile_we  = 1'b1;
-            decode_instr_o.alu_rs1_sel = SEL_PC;
-            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.use_imm = 1'b1;
+            decode_instr_o.use_pc = 1'b1;
             decode_instr_o.alu_op = ALU_ADD;          
         end
         OP_JAL: begin
             // TODO: to be fixed
             decode_instr_o.regfile_we = 1'b1;
             decode_instr_o.change_pc_ena = 1'b1;
-            decode_instr_o.alu_rs1_sel = SEL_PC_4;
-            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.use_imm = 1'b1;
+            decode_instr_o.use_pc = 1'b1;
             decode_instr_o.alu_op = ALU_ADD;
         end
         OP_JALR: begin
@@ -93,7 +93,7 @@ always_comb begin
             
         end
         OP_ALU_I: begin
-            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.use_imm    = 1'b1;
             decode_instr_o.regfile_we = 1'b1;
             // we don't need a default cause all cases are there
             unique case (decode_i.inst.itype.func3)
@@ -193,7 +193,7 @@ always_comb begin
             
         end
         OP_ALU_I_W: begin
-            decode_instr_o.alu_rs2_sel = SEL_IMM;
+            decode_instr_o.use_imm    = 1'b1;
             decode_instr_o.regfile_we = 1'b1;
             
         end
