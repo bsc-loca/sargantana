@@ -1,4 +1,4 @@
-`default_nettype none
+//`default_nettype none
 import drac_pkg::*;
 
 /* -----------------------------------------------
@@ -21,21 +21,24 @@ module mem_unit (
     input logic         valid_i,
     input logic         kill_i,
     input logic         csr_eret_i,
-    input bus64_t       data_op1_i,
-    input bus64_t       data_op2_i,
+    input bus64_t       data_rs1_i,
+    input bus64_t       data_rs2_i,
     input mem_op_t      mem_op_i,
     input mem_format_t  mem_format_i,
     input amo_op_t      amo_op_i,
     input wire [2:0]    funct3_i,
     input reg_t         rd_i,
-    input logic [39:0]        imm_i,
+    input logic [39:0]  imm_i,
 
     input  addr_t       io_base_addr_i,
 
     // DCACHE Answer
     input  wire         dmem_resp_replay_i,
+    // data read from memory
     input  bus64_t      dmem_resp_data_i,
+    // dcache ready to recieve a request
     input  wire         dmem_req_ready_i,
+    // dcache responded
     input  wire         dmem_resp_valid_i,
     input  wire         dmem_resp_nack_i,
     input  wire         dmem_xcpt_ma_st_i,
@@ -46,9 +49,9 @@ module mem_unit (
     // LOAD/STORE/AMO INTERFACE OUTPUTS TO DCACHE
 
     // Sending a valid request
-    output wire          dmem_req_valid_o,
+    output logic        dmem_req_valid_o,
     // Command to dcache
-    output wire [4:0]   dmem_req_cmd_o,
+    output logic [4:0]  dmem_req_cmd_o,
     // Address request
     output addr_t       dmem_req_addr_o,
     // Byte, half word ...
@@ -131,7 +134,7 @@ always_comb begin
             end else begin
                 dmem_req_valid_o = 1'b0;
                 next_state = (kill_mem_ope | kill_io_resp) ? Idle : WaitResponse;
-                lock_o = !(kill_mem_ope | kill_io_resp);
+                lock_o = !(kill_mem_ope || kill_io_resp);
             end
         end
         default: next_state = ResetState;
@@ -162,9 +165,9 @@ always_comb begin
     endcase
 end
 
-assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_op1_i[39:0] : data_op1_i[39:0] + imm_i;
+assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i[39:0] : data_rs1_i[39:0] + imm_i;
 assign dmem_op_type_o = {61'b0,funct3_i};
-assign dmem_req_data_o = data_op2_i;
+assign dmem_req_data_o = data_rs2_i;
 assign dmem_req_tag_o = {2'b00,rd_i,1'b0}; //  bit 0 corresponde a int o fp
 assign dmem_req_invalidate_lr_o = csr_eret_i;
 assign dmem_req_kill_o = mem_xcpt | kill_i  | (dmem_resp_replay_i & valid_i);
@@ -174,5 +177,5 @@ assign ready_o  = dmem_resp_valid_i & (mem_op_i != MEM_STORE);
 assign data_o   = dmem_resp_data_i;
 
 endmodule
-`default_nettype wire
+//`default_nettype wire
 

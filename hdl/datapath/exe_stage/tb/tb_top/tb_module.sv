@@ -45,20 +45,9 @@ module tb_module();
 reg tb_clk_i;
 reg tb_rstn_i;
 
-logic        tb_valid_i;
-logic        tb_kill_i;
-logic        tb_csr_eret_i;
-bus64_t      tb_data_op1_i;
-bus64_t      tb_data_op2_i;
-mem_op_t     tb_mem_op_i;
-mem_format_t tb_mem_format_i;
-amo_op_t     tb_amo_op_i;
-logic [2:0]   tb_funct3_i;
-reg_t        tb_rd_i;
-logic [39:0]       tb_imm_i;
-addr_t   tb_io_base_addr_i;
+addr_t        tb_io_base_addr_i;
 logic         tb_dmem_resp_replay_i;
-bus64_t   tb_dmem_resp_data_i;
+bus64_t       tb_dmem_resp_data_i;
 logic         tb_dmem_req_ready_i;
 logic         tb_dmem_resp_valid_i;
 logic         tb_dmem_resp_nack_i;
@@ -67,38 +56,33 @@ logic         tb_dmem_xcpt_ma_ld_i;
 logic         tb_dmem_xcpt_pf_st_i;
 logic         tb_dmem_xcpt_pf_ld_i;
 
-reg          tb_dmem_req_valid_o;
-reg  [4:0]   tb_dmem_req_cmd_o;
-addr_t   tb_dmem_req_addr_o;
-bus64_t   tb_dmem_op_type_o;
-bus64_t   tb_dmem_req_data_o;
+reg           tb_dmem_req_valid_o;
+reg  [4:0]    tb_dmem_req_cmd_o;
+addr_t        tb_dmem_req_addr_o;
+bus64_t       tb_dmem_op_type_o;
+bus64_t       tb_dmem_req_data_o;
 logic [7:0]   tb_dmem_req_tag_o;
 logic         tb_dmem_req_invalidate_lr_o;
 logic         tb_dmem_req_kill_o;
-logic        tb_ready_o;
-bus64_t      tb_data_o;
-logic        tb_lock_o;
+logic         tb_lock_o;
 
+dec_exe_instr_t     tb_from_dec_i;
+rr_exe_instr_t      tb_from_rr_i;
+wb_exe_instr_t      tb_from_wb_i;
+exe_wb_instr_t      tb_to_wb_o;
 
 //-----------------------------
 // Module
 //-----------------------------
 
-mem_unit module_inst (
+exe_top module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
 
-    .valid_i(tb_valid_i),
-    .kill_i(tb_kill_i),
-    .csr_eret_i(tb_csr_eret_i),
-    .data_op1_i(tb_data_op1_i),
-    .data_op2_i(tb_data_op2_i),
-    .mem_op_i(tb_mem_op_i),
-    .mem_format_i(tb_mem_format_i),
-    .amo_op_i(tb_amo_op_i),
-    .funct3_i(tb_funct3_i),
-    .rd_i(tb_rd_i),
-    .imm_i(tb_imm_i),
+    .from_dec_i(tb_from_dec_i),
+    .from_rr_i(tb_from_rr_i),
+    .from_wb_i(tb_from_wb_i),
+
     .io_base_addr_i(tb_io_base_addr_i),
     .dmem_resp_replay_i(tb_io_base_addr_i),
     .dmem_resp_data_i(tb_dmem_resp_data_i),
@@ -118,9 +102,9 @@ mem_unit module_inst (
     .dmem_req_tag_o(tb_dmem_req_tag_o),
     .dmem_req_invalidate_lr_o(tb_dmem_req_invalidate_lr_o),
     .dmem_req_kill_o(tb_dmem_req_kill_o),
-    .ready_o(tb_ready_o),
-    .data_o(tb_data_o),
-    .lock_o(tb_lock_o)
+    .dmem_lock_o(tb_lock_o),
+
+    .to_wb_o(tb_to_wb_o)
 );
 
 //-----------------------------
@@ -152,17 +136,10 @@ mem_unit module_inst (
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
 
-            tb_valid_i<='{default:0};
-            tb_kill_i<='{default:0};
-            tb_csr_eret_i<='{default:0};
-            tb_data_op1_i<='{default:0};
-            tb_data_op2_i<='{default:0};
-            tb_mem_op_i<='{default:0};
-            tb_mem_format_i<='{default:0};
-            tb_amo_op_i<='{default:0};
-            tb_funct3_i<='{default:0};
-            tb_rd_i<='{default:0};
-            tb_imm_i<='{default:0};
+            tb_from_dec_i<='{default:0};
+            tb_from_rr_i<='{default:0};
+            tb_from_wb_i<='{default:0};
+
             tb_io_base_addr_i<='{default:0};
             tb_dmem_resp_replay_i<='{default:0};
             tb_dmem_resp_data_i<='{default:0};
@@ -182,9 +159,8 @@ mem_unit module_inst (
             tb_dmem_req_tag_o<='{default:0};
             tb_dmem_req_invalidate_lr_o<='{default:0};
             tb_dmem_req_kill_o<='{default:0};
-            tb_ready_o<='{default:0};
-            tb_data_o<='{default:0};
-            tb_lock_o<='{default:0};
+
+            tb_to_wb_o<='{default:0};
             $display("Done");
         end
     endtask
@@ -227,25 +203,11 @@ mem_unit module_inst (
             tmp = 0;
             $random(10);
             for(int i = 0; i < 1000; i++) begin
-                tb_valid_i<=1;
-                tb_kill_i<=0;
-                tb_csr_eret_i<=0;
-                tb_data_op1_i<=57;
-                tb_data_op2_i<=109;
-                tb_mem_op_i<=MEM_LOAD;
-                tb_mem_format_i<=DOUBLEWORD;
-                tb_amo_op_i<=AMO_LR;
-                tb_funct3_i<=0;
-                tb_rd_i<=2;
-                tb_imm_i<=5;
-                tb_dmem_req_ready_i<=1;
+                tb_from_dec_i.functional_unit <= UNIT_ALU;
+                tb_from_dec_i.alu_op <= ALU_ADD;
+                tb_from_dec_i.use_imm <= 0;
+                tb_from_dec_i.imm <= 0;
                 #CLK_PERIOD;
-                #CLK_PERIOD;
-                tb_dmem_req_ready_i<=0;
-                tb_dmem_resp_valid_i<=1;
-                tb_dmem_resp_data_i<=45;
-                #CLK_PERIOD;
-                tb_dmem_resp_valid_i<=0;
                 /*#CLK_HALF_PERIOD;
                 if (tb_div_o != (src1/src2) | tb_rem_o != (src1%src2)) begin
                     tmp = 1;

@@ -140,6 +140,7 @@ typedef enum {
     ALU_AND,
     ALU_MUL,
     ALU_MULH,
+    ALU_MULHSU,
     ALU_MULHS,
     ALU_DIV,
     ALU_DIVU,
