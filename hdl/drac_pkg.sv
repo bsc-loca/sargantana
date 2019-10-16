@@ -201,7 +201,7 @@ typedef struct packed {
     logic valid;
     branch_pred_t bpred;
     exception_t ex;
-} fetch_out_t;
+} if_id_stage_t;
 
 // This is created by decode
 //
