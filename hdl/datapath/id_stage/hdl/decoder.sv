@@ -17,7 +17,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module decoder(
-    input fetch_out_t decode_i,
+    input if_id_stage_t decode_i,
     output instr_entry_t decode_instr_o
 );
 
