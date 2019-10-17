@@ -26,29 +26,30 @@ module exe_top (
     // Response from cache
     input addr_t   io_base_addr_i,
 
-    input wire     dmem_resp_replay_i,
-    input bus64_t  dmem_resp_data_i,
-    input wire     dmem_req_ready_i,
-    input wire     dmem_resp_valid_i,
-    input wire     dmem_resp_nack_i,
-    input wire     dmem_xcpt_ma_st_i,
-    input wire     dmem_xcpt_ma_ld_i,
-    input wire     dmem_xcpt_pf_st_i,
-    input wire     dmem_xcpt_pf_ld_i,
+    input logic     dmem_resp_replay_i,
+    input bus64_t   dmem_resp_data_i,
+    input logic     dmem_req_ready_i,
+    input logic     dmem_resp_valid_i,
+    input logic     dmem_resp_nack_i,
+    input logic     dmem_xcpt_ma_st_i,
+    input logic     dmem_xcpt_ma_ld_i,
+    input logic     dmem_xcpt_pf_st_i,
+    input logic     dmem_xcpt_pf_ld_i,
 
     // OUTPUTS
-    input exe_wb_instr_t to_wb_o,
+    output exe_wb_instr_t to_wb_o,
 
     // Request to cache
-    output wire         dmem_req_valid_o,
-    output bus64_t      dmem_op_type_o,
-    output wire         dmem_req_cmd_o,
-    output bus64_t      dmem_req_data_o,
+    output logic        dmem_req_valid_o,
+    output logic [4:0]  dmem_req_cmd_o,
     output addr_t       dmem_req_addr_o,
-    output wire [7:0]   dmem_req_tag_o,
-    output wire         dmem_req_invalidate_lr_o,
-    output wire         dmem_req_kill_o,
-    output wire         dmem_lock_o
+    output bus64_t      dmem_op_type_o,
+    output bus64_t      dmem_req_data_o,
+    output logic [7:0]  dmem_req_tag_o,
+    output logic        dmem_req_invalidate_lr_o,
+    output logic        dmem_req_kill_o,
+
+    output logic        dmem_lock_o
 );
 
 // Declarations
@@ -56,7 +57,6 @@ bus64_t rs1_data_bypass;
 bus64_t rs2_data_bypass;
 bus64_t rs2_data_def;
 
-bus64_t stall_alu;
 bus64_t result_alu;
 
 logic taken_branch;
@@ -66,22 +66,21 @@ bus64_t reg_data_branch;
 
 logic ready_mem;
 bus64_t result_mem;
-bus64_t stall_mem;
+logic stall_mem;
 
 // Bypasses
 assign rs1_data_bypass = ((from_rr_i.rs1 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
 assign rs2_data_bypass = ((from_rr_i.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
 
-// Select src2 from imm to avoid bypasses
-assign src2_data_def = from_dec_i.use_imm ? from_dec_i.imm : rs2_data_bypass;
+// Select rs2 from imm to avoid bypasses
+assign rs2_data_def = from_dec_i.use_imm ? from_dec_i.imm : rs2_data_bypass;
 
 integer_unit integer_unit_inst (
-    .data_rs1_i     (src1_data_bypass),
-    .data_rs2_i     (src2_data_def),
+    .data_rs1_i     (rs1_data_bypass),
+    .data_rs2_i     (rs2_data_def),
     .alu_op_i       (from_dec_i.alu_op),
 
-    .result_o       (result_alu),
-    .stall_o        (stall_alu)
+    .result_o       (result_alu)
 );
 
 branch_unit branch_unit_inst (

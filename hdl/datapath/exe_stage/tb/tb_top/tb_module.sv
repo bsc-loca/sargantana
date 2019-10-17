@@ -84,7 +84,7 @@ exe_top module_inst (
     .from_wb_i(tb_from_wb_i),
 
     .io_base_addr_i(tb_io_base_addr_i),
-    .dmem_resp_replay_i(tb_io_base_addr_i),
+    .dmem_resp_replay_i(tb_resp_replay_i),
     .dmem_resp_data_i(tb_dmem_resp_data_i),
     .dmem_req_ready_i(tb_dmem_req_ready_i),
     .dmem_resp_valid_i(tb_dmem_resp_valid_i),
@@ -151,16 +151,6 @@ exe_top module_inst (
             tb_dmem_xcpt_pf_st_i<='{default:0};
             tb_dmem_xcpt_pf_ld_i<='{default:0};
 
-            tb_dmem_req_valid_o<='{default:0};
-            tb_dmem_req_cmd_o<='{default:0};
-            tb_dmem_req_addr_o<='{default:0};
-            tb_dmem_op_type_o<='{default:0};
-            tb_dmem_req_data_o<='{default:0};
-            tb_dmem_req_tag_o<='{default:0};
-            tb_dmem_req_invalidate_lr_o<='{default:0};
-            tb_dmem_req_kill_o<='{default:0};
-
-            tb_to_wb_o<='{default:0};
             $display("Done");
         end
     endtask
@@ -201,12 +191,13 @@ exe_top module_inst (
         output int tmp;
         begin
             tmp = 0;
-            $random(10);
             for(int i = 0; i < 1000; i++) begin
                 tb_from_dec_i.functional_unit <= UNIT_ALU;
                 tb_from_dec_i.alu_op <= ALU_ADD;
                 tb_from_dec_i.use_imm <= 0;
                 tb_from_dec_i.imm <= 0;
+                tb_from_rr_i.data_rs1 <= 24;
+                tb_from_rr_i.data_rs2 <= 28;
                 #CLK_PERIOD;
                 /*#CLK_HALF_PERIOD;
                 if (tb_div_o != (src1/src2) | tb_rem_o != (src1%src2)) begin

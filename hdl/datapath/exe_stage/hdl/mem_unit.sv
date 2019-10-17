@@ -26,25 +26,25 @@ module mem_unit (
     input mem_op_t      mem_op_i,
     input mem_format_t  mem_format_i,
     input amo_op_t      amo_op_i,
-    input wire [2:0]    funct3_i,
+    input logic [2:0]   funct3_i,
     input reg_t         rd_i,
-    input logic [39:0]  imm_i,
+    input bus64_t       imm_i,
 
     input  addr_t       io_base_addr_i,
 
     // DCACHE Answer
-    input  wire         dmem_resp_replay_i,
+    input  logic         dmem_resp_replay_i,
     // data read from memory
-    input  bus64_t      dmem_resp_data_i,
+    input  bus64_t       dmem_resp_data_i,
     // dcache ready to recieve a request
-    input  wire         dmem_req_ready_i,
+    input  logic         dmem_req_ready_i,
     // dcache responded
-    input  wire         dmem_resp_valid_i,
-    input  wire         dmem_resp_nack_i,
-    input  wire         dmem_xcpt_ma_st_i,
-    input  wire         dmem_xcpt_ma_ld_i,
-    input  wire         dmem_xcpt_pf_st_i,
-    input  wire         dmem_xcpt_pf_ld_i,
+    input  logic         dmem_resp_valid_i,
+    input  logic         dmem_resp_nack_i,
+    input  logic         dmem_xcpt_ma_st_i,
+    input  logic         dmem_xcpt_ma_ld_i,
+    input  logic         dmem_xcpt_pf_st_i,
+    input  logic         dmem_xcpt_pf_ld_i,
 
     // LOAD/STORE/AMO INTERFACE OUTPUTS TO DCACHE
 
@@ -58,9 +58,9 @@ module mem_unit (
     output bus64_t      dmem_op_type_o,
     // Data to store
     output bus64_t      dmem_req_data_o,
-    output wire [7:0]   dmem_req_tag_o,
-    output wire         dmem_req_invalidate_lr_o,
-    output wire         dmem_req_kill_o,
+    output logic [7:0]  dmem_req_tag_o,
+    output logic        dmem_req_invalidate_lr_o,
+    output logic        dmem_req_kill_o,
 
     // DCACHE Answer to WB
     output logic        ready_o,
@@ -165,7 +165,7 @@ always_comb begin
     endcase
 end
 
-assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i[39:0] : data_rs1_i[39:0] + imm_i;
+assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i[39:0] : data_rs1_i[39:0] + imm_i[39:0];
 assign dmem_op_type_o = {61'b0,funct3_i};
 assign dmem_req_data_o = data_rs2_i;
 assign dmem_req_tag_o = {2'b00,rd_i,1'b0}; //  bit 0 corresponde a int o fp
