@@ -28,6 +28,7 @@ parameter ICACHE_VPN_BITS_SIZE = 28;
 
 typedef logic [63:0] data64_t;
 typedef reg   [63:0] reg64_t;
+typedef logic [127:0] bus128_t;
 typedef logic [63:0] bus64_t;
 typedef logic [31:0] bus32_t;
 
@@ -112,6 +113,8 @@ typedef enum {
 
 typedef enum {
     UNIT_ALU,
+    UNIT_DIV,
+    UNIT_MUL,
     UNIT_BRANCH,
     UNIT_MEM,
     UNIT_CONTROL
@@ -226,6 +229,7 @@ typedef struct packed {
 
 typedef struct packed {
     functional_unit_t functional_unit;
+    logic int_32;
 
     // ALU signals
     alu_op_t alu_op;

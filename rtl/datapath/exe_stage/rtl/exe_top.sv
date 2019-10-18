@@ -58,6 +58,10 @@ bus64_t rs2_data_bypass;
 bus64_t rs2_data_def;
 
 bus64_t result_alu;
+bus64_t result_mul;
+bus64_t result_div;
+bus64_t result_rmd;
+logic stall_div;
 
 logic taken_branch;
 addr_t target_branch;
@@ -81,6 +85,31 @@ integer_unit integer_unit_inst (
     .alu_op_i       (from_dec_i.alu_op),
 
     .result_o       (result_alu)
+);
+
+mul_unit mul_unit_inst (
+    .func3_i   (from_dec_i.funct3),
+    .int_32_i  (from_dec_i.int_32),
+    .rs1_i     (rs1_data_bypass),
+    .rs2_i     (rs2_data_bypass),
+
+    .result_o  (result_mul)
+);
+
+div_unit div_unit_inst (
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
+    .kill_div_i     (kill_i),
+    .request_i      (from_dec_i.functional_unit == UNIT_DIV),
+    .int_32_i       (from_dec_i.int_32),
+    .signed_op_i    (),
+    .dvnd_i         (rs1_data_bypass),
+    .dvsr_i         (rs2_data_def),
+
+    .quo_o          (result_div),
+    .rmd_o          (result_rmd),
+    .stall_o        (stall_div),
+    .done_tick_o    (result_alu)
 );
 
 branch_unit branch_unit_inst (

@@ -1,5 +1,6 @@
-`default_nettype none
-`include "definitions.v"
+import drac_pkg::*;
+//`default_nettype none
+//`include "definitions.v"
 
 /* -----------------------------------------------
  * Project Name   : DRAC
@@ -15,37 +16,38 @@
 
 
 module div_unit (
-    input  wire         clk_i,
-    input  wire         rstn_i,
-    input  wire         kill_div_i,
-    input  wire         request_i,
-    input  wire         int_32_i,
-    input  wire         signed_op_i,
-    input  wire `DATA   dvnd_i,         // rs1
-    input  wire `DATA   dvsr_i,         // rs2
-    output wire `DATA   quo_o,
-    output wire `DATA   rmd_o,
-    output reg          stall_o,        // operation in flight
-    output reg          done_tick_o     // operation finished
+    input  logic          clk_i,
+    input  logic          rstn_i,
+    input  logic          kill_div_i,
+    input  logic          request_i,
+    input  logic          int_32_i,
+    input  logic          signed_op_i,
+    input  bus64_T        dvnd_i,         // rs1
+    input  bus64_T        dvsr_i,         // rs2
+
+    output bus64_t        quo_o,
+    output bus64_t        rmd_o,
+    output logic          stall_o,        // operation in flight
+    output logic          done_tick_o     // operation finished
 );
 
     // Declarations
-    reg [2:0] state_q;
-    reg [2:0] state_d;
-    reg [63:0] rh_q;
-    reg [63:0] rh_d;
-    reg [63:0] rl_q;
-    reg [63:0] rl_d;
-    reg [63:0] rh_tmp;
-    reg [63:0] divisor_q;
-    reg [63:0] divisor_d;
-    reg [64:0] n_q;
-    reg [64:0] n_d;
-    reg q_bit;
-    wire div_zero;
-    wire same_sign;
-    wire `DATA dvnd_def;
-    wire `DATA dvsr_def;
+    logic [2:0] state_q;
+    logic [2:0] state_d;
+    bus64_t rh_q;
+    bus64_t rh_d;
+    bus64_t rl_q;
+    bus64_t rl_d;
+    bus64_t rh_tmp;
+    bus64_t divisor_q;
+    bus64_t divisor_d;
+    logic [64:0] n_q;
+    logic [64:0] n_d;
+    logic q_bit;
+    logic div_zero;
+    logic same_sign;
+    bus64_t dvnd_def;
+    bus64_t dvsr_def;
 
     parameter IDLE = 3'b000,
               OP   = 3'b001,
@@ -153,5 +155,5 @@ module div_unit (
                 ~rh_q + 64'b1 : rh_q) : rh_q)) : 64'b0;
 
 endmodule // divider
-`default_nettype wire
+//`default_nettype wire
 
