@@ -62,7 +62,7 @@ module if_stage(
     // logic branch predictor
 
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst = 32'b0; // TODO: add logic of getting the block
+    assign fetch_o.inst = icache_req_receive_i.data; // TODO: add logic of getting the block
     assign fetch_o.valid = icache_req_receive_i.valid;
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN; // TODO: add bpred
     assign fetch_o.bpred.pred_addr = 40'b0; // TODO: add bpred 

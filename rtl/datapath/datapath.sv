@@ -18,7 +18,7 @@ import riscv_pkg::*;
 module datapath(
     input logic             clk_i,
     input logic             rstn_i,
-    // icache interface anming could be improved
+    // icache interface naming could be improved
     input icache_req_out_t  icache_req_receive_i,
     output icache_req_in_t  icache_req_send_o
 );
@@ -39,8 +39,13 @@ module datapath(
     assign pc_commit_if_int = '0;
     assign next_pc_sel_if_int = NEXT_PC_SEL_PC_4;
     // Pipelines stages data
+    // Fetch
     if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
     if_id_stage_t stage_if_id_q; // this is the next or output of reg
+    // Decode
+    instr_entry_t stage_id_rr_d;
+    instr_entry_t stage_id_rr_q;
+
 
 
     // Instruction Fetch Stage
@@ -63,13 +68,20 @@ module datapath(
         .output_o(stage_if_id_q)
     );
 
-    /*decode id_decode(
+    decoder id_decode_inst(
+        .decode_i(stage_if_id_q),
+        .decode_instr_o(stage_id_rr_d)
     );
 
-    register reg_id(
+    register #($bits(instr_entry_t)) reg_id_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .load_i(!stall_id_int),
+        .input_i(stage_id_rr_d),
+        .output_o(stage_id_rr_q)
     );
 
-    read_reg read_reg(
+    /*read_reg read_reg(
     );
 
     register reg_rr(
