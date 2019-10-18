@@ -4,7 +4,7 @@
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
 * Email(s)       : guillem.lopez@bsc.es
-* References     : 
+* References     : TODO add link to ISA chapter etc..
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description
@@ -15,19 +15,20 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
+// TODO add description
 module immediate(
-	input riscv_pkg::instruction_t instr_i,
-	output data64_t imm_o
+    input riscv_pkg::instruction_t instr_i,
+    output bus64_t imm_o
 );
-	data64_t imm_itype;
-    data64_t imm_stype;
-    data64_t imm_btype;
-    data64_t imm_utype;
-	data64_t imm_jtype;
-    data64_t imm_uitype;
+    bus64_t imm_itype;
+    bus64_t imm_stype;
+    bus64_t imm_btype;
+    bus64_t imm_utype;
+    bus64_t imm_jtype;
+    bus64_t imm_uitype;
     //TODO immediate of CSR
 
-	assign imm_itype = {{52{instr_i[31]}}, instr_i.itype.imm};
+    assign imm_itype = {{52{instr_i[31]}}, instr_i.itype.imm};
     
     assign imm_stype = {{52{instr_i[31]}}, instr_i.stype.imm5, instr_i.stype.imm0};
     
