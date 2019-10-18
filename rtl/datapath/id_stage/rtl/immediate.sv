@@ -17,7 +17,7 @@ import riscv_pkg::*;
 
 // TODO add description
 module immediate(
-    input riscv_pkg::instruction_t instr_i,
+    input instruction_t instr_i,
     output bus64_t imm_o
 );
     bus64_t imm_itype;

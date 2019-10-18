@@ -31,10 +31,14 @@ module decoder(
 
     always_comb begin
         illegal_instruction = 1'b0;
+
         decode_instr_o.pc = decode_i.pc_inst;
         decode_instr_o.bpred = decode_i.bpred;
         // TODO: how to handle exceptions
-        // decode_instr_o.ex;
+        decode_instr_o.ex.cause = NONE;
+        decode_instr_o.ex.origin = 'h0;
+        decode_instr_o.ex.valid = 'h0;
+        decode_instr_o.valid = decode_i.valid;
         // Registers sources
         decode_instr_o.rs1 = decode_i.inst.common.rs1;
         decode_instr_o.rs2 = decode_i.inst.common.rs2;
@@ -46,6 +50,9 @@ module decoder(
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
+
+        decode_instr_o.instr_type = ADD;
+
         
         decode_instr_o.alu_op = ALU_ADD;
         decode_instr_o.unit   = UNIT_ALU;

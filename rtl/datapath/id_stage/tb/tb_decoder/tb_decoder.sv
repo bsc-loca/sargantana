@@ -42,7 +42,7 @@ module tb_decoder();
     reg tb_clk_i;
     reg tb_rstn_i;
 
-    fetch_out_t tb_decode_i;
+    if_id_stage_t tb_decode_i;
     instr_entry_t tb_decode_instr_o;
 
 

@@ -1,7 +1,7 @@
 $1
 CYCLES=20
-DRAC_FOLDER="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/hdl"
-DECODER="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/hdl/datapath/id_stage/hdl"
+DRAC_FOLDER="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl"
+DECODER="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl/datapath/id_stage/rtl"
 
 mv lib_decoder /tmp
 
