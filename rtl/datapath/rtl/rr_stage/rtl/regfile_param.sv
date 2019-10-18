@@ -12,11 +12,10 @@
 * -----------------------------------------------
 */
 
-//`default_nettype none
 import drac_pkg::*;
 import riscv_pkg::*;
 
-module regfile #(
+module regfile_param #(
     parameter int unsigned READ_PORTS  = 2,
     parameter int unsigned WRITE_PORTS = 1,
     // By default we use 64 bit operands
@@ -36,6 +35,6 @@ module regfile #(
     input logic [READ_PORTS-1:0][DATA_SIZE-1:0]     read_data_o
 );
 
-// Register
+// Register TODO
 
 endmodule
