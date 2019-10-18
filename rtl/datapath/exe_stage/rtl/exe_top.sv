@@ -38,6 +38,7 @@ module exe_top (
 
     // OUTPUTS
     output exe_wb_instr_t to_wb_o,
+    output logic stall_o,
 
     // Request to cache
     output logic        dmem_req_valid_o,
@@ -59,9 +60,12 @@ bus64_t rs2_data_def;
 
 bus64_t result_alu;
 bus64_t result_mul;
+logic stall_mul;
+logic ready_mul;
 bus64_t result_div;
 bus64_t result_rmd;
 logic stall_div;
+logic ready_div;
 
 logic taken_branch;
 addr_t target_branch;
@@ -88,12 +92,18 @@ integer_unit integer_unit_inst (
 );
 
 mul_unit mul_unit_inst (
-    .func3_i   (from_dec_i.funct3),
-    .int_32_i  (from_dec_i.int_32),
-    .rs1_i     (rs1_data_bypass),
-    .rs2_i     (rs2_data_bypass),
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
+    .kill_mul_i     (kill_i),
+    .request_i      (from_dec_i.functional_unit == UNIT_MUL),
+    .func3_i        (from_dec_i.funct3),
+    .int_32_i       (from_dec_i.int_32),
+    .src1_i         (rs1_data_bypass),
+    .src2_i         (rs2_data_bypass),
 
-    .result_o  (result_mul)
+    .result_o       (result_mul),
+    .stall_o        (stall_mul),
+    .done_tick_o    (ready_mul)
 );
 
 div_unit div_unit_inst (
@@ -102,14 +112,14 @@ div_unit div_unit_inst (
     .kill_div_i     (kill_i),
     .request_i      (from_dec_i.functional_unit == UNIT_DIV),
     .int_32_i       (from_dec_i.int_32),
-    .signed_op_i    (),
+    .signed_op_i    (from_dec_i.mul_op == ALU_DIV | from_dec_i.mul_op == ALU_REM),
     .dvnd_i         (rs1_data_bypass),
     .dvsr_i         (rs2_data_def),
 
     .quo_o          (result_div),
     .rmd_o          (result_rmd),
     .stall_o        (stall_div),
-    .done_tick_o    (result_alu)
+    .done_tick_o    (ready_div)
 );
 
 branch_unit branch_unit_inst (
@@ -180,27 +190,29 @@ mem_unit mem_unit_inst (
 always_comb begin
     case(from_dec_i.functional_unit)
         UNIT_ALU: begin
-            to_wb_o.rd = from_dec_i.rd;
             to_wb_o.result_rd = result_alu;
             to_wb_o.result_pc = 0;
         end
         UNIT_BRANCH: begin
-            to_wb_o.rd = from_dec_i.rd;
             to_wb_o.result_rd = reg_data_branch;
             to_wb_o.result_pc = result_branch;
         end
         UNIT_MEM: begin
-            to_wb_o.rd = from_dec_i.rd;
             to_wb_o.result_rd = result_mem;
             to_wb_o.result_pc = 0;
         end
         default: begin
-            to_wb_o.rd = 0;
             to_wb_o.result_rd = 0;
             to_wb_o.result_pc = 0;
         end
     endcase
 end
+
+assign to_wb_o.rd = from_dec_i.rd;
+assign stall_o = (from_dec_i.functional_unit == UNIT_MUL) ? stall_mul :
+                 (from_dec_i.functional_unit == UNIT_DIV) ? stall_div :
+                 (from_dec_i.functional_unit == UNIT_MEM) ? stall_mem :
+                 0;
 
 endmodule
 

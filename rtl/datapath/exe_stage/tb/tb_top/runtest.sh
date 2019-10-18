@@ -7,7 +7,7 @@ mv lib_module /tmp
 
 vlib lib_module
 vmap work $PWD/lib_module
-vlog +acc=rn +incdir+ ${TOP_DIR}hdl/riscv_pkg.sv ${TOP_DIR}hdl/drac_pkg.sv ${TOP_DIR}hdl/datapath/exe_stage/hdl/exe_top.sv ${TOP_DIR}hdl/datapath/exe_stage/hdl/integer_unit.sv ${TOP_DIR}hdl/datapath/exe_stage/hdl/branch_unit.sv ${TOP_DIR}hdl/datapath/exe_stage/hdl/mem_unit.sv tb_module.sv colors.vh
+vlog +acc=rn +incdir+ ${TOP_DIR}rtl/riscv_pkg.sv ${TOP_DIR}rtl/drac_pkg.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/exe_top.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/integer_unit.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/mul_unit.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/div_unit.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/branch_unit.sv ${TOP_DIR}rtl/datapath/exe_stage/rtl/mem_unit.sv tb_module.sv colors.vh
 vmake lib_module/ > Makefile
 
 #vsim work.tb_module -do  "view wave -new" -do "do wave.do" -do "run 20"

@@ -22,8 +22,8 @@ module div_unit (
     input  logic          request_i,
     input  logic          int_32_i,
     input  logic          signed_op_i,
-    input  bus64_T        dvnd_i,         // rs1
-    input  bus64_T        dvsr_i,         // rs2
+    input  bus64_t        dvnd_i,         // rs1
+    input  bus64_t        dvsr_i,         // rs2
 
     output bus64_t        quo_o,
     output bus64_t        rmd_o,

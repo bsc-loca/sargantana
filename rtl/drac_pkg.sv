@@ -270,6 +270,7 @@ typedef struct packed {
 
     // ALU signals
     alu_op_t alu_op;
+    mul_op_t mul_op;
     logic use_imm;
     bus64_t imm;
 
