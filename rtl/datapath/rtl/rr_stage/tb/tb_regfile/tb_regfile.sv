@@ -115,7 +115,7 @@ module tb_regfile();
     task automatic init_dump;
         begin
             $display("*** init_dump");
-            $dumpfile("tb_icache_interface.vcd");
+            $dumpfile("dump_file.vcd");
             $dumpvars(0,regfile_inst);
         end
     endtask

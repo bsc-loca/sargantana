@@ -1,6 +1,6 @@
 *.swp
 *.tmp
-dum_file.vcd
+dump_file.vcd
 lib_module/
 modelsim.ini
 transcript
