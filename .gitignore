@@ -1,3 +1,4 @@
+*.swp
 *.tmp
 dum_file.vcd
 lib_module/

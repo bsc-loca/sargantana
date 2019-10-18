@@ -1,9 +1,6 @@
 /************************************************************************/
-/* LAGARTO CONFIGURATION FILE	   									    */
+/* DRAC CONFIGURATION FILE	   									    */
 /************************************************************************/
-`ifndef INCISIVE_SIMULATION
-`define SYNTHESIS     
-`endif
 
 `define LOW  	1'b0
 `define HIGH 	1'b1
@@ -11,7 +8,6 @@
 `define WORD_WIDTH_DATA   64								
 `define WORD_ZERO_64 	  64'b0
 `define WORD_ONE_64 	  64'b1
-`define WORD_DATA          [`WORD_WIDTH_DATA-1:0]
 
 `define WORD_WIDTH_INS    32								
 `define WORD_ZERO_32 	  32'b0
@@ -23,10 +19,8 @@
 
 `define WORD_ZERO_128 	  128'b0	
 `define CACHE_LINE_WIDTH  128									
-`define CACHE_LINE_SIZE   [`CACHE_LINE_WIDTH-1:0]
 
 `define SIZE   			  4									
-`define DATA_SIZE         [`SIZE-1:0]
 								
 `define NOP_INSTRUCTION   32'h00000000
 
