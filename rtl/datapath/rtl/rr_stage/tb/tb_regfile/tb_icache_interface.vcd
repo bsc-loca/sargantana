@@ -1,0 +1,231 @@
+$date
+	Wed Oct 16 17:07:18 2019
+$end
+$version
+	QuestaSim Version 10.7c
+$end
+$timescale
+	1ns
+$end
+
+$scope module tb_regfile $end
+
+$scope module regfile_inst $end
+$var wire 1 ! clk_i $end
+$var wire 1 " rstn_i $end
+$var wire 1 # write_enable_i $end
+$var wire 1 $ write_addr_i [4] $end
+$var wire 1 % write_addr_i [3] $end
+$var wire 1 & write_addr_i [2] $end
+$var wire 1 ' write_addr_i [1] $end
+$var wire 1 ( write_addr_i [0] $end
+$var wire 1 ) write_data_i [63] $end
+$var wire 1 * write_data_i [62] $end
+$var wire 1 + write_data_i [61] $end
+$var wire 1 , write_data_i [60] $end
+$var wire 1 - write_data_i [59] $end
+$var wire 1 . write_data_i [58] $end
+$var wire 1 / write_data_i [57] $end
+$var wire 1 0 write_data_i [56] $end
+$var wire 1 1 write_data_i [55] $end
+$var wire 1 2 write_data_i [54] $end
+$var wire 1 3 write_data_i [53] $end
+$var wire 1 4 write_data_i [52] $end
+$var wire 1 5 write_data_i [51] $end
+$var wire 1 6 write_data_i [50] $end
+$var wire 1 7 write_data_i [49] $end
+$var wire 1 8 write_data_i [48] $end
+$var wire 1 9 write_data_i [47] $end
+$var wire 1 : write_data_i [46] $end
+$var wire 1 ; write_data_i [45] $end
+$var wire 1 < write_data_i [44] $end
+$var wire 1 = write_data_i [43] $end
+$var wire 1 > write_data_i [42] $end
+$var wire 1 ? write_data_i [41] $end
+$var wire 1 @ write_data_i [40] $end
+$var wire 1 A write_data_i [39] $end
+$var wire 1 B write_data_i [38] $end
+$var wire 1 C write_data_i [37] $end
+$var wire 1 D write_data_i [36] $end
+$var wire 1 E write_data_i [35] $end
+$var wire 1 F write_data_i [34] $end
+$var wire 1 G write_data_i [33] $end
+$var wire 1 H write_data_i [32] $end
+$var wire 1 I write_data_i [31] $end
+$var wire 1 J write_data_i [30] $end
+$var wire 1 K write_data_i [29] $end
+$var wire 1 L write_data_i [28] $end
+$var wire 1 M write_data_i [27] $end
+$var wire 1 N write_data_i [26] $end
+$var wire 1 O write_data_i [25] $end
+$var wire 1 P write_data_i [24] $end
+$var wire 1 Q write_data_i [23] $end
+$var wire 1 R write_data_i [22] $end
+$var wire 1 S write_data_i [21] $end
+$var wire 1 T write_data_i [20] $end
+$var wire 1 U write_data_i [19] $end
+$var wire 1 V write_data_i [18] $end
+$var wire 1 W write_data_i [17] $end
+$var wire 1 X write_data_i [16] $end
+$var wire 1 Y write_data_i [15] $end
+$var wire 1 Z write_data_i [14] $end
+$var wire 1 [ write_data_i [13] $end
+$var wire 1 \ write_data_i [12] $end
+$var wire 1 ] write_data_i [11] $end
+$var wire 1 ^ write_data_i [10] $end
+$var wire 1 _ write_data_i [9] $end
+$var wire 1 ` write_data_i [8] $end
+$var wire 1 a write_data_i [7] $end
+$var wire 1 b write_data_i [6] $end
+$var wire 1 c write_data_i [5] $end
+$var wire 1 d write_data_i [4] $end
+$var wire 1 e write_data_i [3] $end
+$var wire 1 f write_data_i [2] $end
+$var wire 1 g write_data_i [1] $end
+$var wire 1 h write_data_i [0] $end
+$var wire 1 i read_addr1_i [4] $end
+$var wire 1 j read_addr1_i [3] $end
+$var wire 1 k read_addr1_i [2] $end
+$var wire 1 l read_addr1_i [1] $end
+$var wire 1 m read_addr1_i [0] $end
+$var wire 1 n read_addr2_i [4] $end
+$var wire 1 o read_addr2_i [3] $end
+$var wire 1 p read_addr2_i [2] $end
+$var wire 1 q read_addr2_i [1] $end
+$var wire 1 r read_addr2_i [0] $end
+$var reg 64 s read_data1_o [63:0] $end
+$var reg 64 t read_data2_o [63:0] $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+$dumpvars
+b0 s
+b0 t
+0r
+0q
+0p
+0o
+0n
+0m
+0l
+0k
+0j
+0i
+0h
+0g
+0f
+0e
+0d
+0c
+0b
+0a
+0`
+0_
+0^
+0]
+0\
+0[
+0Z
+0Y
+0X
+0W
+0V
+0U
+0T
+0S
+0R
+0Q
+0P
+0O
+0N
+0M
+0L
+0K
+0J
+0I
+0H
+0G
+0F
+0E
+0D
+0C
+0B
+0A
+0@
+0?
+0>
+0=
+0<
+0;
+0:
+09
+08
+07
+06
+05
+04
+03
+02
+01
+00
+0/
+0.
+0-
+0,
+0+
+0*
+0)
+0(
+0'
+0&
+0%
+0$
+0#
+0"
+1!
+$end
+#1
+0!
+#2
+1!
+1"
+#3
+0!
+#4
+1!
+#5
+0!
+#6
+1#
+1h
+1(
+1!
+#7
+0!
+#8
+1!
+#9
+0!
+#10
+1!
+#11
+0!
+#12
+1!
+#13
+0!
+#14
+1!
+#15
+0!
+#16
+1!
+#17
+0!
+#18
+1!
+#19
+0!
+#20
+1!
