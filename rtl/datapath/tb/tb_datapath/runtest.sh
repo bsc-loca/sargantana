@@ -1,11 +1,12 @@
 $1
 CYCLES=20
-DRAC_FOLDER="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl"
-IF_STAGE="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl/datapath/rtl/if_stage/rtl"
-ID_STAGE="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl/datapath/rtl/id_stage/rtl"
-RR_STAGE="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl/datapath/rtl/rr_stage/rtl"
-DATAPATH="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/rtl/datapath/rtl"
-INCLUDES="/home/glopez/MIRI/Q4/PD/lab/drac-inorder/includes"
+BASE_DIR="../../../.."
+DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
+IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"
+ID_STAGE="${BASE_DIR}/rtl/datapath/rtl/id_stage/rtl"
+RR_STAGE="${BASE_DIR}/rtl/datapath/rtl/rr_stage/rtl"
+DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
+INCLUDES="${BASE_DIR}/includes"
 
 mv lib_module /tmp
 
