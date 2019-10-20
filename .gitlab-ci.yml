@@ -5,8 +5,9 @@ before_script:
   - apt install verilator -y
 
 stages:
-  - lint
+  - generate
 
-lint:
-    script:
-      - make
+generate:verilog:
+  stage: generate
+  script:
+    - make
