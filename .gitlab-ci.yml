@@ -1,6 +1,12 @@
+image: localhost:5000/lagarto-develop:latest
+
 before_script:
   - apt update
   - apt install verilator -y
 
-script:
-  - make
+stages:
+  - generate
+
+lint:
+    script:
+      - make
