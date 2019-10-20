@@ -1,0 +1,6 @@
+before_script:
+  - apt update
+  - apt install verilator -y
+
+script:
+  - make
