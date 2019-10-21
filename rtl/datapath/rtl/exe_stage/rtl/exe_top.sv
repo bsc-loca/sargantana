@@ -50,7 +50,7 @@ module exe_top (
     output logic        dmem_req_invalidate_lr_o,
     output logic        dmem_req_kill_o,
 
-    output logic        dmem_lock_o
+    output logic        dmem_lock_o // TODO connect
 );
 
 // Declarations
