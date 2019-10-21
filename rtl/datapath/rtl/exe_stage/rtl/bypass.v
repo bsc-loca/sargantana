@@ -1,6 +1,3 @@
-`default_nettype none
-`include "definitions.v"
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : bypass.v
@@ -13,6 +10,8 @@
  * -----------------------------------------------
  */
 
+`default_nettype none
+`include "definitions.v"
 
 module bypass (
     input  [4:0]      exe_src_i,

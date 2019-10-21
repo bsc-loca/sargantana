@@ -1,6 +1,3 @@
-`default_nettype none
-`include "definitions.v"
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : mem_unit.v
@@ -13,6 +10,8 @@
  * -----------------------------------------------
  */
 
+`default_nettype none
+`include "definitions.v"
 
 module mem_unit (
     input  wire         clk_i,

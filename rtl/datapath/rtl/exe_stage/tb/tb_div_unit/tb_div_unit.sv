@@ -20,10 +20,10 @@
 //-----------------------------
 
 `timescale 1 ns / 1 ns
-`default_nettype none
+//`default_nettype none
 
 `include "colors.vh"
-`include "../definitions.v"
+//`include "../definitions.v"
 
 module tb_div_unit();
 
@@ -48,10 +48,10 @@ logic tb_kill_div_i;
 logic tb_request_i;
 logic tb_int_32_i;
 logic tb_signed_op_i;
-logic `DATA tb_src1_i;
-logic `DATA tb_src2_i;
-reg `DATA tb_quo_o;
-reg `DATA tb_rmd_o;
+bus64_t tb_src1_i;
+bus64_t tb_src2_i;
+bus64_t tb_quo_o;
+bus64_t tb_rmd_o;
 reg tb_stall_o;
 reg tb_done_o;
 
@@ -196,4 +196,4 @@ div_unit module_inst (
 
 
 endmodule
-`default_nettype wire
+//`default_nettype wire

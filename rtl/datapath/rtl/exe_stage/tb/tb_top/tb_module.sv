@@ -161,7 +161,7 @@ exe_top module_inst (
     task automatic init_dump;
         begin
             $display("*** init_dump");
-            $dumpfile("dum_file.vcd");
+            $dumpfile("dump_file.vcd");
             $dumpvars(0,module_inst);
         end
     endtask

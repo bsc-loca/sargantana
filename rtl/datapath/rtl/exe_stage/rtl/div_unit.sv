@@ -1,7 +1,3 @@
-import drac_pkg::*;
-//`default_nettype none
-//`include "definitions.v"
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : div_unit.v
@@ -14,6 +10,9 @@ import drac_pkg::*;
  * -----------------------------------------------
  */
 
+import drac_pkg::*;
+//`default_nettype none
+//`include "definitions.v"
 
 module div_unit (
     input  logic          clk_i,
