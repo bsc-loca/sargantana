@@ -19,29 +19,13 @@ module datapath(
     input logic             clk_i,
     input logic             rstn_i,
     input logic             soft_rstn_i,
-    // icache interface naming could be improved
-    input icache_req_out_t  icache_req_receive_i,
-    output icache_req_in_t  icache_req_send_o,
+    // icache/dcache interface
+    // naming could be improved
+    input req_icache_cpu_t  req_icache_cpu_i,
+    input req_dcache_cpu_t  req_dcache_cpu_i,
 
-    // dcache interface for execution
-    input logic     dmem_resp_replay_i,
-    input bus64_t   dmem_resp_data_i,
-    input logic     dmem_req_ready_i,
-    input logic     dmem_resp_valid_i,
-    input logic     dmem_resp_nack_i,
-    input logic     dmem_xcpt_ma_st_i,
-    input logic     dmem_xcpt_ma_ld_i,
-    input logic     dmem_xcpt_pf_st_i,
-    input logic     dmem_xcpt_pf_ld_i,
-    output logic        dmem_req_valid_o,
-    output logic [4:0]  dmem_req_cmd_o,
-    output addr_t       dmem_req_addr_o,
-    output bus64_t      dmem_op_type_o,
-    output bus64_t      dmem_req_data_o,
-    output logic [7:0]  dmem_req_tag_o,
-    output logic        dmem_req_invalidate_lr_o,
-    output logic        dmem_req_kill_o,
-    output logic        dmem_lock_o
+    output req_cpu_dcache_t req_cpu_dcache_o, 
+    output req_cpu_icache_t req_cpu_icache_o
 
 );
 
@@ -69,12 +53,23 @@ module datapath(
     // Decode
     instr_entry_t stage_id_rr_d;
     instr_entry_t stage_id_rr_q;
+    // RR
+    rr_exe_instr_t stage_rr_exe_d;
+    rr_exe_instr_t stage_rr_exe_q;
+    // EXE
+    exe_wb_instr_t stage_exe_wb_d;
+    exe_wb_instr_t stage_exe_wb_q;
+    // WB->Commit
+    exe_wb_instr_t stage_commit;
 
+
+    // Exe
     logic stall_exe_out;
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
+    // this can be inserted to rr_exe
     dec_wb_instr_t dec_to_wb_exe;
-    dec_wb_instr_t dec_to_wb_wb
+    dec_wb_instr_t dec_to_wb_wb;
 
     dec_exe_instr_t dec_to_exe_exe;
     rr_exe_instr_t rr_to_exe_exe;
@@ -82,28 +77,34 @@ module datapath(
 
     reg_addr_t io_base_addr;
 
-    always@(posedge clk)
-    begin
-    if(~soft_rstn_i)
-        io_base_addr <=  40'h0080000000;
-    else if(~rstn_i)
+
+    // What is this????
+    // TODO: Ruben
+    always_ff @(posedge clk_i) begin
+        // What is that?????
+        //if(~soft_rstn_i)
+        if(!rstn_i) begin
+            io_base_addr <=  40'h0080000000;
+        end else if(~rstn_i) begin
             io_base_addr <=  40'h0040000000;
-        else
+        end else begin 
             io_base_addr <= io_base_addr;
+        end
     end
 
-    // Instruction Fetch Stage
+    // IF Stage
     if_stage if_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .stall_i(stall_if_int),
         .next_pc_sel_i(next_pc_sel_if_int),
         .pc_commit_i(pc_commit_if_int),
-        .icache_req_receive_i(icache_req_receive_i),
-        .icache_req_send_o(icache_req_send_o),
+        .req_icache_cpu_i(req_icache_cpu_i),
+        .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_id_d)
     );
 
+    // Register IF to ID
     register #($bits(if_id_stage_t)) reg_if_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -112,11 +113,13 @@ module datapath(
         .output_o(stage_if_id_q)
     );
 
+    // ID Stage
     decoder id_decode_inst(
         .decode_i(stage_if_id_q),
         .decode_instr_o(stage_id_rr_d)
     );
 
+    // Register ID to RR
     register #($bits(instr_entry_t)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -125,11 +128,50 @@ module datapath(
         .output_o(stage_id_rr_q)
     );
 
-    /*read_reg read_reg(
+    // RR Stage
+    regfile rr_stage_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .write_enable_i(1'b0),
+        .write_addr_i(5'b0),
+        .write_data_i(64'b0),
+        .read_addr1_i(stage_id_rr_q.rs1),
+        .read_addr2_i(stage_id_rr_q.rs2),
+        .read_data1_o(stage_rr_exe_d.data_rs1),
+        .read_data2_o(stage_rr_exe_d.data_rs2)
     );
 
-    register reg_rr(
-    );*/
+    assign stage_rr_exe_d.rs1 = stage_id_rr_q.rs1;
+    assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
+    assign stage_rr_exe_d.instr = stage_id_rr_q;
+
+    // Register RR to EXE
+    register #($bits(stage_rr_exe_d)) reg_rr_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .load_i(!stall_rr_int),
+        .input_i(stage_rr_exe_d),
+        .output_o(stage_rr_exe_q)
+    );
+
+    // Workaround
+    // This can be definetaly be thought again
+    // TODO: Guillem and Ruben fix this mess
+    assign dec_to_exe_exe.functional_unit   = stage_rr_exe_q.instr.unit;
+    assign dec_to_exe_exe.int_32            = stage_rr_exe_q.instr.op_32;
+    assign dec_to_exe_exe.alu_op            = stage_rr_exe_q.instr.alu_op;
+    assign dec_to_exe_exe.mul_op            = ALU_REMU;//stage_rr_exe_q.instr.mul_op;
+    assign dec_to_exe_exe.use_imm           = stage_rr_exe_q.instr.use_imm;
+    assign dec_to_exe_exe.imm               = stage_rr_exe_q.instr.result;
+    assign dec_to_exe_exe.ctrl_xfer_op      = CT_JAL;//stage_rr_exe_q.instr.;
+    assign dec_to_exe_exe.branch_op         = B_NE;//stage_rr_exe_q.instr;
+    assign dec_to_exe_exe.pc                = stage_rr_exe_q.instr.pc;
+    assign dec_to_exe_exe.mem_op            = MEM_LOAD;//stage_rr_exe_q.instr.
+    assign dec_to_exe_exe.funct3            = STORE_SH;//stage_rr_exe_q.instr.;
+    assign dec_to_exe_exe.mem_format        = BYTE;//stage_rr_exe_q.instr.;
+    assign dec_to_exe_exe.amo_op            = AMO_SC;//stage_rr_exe_q.instr.;
+    assign dec_to_exe_exe.rd                = stage_rr_exe_q.instr.rd;
+
 
     exe_top exe_stage_inst(
         .clk_i(clk_i),
@@ -140,28 +182,28 @@ module datapath(
         .from_wb_i(wb_to_exe_exe),
 
         .io_base_addr_i(io_base_addr),
-        .dmem_resp_replay_i(dmem_resp_replay_i),
-        .dmem_resp_data_i(dmem_resp_data_i),
-        .dmem_req_ready_i(dmem_req_ready_i),
-        .dmem_resp_valid_i(dmem_resp_valid_i),
-        .dmem_resp_nack_i(dmem_resp_nack_i),
-        .dmem_xcpt_ma_st_i(dmem_xcpt_ma_st_i),
-        .dmem_xcpt_ma_ld_i(dmem_xcpt_ma_ld_i),
-        .dmem_xcpt_pf_st_i(dmem_xcpt_pf_st_i),
-        .dmem_xcpt_pf_ld_i(dmem_xcpt_pf_ld_i),
+        .dmem_resp_replay_i(req_dcache_cpu_i.dmem_resp_replay_i),
+        .dmem_resp_data_i(req_dcache_cpu_i.dmem_resp_data_i),
+        .dmem_req_ready_i(req_dcache_cpu_i.dmem_req_ready_i),
+        .dmem_resp_valid_i(req_dcache_cpu_i.dmem_resp_valid_i),
+        .dmem_resp_nack_i(req_dcache_cpu_i.dmem_resp_nack_i),
+        .dmem_xcpt_ma_st_i(req_dcache_cpu_i.dmem_xcpt_ma_st_i),
+        .dmem_xcpt_ma_ld_i(req_dcache_cpu_i.dmem_xcpt_ma_ld_i),
+        .dmem_xcpt_pf_st_i(req_dcache_cpu_i.dmem_xcpt_pf_st_i),
+        .dmem_xcpt_pf_ld_i(req_dcache_cpu_i.dmem_xcpt_pf_ld_i),
 
         .to_wb_o(exe_to_wb_exe),
         .stall_o(stall_exe_out),
 
-        .dmem_req_valid_o   (dmem_req_valid_o),
-        .dmem_req_cmd_o     (dmem_req_cmd_o),
-        .dmem_req_addr_o    (dmem_req_addr_o),
-        .dmem_op_type_o     (dmem_op_type_o),
-        .dmem_req_data_o    (dmem_req_data_o),
-        .dmem_req_tag_o     (dmem_req_tag_o),
-        .dmem_req_invalidate_lr_o(dmem_req_invalidate_lr_o),
-        .dmem_req_kill_o(dmem_req_kill_o),
-        .dmem_lock_o(dmem_lock_o)
+        .dmem_req_valid_o   (req_cpu_dcache_o.dmem_req_valid_o),
+        .dmem_req_cmd_o     (req_cpu_dcache_o.dmem_req_cmd_o),
+        .dmem_req_addr_o    (req_cpu_dcache_o.dmem_req_addr_o),
+        .dmem_op_type_o     (req_cpu_dcache_o.dmem_op_type_o),
+        .dmem_req_data_o    (req_cpu_dcache_o.dmem_req_data_o),
+        .dmem_req_tag_o     (req_cpu_dcache_o.dmem_req_tag_o),
+        .dmem_req_invalidate_lr_o(req_cpu_dcache_o.dmem_req_invalidate_lr_o),
+        .dmem_req_kill_o(req_cpu_dcache_o.dmem_req_kill_o),
+        .dmem_lock_o(req_cpu_dcache_o.dmem_lock_o)
     );
 
     register #($bits(dec_wb_instr_t)+$bits(exe_wb_instr_t)) reg_exe_inst(

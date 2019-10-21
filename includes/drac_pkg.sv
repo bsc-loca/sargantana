@@ -93,13 +93,41 @@ typedef struct packed {
     inst_t data;
     //addr_t req_addr; I think it is not completely necessary
     exception_t ex;
-} icache_req_out_t;
+} req_icache_cpu_t;
 
 // Req send to ICache
 typedef struct packed {
     logic  valid;
     addr_t vaddr;
-} icache_req_in_t;
+} req_cpu_icache_t;
+
+// dcache response
+// explain what is everything
+typedef struct packed {
+    logic     dmem_resp_replay_i;
+    bus64_t   dmem_resp_data_i;
+    logic     dmem_req_ready_i;
+    logic     dmem_resp_valid_i;
+    logic     dmem_resp_nack_i;
+    logic     dmem_xcpt_ma_st_i;
+    logic     dmem_xcpt_ma_ld_i;
+    logic     dmem_xcpt_pf_st_i;
+    logic     dmem_xcpt_pf_ld_i;
+} req_dcache_cpu_t;
+
+// dcache access
+// TODO: explain magic numbers
+typedef struct packed {
+    logic        dmem_req_valid_o;
+    logic [4:0]  dmem_req_cmd_o;
+    addr_t       dmem_req_addr_o;
+    bus64_t      dmem_op_type_o;
+    bus64_t      dmem_req_data_o;
+    logic [7:0]  dmem_req_tag_o;
+    logic        dmem_req_invalidate_lr_o;
+    logic        dmem_req_kill_o;
+    logic        dmem_lock_o;
+} req_cpu_dcache_t;
 
 typedef enum {
     SEL_SRC1_REGFILE,
@@ -253,13 +281,17 @@ typedef struct packed {
     reg_t rs1;
     reg_t rs2;
     reg_t rd;
-    logic regfile_we;
-    reg_sel_t regfile_w_sel;
+    
     logic use_imm;
     logic use_pc;
+    logic op_32;
     alu_op_t alu_op;
     functional_unit_t unit;
+    // control bits
     logic change_pc_ena;
+    logic regfile_we;
+    reg_sel_t regfile_w_sel;
+    // future
     instr_type_t instr_type;
     bus64_t result; // it can be used as the immediate
 } instr_entry_t;
@@ -281,6 +313,7 @@ typedef struct packed {
 
     // Memory unit signals
     mem_op_t mem_op;
+    // BAD NAMING FUNCT3
     logic [2:0] funct3;
     mem_format_t mem_format;
     amo_op_t amo_op;
@@ -293,6 +326,7 @@ typedef struct packed {
 } dec_wb_instr_t;
 
 typedef struct packed {
+    instr_entry_t instr;
     reg_t rs1;
     bus64_t data_rs1;
     reg_t rs2;

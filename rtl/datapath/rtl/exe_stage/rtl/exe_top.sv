@@ -83,7 +83,7 @@ assign rs2_data_bypass = ((from_rr_i.rs2 == from_wb_i.rd) & from_wb_i.valid) ? f
 // Select rs2 from imm to avoid bypasses
 assign rs2_data_def = from_dec_i.use_imm ? from_dec_i.imm : rs2_data_bypass;
 
-integer_unit integer_unit_inst (
+alu alu_inst (
     .data_rs1_i     (rs1_data_bypass),
     .data_rs2_i     (rs2_data_def),
     .alu_op_i       (from_dec_i.alu_op),

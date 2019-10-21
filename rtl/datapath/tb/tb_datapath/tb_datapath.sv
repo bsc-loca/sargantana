@@ -42,8 +42,8 @@ module tb_datapath();
     reg     tb_clk_i;
     reg     tb_rstn_i;
 
-    icache_req_out_t tb_icache_fetch_i;
-    icache_req_in_t tb_fetch_icache_o;
+    req_icache_cpu_t tb_icache_fetch_i;
+    req_cpu_icache_t tb_fetch_icache_o;
 
     
 
@@ -61,8 +61,8 @@ module tb_datapath();
     datapath datapath_inst( 
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
-        .icache_req_receive_i(tb_icache_fetch_i),
-        .icache_req_send_o(tb_fetch_icache_o)
+        .req_icache_cpu_i(tb_icache_fetch_i),
+        .req_cpu_icache_o(tb_fetch_icache_o)
     );
 
     perfect_memory perfect_memory_inst (

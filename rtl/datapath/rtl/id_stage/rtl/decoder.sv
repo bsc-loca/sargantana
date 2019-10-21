@@ -50,6 +50,7 @@ module decoder(
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
+        decode_instr_o.op_32   = 1'b0;
 
         decode_instr_o.instr_type = ADD;
 

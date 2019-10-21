@@ -2,8 +2,8 @@ onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/clk_i
 add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/rstn_i
-add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/icache_req_receive_i
-add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/icache_req_send_o
+add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/req_icache_cpu_i
+add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/req_cpu_icache_o
 add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/stall_if_int
 add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/stall_id_int
 add wave -noupdate -expand -group datapath /tb_datapath/datapath_inst/stall_rr_int
@@ -18,8 +18,8 @@ add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/stall_i
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/next_pc_sel_i
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/pc_commit_i
-add wave -noupdate -group if_stage -radix hexadecimal -childformat {{/tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.valid -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.data -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.ex -radix hexadecimal}} -subitemconfig {/tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.valid {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.data {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i.ex {-height 17 -radix hexadecimal}} /tb_datapath/datapath_inst/if_stage_inst/icache_req_receive_i
-add wave -noupdate -group if_stage -radix hexadecimal -childformat {{/tb_datapath/datapath_inst/if_stage_inst/icache_req_send_o.valid -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/icache_req_send_o.vaddr -radix hexadecimal}} -subitemconfig {/tb_datapath/datapath_inst/if_stage_inst/icache_req_send_o.valid {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/icache_req_send_o.vaddr {-height 17 -radix hexadecimal}} /tb_datapath/datapath_inst/if_stage_inst/icache_req_send_o
+add wave -noupdate -group if_stage -radix hexadecimal -childformat {{/tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.valid -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.data -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.ex -radix hexadecimal}} -subitemconfig {/tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.valid {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.data {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i.ex {-height 17 -radix hexadecimal}} /tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i
+add wave -noupdate -group if_stage -radix hexadecimal -childformat {{/tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o.valid -radix hexadecimal} {/tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o.vaddr -radix hexadecimal}} -subitemconfig {/tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o.valid {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o.vaddr {-height 17 -radix hexadecimal}} /tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/fetch_o
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/next_pc
 add wave -noupdate -group if_stage -radix hexadecimal /tb_datapath/datapath_inst/if_stage_inst/pc
