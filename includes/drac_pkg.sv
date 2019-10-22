@@ -346,5 +346,39 @@ typedef struct packed {
     bus64_t data;
 } wb_exe_instr_t;
 
+// Control Unit signals
+typedef struct packed {
+    logic valid_fetch;
+} if_cu_t;
+
+// Control Unit signals
+typedef struct packed {
+    next_pc_sel_t next_pc;
+} cu_if_t;
+
+// Control Unit signals
+typedef struct packed {
+    logic valid;
+    logic change_pc_ena;
+    //branch_pred_t bpred;
+    //exception_t ex;
+} wb_cu_t;
+
+// Control Unit signals
+typedef struct packed {
+    logic enable_commit;
+} cu_wb_t;
+
+// Pipeline control
+typedef struct packed {
+    logic stall_if;
+    logic stall_id;
+    logic stall_rr;
+    logic stall_exe;
+    logic stall_wb;
+} pipeline_ctrl_t;
+
+
+
 endpackage
 

@@ -31,15 +31,19 @@ module datapath(
 
     // Stages: if -- id -- rr -- ex -- wb
     // Signals stalls to be coming from the control unit
-    logic stall_if_int;
+    /*logic stall_if_int;
     logic stall_id_int;
     logic stall_rr_int;
     logic stall_exe_int;
+    logic stall_wb_int;
     assign stall_if_int = '0;
     assign stall_id_int = '0;
     assign stall_rr_int = '0;
     assign stall_exe_int = '0;
+    assign stall_wb_int = '0;*/
 
+    pipeline_ctrl_t control_int;
+    cu_if_t cu_if_int;
     // TODO: Remove Stage IF stub
     next_pc_sel_t next_pc_sel_if_int;
     addr_t pc_commit_if_int;
@@ -61,6 +65,7 @@ module datapath(
     exe_wb_instr_t stage_exe_wb_q;
     // WB->Commit
     exe_wb_instr_t stage_commit;
+    wb_cu_t wb_cu_int;
 
 
     // Exe
@@ -92,12 +97,23 @@ module datapath(
         end
     end
 
+    // Control Unit
+    control_unit control_unit_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .valid_fetch(req_icache_cpu_i.valid),
+        .wb_cu_i(wb_cu_int),
+        .pipeline_ctrl_o(control_int),
+        .cu_if_o(cu_if_int)
+
+    );
+
     // IF Stage
     if_stage if_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .stall_i(stall_if_int),
-        .next_pc_sel_i(next_pc_sel_if_int),
+        .stall_i(control_int.stall_if),
+        .next_pc_sel_i(cu_if_int.next_pc),
         .pc_commit_i(pc_commit_if_int),
         .req_icache_cpu_i(req_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
@@ -108,7 +124,7 @@ module datapath(
     register #($bits(if_id_stage_t)) reg_if_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .load_i(!stall_if_int),
+        .load_i(!control_int.stall_if),
         .input_i(stage_if_id_d),
         .output_o(stage_if_id_q)
     );
@@ -123,7 +139,7 @@ module datapath(
     register #($bits(instr_entry_t)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .load_i(!stall_id_int),
+        .load_i(!control_int.stall_id),
         .input_i(stage_id_rr_d),
         .output_o(stage_id_rr_q)
     );
@@ -149,7 +165,7 @@ module datapath(
     register #($bits(stage_rr_exe_d)) reg_rr_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .load_i(!stall_rr_int),
+        .load_i(!control_int.stall_rr),
         .input_i(stage_rr_exe_d),
         .output_o(stage_rr_exe_q)
     );
@@ -212,13 +228,19 @@ module datapath(
     register #($bits(dec_wb_instr_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .load_i(!stall_exe_int),
+        .load_i(!control_int.stall_exe),
         .input_i({dec_to_wb_exe,exe_to_wb_exe}),
         .output_o({dec_to_wb_wb,exe_to_wb_wb})
     );
 
-    assign wb_to_exe_exe.valid  = dec_to_wb_wb.regfile_we;
+    assign wb_to_exe_exe.valid  = control_int.stall_wb;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
+
+    assign wb_cu_int.valid = !control_int.stall_wb;
+    assign wb_cu_int.change_pc_ena = dec_to_wb_wb.change_pc_ena;
+    //assign wb_cu_int.bpred = ;
+    //assign wb_cu_int.ex = ;
+
 
 endmodule

@@ -98,6 +98,7 @@ module tb_datapath();
         .ready_o(tb_icache_fetch_i.valid)
     );
 
+
 //-----------------------------
 // DUT
 //-----------------------------

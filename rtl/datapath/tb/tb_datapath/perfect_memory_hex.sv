@@ -21,7 +21,7 @@ module perfect_memory_hex #(
     parameter SIZE = 32*1024 * 8,
     parameter LINE_SIZE = 32,
     parameter ADDR_SIZE = 32,
-    parameter DELAY = 1,
+    parameter DELAY = 5,
     localparam HEX_LOAD_ADDR = 'h100
 
 ) (
