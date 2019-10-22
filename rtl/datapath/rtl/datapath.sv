@@ -217,7 +217,7 @@ module datapath(
         .output_o({dec_to_wb_wb,exe_to_wb_wb})
     );
 
-    assign wb_to_exe_exe.valid  = 1'b0;//dec_to_wb_wb.regfile_we;
+    assign wb_to_exe_exe.valid  = dec_to_wb_wb.regfile_we;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
 
