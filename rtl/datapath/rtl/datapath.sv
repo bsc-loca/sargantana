@@ -80,10 +80,10 @@ module datapath(
 
     // What is this????
     // TODO: Ruben
-    always_ff @(posedge clk_i) begin
+    always_ff @(posedge clk_i, negedge rstn_i) begin
         // What is that?????
         //if(~soft_rstn_i)
-        if(!rstn_i) begin
+        if(!soft_rstn_i) begin
             io_base_addr <=  40'h0080000000;
         end else if(~rstn_i) begin
             io_base_addr <=  40'h0040000000;
@@ -132,9 +132,9 @@ module datapath(
     regfile rr_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .write_enable_i(1'b0),
-        .write_addr_i(5'b0),
-        .write_data_i(64'b0),
+        .write_enable_i(dec_to_wb_wb.regfile_we),
+        .write_addr_i(exe_to_wb_wb.rd),
+        .write_data_i(exe_to_wb_wb.result_rd),
         .read_addr1_i(stage_id_rr_q.rs1),
         .read_addr2_i(stage_id_rr_q.rs2),
         .read_data1_o(stage_rr_exe_d.data_rs1),
@@ -171,6 +171,9 @@ module datapath(
     assign dec_to_exe_exe.mem_format        = BYTE;//stage_rr_exe_q.instr.;
     assign dec_to_exe_exe.amo_op            = AMO_SC;//stage_rr_exe_q.instr.;
     assign dec_to_exe_exe.rd                = stage_rr_exe_q.instr.rd;
+
+    assign dec_to_wb_exe.regfile_we    = stage_rr_exe_q.instr.regfile_we;
+    assign dec_to_wb_exe.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
 
 
     exe_top exe_stage_inst(

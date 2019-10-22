@@ -69,7 +69,7 @@ module tb_datapath();
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .addr_i(tb_addr_i),
-        .line_o(tb_line_o)
+        .line_o(tb_line2_o)
     );
 
     perfect_memory_hex perfect_memory_hex_inst (
@@ -77,7 +77,7 @@ module tb_datapath();
         .rstn_i(tb_rstn_i),
         .addr_i(tb_addr_i),
         .valid_i(tb_fetch_icache_o.valid),
-        .line_o(tb_line2_o)
+        .line_o(tb_line_o)
     );
 
 //-----------------------------
