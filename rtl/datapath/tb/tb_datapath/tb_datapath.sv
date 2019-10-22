@@ -45,6 +45,9 @@ module tb_datapath();
     req_icache_cpu_t tb_icache_fetch_i;
     req_cpu_icache_t tb_fetch_icache_o;
 
+    req_cpu_dcache_t tb_req_cpu_dcache_o;
+    req_dcache_cpu_t tb_req_dcache_cpu_i;
+
     
 
     logic [31:0] tb_addr_i;
@@ -54,6 +57,16 @@ module tb_datapath();
     assign tb_icache_fetch_i.data = tb_line_o;
     assign tb_addr_i = tb_fetch_icache_o.vaddr;
 
+    assign tb_req_dcache_cpu_i.dmem_resp_replay_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_resp_data_i = 64'b0;
+    assign tb_req_dcache_cpu_i.dmem_req_ready_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_resp_valid_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_resp_nack_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_st_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_ld_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_st_i = 1'b0;
+    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_ld_i = 1'b0;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -62,7 +75,11 @@ module tb_datapath();
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .req_icache_cpu_i(tb_icache_fetch_i),
-        .req_cpu_icache_o(tb_fetch_icache_o)
+        .req_cpu_icache_o(tb_fetch_icache_o),
+        .soft_rstn_i(soft_rstn_i),
+        .req_cpu_dcache_o(tb_req_cpu_dcache_o),
+        .req_dcache_cpu_i(tb_req_dcache_cpu_i)
+
     );
 
     perfect_memory perfect_memory_inst (
@@ -77,7 +94,8 @@ module tb_datapath();
         .rstn_i(tb_rstn_i),
         .addr_i(tb_addr_i),
         .valid_i(tb_fetch_icache_o.valid),
-        .line_o(tb_line_o)
+        .line_o(tb_line_o),
+        .ready_o(tb_icache_fetch_i.valid)
     );
 
 //-----------------------------
@@ -113,7 +131,7 @@ module tb_datapath();
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_icache_fetch_i.valid<='{default:0};
+            //tb_icache_fetch_i.valid<='{default:0};
             //tb_icache_fetch_i.data<='{default:0};
             tb_icache_fetch_i.ex<='{default:0};
             //tb_addr_i<='{default:0};
@@ -165,7 +183,7 @@ module tb_datapath();
             // Simulate memory maybe made a delay here?
             if (tb_fetch_icache_o.valid == 1'b1) begin
                 //tb_addr_i = tb_fetch_icache_o.vaddr;
-                tb_icache_fetch_i.valid <= 1;
+                //tb_icache_fetch_i.valid <= 1;
                 // /tb_icache_fetch_i.data  = tb_line_o;
                 // /tb_icache_fetch_i.ex    ='{default:0};
             end          
@@ -178,7 +196,7 @@ module tb_datapath();
             // Simulate memory maybe made a delay here?
             //if (tb_fetch_icache_o.valid == 1'b1) begin
                 //tb_addr_i = tb_fetch_icache_o.vaddr;
-            tb_icache_fetch_i.valid <= valid;
+            //tb_icache_fetch_i.valid <= valid;
                 // /tb_icache_fetch_i.data  = tb_line_o;
                 // /tb_icache_fetch_i.ex    ='{default:0};         
         end
@@ -195,7 +213,6 @@ module tb_datapath();
             tmp = 0;
             $display("*** test_sim1");
             tick();
-            set_mem_valid(1);
             tick();
             //set_mem_valid(0);
             tick();

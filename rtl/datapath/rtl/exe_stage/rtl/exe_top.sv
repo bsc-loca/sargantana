@@ -87,7 +87,6 @@ alu alu_inst (
     .data_rs1_i     (rs1_data_bypass),
     .data_rs2_i     (rs2_data_def),
     .alu_op_i       (from_dec_i.alu_op),
-
     .result_o       (result_alu)
 );
 
@@ -194,11 +193,11 @@ always_comb begin
             to_wb_o.result_pc = 0;
         end
         UNIT_BRANCH: begin
-            to_wb_o.result_rd = reg_data_branch;
+            to_wb_o.result_rd = 0;//reg_data_branch;
             to_wb_o.result_pc = result_branch;
         end
         UNIT_MEM: begin
-            to_wb_o.result_rd = result_mem;
+            to_wb_o.result_rd = 0;//result_mem;
             to_wb_o.result_pc = 0;
         end
         default: begin

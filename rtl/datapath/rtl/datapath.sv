@@ -181,7 +181,7 @@ module datapath(
         .rstn_i(rstn_i),
 
         .from_dec_i(dec_to_exe_exe),
-        .from_rr_i(rr_to_exe_exe),
+        .from_rr_i(stage_rr_exe_q),
         .from_wb_i(wb_to_exe_exe),
 
         .io_base_addr_i(io_base_addr),
@@ -216,5 +216,9 @@ module datapath(
         .input_i({dec_to_wb_exe,exe_to_wb_exe}),
         .output_o({dec_to_wb_wb,exe_to_wb_wb})
     );
+
+    assign wb_to_exe_exe.valid  = 1'b0;//dec_to_wb_wb.regfile_we;
+    assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
+    assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
 
 endmodule
