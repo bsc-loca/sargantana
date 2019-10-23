@@ -19,7 +19,7 @@ module icache_interface(
   	input logic              rstn_i,
 
     // Fetch stage interface - Request packet from fetch_stage
-  	input icache_req_in_t    req_fetch_icache_i,
+  	input req_cpu_icache_t   req_fetch_icache_i,
 
     // Request input signals from ICache
     input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
@@ -37,7 +37,7 @@ module icache_interface(
     output logic             tlb_req_valid_o, // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-	output icache_req_out_t  req_icache_fetch_o
+	output req_icache_cpu_t  req_icache_fetch_o
 );
 
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;

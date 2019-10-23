@@ -21,7 +21,7 @@
 //-----------------------------
 
 `timescale 1 ns / 1 ns
-`default_nettype none
+//`default_nettype none
 
 `include "colors.vh"
 
@@ -43,7 +43,7 @@ module tb_icache_interface();
     reg tb_rstn_i;
 
     // Fetch stage interface - Request packet from fetch_stage
-    icache_req_in_t tb_req_fetch_icache_i;
+    req_cpu_icache_t tb_req_fetch_icache_i;
 
     // Request input signals from ICache
     icache_line_t  tb_icache_resp_datablock_i; // ICACHE_RESP_BITS_DATABLOCK
@@ -62,7 +62,7 @@ module tb_icache_interface();
     reg            tb_tlb_req_valid_o; // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-    icache_req_out_t tb_req_icache_fetch_o;
+    req_icache_cpu_t tb_req_icache_fetch_o;
 
 //-----------------------------
 // Module
@@ -478,4 +478,4 @@ module tb_icache_interface();
 
 
 endmodule
-`default_nettype wire
+//`default_nettype wire

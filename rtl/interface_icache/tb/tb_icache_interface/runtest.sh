@@ -1,8 +1,8 @@
 $1
 CYCLES=80
-BASE_DIR="../../../../../.."
+BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
-IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"
+ICACHE_INTERF="${BASE_DIR}/rtl/interface_icache/rtl"
 ID_STAGE="${BASE_DIR}/rtl/datapath/rtl/id_stage/rtl"
 RR_STAGE="${BASE_DIR}/rtl/datapath/rtl/rr_stage/rtl"
 DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
@@ -12,7 +12,7 @@ mv lib_module /tmp
 
 vlib lib_module
 vmap work $PWD/lib_module
-vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $IF_STAGE/icache_interface.sv\
+vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $ICACHE_INTERF/icache_interface.sv \
  tb_icache_interface.sv colors.vh
 vmake lib_module/ > Makefile
 
