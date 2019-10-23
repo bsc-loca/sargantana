@@ -1,0 +1,13 @@
+image: localhost:5000/lagarto-develop:latest
+
+before_script:
+  - apt update
+  - apt install verilator -y
+
+stages:
+  - generate
+
+generate:verilog:
+  stage: generate
+  script:
+    - make
