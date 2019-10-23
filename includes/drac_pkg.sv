@@ -11,6 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
+`include "riscv_pkg.sv"
 import riscv_pkg::*;
 
 package drac_pkg;
