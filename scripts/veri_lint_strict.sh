@@ -7,7 +7,7 @@
 include_dirs=""
 while read file; do
     include_dirs="$include_dirs -I$file/"
-done < <(find ./ -d -name "rtl")
+done < <(find ./ -d -name "includes" -o -name "rtl")
 
 
 #find rtl files and run linting in each one of them. Formated one file per line
