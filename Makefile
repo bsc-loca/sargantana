@@ -1,2 +1,3 @@
-register:
-	verilator --lint-only rtl/register.sv 
+lint:
+	bash ./scripts/veri_lint.sh
+	
