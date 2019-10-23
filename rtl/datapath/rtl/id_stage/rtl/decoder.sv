@@ -70,33 +70,119 @@ module decoder(
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.rs1 = '0;
                 decode_instr_o.alu_op = ALU_OR;
+                decode_instr_o.instr_type = OR;
             end
             OP_AUIPC:begin
                 decode_instr_o.regfile_we  = 1'b1;
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.use_pc = 1'b1;
-                decode_instr_o.alu_op = ALU_ADD;          
+                decode_instr_o.alu_op = ALU_ADD;
+                decode_instr_o.instr_type = ADD;          
             end
             OP_JAL: begin
                 // TODO: to be fixed
+                decode_instr_o.regfile_we = 1'b1; // we write pc+4 to rd
+                decode_instr_o.change_pc_ena = 1'b1;
+                decode_instr_o.use_imm = 1'b1;
+                decode_instr_o.use_pc = 1'b1;
+                decode_instr_o.instr_type = JAL;
+                decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
+                decode_instr_o.unit = UNIT_BRANCH;
+            end
+            OP_JALR: begin
                 decode_instr_o.regfile_we = 1'b1;
                 decode_instr_o.change_pc_ena = 1'b1;
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.use_pc = 1'b1;
-                decode_instr_o.alu_op = ALU_ADD;
-            end
-            OP_JALR: begin
-                decode_instr_o.regfile_we = 1'b1;
-                
+                decode_instr_o.instr_type = JALR;
+                decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
+                decode_instr_o.unit = UNIT_BRANCH;
             end
             OP_BRANCH: begin
-                
+                decode_instr_o.regfile_we = 1'b0;
+                decode_instr_o.change_pc_ena = 1'b1;
+                decode_instr_o.use_imm = 1'b1;
+                decode_instr_o.use_pc = 1'b1;
+                decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
+                decode_instr_o.unit = UNIT_BRANCH;
+                case (decode_i.inst.btype.func3)
+                    F3_BEQ: begin
+                        decode_instr_o.instr_type = BEQ;
+                    end
+                    F3_BNE: begin
+                        decode_instr_o.instr_type = BNE;
+                    end
+                    F3_BLT: begin
+                        decode_instr_o.instr_type = BLT;
+                    end
+                    F3_BGE: begin
+                        decode_instr_o.instr_type = BGE;
+                    end                    
+                    F3_BLTU: begin
+                        decode_instr_o.instr_type = BLTU;
+                    end
+                    F3_BGEU: begin
+                        decode_instr_o.instr_type = BGEU;
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase 
             end
             OP_LOAD:begin
                 decode_instr_o.regfile_we = 1'b1;
-                
+                decode_instr_o.use_imm = 1'b1;
+                decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
+                decode_instr_o.unit = UNIT_MEM;
+                case (decode_i.inst.itype.func3)
+                    F3_LB: begin
+                        decode_instr_o.instr_type = LB;
+                    end
+                    F3_LH: begin
+                        decode_instr_o.instr_type = LH;
+                    end
+                    F3_LW: begin
+                        decode_instr_o.instr_type = LW;
+                    end
+                    F3_LD: begin
+                        decode_instr_o.instr_type = LD;
+                    end                    
+                    F3_LBU: begin
+                        decode_instr_o.instr_type = LBU;
+                    end
+                    F3_LHU: begin
+                        decode_instr_o.instr_type = LHU;
+                    end
+                    F3_LWU: begin
+                        decode_instr_o.instr_type = LWU;
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase
             end
             OP_STORE: begin
+                decode_instr_o.regfile_we = 1'b0;
+                decode_instr_o.use_imm = 1'b1;
+                decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
+                decode_instr_o.unit = UNIT_MEM;
+                case (decode_i.inst.itype.func3)
+                    STORE_SB: begin
+                        decode_instr_o.instr_type = SB;
+                    end
+                    STORE_SH: begin
+                        decode_instr_o.instr_type = SH;
+                    end
+                    STORE_SW: begin
+                        decode_instr_o.instr_type = SW;
+                    end
+                    STORE_SD: begin
+                        decode_instr_o.instr_type = SD;
+                    end                    
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase
                 
             end
             OP_ALU_I: begin
@@ -106,24 +192,31 @@ module decoder(
                 unique case (decode_i.inst.itype.func3)
                     F3_ADDI: begin
                        decode_instr_o.alu_op = ALU_ADD;
+                       decode_instr_o.instr_type = ADD;
                     end
                     F3_SLTI: begin
                         decode_instr_o.alu_op = ALU_SLT;
+                        decode_instr_o.instr_type = SLT;
                     end
                     F3_SLTIU: begin
                         decode_instr_o.alu_op = ALU_SLTU;
+                        decode_instr_o.instr_type = SLTU;
                     end
                     F3_XORI: begin
                         decode_instr_o.alu_op = ALU_XOR;
+                        decode_instr_o.instr_type = XOR;
                     end
                     F3_ORI: begin
                         decode_instr_o.alu_op = ALU_OR;
+                        decode_instr_o.instr_type = OR;
                     end
                     F3_ANDI: begin
                         decode_instr_o.alu_op = ALU_AND;
+                        decode_instr_o.instr_type = AND;
                     end
                     F3_SLLI: begin
                         decode_instr_o.alu_op = ALU_SLL;
+                        decode_instr_o.instr_type = SLL;
                         // check for illegal isntruction
                         if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
                             illegal_instruction = 1'b1;
@@ -135,9 +228,11 @@ module decoder(
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
                                 decode_instr_o.alu_op = ALU_SRA;
+                                decode_instr_o.instr_type = SRA;
                             end
                             F7_NORMAL: begin
                                 decode_instr_o.alu_op = ALU_SRL;
+                                decode_instr_o.instr_type = SRL;
                             end
                             default: begin // check illegal instruction
                                 illegal_instruction = 1'b1;
@@ -156,9 +251,11 @@ module decoder(
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
                                 decode_instr_o.alu_op = ALU_SUB;
+                                decode_instr_o.instr_type = SUB;
                             end
                             F7_NORMAL: begin
                                 decode_instr_o.alu_op = ALU_ADD;
+                                decode_instr_o.instr_type = ADD;
                             end
                             default: begin // check illegal instruction
                                 illegal_instruction = 1'b1;
@@ -166,24 +263,30 @@ module decoder(
                         endcase
                     end
                     F3_SLL: begin
-                        decode_instr_o.alu_op = ALU_SLT;
+                        decode_instr_o.alu_op = ALU_SLL;
+                        decode_instr_o.instr_type = SLL;
                     end
                     F3_SLT: begin
-                        decode_instr_o.alu_op = ALU_SLTU;
+                        decode_instr_o.alu_op = ALU_SLT;
+                        decode_instr_o.instr_type = SLT;
                     end
                     F3_SLTU: begin
                         decode_instr_o.alu_op = ALU_SLTU;
+                        decode_instr_o.instr_type = SLTU;
                     end
                     F3_XOR: begin
                         decode_instr_o.alu_op = ALU_XOR;
+                        decode_instr_o.instr_type = XOR;
                     end
                     F3_SRL_SRA: begin
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
                                 decode_instr_o.alu_op = ALU_SRA;
+                                decode_instr_o.instr_type = SRA;
                             end
                             F7_NORMAL: begin
                                 decode_instr_o.alu_op = ALU_SRL;
+                                decode_instr_o.instr_type = SRL;
                             end
                             default: begin // check illegal instruction
                                 illegal_instruction = 1'b1;
@@ -192,9 +295,11 @@ module decoder(
                     end
                     F3_OR: begin
                         decode_instr_o.alu_op = ALU_OR;
+                        decode_instr_o.instr_type = OR;
                     end
                     F3_AND: begin
                         decode_instr_o.alu_op = ALU_AND;
+                        decode_instr_o.instr_type = AND;
                     end
                 endcase
                 
@@ -210,6 +315,7 @@ module decoder(
             end
             OP_FENCE: begin
                 // Not sure what we should do
+                decode_instr_o.instr_type = FENCE;
             end
             OP_SYSTEM: begin
                 

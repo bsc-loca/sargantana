@@ -11,7 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`include "riscv_pkg.sv"
+//`include "riscv_pkg.sv"
 import riscv_pkg::*;
 
 package drac_pkg;
@@ -151,6 +151,7 @@ typedef enum {
 typedef enum {
     SEL_FROM_MEM,
     SEL_FROM_ALU,
+    SEL_FROM_BRANCH,
     SEL_FROM_CONTROL
 } reg_sel_t;
 
@@ -158,15 +159,15 @@ typedef enum logic [6:0] {
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
    // logic operations
-   XORL, ORL, ANDL,
+   XOR, OR, AND,
    // shifts
    SRA, SRL, SLL, SRLW, SLLW, SRAW,
    // comparisons
-   LTS, LTU, GES, GEU, EQ, NE,
+   BLT, BLTU, BGE, BGEU, BEQ, BNE,
    // jumps
-   JALR, BRANCH,
+   JALR, JAL, BRANCH,
    // set lower than operations
-   SLTS, SLTU,
+   SLT, SLTU,
    // CSR functions
    MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    // LSU functions

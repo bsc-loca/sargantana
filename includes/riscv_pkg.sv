@@ -113,22 +113,22 @@ typedef enum logic [6:0] {
 } op_inst_t;
 
 typedef enum logic [2:0] {
-    BRANCH_BEQ  = 3'b000,
-    BRANCH_BNE  = 3'b001,
-    BRANCH_BLT  = 3'b100,
-    BRANCH_BGE  = 3'b101,
-    BRANCH_BLTU = 3'b110,
-    BRANCH_BGEU = 3'b111
+    F3_BEQ  = 3'b000,
+    F3_BNE  = 3'b001,
+    F3_BLT  = 3'b100,
+    F3_BGE  = 3'b101,
+    F3_BLTU = 3'b110,
+    F3_BGEU = 3'b111
 } op_funct3_branch_t;
 
 typedef enum logic [2:0] {
-    LOAD_LB   = 3'b000,
-    LOAD_LH   = 3'b001,
-    LOAD_LW   = 3'b010,
-    LOAD_LD   = 3'b011,
-    LOAD_LBU  = 3'b100,
-    LOAD_LWU  = 3'b110,
-    LOAD_LHU  = 3'b101
+    F3_LB   = 3'b000,
+    F3_LH   = 3'b001,
+    F3_LW   = 3'b010,
+    F3_LD   = 3'b011,
+    F3_LBU  = 3'b100,
+    F3_LHU  = 3'b101,
+    F3_LWU  = 3'b110
 } op_func3_load_t;
 
 typedef enum logic [2:0] {
