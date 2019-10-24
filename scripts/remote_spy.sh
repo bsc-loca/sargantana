@@ -1,8 +1,11 @@
 #!/bin/bash
+#Exit automatically if any command returns non zero values
+set -e
 #Format parameters
 FN="$(basename -- $1)"
 N="${FN%%.*}"
 EX="${FN#*.}"
+artifact="/tmp/artifact_spy.log"
 #echo $FN
 #echo $N
 #echo $EX
@@ -10,7 +13,7 @@ EX="${FN#*.}"
 rm -rf ./spyglass_reports 
 rm -rf /tmp/importspy
 rm -rf /tmp/optionsspy
-ssh drac@192.168.10.38 << EOF
+ssh -o ConnectTimeout=5 drac@192.168.10.38 << EOF
 rm -rf /tmp/$N
 #make destination folder
 mkdir /tmp/$N
@@ -26,14 +29,15 @@ done
 echo "set_option top top_drac" >> /tmp/optionsspy 
 scp /tmp/importspy drac@192.168.10.38:/tmp
 scp /tmp/optionsspy drac@192.168.10.38:/tmp
-ssh drac@192.168.10.38 << EOF
+ssh -o ConnectTimeout=5 drac@192.168.10.38 << EOF
 cp /home/drac/guillem/template_spyglass.prj /tmp/$N/$N.prj
 cd /tmp/$N
 sed -i '/Data Import Section/ r /tmp/importspy' ./$N.prj
 sed -i '/Common Options Section/ r /tmp/optionsspy' ./$N.prj
 export SKIP_PLATFORM_CHECK=TRUE
-export LM_LICENSE_FILE=27020@192.168.10.38
-export SNPSLMD_LICENSE_FILE=27020@192.168.10.38
+export LM_LICENSE_FILE=27020@84.88.187.145     
+export SNPS_LICENSE_FILE=27020@epi01.bsc.es    
+export SNPSLMD_LICENSE_FILE=27020@epi01.bsc.es 
 export PATH='$PATH:/home/drac/synopsys/install/spyglass/SPYGLASS2018.09-SP1-1/SPYGLASS_HOME/bin/'
 echo -e "exports\n"
 echo -e "run_goal lint/lint_rtl\nexit -save\n"| spyglass_main -shell -project $N.prj   
@@ -41,6 +45,16 @@ echo -e "remove\n"
 exit
 EOF
 echo -e "exit"
+ssh_val="$?"
 scp -r drac@192.168.10.38:/tmp/$N/$N ./spyglass_reports
+scp_val="$?"
 echo -e "copy resuts"
-cat spyglass_reports/consolidated_reports/top_drac_lint_lint_rtl/moresimple.rpt | grep -i 'warning\|error' 2>&1
+cat spyglass_reports/consolidated_reports/top_drac_lint_lint_rtl/moresimple.rpt | grep -i 'warning\|error' 2>&1 | tee -a $artifact 
+#check if there is an artifact, due to errors or warnings
+#if 0 is returned by exit no log has been generated
+#else there are errors and pipeline as failed
+#this checks if $artifacs exist
+! [ -s $artifact ]
+#Stores previous return value, inverted.
+rval="$?"
+exit $rval

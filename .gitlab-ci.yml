@@ -13,8 +13,9 @@ verilator:verilog:
   script:
     - verilator --version
     - make lint
+  allow_failure: true
 
-image: localhost:5000/epi-vector-lint:latest
+image: localhost:5000/epi_rtl-spyglass-lint
 spyglass:verilog:
   stage: spyglass
   tags:
@@ -22,3 +23,8 @@ spyglass:verilog:
   script:
     - make local_spyglass
   allow_failure: true
+
+  artifacts:
+    paths:
+    - top_drac/consolidated_reports/top_drac_lint_lint_rtl/
+    expire_in: 1 week
