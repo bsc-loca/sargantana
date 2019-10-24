@@ -80,12 +80,12 @@ typedef enum logic {
 
 typedef struct packed {
     branch_pred_decision_t decision;
-    addr_t pred_addr;
+    addrPC_t pred_addr;
 } branch_pred_t;
 
 typedef struct packed {
     exception_cause_t cause;
-    addr_t origin; // this will be the addr or pc but maybe other things?
+    addrPC_t origin; // this will be the addr or pc but maybe other things?
     logic valid;
 } exception_t;
 
