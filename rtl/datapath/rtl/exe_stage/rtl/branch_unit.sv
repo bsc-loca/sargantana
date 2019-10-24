@@ -10,7 +10,6 @@
  * -----------------------------------------------
  */
 //`default_nettype none
-`include "drac_pkg.sv"
 import drac_pkg::*;
 
 
@@ -18,16 +17,16 @@ module branch_unit(
     input ctrl_xfer_op_t  ctrl_xfer_op_i,
     input branch_op_t     branch_op_i,
 
-    input addr_t      pc_i,
-    input bus64_t     data_rs1_i,
-    input bus64_t     data_rs2_i,
-    input bus64_t     imm_i,
+    input addrPC_t      pc_i,
+    input bus64_t       data_rs1_i,
+    input bus64_t       data_rs2_i,
+    input bus64_t       imm_i,
 
-    output logic      taken_o,
-    output addr_t     target_o,
-    output addr_t     result_o,
+    output logic        taken_o,
+    output addrPC_t     target_o,
+    output addrPC_t     result_o,
 
-    output bus64_t    reg_data_o
+    output bus64_t      reg_data_o
 );
 
 logic equal;

@@ -12,7 +12,6 @@
 * -----------------------------------------------
 */
 
-`include "drac_pkg.sv"
 import drac_pkg::*;
 import riscv_pkg::*;
 
@@ -46,11 +45,11 @@ module datapath(
     pipeline_ctrl_t control_int;
     cu_if_t cu_if_int;
     // TODO: Remove Stage IF stub
-    next_pc_sel_t next_pc_sel_if_int;
-    addr_t pc_commit_if_int;
+    //next_pc_sel_t next_pc_sel_if_int;
+    addrPC_t pc_jump_if_int;
 
-    assign pc_commit_if_int = '0;
-    assign next_pc_sel_if_int = NEXT_PC_SEL_PC_4;
+    
+    //assign next_pc_sel_if_int = NEXT_PC_SEL_PC_4;
     // Pipelines stages data
     // Fetch
     if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
@@ -67,6 +66,10 @@ module datapath(
     // WB->Commit
     exe_wb_instr_t stage_commit;
     wb_cu_t wb_cu_int;
+
+    // Control Unit
+    id_cu_t id_cu_int;
+    jal_id_if_t jal_id_if_int;
 
 
     // Exe
@@ -105,9 +108,14 @@ module datapath(
         .valid_fetch(req_icache_cpu_i.valid),
         .wb_cu_i(wb_cu_int),
         .pipeline_ctrl_o(control_int),
-        .cu_if_o(cu_if_int)
+        .cu_if_o(cu_if_int),
+        .id_cu_i(id_cu_int)
 
     );
+
+    // Multiplexor select jump pc from decode or fetch
+    assign pc_jump_if_int = (control_int.sel_addr_if) ? exe_to_wb_wb.result_rd : 
+                                                        jal_id_if_int.jump_addr;
 
     // IF Stage
     if_stage if_stage_inst(
@@ -115,7 +123,7 @@ module datapath(
         .rstn_i(rstn_i),
         .stall_i(control_int.stall_if),
         .next_pc_sel_i(cu_if_int.next_pc),
-        .pc_commit_i(exe_to_wb_wb.result_rd),
+        .pc_jump_i(pc_jump_if_int),
         .req_icache_cpu_i(req_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_id_d)
@@ -133,8 +141,11 @@ module datapath(
     // ID Stage
     decoder id_decode_inst(
         .decode_i(stage_if_id_q),
-        .decode_instr_o(stage_id_rr_d)
+        .decode_instr_o(stage_id_rr_d),
+        .jal_id_if_o(jal_id_if_int)
     );
+
+    assign id_cu_int.valid_jal = jal_id_if_int.valid;
 
     // Register ID to RR
     register #($bits(instr_entry_t)) reg_id_inst(

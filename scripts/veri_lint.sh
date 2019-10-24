@@ -2,6 +2,9 @@
 #This script will lint all the verilog and sv files with verilator
 #An artifact with the errors is generated
 artifact="/tmp/artifact_lint.log"
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
 #find paths of directories that are called rtl and save them in the format of
 #verilator. path -I"other_paths"
 include_dirs=""
@@ -15,7 +18,7 @@ done < <(find ./ -depth -name "includes" -o -name "rtl")
 rtl_files=""
 while read file; do
     rtl_files=$rtl_files$file$'\n'
-done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* )
+done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* --exclude \drac_pkg* --exclude \riscv_pkg*)
 #remove the last character, If not verilator will try to run without file name
 rtl_files=${rtl_files::-1}
 echo "Verilator lint only"
@@ -25,7 +28,8 @@ while read p; do
   #include all the founded rtl folders as includes in case you have dependences 
   #grep for warnings and errors and save it on a variable. Notice that sterr is 
   #required
-  (verilator --lint-only  $include_dirs "$p"| grep 'warning\|error')2>&1 | tee -a $artifact 
+  echo -e "$GREEN $p $NC"
+  (verilator --lint-only   includes/riscv_pkg.sv includes/drac_pkg.sv $include_dirs "$p"| grep 'warning\|error')2>&1 | tee -a $artifact 
 done <<< "$rtl_files"
 
 #check if there is an artifact, due to errors or warnings

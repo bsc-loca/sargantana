@@ -13,17 +13,18 @@
 */
 
 //`default_nettype none
-`include "drac_pkg.sv"
 import drac_pkg::*;
 import riscv_pkg::*;
 
 module decoder(
-    input if_id_stage_t decode_i,
-    output instr_entry_t decode_instr_o
+    input   if_id_stage_t    decode_i,
+    output  instr_entry_t    decode_instr_o,
+    output  jal_id_if_t      jal_id_if_o
 );
 
     bus64_t imm_value;
     logic illegal_instruction;
+    logic ex_addr_misaligned_int;
 
     immediate immediate_inst(
         .instr_i(decode_i.inst),
@@ -63,6 +64,8 @@ module decoder(
         // By default use the imm value then it will change along the process
         decode_instr_o.result = imm_value; 
 
+        ex_addr_misaligned_int = 1'b0;
+
 
         case (decode_i.inst.common.opcode)
             // Load Upper immediate
@@ -83,12 +86,20 @@ module decoder(
             OP_JAL: begin
                 // TODO: to be fixed
                 decode_instr_o.regfile_we = 1'b1; // we write pc+4 to rd
-                decode_instr_o.change_pc_ena = 1'b1;
+                decode_instr_o.change_pc_ena = 1'b0; // Actually we change now
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.use_pc = 1'b1;
                 decode_instr_o.instr_type = JAL;
                 decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                 decode_instr_o.unit = UNIT_BRANCH;
+                // it is valid if there is no misaligned exception
+                ex_addr_misaligned_int = imm_value[1]; 
+                jal_id_if_o.valid = !ex_addr_misaligned_int;
+                jal_id_if_o.jump_addr = imm_value+decode_i.pc_inst;
+                // handle instr addr misaligned
+                decode_instr_o.ex.cause = INSTR_ADDR_MISALIGNED;
+                decode_instr_o.ex.origin = decode_i.pc_inst;
+                decode_instr_o.ex.valid = ex_addr_misaligned_int;
             end
             OP_JALR: begin
                 decode_instr_o.regfile_we = 1'b1;
@@ -327,7 +338,6 @@ module decoder(
                 illegal_instruction = 1'b1;
             end
         endcase
-
     end
 
 endmodule

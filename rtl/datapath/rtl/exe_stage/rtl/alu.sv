@@ -1,5 +1,4 @@
 //`default_nettype none
-`include "drac_pkg.sv"
 import drac_pkg::*;
 
 module alu (

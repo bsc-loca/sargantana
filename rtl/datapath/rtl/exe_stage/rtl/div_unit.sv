@@ -9,7 +9,6 @@
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
-`include "drac_pkg.sv"
 import drac_pkg::*;
 //`default_nettype none
 

@@ -11,7 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`include "drac_pkg.sv"
+
 import drac_pkg::*;
 import riscv_pkg::*;
 
@@ -23,7 +23,7 @@ module if_stage(
     // which pc to select
     input next_pc_sel_t         next_pc_sel_i,
     // PC comming from commit
-    input addrPC_t              pc_commit_i,
+    input addrPC_t              pc_jump_i,
     // Request packet coming from Icache
     input req_icache_cpu_t      req_icache_cpu_i,
     // Request packet going from Icache
@@ -46,8 +46,8 @@ module if_stage(
                 next_pc = pc;
             NEXT_PC_SEL_PC_4:
                 next_pc = pc + 64'h04;
-            NEXT_PC_SEL_COMMIT:
-                next_pc = pc_commit_i;
+            NEXT_PC_SEL_JUMP:
+                next_pc = pc_jump_i;
         endcase
     end
 
@@ -73,6 +73,7 @@ module if_stage(
         end
     end
     // check misaligned fetch
+    // TODO: (guillemlp) I think this cannot happen
     always_comb begin
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
@@ -99,7 +100,7 @@ module if_stage(
                                     !ex_if_addr_fault_int & 
                                     !ex_if_page_fault_int;
 
-    assign req_cpu_icache_o.vaddr = pc;
+    assign req_cpu_icache_o.vaddr = pc[39:0];
 
     // logic branch predictor
 
@@ -114,7 +115,8 @@ module if_stage(
         if (ex_addr_misaligned_int) begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
             fetch_o.ex.valid = 1'b1;
-        end else if (ex_if_addr_fault_int) begin
+        end else 
+        if (ex_if_addr_fault_int) begin
             fetch_o.ex.cause = INSTR_ACCESS_FAULT;
             fetch_o.ex.valid = 1'b1;
         end else if (ex_if_page_fault_int) begin

@@ -13,7 +13,6 @@
 */
 
 //`default_nettype none
-`include "drac_pkg.sv"
 import drac_pkg::*;
 import riscv_pkg::*;
 

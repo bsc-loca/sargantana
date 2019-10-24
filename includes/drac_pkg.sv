@@ -11,10 +11,6 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`ifndef DRAC_PKG
-    `define DARC_PKG
-    `include "riscv_pkg.sv"
-`endif
 import riscv_pkg::*;
 
 package drac_pkg;
@@ -38,8 +34,8 @@ typedef logic [31:0] bus32_t;
 typedef logic [REGFILE_WIDTH-1:0] reg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
 typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
-typedef logic [riscv_pkg::XLEN-1:0] addr_t;
-typedef reg   [riscv_pkg::XLEN-1:0] reg_addr_t;
+typedef logic [ADDR_SIZE-1:0] addr_t;
+typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
 
 typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
 typedef logic [ICACHELINE_SIZE:0] icache_line_t;
@@ -51,8 +47,13 @@ typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 typedef enum {
     NEXT_PC_SEL_PC,
     NEXT_PC_SEL_PC_4,
-    NEXT_PC_SEL_COMMIT
+    NEXT_PC_SEL_JUMP
 } next_pc_sel_t;
+
+typedef enum logic {
+    SEL_JUMP_COMMIT,
+    SEL_JUMP_DECODE
+} jump_addr_fetch_t;
 
 typedef enum {
     NoReq,
@@ -257,7 +258,7 @@ typedef enum {
 
 // Fetch Stage
 typedef struct packed {
-    addr_t pc_inst;
+    addrPC_t pc_inst;
     riscv_pkg::instruction_t inst;
     logic valid;
     branch_pred_t bpred;
@@ -268,7 +269,7 @@ typedef struct packed {
 //
 typedef struct packed {
     logic valid;
-    addr_t pc;
+    addrPC_t pc;
     branch_pred_t bpred;
     exception_t ex;
     reg_t rs1;
@@ -302,7 +303,7 @@ typedef struct packed {
     // Branch unit signals
     ctrl_xfer_op_t ctrl_xfer_op;
     branch_op_t branch_op;
-    addr_t pc;
+    addrPC_t pc;
 
     // Memory unit signals
     mem_op_t mem_op;
@@ -344,6 +345,10 @@ typedef struct packed {
     logic valid_fetch;
 } if_cu_t;
 
+typedef struct packed {
+    logic valid_jal;
+} id_cu_t;
+
 // Control Unit signals
 typedef struct packed {
     next_pc_sel_t next_pc;
@@ -369,7 +374,15 @@ typedef struct packed {
     logic stall_rr;
     logic stall_exe;
     logic stall_wb;
+    // whether insert in fetch from dec or commit
+    jump_addr_fetch_t sel_addr_if;
 } pipeline_ctrl_t;
+
+// Pipeline control
+typedef struct packed {
+    logic       valid; // whether is a jal or not
+    addrPC_t    jump_addr;
+} jal_id_if_t;
 
 
 
