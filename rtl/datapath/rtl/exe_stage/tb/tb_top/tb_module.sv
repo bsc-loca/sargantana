@@ -65,6 +65,7 @@ logic [7:0]   tb_dmem_req_tag_o;
 logic         tb_dmem_req_invalidate_lr_o;
 logic         tb_dmem_req_kill_o;
 logic         tb_lock_o;
+logic         tb_stall_o;
 
 dec_exe_instr_t     tb_from_dec_i;
 rr_exe_instr_t      tb_from_rr_i;
@@ -104,7 +105,8 @@ exe_top module_inst (
     .dmem_req_kill_o(tb_dmem_req_kill_o),
     .dmem_lock_o(tb_lock_o),
 
-    .to_wb_o(tb_to_wb_o)
+    .to_wb_o(tb_to_wb_o),
+    .stall_o(tb_stall_o)
 );
 
 //-----------------------------
@@ -168,49 +170,123 @@ exe_top module_inst (
 
 //***task automatic test_sim***
 //This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
+    task automatic check_out;
+        input int test;
+        input int status;
+        begin
+            if (status == 1) begin
+                `START_RED_PRINT
+                        $display("TEST %d FAILED.",test);
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST %d PASSED.",test);
+                `END_COLOR_PRINT
+            end
+        end
+    endtask
+
+//***task automatic test_sim***
+//This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
             int tmp;
             $display("*** test_sim");
             test_sim_1(tmp);
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
-                `END_COLOR_PRINT
-            end
+            check_out(1,tmp);
+            test_sim_2(tmp);
+            check_out(2,tmp);
+            test_sim_3(tmp);
+            check_out(3,tmp);
         end
     endtask
 
-// Test getting a petition that is not valid
-// Output should be nothing 
+// Testing add
     task automatic test_sim_1;
         output int tmp;
         begin
+            longint src1,src2;
             tmp = 0;
+            tb_from_dec_i.functional_unit <= UNIT_ALU;
+            tb_from_dec_i.alu_op <= ALU_ADD;
+            tb_from_dec_i.use_imm <= 0;
+            tb_from_dec_i.imm <= 0;
+            $random(10);
             for(int i = 0; i < 1000; i++) begin
-                tb_from_dec_i.functional_unit <= UNIT_ALU;
-                tb_from_dec_i.alu_op <= ALU_ADD;
-                tb_from_dec_i.use_imm <= 0;
-                tb_from_dec_i.imm <= 0;
-                tb_from_rr_i.data_rs1 <= 24;
-                tb_from_rr_i.data_rs2 <= 28;
+                src1 = $urandom();
+                src1[63:32] = $urandom();
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.data_rs2 <= src2;
                 #CLK_PERIOD;
-                /*#CLK_HALF_PERIOD;
-                if (tb_div_o != (src1/src2) | tb_rem_o != (src1%src2)) begin
+                if (tb_to_wb_o.result_rd != (src1+src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h mod %h out: %h mod %h",src1,src2,(src1/src2),(src1%src2),tb_div_o,tb_rem_o);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,(src1+src2),tb_to_wb_o.result_rd);
                     `END_COLOR_PRINT
                 end
-                #CLK_HALF_PERIOD;*/
             end
         end
     endtask
 
+// Testing substraction
+    task automatic test_sim_2;
+        output int tmp;
+        begin
+            longint src1,src2;
+            tmp = 0;
+            tb_from_dec_i.functional_unit <= UNIT_ALU;
+            tb_from_dec_i.alu_op <= ALU_SUB;
+            tb_from_dec_i.use_imm <= 0;
+            tb_from_dec_i.imm <= 0;
+            $random(10);
+            for(int i = 0; i < 1000; i++) begin
+                src1 = $urandom();
+                src1[63:32] = $urandom();
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.data_rs2 <= src2;
+                #CLK_PERIOD;
+                if (tb_to_wb_o.result_rd != (src1-src2)) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,(src1-src2),tb_to_wb_o.result_rd);
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+// Testing multiplication
+    task automatic test_sim_3;
+        output int tmp;
+        begin
+            longint src1,src2;
+            tmp = 0;
+            tb_from_dec_i.functional_unit <= UNIT_MUL;
+            tb_from_dec_i.mul_op <= ALU_MUL;
+            tb_from_dec_i.use_imm <= 0;
+            tb_from_dec_i.imm <= 0;
+            $random(10);
+            for(int i = 0; i < 1000; i++) begin
+                src1 = $urandom();
+                src1[63:32] = $urandom();
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.data_rs2 <= src2;
+                while(tb_stall_o)#CLK_PERIOD;
+                if (tb_to_wb_o.result_rd != (src1*src2)) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o.result_rd);
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
 
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
