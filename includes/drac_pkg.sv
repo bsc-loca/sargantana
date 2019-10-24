@@ -34,6 +34,7 @@ typedef logic [31:0] bus32_t;
 
 typedef logic [REGFILE_WIDTH-1:0] reg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
+typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
 typedef logic [ADDR_SIZE-1:0] addr_t;
 typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
 
@@ -73,8 +74,8 @@ typedef enum {
 } icache_state_t;
 
 typedef enum logic {
-    PRED_TAKEN,
-    PRED_NOT_TAKEN
+    PRED_NOT_TAKEN,
+    PRED_TAKEN
 } branch_pred_decision_t;
 
 typedef struct packed {

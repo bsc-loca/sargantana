@@ -82,12 +82,12 @@ module tb_datapath();
 
     );
 
-    perfect_memory perfect_memory_inst (
+    /*perfect_memory perfect_memory_inst (
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .addr_i(tb_addr_i),
         .line_o(tb_line2_o)
-    );
+    );*/
 
     perfect_memory_hex perfect_memory_hex_inst (
         .clk_i(tb_clk_i),
