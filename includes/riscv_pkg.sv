@@ -227,4 +227,21 @@ typedef enum logic [6:0] {
     F7_MUL   = 7'b0000001
 } op_func7_mul_t;
 
+// By RISCV ISA, exceptions are 64 bits
+typedef enum logic[XLEN-1:0] {
+    INSTR_ADDR_MISALIGNED   = 64'h00,
+    INSTR_ACCESS_FAULT      = 64'h01,
+    ILLEGAL_INSTR           = 64'h02,
+    BREAKPOINT              = 64'h03,
+    LD_ADDR_MISALIGNED      = 64'h04,
+    LD_ACCESS_FAULT         = 64'h05,
+    ST_AMO_ADDR_MISALIGNED  = 64'h06,
+    ST_AMO_ACCES_FAULT      = 64'h07,
+    USER_ECALL              = 64'h08,
+    SUPERVISOR_ECALL        = 64'h09,
+    INSTR_PAGE_FAULT        = 64'h0C,
+    LD_PAGE_FAULT           = 64'h0D,
+    ST_AMO_PAGE_FAULT       = 64'h0F
+} exception_cause_t;
+
 endpackage

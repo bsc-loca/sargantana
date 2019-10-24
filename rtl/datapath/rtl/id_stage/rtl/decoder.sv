@@ -35,7 +35,7 @@ module decoder(
         decode_instr_o.pc = decode_i.pc_inst;
         decode_instr_o.bpred = decode_i.bpred;
         // TODO: how to handle exceptions
-        decode_instr_o.ex.cause = NONE;
+        decode_instr_o.ex.cause = ILLEGAL_INSTR;
         decode_instr_o.ex.origin = 'h0;
         decode_instr_o.ex.valid = 'h0;
         decode_instr_o.valid = decode_i.valid;

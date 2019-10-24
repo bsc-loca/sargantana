@@ -13,6 +13,7 @@
 */
 
 import drac_pkg::*;
+import riscv_pkg::*;
 
 module if_stage(
     input logic                 clk_i,
@@ -30,11 +31,14 @@ module if_stage(
     // fetch data output
     output if_id_stage_t        fetch_o
 );
-
+    // next pc logic
     addrPC_t next_pc;
     regPC_t pc;
-    logic ex_misaligned_if_int;
+
+    // exceptions
+    logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
+    logic ex_if_page_fault_int;
 
     always_comb begin
         priority case (next_pc_sel_i)
@@ -61,21 +65,40 @@ module if_stage(
         // or of the high part of the addr
         if (|pc[63:40]) begin
             ex_if_addr_fault_int = 1'b1;
+        end else if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_access_fault) begin
+            ex_if_addr_fault_int = 1'b1;
         end else begin
             ex_if_addr_fault_int = 1'b0;
         end
     end
-    // check mislaigned fetch
+    // check misaligned fetch
     always_comb begin
         if (|pc[1:0]) begin
-            ex_misaligned_if_int = 1'b1;
+            ex_addr_misaligned_int = 1'b1;
+        // check also from icache
+        end else  if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_addr_misaligned) begin
+            ex_addr_misaligned_int = 1'b1;
         end else begin
-            ex_misaligned_if_int = 1'b0;
+            ex_addr_misaligned_int = 1'b0;
+        end
+    end
+    // check exceptions finstr page fault
+    always_comb begin
+        if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_page_fault) begin
+            ex_if_page_fault_int = 1'b1;
+        end else begin
+            ex_if_page_fault_int = 1'b0;
         end
     end
 
     // logic for icache access
-    assign req_cpu_icache_o.valid = !ex_misaligned_if_int & !ex_if_addr_fault_int;
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & 
+                                    !ex_if_addr_fault_int & 
+                                    !ex_if_page_fault_int;
+
     assign req_cpu_icache_o.vaddr = pc[39:0];
 
     // logic branch predictor
@@ -86,9 +109,23 @@ module if_stage(
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN; // TODO: add bpred
     assign fetch_o.bpred.pred_addr = 64'b0; // TODO: add bpred 
 
-    // TODO add the correct fault order
-    assign fetch_o.ex.cause = MISALIGNED_FETCH;
+    // exceptions ordering
+    always_comb begin
+        if (ex_addr_misaligned_int) begin
+            fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
+            fetch_o.ex.valid = 1'b1;
+        end else if (ex_if_addr_fault_int) begin
+            fetch_o.ex.cause = INSTR_ACCESS_FAULT;
+            fetch_o.ex.valid = 1'b1;
+        end else if (ex_if_page_fault_int) begin
+            fetch_o.ex.cause = INSTR_PAGE_FAULT;
+            fetch_o.ex.valid = 1'b1;
+        end else begin
+            fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
+            fetch_o.ex.valid = 1'b0;
+        end
+    end
     assign fetch_o.ex.origin = pc;
-    assign fetch_o.ex.valid = ex_misaligned_if_int;
+   
 
 endmodule

@@ -52,22 +52,6 @@ typedef enum {
 } next_pc_sel_t;
 
 typedef enum {
-    NONE,
-    MISALIGNED_FETCH,
-    FAULT_FETCH,
-    ILLEGAL_INST,
-    BREAKPOINT,
-    MISALIGNED_LOAD,
-    FAULT_LOAD,
-    MISALIGNED_STORE,
-    FAULT_STORE,
-    USER_ECALL,
-    SUPERVISOR_ECALL,
-    HYPERVISOR_ECALL,
-    MACHINE_ECALL 
-} exception_cause_t;
-
-typedef enum {
     NoReq,
     ReqValid,
     RespReady
@@ -84,7 +68,7 @@ typedef struct packed {
 } branch_pred_t;
 
 typedef struct packed {
-    exception_cause_t cause;
+    riscv_pkg::exception_cause_t cause;
     addrPC_t origin; // this will be the addr or pc but maybe other things?
     logic valid;
 } exception_t;
@@ -94,7 +78,10 @@ typedef struct packed {
     logic  valid;
     inst_t data;
     //addr_t req_addr; I think it is not completely necessary
-    exception_t ex;
+    //exception_t ex;
+    logic instr_addr_misaligned;
+    logic instr_access_fault;
+    logic instr_page_fault;
 } req_icache_cpu_t;
 
 // Req send to ICache
