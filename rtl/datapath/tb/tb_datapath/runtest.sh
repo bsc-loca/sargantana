@@ -8,6 +8,7 @@ RR_STAGE="${BASE_DIR}/rtl/datapath/rtl/rr_stage/rtl"
 CONTROL="${BASE_DIR}/rtl/control_unit/rtl"
 EXE_STAGE="${BASE_DIR}/rtl/datapath/rtl/exe_stage/rtl"
 DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
+DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
 mv lib_module /tmp
@@ -17,7 +18,7 @@ vmap work $PWD/lib_module
 vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_RTL/register.sv\
  $IF_STAGE/if_stage.sv $ID_STAGE/decoder.sv $ID_STAGE/immediate.sv $RR_STAGE/regfile.sv \
  $EXE_STAGE/exe_top.sv $EXE_STAGE/alu.sv  $EXE_STAGE/mul_unit.sv $EXE_STAGE/div_unit.sv \
- $EXE_STAGE/branch_unit.sv $EXE_STAGE/mem_unit.sv $CONTROL/control_unit.sv \
+ $EXE_STAGE/branch_unit.sv $DCACHE/mem_unit.sv $CONTROL/control_unit.sv \
  $DATAPATH/datapath.sv tb_datapath.sv perfect_memory.sv perfect_memory_hex.sv colors.vh 
 vmake lib_module/ > Makefile
 

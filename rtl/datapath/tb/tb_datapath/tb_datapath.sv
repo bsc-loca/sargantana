@@ -82,12 +82,12 @@ module tb_datapath();
 
     );
 
-    perfect_memory perfect_memory_inst (
+    /*perfect_memory perfect_memory_inst (
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .addr_i(tb_addr_i),
         .line_o(tb_line2_o)
-    );
+    );*/
 
     perfect_memory_hex perfect_memory_hex_inst (
         .clk_i(tb_clk_i),
@@ -134,7 +134,9 @@ module tb_datapath();
             tb_rstn_i<='{default:0};
             //tb_icache_fetch_i.valid<='{default:0};
             //tb_icache_fetch_i.data<='{default:0};
-            tb_icache_fetch_i.ex<='{default:0};
+            tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
+            tb_icache_fetch_i.instr_access_fault<='{default:0};
+            tb_icache_fetch_i.instr_page_fault<='{default:0};
             //tb_addr_i<='{default:0};
             $display("Done");
             

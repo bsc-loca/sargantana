@@ -115,7 +115,7 @@ module datapath(
         .rstn_i(rstn_i),
         .stall_i(control_int.stall_if),
         .next_pc_sel_i(cu_if_int.next_pc),
-        .pc_commit_i(pc_commit_if_int),
+        .pc_commit_i(exe_to_wb_wb.result_rd),
         .req_icache_cpu_i(req_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_id_d)

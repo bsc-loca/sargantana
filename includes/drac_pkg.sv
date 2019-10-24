@@ -37,8 +37,9 @@ typedef logic [31:0] bus32_t;
 
 typedef logic [REGFILE_WIDTH-1:0] reg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
-typedef logic [ADDR_SIZE-1:0] addr_t;
-typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
+typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
+typedef logic [riscv_pkg::XLEN-1:0] addr_t;
+typedef reg   [riscv_pkg::XLEN-1:0] reg_addr_t;
 
 typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
 typedef logic [ICACHELINE_SIZE:0] icache_line_t;
@@ -54,40 +55,24 @@ typedef enum {
 } next_pc_sel_t;
 
 typedef enum {
-    NONE,
-    MISALIGNED_FETCH,
-    FAULT_FETCH,
-    ILLEGAL_INST,
-    BREAKPOINT,
-    MISALIGNED_LOAD,
-    FAULT_LOAD,
-    MISALIGNED_STORE,
-    FAULT_STORE,
-    USER_ECALL,
-    SUPERVISOR_ECALL,
-    HYPERVISOR_ECALL,
-    MACHINE_ECALL 
-} exception_cause_t;
-
-typedef enum {
     NoReq,
     ReqValid,
     RespReady
 } icache_state_t;
 
 typedef enum logic {
-    PRED_TAKEN,
-    PRED_NOT_TAKEN
+    PRED_NOT_TAKEN,
+    PRED_TAKEN
 } branch_pred_decision_t;
 
 typedef struct packed {
     branch_pred_decision_t decision;
-    addr_t pred_addr;
+    addrPC_t pred_addr;
 } branch_pred_t;
 
 typedef struct packed {
-    exception_cause_t cause;
-    addr_t origin; // this will be the addr or pc but maybe other things?
+    riscv_pkg::exception_cause_t cause;
+    addrPC_t origin; // this will be the addr or pc but maybe other things?
     logic valid;
 } exception_t;
 
@@ -96,7 +81,10 @@ typedef struct packed {
     logic  valid;
     inst_t data;
     //addr_t req_addr; I think it is not completely necessary
-    exception_t ex;
+    //exception_t ex;
+    logic instr_addr_misaligned;
+    logic instr_access_fault;
+    logic instr_page_fault;
 } req_icache_cpu_t;
 
 // Req send to ICache
@@ -154,6 +142,7 @@ typedef enum {
 typedef enum {
     SEL_FROM_MEM,
     SEL_FROM_ALU,
+    SEL_FROM_BRANCH,
     SEL_FROM_CONTROL
 } reg_sel_t;
 
@@ -161,15 +150,15 @@ typedef enum logic [6:0] {
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
    // logic operations
-   XORL, ORL, ANDL,
+   XOR, OR, AND,
    // shifts
    SRA, SRL, SLL, SRLW, SLLW, SRAW,
    // comparisons
-   LTS, LTU, GES, GEU, EQ, NE,
+   BLT, BLTU, BGE, BGEU, BEQ, BNE,
    // jumps
-   JALR, BRANCH,
+   JALR, JAL, BRANCH,
    // set lower than operations
-   SLTS, SLTU,
+   SLT, SLTU,
    // CSR functions
    MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    // LSU functions
