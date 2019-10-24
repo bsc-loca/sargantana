@@ -7,7 +7,7 @@ artifact="/tmp/artifact_lint.log"
 include_dirs=""
 while read file; do
     include_dirs="$include_dirs -I$file/"
-done < <(find ./ -d -name "includes" -o -name "rtl")
+done < <(find ./ -depth -name "includes" -o -name "rtl")
 
 
 #find rtl files and run linting in each one of them. Formated one file per line
@@ -15,17 +15,9 @@ done < <(find ./ -d -name "includes" -o -name "rtl")
 rtl_files=""
 while read file; do
     rtl_files=$rtl_files$file$'\n'
-done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wpi_* )
-
-#Keep this only for debug pourpouses, can be removed in the future. TODO
-#echo "paths of include_dirs"
-#echo "-----------------"
-#echo $include_dirs
-#echo "paths of rtl_files"
-#echo "-----------------"
-#echo -e $rtl_files
-
-
+done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* )
+#remove the last character, If not verilator will try to run without file name
+rtl_files=${rtl_files::-1}
 echo "Verilator lint only"
 echo "-----------------"
 rm $artifact
