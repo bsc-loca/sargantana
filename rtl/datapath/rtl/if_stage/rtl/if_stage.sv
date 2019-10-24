@@ -67,7 +67,7 @@ module if_stage(
     end
     // check mislaigned fetch
     always_comb begin
-        if (!pc[1:0]) begin
+        if (|pc[1:0]) begin
             ex_misaligned_if_int = 1'b1;
         end else begin
             ex_misaligned_if_int = 1'b0;
