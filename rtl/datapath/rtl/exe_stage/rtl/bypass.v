@@ -11,7 +11,7 @@
  */
 
 `default_nettype none
-`include "definitions.v"
+`include "definitions.vh"
 
 module bypass (
     input  [4:0]      exe_src_i,

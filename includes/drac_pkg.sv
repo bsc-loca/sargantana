@@ -11,7 +11,10 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`include "riscv_pkg.sv"
+`ifndef DRAC_PKG
+    `define DARC_PKG
+    `include "riscv_pkg.sv"
+`endif
 import riscv_pkg::*;
 
 package drac_pkg;

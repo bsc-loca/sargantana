@@ -12,6 +12,7 @@
 * -----------------------------------------------
 */
 
+`include "drac_pkg.sv"
 import drac_pkg::*;
 
 module perfect_memory #(

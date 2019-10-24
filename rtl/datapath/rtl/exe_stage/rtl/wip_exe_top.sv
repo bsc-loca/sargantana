@@ -1,6 +1,3 @@
-//`default_nettype none
-import drac_pkg::*;
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : execution.v
@@ -12,6 +9,10 @@ import drac_pkg::*;
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
+//`default_nettype none
+`include "drac_pkg.sv"
+import drac_pkg::*;
+
 
 
 module exe_top (

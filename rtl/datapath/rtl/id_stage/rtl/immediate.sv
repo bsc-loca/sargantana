@@ -12,6 +12,7 @@
 * -----------------------------------------------
 */
 
+`include "drac_pkg.sv"
 import drac_pkg::*;
 import riscv_pkg::*;
 
@@ -27,16 +28,18 @@ module immediate(
     bus64_t imm_jtype;
     bus64_t imm_uitype;
     //TODO immediate of CSR
-
     assign imm_itype = {{52{instr_i[31]}}, instr_i.itype.imm};
     
     assign imm_stype = {{52{instr_i[31]}}, instr_i.stype.imm5, instr_i.stype.imm0};
     
-    assign imm_btype = {{51{instr_i[31]}}, instr_i.btype.imm11, instr_i.btype.imm5, instr_i.btype.imm1, 1'b0};
+    //TODO: Width mismatch seems a typo y added 1 bit to 51{instr_i[31]}}
+    assign imm_btype = {{52{instr_i[31]}}, instr_i.btype.imm11, instr_i.btype.imm5, instr_i.btype.imm1, 1'b0};
     
     assign imm_utype = {{32{instr_i[31]}}, instr_i.utype.imm, 12'b0};
 
-    assign imm_jtype = {{32{instr_i[31]}}, instr_i.jtype.imm20,
+    //TODO: Width mismatch you have 21 bits before sign extend.
+    //If you add {32{instr_i[31]} you still have 52, not 64 
+    assign imm_jtype = {{43{instr_i[31]}}, instr_i.jtype.imm20,
                                          instr_i.jtype.imm12, 
                                          instr_i.jtype.imm11,
                                          instr_i.jtype.imm1, 1'b0};

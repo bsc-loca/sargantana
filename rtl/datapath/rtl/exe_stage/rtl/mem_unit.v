@@ -11,7 +11,7 @@
  */
 
 `default_nettype none
-`include "definitions.v"
+`include "definitions.vh"
 
 module mem_unit (
     input  wire         clk_i,
@@ -46,7 +46,8 @@ module mem_unit (
 
     // LOAD/STORE/AMO INTERFACE OUTPUTS TO DCACHE
     output reg          mem_req_valid_o,
-    output wire `DATA   mem_op_type_o,
+//TODO:Double check width mem_op_type_o,
+    output wire [3:0]   mem_op_type_o,
     output reg  [4:0]   mem_req_cmd_o,
     output reg  `DATA   mem_req_bits_data_o,
     output reg  `ADDR   mem_req_bits_addr_o,

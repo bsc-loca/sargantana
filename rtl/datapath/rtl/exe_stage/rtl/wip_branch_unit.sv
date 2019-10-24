@@ -1,6 +1,3 @@
-//`default_nettype none
-import drac_pkg::*;
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : branch_unit.v
@@ -12,6 +9,10 @@ import drac_pkg::*;
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
+//`default_nettype none
+`include "drac_pkg.sv"
+import drac_pkg::*;
+
 
 module branch_unit(
     input ctrl_xfer_op_t  ctrl_xfer_op_i,

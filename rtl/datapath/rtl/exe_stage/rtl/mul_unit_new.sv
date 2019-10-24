@@ -9,10 +9,9 @@
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
-
+`include "drac_pkg.sv"
 import drac_pkg::*;
 //`default_nettype none
-//`include "definitions.v"
 
 module mul_unit (
     input  logic [2:0]  func3_i,
@@ -91,7 +90,7 @@ always@(*) begin
     endcase
 end 
 
-result_o = result_64;
+assign result_o = result_64;
 
 endmodule
 //`default_nettype wire
