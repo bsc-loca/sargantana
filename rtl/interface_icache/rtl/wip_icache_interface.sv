@@ -12,6 +12,7 @@
 * -----------------------------------------------
 */
 
+`include "drac_pkg.sv"
 import drac_pkg::*;
 
 module icache_interface(
@@ -159,7 +160,7 @@ end
 // Manage the pc_int_register
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
-        pc_buffer_q <= 32'b0;
+        pc_buffer_q <= {ADDR_SIZE{1'b0}};
     end else begin
         pc_buffer_q <= pc_buffer_d;
     end

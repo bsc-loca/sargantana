@@ -11,7 +11,6 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-
 import drac_pkg::*;
 import riscv_pkg::*;
 

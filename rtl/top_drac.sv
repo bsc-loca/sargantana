@@ -1,7 +1,6 @@
+//TODO: add DRAC header
 //TODO: replace definitions with package drac
-//DRAC
-`include "LAGARTO_CONFIG.v" 
-`include "definitions.v" 
+`include "definitions.vh" 
 
 module top_drac(
 //original inputs of lagarto
@@ -10,15 +9,15 @@ input 					    RST,
 input                       SOFT_RST,
 input	`ADDR			    RESET_ADDRESS,
 //CSR inputs
-input    `WORD_DATA         CSR_RW_RDATA,
+input    `DATA         CSR_RW_RDATA,
 input                       CSR_CSR_STALL,
 input                       CSR_XCPT,
 input                       CSR_ERET,
 input    `ADDR              CSR_EVEC,
 input                       CSR_INTERRUPT,
-input    `WORD_DATA         CSR_INTERRUPT_CAUSE,
+input    `DATA         CSR_INTERRUPT_CAUSE,
 //ICache
-input 	`CACHE_LINE_SIZE 	ICACHE_RESP_BITS_DATABLOCK,
+input 	`CBLOCK 	ICACHE_RESP_BITS_DATABLOCK,
 input						ICACHE_RESP_VALID,
 input						PTWINVALIDATE,
 input						TLB_RESP_MISS,
@@ -26,7 +25,7 @@ input						TLB_RESP_XCPT_IF,
 //DMEM
 input                       DMEM_ORDERED,
 input                       DMEM_REQ_READY,
-input    `WORD_DATA         DMEM_RESP_BITS_DATA_SUBW,
+input    `DATA         DMEM_RESP_BITS_DATA_SUBW,
 input                       DMEM_RESP_BITS_NACK,
 input                       DMEM_RESP_BITS_REPLAY,
 input                       DMEM_RESP_VALID,

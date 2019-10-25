@@ -1,6 +1,3 @@
-//`default_nettype none
-import drac_pkg::*;
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : branch_unit.v
@@ -12,20 +9,23 @@ import drac_pkg::*;
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
+//`default_nettype none
+import drac_pkg::*;
+
 
 module branch_unit(
     input instr_type_t  instr_type_i,
 
-    input addr_t      pc_i,
-    input bus64_t     data_rs1_i,
-    input bus64_t     data_rs2_i,
-    input bus64_t     imm_i,
+    input addrPC_t      pc_i,
+    input bus64_t       data_rs1_i,
+    input bus64_t       data_rs2_i,
+    input bus64_t       imm_i,
 
-    output logic      taken_o,
-    output addr_t     target_o,
-    output addr_t     result_o,
+    output logic        taken_o,
+    output addrPC_t     target_o,
+    output addrPC_t     result_o,
 
-    output bus64_t    reg_data_o
+    output bus64_t      reg_data_o
 );
 
 logic equal;

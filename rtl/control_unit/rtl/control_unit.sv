@@ -21,7 +21,7 @@ module control_unit(
 
     input logic             valid_fetch,
     //input if_cu_t           if_cu_i,
-    //input id_cu_t           id_cu_i,
+    input id_cu_t           id_cu_i,
     //input rr_cu_t           rr_cu_i,
     //input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
@@ -42,7 +42,7 @@ module control_unit(
     always_comb begin
         
         if (wb_cu_i.valid && wb_cu_i.change_pc_ena) begin
-            cu_if_o.next_pc = NEXT_PC_SEL_COMMIT;
+            cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         
         //end else if (!if_cu_i.valid_fetch) begin
         end else if (!valid_fetch) begin
@@ -53,6 +53,15 @@ module control_unit(
         end
     end
 
+    // logic select which pc to use in fetch
+    always_comb begin
+        if (id_cu_i.valid_jal) begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
+        end else begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
+        end
+    end
+
     // logic stalls
     // TODO
     always_comb begin
@@ -60,7 +69,7 @@ module control_unit(
         pipeline_ctrl_o.stall_id  = 1'b0;
         pipeline_ctrl_o.stall_rr  = 1'b0;
         pipeline_ctrl_o.stall_exe = 1'b0;
-        pipeline_ctrl_o.stall_wb = 1'b0;
+        pipeline_ctrl_o.stall_wb  = 1'b0;
     end
 
 endmodule

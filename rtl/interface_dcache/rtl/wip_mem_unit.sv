@@ -1,4 +1,5 @@
 //`default_nettype none
+//`include "drac_pkg.sv"
 import drac_pkg::*;
 
 /* -----------------------------------------------
@@ -87,7 +88,8 @@ parameter ResetState  = 2'b00,
 //-------------------------------------------------------------
 assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dmem_xcpt_pf_ld_i;
 
-assign io_address_space = (dmem_req_addr_o >= io_base_addr_i) & (dmem_req_addr_o <= 40'h80020053);
+//TODO: Make next line parametric
+assign io_address_space = (dmem_req_addr_o >= io_base_addr_i) & (dmem_req_addr_o <= 64'h80020053);
 assign kill_io_resp =  io_address_space & (mem_op_i == MEM_STORE);
 assign kill_mem_ope = mem_xcpt | kill_i;
 
@@ -165,7 +167,7 @@ always_comb begin
     endcase
 end
 
-assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i[39:0] : data_rs1_i[39:0] + imm_i[39:0];
+assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i : data_rs1_i + imm_i;
 assign dmem_op_type_o = {61'b0,funct3_i};
 assign dmem_req_data_o = data_rs2_i;
 assign dmem_req_tag_o = {2'b00,rd_i,1'b0}; //  bit 0 corresponde a int o fp

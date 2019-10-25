@@ -11,7 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-
+`include "drac_pkg.sv"
 import drac_pkg::*;
 
 module perfect_memory #(

@@ -7,7 +7,7 @@
 include_dirs=""
 while read file; do
     include_dirs="$include_dirs -I$file/"
-done < <(find ./ -d -name "includes" -o -name "rtl")
+done < <(find ./ -depth -name "includes" -o -name "rtl")
 
 
 #find rtl files and run linting in each one of them. Formated one file per line
@@ -15,7 +15,10 @@ done < <(find ./ -d -name "includes" -o -name "rtl")
 rtl_files=""
 while read file; do
     rtl_files=$rtl_files$file$'\n'
-done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wpi_* )
+done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* )
+#remove the last character (empty), If not verilator will try to run without 
+#a valid file name
+rtl_files=${rtl_files::-1}
 
 echo "Verilator lint only"
 echo "-----------------"

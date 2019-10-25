@@ -194,35 +194,5 @@ module top(
 	output[63:0] io_counter_wb
 );
 
-control control(
-);
-
-fetch if_stage(
-);
-
-register reg_if(
-);
-
-decode decode(
-);
-
-register reg_id(
-);
-
-read_reg read_reg(
-);
-
-register reg_rr(
-);
-
-execution execution(
-);
-
-register reg_ex(
-);
-
-write_back write_back(
-);
-
 endmodule
 

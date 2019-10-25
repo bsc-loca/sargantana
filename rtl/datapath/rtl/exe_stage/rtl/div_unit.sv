@@ -9,10 +9,8 @@
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
-
 import drac_pkg::*;
 //`default_nettype none
-//`include "definitions.v"
 
 module div_unit (
     input  logic          clk_i,
