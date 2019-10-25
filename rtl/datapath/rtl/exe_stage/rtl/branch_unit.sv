@@ -57,7 +57,7 @@ end
 
 // Calculate taken
 always_comb begin
-    case (branch_op_i)
+    case (instr_type_i)
         JAL: begin
             taken_o = 1;
         end

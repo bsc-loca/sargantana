@@ -22,7 +22,7 @@ module if_stage(
     input logic                 stall_i,
     // which pc to select
     input next_pc_sel_t         next_pc_sel_i,
-    // PC comming from commit
+    // PC comming from commit/decode/ecall
     input addrPC_t              pc_jump_i,
     // Request packet coming from Icache
     input req_icache_cpu_t      req_icache_cpu_i,
