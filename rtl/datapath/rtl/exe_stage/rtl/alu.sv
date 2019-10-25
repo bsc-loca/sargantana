@@ -4,7 +4,7 @@ import drac_pkg::*;
 module alu (
     input bus64_t  data_rs1_i,
     input bus64_t  data_rs2_i,
-    input alu_op_t alu_op_i,
+    input instr_type_t instr_type_i,
 
     output bus64_t result_o
 );
@@ -15,35 +15,35 @@ assign mul_u = data_rs1_i * data_rs2_i;
 assign mul_su = $signed(data_rs1_i) * data_rs2_i;
 */
 always_comb begin
-    case (alu_op_i)
-        ALU_ADD: begin
+    case (instr_type_i)
+        ADD,ADDW: begin
             result_o = data_rs1_i + data_rs2_i;
         end
-        ALU_SUB: begin
+        SUB.SUBW: begin
             result_o = data_rs1_i - data_rs2_i;
         end
-        ALU_SLL: begin
+        SLL: begin
             result_o = data_rs1_i << data_rs2_i;
         end
-        ALU_SLT: begin
+        SLT: begin
             result_o = {63'b0, $signed(data_rs1_i) < $signed(data_rs2_i)};
         end
-        ALU_SLTU: begin
+        SLTU: begin
             result_o = {63'b0, data_rs1_i < data_rs2_i};
         end
-        ALU_XOR: begin
+        XOR: begin
             result_o = data_rs1_i ^ data_rs2_i;
         end
-        ALU_SRL: begin
+        SRL: begin
             result_o = data_rs1_i >> data_rs2_i;
         end
-        ALU_SRA: begin
+        SRA: begin
             result_o = data_rs1_i >>> data_rs2_i;
         end
-        ALU_OR: begin
+        OR: begin
             result_o = data_rs1_i | data_rs2_i;
         end
-        ALU_AND: begin
+        AND: begin
             result_o = data_rs1_i & data_rs2_i;
         end
         default: begin

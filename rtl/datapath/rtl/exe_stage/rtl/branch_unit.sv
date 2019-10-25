@@ -14,8 +14,7 @@ import drac_pkg::*;
  */
 
 module branch_unit(
-    input ctrl_xfer_op_t  ctrl_xfer_op_i,
-    input branch_op_t     branch_op_i,
+    input instr_type_t  instr_type_i,
 
     input addr_t      pc_i,
     input bus64_t     data_rs1_i,
@@ -38,46 +37,53 @@ assign equal = data_rs1_i == data_rs2_i;
 assign less = $signed(data_rs1_i) < $signed(data_rs2_i);
 assign less_u = data_rs1_i < data_rs2_i;
 
-// Calculate if the branch is taken
+// Calculate target
 always_comb begin
-    case (ctrl_xfer_op_i)
-        CT_JAL: begin
-            taken_o  = 1;
+    case (instr_type_i)
+        JAL: begin
             target_o = pc_i + imm_i;
         end
-        CT_JALR: begin
-            taken_o  = 1;
+        JALR: begin
             target_o = pc_i + data_rs1_i + imm_i;
         end
-        CT_BRANCH: begin
+        BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
             target_o = pc_i + imm_i;
-            case (branch_op_i)
-                B_EQ: begin   //branch on equal
-                    taken_o = equal;
-                end
-                B_NE: begin //branch on not equal
-                    taken_o = ~equal;
-                end
-                B_LT: begin //branch on less than
-                    taken_o = less;
-                end
-                B_GE: begin //branch on greater than or equal
-                    taken_o = ~less;
-                end
-                B_LTU: begin //branch if less than unsigned
-                    taken_o = less_u;
-                end
-                B_GEU: begin //branch if greater than or equal unsigned
-                    taken_o = ~less_u;
-                end
-                default: begin
-                    taken_o = 0;
-                end
-            endcase
         end
         default: begin
-            taken_o  = 0;
             target_o = 0;
+        end
+    endcase
+end
+
+// Calculate taken
+always_comb begin
+    case (branch_op_i)
+        JAL: begin
+            taken_o = 1;
+        end
+        JALR: begin
+            taken_o = 1;
+        end
+        BEQ: begin   //branch on equal
+            taken_o = equal;
+        end
+        BNE: begin //branch on not equal
+            taken_o = ~equal;
+        end
+        BLT: begin //branch on less than
+            taken_o = less;
+        end
+        BGE: begin //branch on greater than or equal
+            taken_o = ~less;
+        end
+        BLTU: begin //branch if less than unsigned
+            taken_o = less_u;
+        end
+        BGEU: begin //branch if greater than or equal unsigned
+            taken_o = ~less_u;
+        end
+        default: begin
+            taken_o = 0;
         end
     endcase
 end

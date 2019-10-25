@@ -19,7 +19,6 @@ module exe_top (
     input wire         rstn_i,
 
     // INPUTS
-    input dec_exe_instr_t   from_dec_i,
     input rr_exe_instr_t    from_rr_i,
     input wb_exe_instr_t    from_wb_i,
 
@@ -81,12 +80,12 @@ assign rs1_data_bypass = ((from_rr_i.rs1 == from_wb_i.rd) & from_wb_i.valid) ? f
 assign rs2_data_bypass = ((from_rr_i.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
 
 // Select rs2 from imm to avoid bypasses
-assign rs2_data_def = from_dec_i.use_imm ? from_dec_i.imm : rs2_data_bypass;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : rs2_data_bypass;
 
 alu alu_inst (
     .data_rs1_i     (rs1_data_bypass),
     .data_rs2_i     (rs2_data_def),
-    .alu_op_i       (from_dec_i.alu_op),
+    .alu_op_i       (from_rr_i.instr.instr_type),
     .result_o       (result_alu)
 );
 
@@ -94,9 +93,9 @@ mul_unit mul_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_mul_i     (kill_i),
-    .request_i      (from_dec_i.functional_unit == UNIT_MUL),
-    .func3_i        (from_dec_i.funct3),
-    .int_32_i       (from_dec_i.int_32),
+    .request_i      (from_rr_i.instr.unit == UNIT_MUL),
+    .func3_i        (from_rr_i.instr.funct3),
+    .int_32_i       (from_rr_i.instr.op_32),
     .src1_i         (rs1_data_bypass),
     .src2_i         (rs2_data_bypass),
 
@@ -109,9 +108,9 @@ div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_div_i     (kill_i),
-    .request_i      (from_dec_i.functional_unit == UNIT_DIV),
-    .int_32_i       (from_dec_i.int_32),
-    .signed_op_i    (from_dec_i.mul_op == ALU_DIV | from_dec_i.mul_op == ALU_REM),
+    .request_i      (from_rr_i.instr.unit == UNIT_DIV),
+    .int_32_i       (from_rr_i.instr.op_32),
+    .signed_op_i    (from_rr_i.instr.signed_op),
     .dvnd_i         (rs1_data_bypass),
     .dvsr_i         (rs2_data_def),
 
@@ -122,12 +121,11 @@ div_unit div_unit_inst (
 );
 
 branch_unit branch_unit_inst (
-    .ctrl_xfer_op_i     (from_dec_i.ctrl_xfer_op),
-    .branch_op_i        (from_dec_i.branch_op),
-    .pc_i               (from_dec_i.pc),
+    .instr_type_i       (from_rr_i.instr.instr_type),
+    .pc_i               (from_rr_i.instr.from_dec_i.pc),
     .data_rs1_i         (rs1_data_bypass),
     .data_rs2_i         (rs2_data_bypass),
-    .imm_i              (from_dec_i.imm),
+    .imm_i              (from_rr_i.instr.from_dec_i.imm),
 
     .taken_o            (taken_branch),
     .target_o           (target_branch),
@@ -139,17 +137,17 @@ mem_unit mem_unit_inst (
     .clk_i                          (clk_i),
     .rstn_i                         (rstn_i),
 
-    .valid_i                        (from_dec_i.functional_unit == UNIT_MEM),
+    .valid_i                        (from_rr_i.instr.unit == UNIT_MEM),
     .kill_i                         (kill_i),
     .csr_eret_i                     (csr_eret_i),
     .data_rs1_i                     (rs1_data_bypass),
     .data_rs2_i                     (rs2_data_bypass),
-    .mem_op_i                       (from_dec_i.mem_op),
-    .mem_format_i                   (from_dec_i.mem_format),
-    .amo_op_i                       (from_dec_i.amo_op),
-    .funct3_i                       (from_dec_i.funct3),
-    .rd_i                           (from_dec_i.rd),
-    .imm_i                          (from_dec_i.imm),
+    .mem_op_i                       (from_rr_i.instr.from_dec_i.mem_op),
+    .mem_format_i                   (from_rr_i.instr.from_dec_i.mem_format),
+    .amo_op_i                       (from_rr_i.instr.from_dec_i.amo_op),
+    .funct3_i                       (from_rr_i.instr.from_dec_i.funct3),
+    .rd_i                           (from_rr_i.instr.from_dec_i.rd),
+    .imm_i                          (from_rr_i.instr.from_dec_i.imm),
 
     .io_base_addr_i                 (io_base_addr_i),
 
@@ -184,20 +182,20 @@ mem_unit mem_unit_inst (
 // DATA  TO WRITE_BACK
 //------------------------------------------------------------------------------
 
-//assign to_wb_o.rd = from_dec_i.rd;
+//assign to_wb_o.rd = from_rr_i.instr.from_dec_i.rd;
 
 always_comb begin
-    case(from_dec_i.functional_unit)
+    case(from_rr_i.instr.from_dec_i.functional_unit)
         UNIT_ALU: begin
             to_wb_o.result_rd = result_alu;
             to_wb_o.result_pc = 0;
         end
         UNIT_BRANCH: begin
-            to_wb_o.result_rd = 0;//reg_data_branch;
+            to_wb_o.result_rd = reg_data_branch;
             to_wb_o.result_pc = result_branch;
         end
         UNIT_MEM: begin
-            to_wb_o.result_rd = 0;//result_mem;
+            to_wb_o.result_rd = result_mem;
             to_wb_o.result_pc = 0;
         end
         default: begin
@@ -207,10 +205,10 @@ always_comb begin
     endcase
 end
 
-assign to_wb_o.rd = from_dec_i.rd;
-assign stall_o = (from_dec_i.functional_unit == UNIT_MUL) ? stall_mul :
-                 (from_dec_i.functional_unit == UNIT_DIV) ? stall_div :
-                 (from_dec_i.functional_unit == UNIT_MEM) ? stall_mem :
+assign to_wb_o.rd = from_rr_i.instr.from_dec_i.rd;
+assign stall_o = (from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
+                 (from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
+                 (from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :
                  0;
 
 endmodule

@@ -284,6 +284,11 @@ typedef struct packed {
     // future
     instr_type_t instr_type;
     bus64_t result; // it can be used as the immediate
+
+    // Added by Ruben
+    logic signed_op;
+    logic [2:0] funct3;
+    bus64_t imm;
 } instr_entry_t;
 
 typedef struct packed {
@@ -317,9 +322,7 @@ typedef struct packed {
 
 typedef struct packed {
     instr_entry_t instr;
-    reg_t rs1;
     bus64_t data_rs1;
-    reg_t rs2;
     bus64_t data_rs2;
 } rr_exe_instr_t;
 
