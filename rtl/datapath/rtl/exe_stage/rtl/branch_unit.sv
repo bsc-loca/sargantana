@@ -88,7 +88,7 @@ always_comb begin
     endcase
 end
 
-assign result_o   = taken_o ? target_o : pc_i + 4;
+assign result_o = taken_o ? target_o : pc_i + 4;
 assign reg_data_o = pc_i + 4;
 
 endmodule

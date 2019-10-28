@@ -15,8 +15,10 @@ import drac_pkg::*;
 
 
 module exe_top (
-    input wire         clk_i,
-    input wire         rstn_i,
+    input logic         clk_i,
+    input logic         rstn_i,
+    input logic         kill_i,
+    input logic         csr_eret_i,
 
     // INPUTS
     input rr_exe_instr_t    from_rr_i,
@@ -67,8 +69,8 @@ logic stall_div;
 logic ready_div;
 
 logic taken_branch;
-addr_t target_branch;
-addr_t result_branch;
+addrPC_t target_branch;
+addrPC_t result_branch;
 bus64_t reg_data_branch;
 
 logic ready_mem;

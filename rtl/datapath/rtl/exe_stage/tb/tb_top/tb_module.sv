@@ -44,6 +44,7 @@ module tb_module();
 //-----------------------------
 reg tb_clk_i;
 reg tb_rstn_i;
+reg tb_kill_i;
 
 addr_t        tb_io_base_addr_i;
 logic         tb_dmem_resp_replay_i;
@@ -67,7 +68,6 @@ logic         tb_dmem_req_kill_o;
 logic         tb_lock_o;
 logic         tb_stall_o;
 
-dec_exe_instr_t     tb_from_dec_i;
 rr_exe_instr_t      tb_from_rr_i;
 wb_exe_instr_t      tb_from_wb_i;
 exe_wb_instr_t      tb_to_wb_o;
@@ -79,8 +79,8 @@ exe_wb_instr_t      tb_to_wb_o;
 exe_top module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
+    .kill_i(tb_kill_i),
 
-    .from_dec_i(tb_from_dec_i),
     .from_rr_i(tb_from_rr_i),
     .from_wb_i(tb_from_wb_i),
 
@@ -137,8 +137,8 @@ exe_top module_inst (
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
+            tb_kill_i<='{default:0};
 
-            tb_from_dec_i<='{default:0};
             tb_from_rr_i<='{default:0};
             tb_from_wb_i<='{default:0};
 
@@ -207,10 +207,10 @@ exe_top module_inst (
         begin
             longint src1,src2;
             tmp = 0;
-            tb_from_dec_i.functional_unit <= UNIT_ALU;
-            tb_from_dec_i.alu_op <= ALU_ADD;
-            tb_from_dec_i.use_imm <= 0;
-            tb_from_dec_i.imm <= 0;
+            tb_from_rr_i.instr.unit <= UNIT_ALU;
+            tb_from_rr_i.instr.instr_type <= ADD;
+            tb_from_rr_i.instr.use_imm <= 0;
+            tb_from_rr_i.instr.imm <= 0;
             $random(10);
             for(int i = 0; i < 1000; i++) begin
                 src1 = $urandom();
@@ -236,10 +236,10 @@ exe_top module_inst (
         begin
             longint src1,src2;
             tmp = 0;
-            tb_from_dec_i.functional_unit <= UNIT_ALU;
-            tb_from_dec_i.alu_op <= ALU_SUB;
-            tb_from_dec_i.use_imm <= 0;
-            tb_from_dec_i.imm <= 0;
+            tb_from_rr_i.instr.unit <= UNIT_ALU;
+            tb_from_rr_i.instr.instr_type <= SUB;
+            tb_from_rr_i.instr.use_imm <= 0;
+            tb_from_rr_i.instr.imm <= 0;
             $random(10);
             for(int i = 0; i < 1000; i++) begin
                 src1 = $urandom();
@@ -265,10 +265,10 @@ exe_top module_inst (
         begin
             longint src1,src2;
             tmp = 0;
-            tb_from_dec_i.functional_unit <= UNIT_MUL;
-            tb_from_dec_i.mul_op <= ALU_MUL;
-            tb_from_dec_i.use_imm <= 0;
-            tb_from_dec_i.imm <= 0;
+            tb_from_rr_i.instr.unit <= UNIT_MUL;
+            tb_from_rr_i.instr.instr_type <= MUL;
+            tb_from_rr_i.instr.use_imm <= 0;
+            tb_from_rr_i.instr.imm <= 0;
             $random(10);
             for(int i = 0; i < 1000; i++) begin
                 src1 = $urandom();
@@ -277,7 +277,10 @@ exe_top module_inst (
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
                 tb_from_rr_i.data_rs2 <= src2;
-                while(tb_stall_o)#CLK_PERIOD;
+                //while(tb_stall_o)#CLK_PERIOD;
+                #CLK_PERIOD;
+                #CLK_PERIOD;
+                #CLK_PERIOD;
                 if (tb_to_wb_o.result_rd != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT

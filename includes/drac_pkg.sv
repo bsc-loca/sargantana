@@ -332,7 +332,7 @@ typedef struct packed {
 } rr_exe_instr_t;
 
 typedef struct packed {
-    addr_t result_pc;
+    addrPC_t result_pc;
     reg_t rd;
     bus64_t result_rd;
 } exe_wb_instr_t;
