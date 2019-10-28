@@ -45,6 +45,7 @@ module tb_module();
 reg tb_clk_i;
 reg tb_rstn_i;
 reg tb_kill_i;
+reg tb_csr_eret_i;
 
 addr_t        tb_io_base_addr_i;
 logic         tb_dmem_resp_replay_i;
@@ -80,6 +81,7 @@ exe_top module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .kill_i(tb_kill_i),
+    .csr_eret_i(tb_csr_eret_i),
 
     .from_rr_i(tb_from_rr_i),
     .from_wb_i(tb_from_wb_i),
@@ -138,6 +140,7 @@ exe_top module_inst (
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
             tb_kill_i<='{default:0};
+            tb_csr_eret_i<='{default:0};
 
             tb_from_rr_i<='{default:0};
             tb_from_wb_i<='{default:0};
@@ -198,6 +201,8 @@ exe_top module_inst (
             check_out(2,tmp);
             test_sim_3(tmp);
             check_out(3,tmp);
+            test_sim_4(tmp);
+            check_out(4,tmp);
         end
     endtask
 
@@ -277,16 +282,48 @@ exe_top module_inst (
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
                 tb_from_rr_i.data_rs2 <= src2;
-                //while(tb_stall_o)#CLK_PERIOD;
-                #CLK_PERIOD;
-                #CLK_PERIOD;
-                #CLK_PERIOD;
+                #CLK_HALF_PERIOD;
+                while(tb_stall_o)#CLK_PERIOD;
+                //#CLK_PERIOD;
                 if (tb_to_wb_o.result_rd != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
                     $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o.result_rd);
                     `END_COLOR_PRINT
                 end
+                #CLK_HALF_PERIOD;
+            end
+        end
+    endtask
+
+// Testing division
+    task automatic test_sim_4;
+        output int tmp;
+        begin
+            longint src1,src2;
+            tmp = 0;
+            tb_from_rr_i.instr.unit <= UNIT_DIV;
+            tb_from_rr_i.instr.instr_type <= DIV;
+            tb_from_rr_i.instr.use_imm <= 0;
+            tb_from_rr_i.instr.imm <= 0;
+            $random(10);
+            for(int i = 0; i < 100; i++) begin
+                src1 = $urandom();
+                src1[63:32] = $urandom();
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.data_rs2 <= src2;
+                #CLK_HALF_PERIOD;
+                while(tb_stall_o)#CLK_PERIOD;
+                //#CLK_PERIOD;
+                if (tb_to_wb_o.result_rd != (src1/src2)) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o.result_rd);
+                    `END_COLOR_PRINT
+                end
+                #CLK_HALF_PERIOD;
             end
         end
     endtask

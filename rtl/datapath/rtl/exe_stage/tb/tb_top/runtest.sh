@@ -1,5 +1,5 @@
 $1
-CYCLES=10000
+CYCLES=30000
 
 TOP_DIR=$(git rev-parse --show-cdup)
 

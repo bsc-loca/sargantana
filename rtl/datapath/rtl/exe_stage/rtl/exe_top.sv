@@ -189,6 +189,14 @@ always_comb begin
             to_wb_o.result_rd = result_alu;
             to_wb_o.result_pc = 0;
         end
+        UNIT_MUL: begin
+            to_wb_o.result_rd = result_mul;
+            to_wb_o.result_pc = 0;
+        end
+        UNIT_DIV: begin
+            to_wb_o.result_rd = result_div;
+            to_wb_o.result_pc = 0;
+        end
         UNIT_BRANCH: begin
             to_wb_o.result_rd = reg_data_branch;
             to_wb_o.result_pc = result_branch;
