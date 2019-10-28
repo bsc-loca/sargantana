@@ -290,6 +290,7 @@ typedef struct packed {
     bus64_t result; // it can be used as the immediate
 
     // Added by Ruben
+    mem_op_t mem_op;
     logic signed_op;
     logic [2:0] funct3;
     bus64_t imm;

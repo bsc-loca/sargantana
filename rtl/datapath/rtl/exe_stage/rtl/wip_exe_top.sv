@@ -122,10 +122,10 @@ div_unit div_unit_inst (
 
 branch_unit branch_unit_inst (
     .instr_type_i       (from_rr_i.instr.instr_type),
-    .pc_i               (from_rr_i.instr.from_dec_i.pc),
+    .pc_i               (from_rr_i.instr.pc),
     .data_rs1_i         (rs1_data_bypass),
     .data_rs2_i         (rs2_data_bypass),
-    .imm_i              (from_rr_i.instr.from_dec_i.imm),
+    .imm_i              (from_rr_i.instr.imm),
 
     .taken_o            (taken_branch),
     .target_o           (target_branch),
@@ -142,12 +142,11 @@ mem_unit mem_unit_inst (
     .csr_eret_i                     (csr_eret_i),
     .data_rs1_i                     (rs1_data_bypass),
     .data_rs2_i                     (rs2_data_bypass),
-    .mem_op_i                       (from_rr_i.instr.from_dec_i.mem_op),
-    .mem_format_i                   (from_rr_i.instr.from_dec_i.mem_format),
-    .amo_op_i                       (from_rr_i.instr.from_dec_i.amo_op),
-    .funct3_i                       (from_rr_i.instr.from_dec_i.funct3),
-    .rd_i                           (from_rr_i.instr.from_dec_i.rd),
-    .imm_i                          (from_rr_i.instr.from_dec_i.imm),
+    .instr_type_i                   (from_rr_i.instr.instr_type),
+    .mem_op_i                       (from_rr_i.instr.mem_op),
+    .funct3_i                       (from_rr_i.instr.funct3),
+    .rd_i                           (from_rr_i.instr.i.rd),
+    .imm_i                          (from_rr_i.instr.imm),
 
     .io_base_addr_i                 (io_base_addr_i),
 
@@ -182,10 +181,8 @@ mem_unit mem_unit_inst (
 // DATA  TO WRITE_BACK
 //------------------------------------------------------------------------------
 
-//assign to_wb_o.rd = from_rr_i.instr.from_dec_i.rd;
-
 always_comb begin
-    case(from_rr_i.instr.from_dec_i.functional_unit)
+    case(from_rr_i.instr.unit)
         UNIT_ALU: begin
             to_wb_o.result_rd = result_alu;
             to_wb_o.result_pc = 0;
@@ -205,7 +202,7 @@ always_comb begin
     endcase
 end
 
-assign to_wb_o.rd = from_rr_i.instr.from_dec_i.rd;
+assign to_wb_o.rd = from_rr_i.instr.rd;
 assign stall_o = (from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
                  (from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
                  (from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :

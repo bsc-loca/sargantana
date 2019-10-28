@@ -24,9 +24,8 @@ module mem_unit (
     input logic         csr_eret_i,
     input bus64_t       data_rs1_i,
     input bus64_t       data_rs2_i,
+    input instr_entry_t instr_type_i,
     input mem_op_t      mem_op_i,
-    input mem_format_t  mem_format_i,
-    input amo_op_t      amo_op_i,
     input logic [2:0]   funct3_i,
     input reg_t         rd_i,
     input bus64_t       imm_i,
@@ -100,7 +99,6 @@ always@(posedge clk_i, negedge rstn_i) begin
         state = next_state;
 end
 
-
 always_comb begin
     case(state)
         ResetState: begin
@@ -144,26 +142,21 @@ always_comb begin
 end
 
 always_comb begin
-    case(mem_op_i)
-        MEM_AMO: begin
-            case(amo_op_i)
-                AMO_LR:      dmem_req_cmd_o = 5'b00110; // lr
-                AMO_SC:      dmem_req_cmd_o = 5'b00111; // sc
-                AMO_SWAP:    dmem_req_cmd_o = 5'b00100; // amoswap
-                AMO_ADD:     dmem_req_cmd_o = 5'b01000; // amoadd
-                AMO_XOR:     dmem_req_cmd_o = 5'b01001; // amoxor
-                AMO_AND:     dmem_req_cmd_o = 5'b01011; // amoand
-                AMO_OR:      dmem_req_cmd_o = 5'b01010; // amoor
-                AMO_MIN:     dmem_req_cmd_o = 5'b01100; // amomin
-                AMO_MAX:     dmem_req_cmd_o = 5'b01101; // amomax
-                AMO_MINU:    dmem_req_cmd_o = 5'b01110; // amominu
-                AMO_MAXU:    dmem_req_cmd_o = 5'b01111; // amomaxu
-                default:    dmem_req_cmd_o = 5'b00000;
-            endcase
-        end
-        MEM_LOAD:            dmem_req_cmd_o = 5'b00000;
-        MEM_STORE:           dmem_req_cmd_o = 5'b00001;
-        default:            dmem_req_cmd_o = 5'b00000;
+    case(instr_type_i)
+        AMO_LRW,AMO_LRD:            dmem_req_cmd_o = 5'b00110; // lr
+        AMO_SCW,AMO_SCD:            dmem_req_cmd_o = 5'b00111; // sc
+        AMO_SWAPW,AMO_SWAPD:        dmem_req_cmd_o = 5'b00100; // amoswap
+        AMO_ADDW,AMO_ADDD:          dmem_req_cmd_o = 5'b01000; // amoadd
+        AMO_XORW,AMO_XORD:          dmem_req_cmd_o = 5'b01001; // amoxor
+        AMO_ANDW,AMO_ANDD:          dmem_req_cmd_o = 5'b01011; // amoand
+        AMO_ORW,AMO_ORD:            dmem_req_cmd_o = 5'b01010; // amoor
+        AMO_MINW,AMO_MIND:          dmem_req_cmd_o = 5'b01100; // amomin
+        AMO_MAXW,AMO_MAXD:          dmem_req_cmd_o = 5'b01101; // amomax
+        AMO_MINWU,AMO_MINDU:        dmem_req_cmd_o = 5'b01110; // amominu
+        AMO_MAXWU,AMO_MAXDU:        dmem_req_cmd_o = 5'b01111; // amomaxu
+        LD,LW,LWU,LH,LHU,LB,LBU:    dmem_req_cmd_o = 5'b00000; // Load
+        SD,SW,SH,SB:                dmem_req_cmd_o = 5'b00001; // Store
+        default:                    dmem_req_cmd_o = 5'b00000;
     endcase
 end
 
