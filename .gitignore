@@ -5,4 +5,5 @@ lib_module/
 modelsim.ini
 transcript
 vsim.wlf
+Makefile_test
 

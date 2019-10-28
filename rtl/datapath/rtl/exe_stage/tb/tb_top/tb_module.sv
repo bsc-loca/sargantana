@@ -203,6 +203,8 @@ exe_top module_inst (
             check_out(3,tmp);
             test_sim_4(tmp);
             check_out(4,tmp);
+            test_sim_5(tmp);
+            check_out(5,tmp);
         end
     endtask
 
@@ -323,6 +325,39 @@ exe_top module_inst (
                     $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o.result_rd);
                     `END_COLOR_PRINT
                 end
+                #CLK_HALF_PERIOD;
+            end
+        end
+    endtask
+
+// Testing JAL
+    task automatic test_sim_5;
+        output int tmp;
+        begin
+            longint src1,src2;
+            tmp = 0;
+            tb_from_rr_i.instr.pc <= 24;
+            tb_from_rr_i.instr.unit <= UNIT_BRANCH;
+            tb_from_rr_i.instr.instr_type <= JAL;
+            tb_from_rr_i.instr.use_imm <= 1;
+            tb_from_rr_i.instr.imm <= 4;
+            $random(10);
+            for(int i = 0; i < 100; i++) begin
+                src1 = $urandom();
+                src1[63:32] = $urandom();
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.data_rs2 <= src2;
+                #CLK_HALF_PERIOD;
+                while(tb_stall_o)#CLK_PERIOD;
+                //#CLK_PERIOD;
+                /*if (tb_to_wb_o.result_rd != (src1/src2)) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o.result_rd);
+                    `END_COLOR_PRINT
+                end*/
                 #CLK_HALF_PERIOD;
             end
         end
