@@ -76,8 +76,8 @@ bus64_t result_mem;
 logic stall_mem;
 
 // Bypasses
-assign rs1_data_bypass = ((from_rr_i.rs1 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
-assign rs2_data_bypass = ((from_rr_i.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
+assign rs1_data_bypass = ((from_rr_i.instr.rs1 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
+assign rs2_data_bypass = ((from_rr_i.instr.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
 
 // Select rs2 from imm to avoid bypasses
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : rs2_data_bypass;
@@ -85,7 +85,7 @@ assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : rs2_data_b
 alu alu_inst (
     .data_rs1_i     (rs1_data_bypass),
     .data_rs2_i     (rs2_data_def),
-    .alu_op_i       (from_rr_i.instr.instr_type),
+    .instr_type_i   (from_rr_i.instr.instr_type),
     .result_o       (result_alu)
 );
 
@@ -145,7 +145,7 @@ mem_unit mem_unit_inst (
     .instr_type_i                   (from_rr_i.instr.instr_type),
     .mem_op_i                       (from_rr_i.instr.mem_op),
     .funct3_i                       (from_rr_i.instr.funct3),
-    .rd_i                           (from_rr_i.instr.i.rd),
+    .rd_i                           (from_rr_i.instr.rd),
     .imm_i                          (from_rr_i.instr.imm),
 
     .io_base_addr_i                 (io_base_addr_i),

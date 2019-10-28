@@ -19,7 +19,7 @@ always_comb begin
         ADD,ADDW: begin
             result_o = data_rs1_i + data_rs2_i;
         end
-        SUB.SUBW: begin
+        SUB,SUBW: begin
             result_o = data_rs1_i - data_rs2_i;
         end
         SLL: begin
