@@ -1,5 +1,5 @@
 $1
-CYCLES=50
+CYCLES=200
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
 IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"
@@ -19,7 +19,7 @@ vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_
  $IF_STAGE/if_stage.sv $ID_STAGE/decoder.sv $ID_STAGE/immediate.sv $RR_STAGE/regfile.sv \
  $EXE_STAGE/exe_top.sv $EXE_STAGE/alu.sv  $EXE_STAGE/mul_unit.sv $EXE_STAGE/div_unit.sv \
  $EXE_STAGE/branch_unit.sv $DCACHE/mem_unit.sv $CONTROL/control_unit.sv \
- $DATAPATH/datapath.sv tb_datapath.sv perfect_memory.sv wip_perfect_memory_hex.sv colors.vh 
+ $DATAPATH/datapath.sv tb_datapath.sv perfect_memory.sv perfect_memory_hex.sv colors.vh 
 
 #vlog +acc=rn +incdir+ $INCLUDES/*.sv $DRAC_FOLDER_RTL/*.sv \
 # $IF_STAGE/*.sv $ID_STAGE/*.sv $RR_STAGE/*.sv $EXE_STAGE/* $DCACHE/*.sv \

@@ -28,6 +28,8 @@ module datapath(
     output req_cpu_icache_t req_cpu_icache_o
 
 );
+// RISCV TESTS
+
 
     // Stages: if -- id -- rr -- ex -- wb
     // Signals stalls to be coming from the control unit

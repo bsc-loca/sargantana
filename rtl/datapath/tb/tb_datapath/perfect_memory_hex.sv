@@ -11,7 +11,6 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`include "drac_pkg.sv"
 import drac_pkg::*;
 
 // TODO: use interfaces
@@ -22,7 +21,7 @@ module perfect_memory_hex #(
     parameter LINE_SIZE = 32,
     parameter ADDR_SIZE = 32,
     parameter DELAY = 0,
-    localparam HEX_LOAD_ADDR = 'h100
+    localparam HEX_LOAD_ADDR = 'h0F0
 
 ) (
     input logic                     clk_i,
@@ -34,11 +33,12 @@ module perfect_memory_hex #(
 );
     localparam BASE = 128;
     logic [BASE-1:0] memory [SIZE/BASE];
-    logic [$clog2(DELAY)-1:0] counter;
-    logic [$clog2(DELAY)-1:0] next_counter;
+    logic [$clog2(DELAY):0] counter;
+    logic [$clog2(DELAY):0] next_counter;
 
     logic  [ADDR_SIZE-1:0]    addr_int;
-    assign addr_int = {addr_i[31:8],8'b0}+16;
+    //assign addr_int = {addr_i[31:8],8'b0}+16;
+    assign addr_int = 'h100+({4'b0,addr_i[31:4]}-'h010);
 
     // counter stuff
     assign next_counter = (counter > 0) ? counter-1 : 0;

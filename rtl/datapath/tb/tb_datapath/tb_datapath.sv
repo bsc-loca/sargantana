@@ -216,12 +216,7 @@ module tb_datapath();
             tmp = 0;
             $display("*** test_sim1");
             tick();
-            tick();
-            //set_mem_valid(0);
-            tick();
-            tick();
-            tick();
-            tick();
+            
 
         end
     endtask
@@ -235,7 +230,7 @@ module tb_datapath();
         reset_dut();
         test_sim();
     end
-
+assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
 
 endmodule
 //`default_nettype wire
