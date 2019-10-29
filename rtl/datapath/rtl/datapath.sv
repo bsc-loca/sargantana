@@ -80,6 +80,9 @@ module datapath(
     dec_wb_instr_t dec_to_wb_exe;
     dec_wb_instr_t dec_to_wb_wb;
 
+    //rr_exe_instr_t stage_rr_exe_d;
+    //rr_exe_instr_t stage_rr_exe_q;
+
     dec_exe_instr_t dec_to_exe_exe;
     rr_exe_instr_t rr_to_exe_exe;
     wb_exe_instr_t wb_to_exe_exe;
@@ -169,8 +172,8 @@ module datapath(
         .read_data2_o(stage_rr_exe_d.data_rs2)
     );
 
-    assign stage_rr_exe_d.rs1 = stage_id_rr_q.rs1;
-    assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
+    //assign stage_rr_exe_d.rs1 = stage_id_rr_q.rs1;
+    //assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
     assign stage_rr_exe_d.instr = stage_id_rr_q;
 
     // Register RR to EXE
@@ -185,7 +188,7 @@ module datapath(
     // Workaround
     // This can be definetaly be thought again
     // TODO: Guillem and Ruben fix this mess
-    assign dec_to_exe_exe.functional_unit   = stage_rr_exe_q.instr.unit;
+    /*assign dec_to_exe_exe.functional_unit   = stage_rr_exe_q.instr.unit;
     assign dec_to_exe_exe.int_32            = stage_rr_exe_q.instr.op_32;
     assign dec_to_exe_exe.alu_op            = stage_rr_exe_q.instr.alu_op;
     assign dec_to_exe_exe.mul_op            = ALU_REMU;//stage_rr_exe_q.instr.mul_op;
@@ -198,17 +201,17 @@ module datapath(
     assign dec_to_exe_exe.funct3            = STORE_SH;//stage_rr_exe_q.instr.;
     assign dec_to_exe_exe.mem_format        = BYTE;//stage_rr_exe_q.instr.;
     assign dec_to_exe_exe.amo_op            = AMO_SC;//stage_rr_exe_q.instr.;
-    assign dec_to_exe_exe.rd                = stage_rr_exe_q.instr.rd;
+    assign dec_to_exe_exe.rd                = stage_rr_exe_q.instr.rd;*/
 
-    assign dec_to_wb_exe.regfile_we    = stage_rr_exe_q.instr.regfile_we;
-    assign dec_to_wb_exe.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
+    //assign dec_to_wb_exe.regfile_we    = stage_rr_exe_q.instr.regfile_we;
+    //assign dec_to_wb_exe.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
 
 
     exe_top exe_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
-        .from_dec_i(dec_to_exe_exe),
+        //.from_rr_i(dec_to_exe_exe),
         .from_rr_i(stage_rr_exe_q),
         .from_wb_i(wb_to_exe_exe),
 
@@ -222,6 +225,9 @@ module datapath(
         .dmem_xcpt_ma_ld_i(req_dcache_cpu_i.dmem_xcpt_ma_ld_i),
         .dmem_xcpt_pf_st_i(req_dcache_cpu_i.dmem_xcpt_pf_st_i),
         .dmem_xcpt_pf_ld_i(req_dcache_cpu_i.dmem_xcpt_pf_ld_i),
+        // Not sure what it does
+        .kill_i(1'b0),
+        .csr_eret_i(1'b0),
 
         .to_wb_o(exe_to_wb_exe),
         .stall_o(stall_exe_out),

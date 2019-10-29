@@ -241,7 +241,8 @@ typedef enum logic[XLEN-1:0] {
     SUPERVISOR_ECALL        = 64'h09,
     INSTR_PAGE_FAULT        = 64'h0C,
     LD_PAGE_FAULT           = 64'h0D,
-    ST_AMO_PAGE_FAULT       = 64'h0F
+    ST_AMO_PAGE_FAULT       = 64'h0F,
+    NONE                    = 64'hFF
 } exception_cause_t;
 
 endpackage

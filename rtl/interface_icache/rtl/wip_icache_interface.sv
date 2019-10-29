@@ -12,7 +12,6 @@
 * -----------------------------------------------
 */
 
-`include "drac_pkg.sv"
 import drac_pkg::*;
 
 module icache_interface(
@@ -128,17 +127,17 @@ assign tlb_req_valid_o = icache_req_valid_o;
 //assign req_icache_fetch_o.ex.cause = (tlb_resp_xcp_if_i) ? FAULT_FETCH : NONE;
 //assign req_icache_fetch_o.ex.origin = req_fetch_icache_i.vaddr;
 //assign req_icache_fetch_o.ex.valid = fetch_ex_int.valid;
-assign req_icache_fetch_o.ex = fetch_ex_int;
+//assign req_icache_fetch_o.ex = fetch_ex_int;
 // whether there is a misaligned fetch
 assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] | 
                                     req_fetch_icache_i.vaddr[0]) &
                                     req_fetch_icache_i.valid;
 
-assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
+//assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
+//assign fetch_ex_int.origin = req_fetch_icache_i.vaddr[39:0];
 // Assign whether it is a misaligned, fault fetch or none
-assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? MISALIGNED_FETCH : 
-                            (tlb_resp_xcp_if_i) ? FAULT_FETCH : NONE; 
+//assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
+//                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE; 
 
 // sequential logic cacheline register buffer
 // TODO manage invalidations etc...
