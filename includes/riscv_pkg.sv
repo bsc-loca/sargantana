@@ -173,11 +173,11 @@ typedef enum logic [2:0] {
 
 
 typedef enum logic [2:0] {
-    //F3_64I_SLLI         = 3'b001,
-    //F3_64I_SRLI_SRAI    = 3'b101,
-    F3_64I_ADDIW        = 3'b000,
-    F3_64I_SLLIW        = 3'b001,
-    F3_64I_SRLIW_SRAIW  = 3'b101
+    //F3_64_SLLI         = 3'b001,
+    //F3_64_SRLI_SRAI    = 3'b101,
+    F3_64_ADDIW        = 3'b000,
+    F3_64_SLLIW        = 3'b001,
+    F3_64_SRLIW_SRAIW  = 3'b101
 } op_func3_alu_imm_64_t;
 
 

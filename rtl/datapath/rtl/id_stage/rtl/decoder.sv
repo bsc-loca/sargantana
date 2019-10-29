@@ -205,7 +205,6 @@ module decoder(
                         illegal_instruction = 1'b1;
                     end
                 endcase
-                
             end
             OP_ALU_I: begin
                 decode_instr_o.use_imm    = 1'b1;
@@ -262,7 +261,6 @@ module decoder(
                         endcase             
                     end
                 endcase
-                
             end
             OP_ALU: begin
                 decode_instr_o.regfile_we = 1'b1;
@@ -324,15 +322,80 @@ module decoder(
                         decode_instr_o.instr_type = AND;
                     end
                 endcase
-                
             end
             OP_ALU_I_W: begin
                 decode_instr_o.use_imm    = 1'b1;
                 decode_instr_o.regfile_we = 1'b1;
-                
+                decode_instr_o.op_32 = 1'b1;
+
+                case (decode_i.inst.itype.func3)
+                    F3_64_ADDIW: begin
+                       decode_instr_o.instr_type = ADDW;
+                    end
+                    F3_64_SLLIW: begin
+                        decode_instr_o.instr_type = SLLW;
+                        // check for illegal isntruction
+                        if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
+                            illegal_instruction = 1'b1;
+                        end else begin
+                            illegal_instruction = 1'b0;
+                        end
+                    end
+                    F3_64_SRLIW_SRAIW: begin
+                        case (decode_i.inst.rtype.func7)
+                            F7_SRAI_SUB_SRA: begin
+                                decode_instr_o.instr_type = SRAW;
+                            end
+                            F7_NORMAL: begin
+                                decode_instr_o.instr_type = SRLW;
+                            end
+                            default: begin // check illegal instruction
+                                illegal_instruction = 1'b1;
+                            end
+                        endcase             
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase
             end
             OP_ALU_W: begin
                 decode_instr_o.regfile_we = 1'b1;
+                decode_instr_o.op_32 = 1'b1;
+                case (decode_i.inst.rtype.func3)
+                    F3_64_ADDW_SUBW: begin
+                        case (decode_i.inst.rtype.func7)
+                            F7_SRAI_SUB_SRA: begin
+                                decode_instr_o.instr_type = SUBW;
+                            end
+                            F7_NORMAL: begin
+                                decode_instr_o.instr_type = ADDW;
+                            end
+                            default: begin // check illegal instruction
+                                illegal_instruction = 1'b1;
+                            end
+                        endcase
+                    end
+                    F3_64_SLLW: begin
+                        decode_instr_o.instr_type = SLLW;
+                    end
+                    F3_64_SRLW_SRAW: begin
+                        case (decode_i.inst.rtype.func7)
+                            F7_SRAI_SUB_SRA: begin
+                                decode_instr_o.instr_type = SRAW;
+                            end
+                            F7_NORMAL: begin
+                                decode_instr_o.instr_type = SRLW;
+                            end
+                            default: begin // check illegal instruction
+                                illegal_instruction = 1'b1;
+                            end
+                        endcase                        
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase
                 
             end
             OP_FENCE: begin
