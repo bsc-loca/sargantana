@@ -335,6 +335,7 @@ typedef struct packed {
     addrPC_t result_pc;
     reg_t rd;
     bus64_t result_rd;
+    logic branch_taken;
 } exe_wb_instr_t;
 
 // For bypass
@@ -362,6 +363,7 @@ typedef struct packed {
 typedef struct packed {
     logic valid;
     logic change_pc_ena;
+    logic branch_taken;
     //branch_pred_t bpred;
     //exception_t ex;
 } wb_cu_t;

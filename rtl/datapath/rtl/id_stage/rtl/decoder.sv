@@ -62,9 +62,18 @@ module decoder(
         // not sure if we should have this
         //decode_instr_o.instr_type;
         // By default use the imm value then it will change along the process
-        decode_instr_o.result = imm_value; 
+        decode_instr_o.result = 64'b0;
+
+        // TODO review
+        decode_instr_o.imm = 64'b0;
+        decode_instr_o.funct3 = decode_i.inst.common.func3;
+        decode_instr_o.signed_op = 1'b0;
+        decode_instr_o.mem_op = MEM_LOAD;
 
         ex_addr_misaligned_int = 1'b0;
+
+        jal_id_if_o.valid = 1'b0;
+        jal_id_if_o.jump_addr = 64'b0;
 
 
         case (decode_i.inst.common.opcode)
@@ -178,6 +187,7 @@ module decoder(
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                 decode_instr_o.unit = UNIT_MEM;
+                decode_instr_o.mem_op = MEM_STORE;
                 case (decode_i.inst.itype.func3)
                     STORE_SB: begin
                         decode_instr_o.instr_type = SB;

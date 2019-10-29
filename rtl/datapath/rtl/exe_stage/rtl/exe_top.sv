@@ -184,10 +184,12 @@ mem_unit mem_unit_inst (
 //------------------------------------------------------------------------------
 
 always_comb begin
+    to_wb_o.branch_taken = 1'b0;
     case(from_rr_i.instr.unit)
         UNIT_ALU: begin
             to_wb_o.result_rd = result_alu;
             to_wb_o.result_pc = 0;
+
         end
         UNIT_MUL: begin
             to_wb_o.result_rd = result_mul;
@@ -200,6 +202,7 @@ always_comb begin
         UNIT_BRANCH: begin
             to_wb_o.result_rd = reg_data_branch;
             to_wb_o.result_pc = result_branch;
+            to_wb_o.branch_taken = taken_branch;
         end
         UNIT_MEM: begin
             to_wb_o.result_rd = result_mem;

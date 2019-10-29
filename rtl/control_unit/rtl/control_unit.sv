@@ -36,12 +36,18 @@ module control_unit(
     //output cu_datapath_t    cu_datapath_t
 
 );
+    logic jump_enable_int;
+    // jump enable logic
+    // TODO add exceptions and csr
+    always_comb begin
+        jump_enable_int = wb_cu_i.branch_taken || id_cu_i.valid_jal;
+    end
     // logic to select the next pc
     // TODO: Branch Predictor
     // TODO: exception
     always_comb begin
-        
-        if (wb_cu_i.valid && wb_cu_i.change_pc_ena) begin
+        // branches
+        if (wb_cu_i.valid && wb_cu_i.change_pc_ena && jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         
         //end else if (!if_cu_i.valid_fetch) begin

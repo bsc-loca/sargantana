@@ -59,7 +59,7 @@ end
 always_comb begin
     case (instr_type_i)
         JAL: begin
-            taken_o = 1;
+            taken_o = 0; // guillemlp this is done at decode stage
         end
         JALR: begin
             taken_o = 1;

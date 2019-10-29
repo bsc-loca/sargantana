@@ -24,7 +24,7 @@ typedef struct packed {
     logic [31:25] void2;
     logic [24:20] rs2;
     logic [19:15] rs1;
-    logic [14:12] void1;
+    logic [14:12] func3;
     logic [11:7]  rd;
     logic [6:0]   opcode;
 } instruction_common_t;

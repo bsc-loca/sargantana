@@ -61,10 +61,11 @@ module datapath(
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
     // EXE
-    exe_wb_instr_t stage_exe_wb_d;
-    exe_wb_instr_t stage_exe_wb_q;
+    //exe_wb_instr_t stage_exe_wb_d;
+    //exe_wb_instr_t stage_exe_wb_q;
     // WB->Commit
-    exe_wb_instr_t stage_commit;
+    instr_entry_t wb_instr_int;
+    //exe_wb_instr_t stage_commit;
     wb_cu_t wb_cu_int;
 
     // Control Unit
@@ -77,14 +78,14 @@ module datapath(
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
     // this can be inserted to rr_exe
-    dec_wb_instr_t dec_to_wb_exe;
-    dec_wb_instr_t dec_to_wb_wb;
+    //dec_wb_instr_t dec_to_wb_exe;
+    //dec_wb_instr_t dec_to_wb_wb;
 
     //rr_exe_instr_t stage_rr_exe_d;
     //rr_exe_instr_t stage_rr_exe_q;
 
-    dec_exe_instr_t dec_to_exe_exe;
-    rr_exe_instr_t rr_to_exe_exe;
+    //dec_exe_instr_t dec_to_exe_exe;
+    //rr_exe_instr_t rr_to_exe_exe;
     wb_exe_instr_t wb_to_exe_exe;
 
     reg_addr_t io_base_addr;
@@ -117,7 +118,7 @@ module datapath(
     );
 
     // Multiplexor select jump pc from decode or fetch
-    assign pc_jump_if_int = (control_int.sel_addr_if) ? exe_to_wb_wb.result_rd : 
+    assign pc_jump_if_int = (control_int.sel_addr_if == SEL_JUMP_COMMIT) ? exe_to_wb_wb.result_pc : 
                                                         jal_id_if_int.jump_addr;
 
     // IF Stage
@@ -163,7 +164,7 @@ module datapath(
     regfile rr_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .write_enable_i(dec_to_wb_wb.regfile_we),
+        .write_enable_i(wb_instr_int.regfile_we),
         .write_addr_i(exe_to_wb_wb.rd),
         .write_data_i(exe_to_wb_wb.result_rd),
         .read_addr1_i(stage_id_rr_q.rs1),
@@ -243,12 +244,12 @@ module datapath(
         .dmem_lock_o(req_cpu_dcache_o.dmem_lock_o)
     );
 
-    register #($bits(dec_wb_instr_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
+    register #($bits(instr_entry_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .load_i(!control_int.stall_exe),
-        .input_i({dec_to_wb_exe,exe_to_wb_exe}),
-        .output_o({dec_to_wb_wb,exe_to_wb_wb})
+        .input_i({stage_rr_exe_q.instr,exe_to_wb_exe}),
+        .output_o({wb_instr_int,exe_to_wb_wb})
     );
 
     assign wb_to_exe_exe.valid  = control_int.stall_wb;
@@ -256,7 +257,8 @@ module datapath(
     assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
 
     assign wb_cu_int.valid = !control_int.stall_wb;
-    assign wb_cu_int.change_pc_ena = dec_to_wb_wb.change_pc_ena;
+    assign wb_cu_int.change_pc_ena = wb_instr_int.change_pc_ena;
+    assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     //assign wb_cu_int.bpred = ;
     //assign wb_cu_int.ex = ;
 
