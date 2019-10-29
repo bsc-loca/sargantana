@@ -212,31 +212,24 @@ module decoder(
                 // we don't need a default cause all cases are there
                 unique case (decode_i.inst.itype.func3)
                     F3_ADDI: begin
-                       decode_instr_o.alu_op = ALU_ADD;
                        decode_instr_o.instr_type = ADD;
                     end
                     F3_SLTI: begin
-                        decode_instr_o.alu_op = ALU_SLT;
                         decode_instr_o.instr_type = SLT;
                     end
                     F3_SLTIU: begin
-                        decode_instr_o.alu_op = ALU_SLTU;
                         decode_instr_o.instr_type = SLTU;
                     end
                     F3_XORI: begin
-                        decode_instr_o.alu_op = ALU_XOR;
                         decode_instr_o.instr_type = XOR;
                     end
                     F3_ORI: begin
-                        decode_instr_o.alu_op = ALU_OR;
                         decode_instr_o.instr_type = OR;
                     end
                     F3_ANDI: begin
-                        decode_instr_o.alu_op = ALU_AND;
                         decode_instr_o.instr_type = AND;
                     end
                     F3_SLLI: begin
-                        decode_instr_o.alu_op = ALU_SLL;
                         decode_instr_o.instr_type = SLL;
                         // check for illegal isntruction
                         if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
@@ -248,11 +241,9 @@ module decoder(
                     F3_SRLAI: begin
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.alu_op = ALU_SRA;
                                 decode_instr_o.instr_type = SRA;
                             end
                             F7_NORMAL: begin
-                                decode_instr_o.alu_op = ALU_SRL;
                                 decode_instr_o.instr_type = SRL;
                             end
                             default: begin // check illegal instruction
@@ -270,11 +261,9 @@ module decoder(
                     F3_ADD_SUB: begin
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.alu_op = ALU_SUB;
                                 decode_instr_o.instr_type = SUB;
                             end
                             F7_NORMAL: begin
-                                decode_instr_o.alu_op = ALU_ADD;
                                 decode_instr_o.instr_type = ADD;
                             end
                             default: begin // check illegal instruction
@@ -283,29 +272,23 @@ module decoder(
                         endcase
                     end
                     F3_SLL: begin
-                        decode_instr_o.alu_op = ALU_SLL;
                         decode_instr_o.instr_type = SLL;
                     end
                     F3_SLT: begin
-                        decode_instr_o.alu_op = ALU_SLT;
                         decode_instr_o.instr_type = SLT;
                     end
                     F3_SLTU: begin
-                        decode_instr_o.alu_op = ALU_SLTU;
                         decode_instr_o.instr_type = SLTU;
                     end
                     F3_XOR: begin
-                        decode_instr_o.alu_op = ALU_XOR;
                         decode_instr_o.instr_type = XOR;
                     end
                     F3_SRL_SRA: begin
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.alu_op = ALU_SRA;
                                 decode_instr_o.instr_type = SRA;
                             end
                             F7_NORMAL: begin
-                                decode_instr_o.alu_op = ALU_SRL;
                                 decode_instr_o.instr_type = SRL;
                             end
                             default: begin // check illegal instruction
@@ -314,11 +297,9 @@ module decoder(
                         endcase                        
                     end
                     F3_OR: begin
-                        decode_instr_o.alu_op = ALU_OR;
                         decode_instr_o.instr_type = OR;
                     end
                     F3_AND: begin
-                        decode_instr_o.alu_op = ALU_AND;
                         decode_instr_o.instr_type = AND;
                     end
                 endcase

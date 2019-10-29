@@ -36,8 +36,8 @@ reg64_t registers [1:31];
 
 // these assigns select data of register at position x 
 // if x = 0 then return 0
-assign read_data1_o = (read_addr1_i > 0) ? registers[read_addr1_i] : 64'b0;
-assign read_data2_o = (read_addr2_i > 0) ? registers[read_addr2_i] : 64'b0; 
+assign read_data1_o = (write_addr_i == read_addr1_i && write_enable_i) ? write_data_i : (read_addr1_i > 0) ? registers[read_addr1_i] : 64'b0;
+assign read_data2_o = (write_addr_i == read_addr2_i && write_enable_i) ? write_data_i : (read_addr2_i > 0) ? registers[read_addr2_i] : 64'b0; 
 
 always_ff @(posedge clk_i, negedge rstn_i)  begin
     if (!rstn_i) begin
