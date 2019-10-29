@@ -186,28 +186,6 @@ module datapath(
         .output_o(stage_rr_exe_q)
     );
 
-    // Workaround
-    // This can be definetaly be thought again
-    // TODO: Guillem and Ruben fix this mess
-    /*assign dec_to_exe_exe.functional_unit   = stage_rr_exe_q.instr.unit;
-    assign dec_to_exe_exe.int_32            = stage_rr_exe_q.instr.op_32;
-    assign dec_to_exe_exe.alu_op            = stage_rr_exe_q.instr.alu_op;
-    assign dec_to_exe_exe.mul_op            = ALU_REMU;//stage_rr_exe_q.instr.mul_op;
-    assign dec_to_exe_exe.use_imm           = stage_rr_exe_q.instr.use_imm;
-    assign dec_to_exe_exe.imm               = stage_rr_exe_q.instr.result;
-    assign dec_to_exe_exe.ctrl_xfer_op      = CT_JAL;//stage_rr_exe_q.instr.;
-    assign dec_to_exe_exe.branch_op         = B_NE;//stage_rr_exe_q.instr;
-    assign dec_to_exe_exe.pc                = stage_rr_exe_q.instr.pc;
-    assign dec_to_exe_exe.mem_op            = MEM_LOAD;//stage_rr_exe_q.instr.
-    assign dec_to_exe_exe.funct3            = STORE_SH;//stage_rr_exe_q.instr.;
-    assign dec_to_exe_exe.mem_format        = BYTE;//stage_rr_exe_q.instr.;
-    assign dec_to_exe_exe.amo_op            = AMO_SC;//stage_rr_exe_q.instr.;
-    assign dec_to_exe_exe.rd                = stage_rr_exe_q.instr.rd;*/
-
-    //assign dec_to_wb_exe.regfile_we    = stage_rr_exe_q.instr.regfile_we;
-    //assign dec_to_wb_exe.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
-
-
     exe_top exe_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),

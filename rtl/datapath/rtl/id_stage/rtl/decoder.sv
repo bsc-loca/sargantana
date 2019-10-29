@@ -65,7 +65,7 @@ module decoder(
         decode_instr_o.result = 64'b0;
 
         // TODO review
-        decode_instr_o.imm = 64'b0;
+        decode_instr_o.imm = imm_value;
         decode_instr_o.funct3 = decode_i.inst.common.func3;
         decode_instr_o.signed_op = 1'b0;
         decode_instr_o.mem_op = MEM_LOAD;
