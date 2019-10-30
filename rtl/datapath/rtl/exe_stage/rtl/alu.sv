@@ -16,11 +16,19 @@ assign mul_su = $signed(data_rs1_i) * data_rs2_i;
 */
 always_comb begin
     case (instr_type_i)
-        ADD,ADDW: begin
+        ADD: begin
             result_o = data_rs1_i + data_rs2_i;
         end
-        SUB,SUBW: begin
+        ADDW: begin
+            result_o[31:0] = data_rs1_i[31:0] + data_rs2_i[31:0];
+            result_o[63:32] = {32{result_o[31]}};
+        end
+        SUB: begin
             result_o = data_rs1_i - data_rs2_i;
+        end
+        SUBW: begin
+            result_o[31:0] = data_rs1_i[31:0] - data_rs2_i[31:0];
+            result_o[63:32] = {32{result_o[31]}};
         end
         SLL: begin
             result_o = data_rs1_i << data_rs2_i;
