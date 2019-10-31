@@ -78,8 +78,17 @@ bus64_t result_mem;
 logic stall_mem;
 
 // Bypasses
-assign rs1_data_bypass = ((from_rr_i.instr.rs1 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
-assign rs2_data_bypass = ((from_rr_i.instr.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
+`ifdef ASSERTIONS
+    always @(posedge clk_i) begin
+        if(from_rr_i.instr.rs1 == 0)
+            assert rs1_data_bypass==0;
+        if(from_rr_i.instr.rs2 == 0)
+            assert rs2_data_bypass==0;
+    end
+`endif
+
+assign rs1_data_bypass = ((from_rr_i.instr.rs1 != 0) & (from_rr_i.instr.rs1 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
+assign rs2_data_bypass = ((from_rr_i.instr.rs2 != 0) & (from_rr_i.instr.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
 
 // Select rs2 from imm to avoid bypasses
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : rs2_data_bypass;
