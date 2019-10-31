@@ -139,6 +139,7 @@ module datapath(
     register #($bits(if_id_stage_t)) reg_if_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .flush_i(control_int.flush_if),
         .load_i(!control_int.stall_if),
         .input_i(stage_if_id_d),
         .output_o(stage_if_id_q)
@@ -157,6 +158,7 @@ module datapath(
     register #($bits(instr_entry_t)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .flush_i(control_int.flush_id),
         .load_i(!control_int.stall_id),
         .input_i(stage_id_rr_d),
         .output_o(stage_id_rr_q)
@@ -183,6 +185,7 @@ module datapath(
     register #($bits(stage_rr_exe_d)) reg_rr_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .flush_i(control_int.flush_rr),
         .load_i(!control_int.stall_rr),
         .input_i(stage_rr_exe_d),
         .output_o(stage_rr_exe_q)
@@ -227,6 +230,7 @@ module datapath(
     register #($bits(instr_entry_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .flush_i(control_int.flush_exe),
         .load_i(!control_int.stall_exe),
         .input_i({stage_rr_exe_q.instr,exe_to_wb_exe}),
         .output_o({wb_instr_int,exe_to_wb_wb})

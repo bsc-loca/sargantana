@@ -1,5 +1,5 @@
 $1
-CYCLES=200
+CYCLES=2000
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
 IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"

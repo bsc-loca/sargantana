@@ -1,12 +1,12 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/clk_i
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/rstn_i
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/valid_fetch
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/id_cu_i
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/wb_cu_i
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/pipeline_ctrl_o
-add wave -noupdate -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/cu_if_o
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/clk_i
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/rstn_i
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/valid_fetch
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/id_cu_i
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/wb_cu_i
+add wave -noupdate -expand -group {Control Unit} -expand /tb_datapath/datapath_inst/control_unit_inst/pipeline_ctrl_o
+add wave -noupdate -expand -group {Control Unit} /tb_datapath/datapath_inst/control_unit_inst/cu_if_o
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/rstn_i
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/soft_rstn_i
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/req_icache_cpu_i
@@ -31,19 +31,19 @@ add wave -noupdate -group datapath /tb_datapath/datapath_inst/exe_to_wb_wb
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/wb_to_exe_exe
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/io_base_addr
 add wave -noupdate -group datapath /tb_datapath/datapath_inst/clk_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/clk_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/rstn_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/stall_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/next_pc_sel_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/pc_jump_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/fetch_o
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/next_pc
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/pc
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_addr_misaligned_int
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_if_addr_fault_int
-add wave -noupdate -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_if_page_fault_int
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/clk_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/rstn_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/stall_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/next_pc_sel_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/pc_jump_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/req_icache_cpu_i
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/req_cpu_icache_o
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/fetch_o
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/next_pc
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/pc
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_addr_misaligned_int
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_if_addr_fault_int
+add wave -noupdate -expand -group if_stage /tb_datapath/datapath_inst/if_stage_inst/ex_if_page_fault_int
 add wave -noupdate -group id_stage -radix hexadecimal -childformat {{/tb_datapath/datapath_inst/id_decode_inst/decode_i.pc_inst -radix hexadecimal} {/tb_datapath/datapath_inst/id_decode_inst/decode_i.inst -radix hexadecimal} {/tb_datapath/datapath_inst/id_decode_inst/decode_i.valid -radix hexadecimal} {/tb_datapath/datapath_inst/id_decode_inst/decode_i.bpred -radix hexadecimal} {/tb_datapath/datapath_inst/id_decode_inst/decode_i.ex -radix hexadecimal}} -expand -subitemconfig {/tb_datapath/datapath_inst/id_decode_inst/decode_i.pc_inst {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/id_decode_inst/decode_i.inst {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/id_decode_inst/decode_i.valid {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/id_decode_inst/decode_i.bpred {-height 17 -radix hexadecimal} /tb_datapath/datapath_inst/id_decode_inst/decode_i.ex {-height 17 -radix hexadecimal}} /tb_datapath/datapath_inst/id_decode_inst/decode_i
 add wave -noupdate -group id_stage -radix hexadecimal /tb_datapath/datapath_inst/id_decode_inst/decode_instr_o
 add wave -noupdate -group id_stage -radix hexadecimal /tb_datapath/datapath_inst/id_decode_inst/imm_value
@@ -70,6 +70,10 @@ add wave -noupdate -expand -group exe_stage -radix hexadecimal -childformat {{{/
 add wave -noupdate -expand -group exe_stage -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/rs2_data_def
 add wave -noupdate -expand -group exe_stage -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/result_alu
 add wave -noupdate -expand -group exe_stage -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/to_wb_o
+add wave -noupdate -expand -group exe_stage -expand -group exe_wb_reg /tb_datapath/datapath_inst/reg_exe_inst/rstn_i
+add wave -noupdate -expand -group exe_stage -expand -group exe_wb_reg /tb_datapath/datapath_inst/reg_exe_inst/load_i
+add wave -noupdate -expand -group exe_stage -expand -group exe_wb_reg /tb_datapath/datapath_inst/reg_exe_inst/input_i
+add wave -noupdate -expand -group exe_stage -expand -group exe_wb_reg /tb_datapath/datapath_inst/reg_exe_inst/output_o
 add wave -noupdate -expand -group exe_stage -group mul_div -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/result_mul
 add wave -noupdate -expand -group exe_stage -group mul_div -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/stall_mul
 add wave -noupdate -expand -group exe_stage -group mul_div -radix hexadecimal /tb_datapath/datapath_inst/exe_stage_inst/ready_mul
@@ -107,7 +111,7 @@ add wave -noupdate -expand -group Commit /tb_datapath/datapath_inst/wb_cu_int
 add wave -noupdate -expand -group Commit -expand /tb_datapath/datapath_inst/exe_to_wb_wb
 add wave -noupdate -expand -group Commit /tb_datapath/datapath_inst/wb_to_exe_exe
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {162 ns} 0}
+WaveRestoreCursors {{Cursor 1} {99979 ns} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 308
 configure wave -valuecolwidth 185
@@ -123,4 +127,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {151 ns} {163 ns}
+WaveRestoreZoom {99978 ns} {99990 ns}

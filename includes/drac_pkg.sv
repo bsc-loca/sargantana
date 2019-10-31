@@ -380,6 +380,12 @@ typedef struct packed {
     logic stall_rr;
     logic stall_exe;
     logic stall_wb;
+
+    logic flush_if;
+    logic flush_id;
+    logic flush_rr;
+    logic flush_exe;
+    logic flush_wb;
     // whether insert in fetch from dec or commit
     jump_addr_fetch_t sel_addr_if;
 } pipeline_ctrl_t;

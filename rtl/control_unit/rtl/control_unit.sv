@@ -76,6 +76,19 @@ module control_unit(
         pipeline_ctrl_o.stall_rr  = 1'b0;
         pipeline_ctrl_o.stall_exe = 1'b0;
         pipeline_ctrl_o.stall_wb  = 1'b0;
+        if (wb_cu_i.branch_taken) begin
+            pipeline_ctrl_o.flush_if  = 1'b1;
+            pipeline_ctrl_o.flush_id  = 1'b1;
+            pipeline_ctrl_o.flush_rr  = 1'b1;
+            pipeline_ctrl_o.flush_exe = 1'b1;
+            pipeline_ctrl_o.flush_wb  = 1'b1;
+        end else begin
+            pipeline_ctrl_o.flush_if  = 1'b0;
+            pipeline_ctrl_o.flush_id  = 1'b0;
+            pipeline_ctrl_o.flush_rr  = 1'b0;
+            pipeline_ctrl_o.flush_exe = 1'b0;
+            pipeline_ctrl_o.flush_wb  = 1'b0;
+        end
     end
 
 endmodule
