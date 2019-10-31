@@ -40,16 +40,22 @@ module control_unit(
     // jump enable logic
     // TODO add exceptions and csr
     always_comb begin
-        jump_enable_int = wb_cu_i.branch_taken || id_cu_i.valid_jal;
+        jump_enable_int = (wb_cu_i.valid && 
+                           wb_cu_i.change_pc_ena && 
+                           wb_cu_i.branch_taken) || id_cu_i.valid_jal;
     end
     // logic to select the next pc
     // TODO: Branch Predictor
     // TODO: exception
     always_comb begin
-        // branches
-        if (wb_cu_i.valid && wb_cu_i.change_pc_ena && jump_enable_int) begin
+        // branches or jal
+        if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
+        // jal select
+        //end else if (id_cu_i.valid_jal) begin
+        //    cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         
+        //end 
         //end else if (!if_cu_i.valid_fetch) begin
         end else if (!valid_fetch) begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC;
@@ -68,6 +74,30 @@ module control_unit(
         end
     end
 
+    // logic about flush the pipeline if branch
+    always_comb begin
+        if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
+            pipeline_ctrl_o.flush_if  = 1'b1;
+            pipeline_ctrl_o.flush_id  = 1'b1;
+            pipeline_ctrl_o.flush_rr  = 1'b1;
+            pipeline_ctrl_o.flush_exe = 1'b1;
+            pipeline_ctrl_o.flush_wb  = 1'b0;
+        end else if (id_cu_i.valid_jal) begin
+            pipeline_ctrl_o.flush_if  = 1'b1;
+            pipeline_ctrl_o.flush_id  = 1'b0;
+            pipeline_ctrl_o.flush_rr  = 1'b0;
+            pipeline_ctrl_o.flush_exe = 1'b0;
+            pipeline_ctrl_o.flush_wb  = 1'b0;
+        end else begin
+            pipeline_ctrl_o.flush_if  = 1'b0;
+            pipeline_ctrl_o.flush_id  = 1'b0;
+            pipeline_ctrl_o.flush_rr  = 1'b0;
+            pipeline_ctrl_o.flush_exe = 1'b0;
+            pipeline_ctrl_o.flush_wb  = 1'b0;
+        end
+    end
+
+
     // logic stalls
     // TODO
     always_comb begin
@@ -76,19 +106,6 @@ module control_unit(
         pipeline_ctrl_o.stall_rr  = 1'b0;
         pipeline_ctrl_o.stall_exe = 1'b0;
         pipeline_ctrl_o.stall_wb  = 1'b0;
-        if (wb_cu_i.branch_taken) begin
-            pipeline_ctrl_o.flush_if  = 1'b1;
-            pipeline_ctrl_o.flush_id  = 1'b1;
-            pipeline_ctrl_o.flush_rr  = 1'b1;
-            pipeline_ctrl_o.flush_exe = 1'b1;
-            pipeline_ctrl_o.flush_wb  = 1'b1;
-        end else begin
-            pipeline_ctrl_o.flush_if  = 1'b0;
-            pipeline_ctrl_o.flush_id  = 1'b0;
-            pipeline_ctrl_o.flush_rr  = 1'b0;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end
     end
 
 endmodule
