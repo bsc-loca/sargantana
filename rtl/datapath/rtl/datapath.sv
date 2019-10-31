@@ -240,7 +240,7 @@ module datapath(
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
 
-    assign wb_cu_int.valid = !control_int.stall_wb;
+    assign wb_cu_int.valid = wb_instr_int.valid;//!control_int.stall_wb;
     assign wb_cu_int.change_pc_ena = wb_instr_int.change_pc_ena;
     assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     //assign wb_cu_int.bpred = ;
