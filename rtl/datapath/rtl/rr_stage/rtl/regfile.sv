@@ -41,11 +41,7 @@ assign read_data2_o = (read_addr2_i == 0) ? 64'b0 : (write_addr_i == read_addr2_
 //assign read_data2_o = (write_addr_i == read_addr2_i && write_enable_i) ? write_data_i : (read_addr2_i > 0) ? registers[read_addr2_i] : 64'b0; 
 
 always_ff @(posedge clk_i, negedge rstn_i)  begin
-    if (!rstn_i) begin
-        for (integer i = 1; i < 32; i++) begin
-            registers[i] <= 64'b0;
-        end
-    end else if (write_enable_i && write_addr_i > 0) begin
+    if (write_enable_i && (write_addr_i > 0)) begin
         registers[write_addr_i] <= write_data_i;
     end
 end
