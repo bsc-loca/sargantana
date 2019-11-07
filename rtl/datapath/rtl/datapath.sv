@@ -167,7 +167,6 @@ module datapath(
     // RR Stage
     regfile rr_stage_inst(
         .clk_i(clk_i),
-        .rstn_i(rstn_i),
         .write_enable_i(wb_instr_int.regfile_we),
         .write_addr_i(exe_to_wb_wb.rd),
         .write_data_i(exe_to_wb_wb.result_rd),
