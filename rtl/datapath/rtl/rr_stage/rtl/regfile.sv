@@ -19,15 +19,15 @@ import riscv_pkg::*;
 module regfile (
     input   logic                   clk_i,
     // write port input
-    input   logic					write_enable_i,
-    input  	[REGFILE_WIDTH-1:0]	    write_addr_i,
-    input   bus64_t	                write_data_i,
+    input   logic                   write_enable_i,
+    input   [REGFILE_WIDTH-1:0]     write_addr_i,
+    input   bus64_t                 write_data_i,
     // read ports input
-    input  	[REGFILE_WIDTH-1:0] 	read_addr1_i,
-    input  	[REGFILE_WIDTH-1:0] 	read_addr2_i,
+    input   [REGFILE_WIDTH-1:0]     read_addr1_i,
+    input   [REGFILE_WIDTH-1:0]     read_addr2_i,
     // read port output
-    output  bus64_t	                read_data1_o,
-    output  bus64_t	                read_data2_o
+    output  bus64_t                 read_data1_o,
+    output  bus64_t                 read_data2_o
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...

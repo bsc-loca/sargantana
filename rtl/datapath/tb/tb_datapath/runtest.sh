@@ -1,4 +1,5 @@
-$1
+#$1
+TEST=$1
 CYCLES=2000
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
@@ -27,9 +28,10 @@ vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_
 
 vmake lib_module/ > Makefile_test
 
-if [ -z "$1" ]
-then #// -new
-      vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
-else
-      vsim work.tb_datapath $1 -do "run $CYCLES"
-fi
+#if [ -z "$1" ]
+#then #// -new
+cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
+vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
+#else
+ #     vsim work.tb_datapath $1 -do "run $CYCLES"
+#fi
