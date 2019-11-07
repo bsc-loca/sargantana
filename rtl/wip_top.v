@@ -47,25 +47,25 @@ module top_drac(
 //instance of the struct  for interface icache and cpu
 req_icache_cpu_t req_icache_cpu_i;
 //translate from SoC signals to struct
-req_icache_cpu_i.valid = ICACHE_RESP_VALID;
-req_icache_cpu_i.data =  ICACHE_RESP_BITS_DATABLOCK;
+assign req_icache_cpu_i.valid = ICACHE_RESP_VALID;
+assign req_icache_cpu_i.data =  ICACHE_RESP_BITS_DATABLOCK;
 //TODO: If not needed remove them from struct
 //req_icache_cpu_i.instr_addr_misaligned = ;
 //req_icache_cpu_i.instr_access_fault = ;
-req_icache_cpu_i.instr_page_fault = PTWINVALIDATE ;
+assign req_icache_cpu_i.instr_page_fault = PTWINVALIDATE ;
 
 //instance of the struct for interface dcache and cpu
-req_dcache_cpu_t req_icache_cpu_i;
+assign req_dcache_cpu_t req_icache_cpu_i;
 //translate from SoC signals to struct
-req_icache_cpu_i.dmem_resp_replay_i = DMEM_RESP_BITS_REPLAY;
-req_icache_cpu_i.dmem_resp_data_i = DMEM_RESP_BITS_DATA_SUBW;
-req_icache_cpu_i.dmem_req_ready_i = DMEM_REQ_READY;
-req_icache_cpu_i.dmem_resp_valid_i = DMEM_RESP_VALID ;
-req_icache_cpu_i.dmem_resp_nack_i = DMEM_RESP_BITS_NACK;
-req_icache_cpu_i.dmem_xcpt_ma_st_i = DMEM_XCPT_MA_ST;
-req_icache_cpu_i.dmem_xcpt_ma_ld_i = DMEM_XCPT_MA_LD;
-req_icache_cpu_i.dmem_xcpt_pf_st_i = DMEM_XCPT_PF_ST;
-req_icache_cpu_i.dmem_xcpt_pf_ld_i = DMEM_XCPT_PF_LD;
+assign req_icache_cpu_i.dmem_resp_replay_i = DMEM_RESP_BITS_REPLAY;
+assign req_icache_cpu_i.dmem_resp_data_i = DMEM_RESP_BITS_DATA_SUBW;
+assign req_icache_cpu_i.dmem_req_ready_i = DMEM_REQ_READY;
+assign req_icache_cpu_i.dmem_resp_valid_i = DMEM_RESP_VALID ;
+assign req_icache_cpu_i.dmem_resp_nack_i = DMEM_RESP_BITS_NACK;
+assign req_icache_cpu_i.dmem_xcpt_ma_st_i = DMEM_XCPT_MA_ST;
+assign req_icache_cpu_i.dmem_xcpt_ma_ld_i = DMEM_XCPT_MA_LD;
+assign req_icache_cpu_i.dmem_xcpt_pf_st_i = DMEM_XCPT_PF_ST;
+assign req_icache_cpu_i.dmem_xcpt_pf_ld_i = DMEM_XCPT_PF_LD;
 
 datapath datapath_inst(
     .clk_i(CLK),
