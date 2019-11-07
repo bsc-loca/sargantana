@@ -54,7 +54,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= 'h0000021c;
+            pc <= 'h00000200;
         end else begin
             pc <= next_pc;
         end
@@ -102,10 +102,24 @@ module if_stage(
 
     assign req_cpu_icache_o.vaddr = pc[39:0];
 
+    
+    //Logic to select block(current instruction) from Icache row
+    inst_t inst_int;
+    //TODO: check synt of this. 4 way mux expected
+    always_comb begin
+        case(pc[3:2])
+            2'b00: inst_int = req_icache_cpu_i.data[riscv_pkg::INST_SIZE-1 : 0];
+            2'b01: inst_int = req_icache_cpu_i.data[2*riscv_pkg::INST_SIZE-1 :
+                                                    riscv_pkg::INST_SIZE];
+            2'b10: inst_int = req_icache_cpu_i.data[3*riscv_pkg::INST_SIZE-1 :
+                                                    2*riscv_pkg::INST_SIZE];
+            2'b11: inst_int = req_icache_cpu_i.data[4*riscv_pkg::INST_SIZE-1 : 
+                                                    3*riscv_pkg::INST_SIZE];
+        endcase
+    end 
     // logic branch predictor
-
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst = req_icache_cpu_i.data; // TODO: add logic of getting the block
+    assign fetch_o.inst = inst_int;
     assign fetch_o.valid = req_icache_cpu_i.valid;
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN; // TODO: add bpred
     assign fetch_o.bpred.pred_addr = 64'b0; // TODO: add bpred 

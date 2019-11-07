@@ -155,7 +155,7 @@ interface_dcache interface_dcache_inst (
     .data_rs2_i                     (rs2_data_bypass),
     .instr_type_i                   (from_rr_i.instr.instr_type),
     .mem_op_i                       (from_rr_i.instr.mem_op),
-    .funct3_i                       (from_rr_i.instr.funct3),
+   .funct3_i                       (from_rr_i.instr.funct3),
     .rd_i                           (from_rr_i.instr.rd),
     .imm_i                          (from_rr_i.instr.imm),
 
@@ -183,6 +183,7 @@ interface_dcache interface_dcache_inst (
     .dmem_req_kill_o                (dmem_req_kill_o),
 
     // output to wb
+//TODO:figureout why they are missign
     .ready_o                        (ready_mem),
     .data_o                         (result_mem),
     .lock_o                         (stall_mem)

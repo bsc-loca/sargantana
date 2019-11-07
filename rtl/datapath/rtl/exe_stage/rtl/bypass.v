@@ -10,18 +10,18 @@
  * -----------------------------------------------
  */
 
-`default_nettype none
-`include "definitions.vh"
+
+import drac_pkg::*;
 
 module bypass (
-    input  [4:0]      exe_src_i,
-    input  `DATA      exe_data_i,
+    input  [4:0]        exe_src_i,
+    input  bus64_t      exe_data_i,
 
-    input  `DATA      wb_data_i,
-    input  [4:0]      wb_dst_i,
-    input             wb_we_i,
+    input  bus64_t      wb_data_i,
+    input  [4:0]        wb_dst_i,
+    input               wb_we_i,
 
-    output reg `DATA  bypass_o
+    output reg64_t      bypass_o
 );
 
 

@@ -80,7 +80,7 @@ typedef struct packed {
 // Req coming from ICache
 typedef struct packed {
     logic  valid;
-    inst_t data;
+    icache_line_t  data;
     //addr_t req_addr; I think it is not completely necessary
     //exception_t ex;
     logic instr_addr_misaligned;

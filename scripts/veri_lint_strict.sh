@@ -15,7 +15,7 @@ done < <(find ./ -depth -name "includes" -o -name "rtl")
 rtl_files=""
 while read file; do
     rtl_files=$rtl_files$file$'\n'
-done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* )
+done < <(grep -r -l -i --include \*.v --include \*.sv ./ --exclude \tb_* --exclude \wip_* --exclude \drac_pkg* --exclude \riscv_pkg*)
 #remove the last character (empty), If not verilator will try to run without 
 #a valid file name
 rtl_files=${rtl_files::-1}
@@ -26,7 +26,7 @@ while read p; do
   #include all the founded rtl folders as includes in case you have dependences 
   #grep for warnings and errors and save it on a variable. Notice that sterr is 
   #required
-  (verilator --lint-only  $include_dirs "$p") 
+  (verilator --lint-only  includes/riscv_pkg.sv includes/drac_pkg.sv $include_dirs "$p") 
   #Detect if there was an error in previous command
   if [ "$?" -ne "0" ]; then
    exit 1
