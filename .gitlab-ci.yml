@@ -10,5 +10,4 @@ stages:
 generate:verilog:
   stage: generate
   script:
-    - verilator --version
     - make

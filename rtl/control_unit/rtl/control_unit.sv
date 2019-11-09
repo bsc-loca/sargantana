@@ -48,7 +48,7 @@ module control_unit(
     // TODO: Branch Predictor
     // TODO: exception
     always_comb begin
-        // branches or valid_jal
+        // branches or jal
         if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         // jal select

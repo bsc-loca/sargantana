@@ -40,6 +40,7 @@ module tb_regfile();
 // Signals
 //-----------------------------
     reg     tb_clk_i;
+    reg     tb_rstn_i;
 
     reg     tb_write_enable_i;
     reg_t   tb_write_addr_i;
@@ -58,6 +59,7 @@ module tb_regfile();
 
     regfile regfile_inst( 
         .clk_i(tb_clk_i),
+        .rstn_i(tb_rstn_i),
         .write_enable_i(tb_write_enable_i),
         .write_addr_i(tb_write_addr_i),
         .write_data_i(tb_write_data_i),
@@ -77,6 +79,17 @@ module tb_regfile();
     initial tb_clk_i = 1;
     always #CLK_HALF_PERIOD tb_clk_i = !tb_clk_i;
 
+    //***task automatic reset_dut***
+    task automatic reset_dut;
+        begin
+            $display("*** Toggle reset.");
+            tb_rstn_i <= 1'b0; 
+            #CLK_PERIOD;
+            tb_rstn_i <= 1'b1;
+            #CLK_PERIOD;
+            $display("Done");
+        end
+    endtask
 
 //***task automatic init_sim***
 //This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
@@ -84,6 +97,7 @@ module tb_regfile();
         begin
             $display("*** init_sim");
             tb_clk_i <='{default:1};
+            tb_rstn_i<='{default:0};
             tb_write_enable_i<='{default:0};
             tb_write_addr_i<='{default:0};
             tb_write_data_i<='{default:0};
