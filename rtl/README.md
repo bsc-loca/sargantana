@@ -3,7 +3,8 @@ Structure
 
 All modules have the following structure.
 Try to follow it.
-```
+
+```            
 nameOfModule
 │       ├── doc
 │       │   ├── digram.dwg
@@ -21,6 +22,7 @@ nameOfModule
 │           └── SBY
 │               └── files
 ```            
+            
 Original folder
 ---------------
 

@@ -1,5 +1,4 @@
-#$1
-TEST=$1
+$1
 CYCLES=2000
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
