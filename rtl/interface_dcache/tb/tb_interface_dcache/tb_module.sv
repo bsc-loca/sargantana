@@ -240,7 +240,7 @@ mem_unit module_inst (
                 `END_COLOR_PRINT
             end else begin
                 `START_GREEN_PRINT
-                        $display("TEST  PASSED.");
+                        $display("TEST 4 PASSED.");
                 `END_COLOR_PRINT
             end
         end
