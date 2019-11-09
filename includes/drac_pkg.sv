@@ -95,7 +95,7 @@ typedef struct packed {
 } req_cpu_icache_t;
 
 // dcache response
-// explain what is everything
+// TODO: explain what is everything
 typedef struct packed {
     logic     dmem_resp_replay_i;
     bus64_t   dmem_resp_data_i;
