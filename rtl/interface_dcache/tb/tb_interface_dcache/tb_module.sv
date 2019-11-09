@@ -79,7 +79,7 @@ module tb_module();
 // Module
 //-----------------------------
 
-mem_unit module_inst (
+interface_dcache module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
 

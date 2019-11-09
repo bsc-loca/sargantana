@@ -114,7 +114,7 @@ typedef struct packed {
     logic        dmem_req_valid_o;
     logic [4:0]  dmem_req_cmd_o;
     addr_t       dmem_req_addr_o;
-    bus64_t      dmem_op_type_o;
+    logic [3:0]  dmem_op_type_o;
     bus64_t      dmem_req_data_o;
     logic [7:0]  dmem_req_tag_o;
     logic        dmem_req_invalidate_lr_o;

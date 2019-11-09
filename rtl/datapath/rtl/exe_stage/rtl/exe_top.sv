@@ -45,7 +45,7 @@ module exe_top (
     output logic        dmem_req_valid_o,
     output logic [4:0]  dmem_req_cmd_o,
     output addr_t       dmem_req_addr_o,
-    output bus64_t      dmem_op_type_o,
+    output logic [3:0]  dmem_op_type_o,
     output bus64_t      dmem_req_data_o,
     output logic [7:0]  dmem_req_tag_o,
     output logic        dmem_req_invalidate_lr_o,
@@ -144,7 +144,7 @@ branch_unit branch_unit_inst (
     .reg_data_o         (reg_data_branch)
 );
 
-mem_unit mem_unit_inst (
+interface_dcache interface_dcache_inst (
     .clk_i                          (clk_i),
     .rstn_i                         (rstn_i),
 

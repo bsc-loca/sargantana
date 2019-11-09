@@ -18,7 +18,7 @@ import drac_pkg::*;
  
 // Interface with Data Cache. Stores a Memory request until it finishes
 
-module mem_unit (
+module interface_dcache (
     input  wire         clk_i,               // Clock
     input  wire         rstn_i,              // Negative Reset Signal
 
