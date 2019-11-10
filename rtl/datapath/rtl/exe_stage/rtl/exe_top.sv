@@ -150,44 +150,44 @@ mem_unit mem_unit_inst (
 .clk_i                          (clk_i),
     .rstn_i                         (rstn_i),
 
-//    .valid_i                        (from_rr_i.instr.unit == UNIT_MEM),
-//    .kill_i                         (kill_i),
+    .valid_i                        (from_rr_i.instr.unit == UNIT_MEM),
+    .kill_i                         (kill_i),
     .csr_eret_i                     (csr_eret_i),
-//    .data_rs1_i                     (rs1_data_bypass),
-//    .data_rs2_i                     (rs2_data_bypass),
-//    .instr_type_i                   (from_rr_i.instr.instr_type),
-//    .mem_op_i                       (from_rr_i.instr.mem_op),
-//   .funct3_i                       (from_rr_i.instr.funct3),
-//    .rd_i                           (from_rr_i.instr.rd),
-//    .imm_i                          (from_rr_i.instr.imm),
+    .data_rs1_i                     (rs1_data_bypass),
+    .data_rs2_i                     (rs2_data_bypass),
+    .instr_type_i                   (from_rr_i.instr.instr_type),
+    .mem_op_i                       (from_rr_i.instr.mem_op),
+   .funct3_i                       (from_rr_i.instr.funct3),
+    .rd_i                           (from_rr_i.instr.rd),
+    .imm_i                          (from_rr_i.instr.imm),
 
     .io_base_addr_i                 (io_base_addr_i),
 
     // dcache answer
-//    .dmem_resp_replay_i             (dmem_resp_replay_i),
-//    .dmem_resp_data_i               (dmem_resp_data_i),
+    .dmem_resp_replay_i             (dmem_resp_replay_i),
+    .dmem_resp_data_i               (dmem_resp_data_i),
     .dmem_req_ready_i               (dmem_req_ready_i),
     .dmem_resp_valid_i              (dmem_resp_valid_i),
-//    .dmem_resp_nack_i               (dmem_resp_nack_i),
+    .dmem_resp_nack_i               (dmem_resp_nack_i),
     .dmem_xcpt_ma_st_i              (dmem_xcpt_ma_st_i),
     .dmem_xcpt_ma_ld_i              (dmem_xcpt_ma_ld_i),
     .dmem_xcpt_pf_st_i              (dmem_xcpt_pf_st_i),
     .dmem_xcpt_pf_ld_i              (dmem_xcpt_pf_ld_i),
 
     // request to dcache
-//    .dmem_req_valid_o               (dmem_req_valid_o),
-//    .dmem_op_type_o                 (dmem_op_type_o),
-//    .dmem_req_cmd_o                 (dmem_req_cmd_o),
-//    .dmem_req_data_o                (dmem_req_data_o),
-//    .dmem_req_addr_o                (dmem_req_addr_o),
-//    .dmem_req_tag_o                 (dmem_req_tag_o),
-//    .dmem_req_invalidate_lr_o       (dmem_req_invalidate_lr_o),
-//    .dmem_req_kill_o                (dmem_req_kill_o),
+    .dmem_req_valid_o               (dmem_req_valid_o),
+    .dmem_op_type_o                 (dmem_op_type_o),
+    .dmem_req_cmd_o                 (dmem_req_cmd_o),
+    .dmem_req_data_o                (dmem_req_data_o),
+    .dmem_req_addr_o                (dmem_req_addr_o),
+    .dmem_req_tag_o                 (dmem_req_tag_o),
+    .dmem_req_invalidate_lr_o       (dmem_req_invalidate_lr_o),
+    .dmem_req_kill_o                (dmem_req_kill_o),
 
     // output to wb
 //TODO:figureout why they are missign
-//    .ready_o                        (ready_mem),
-//    .data_o                         (result_mem),
+    .ready_o                        (ready_mem),
+    .data_o                         (result_mem),
     .lock_o                         (stall_mem)
 );
 
