@@ -137,7 +137,7 @@ always_comb begin
             end else begin
                 dmem_req_valid_o = 1'b0;
                 lock_o = !kill_mem_ope;
-                next_state = (!kill_mem_ope & dmem_req_ready_i) ? WaitResponse : Idle;
+                next_state = (!kill_mem_ope) ? WaitResponse : Idle;
             end
         end
         // IN WAIT RESPONSE STATE
@@ -206,8 +206,8 @@ assign dmem_req_tag_o = {2'b00,rd_i,1'b0};
 // Reset load-reserved/store-conditional 
 assign dmem_req_invalidate_lr_o = kill_i;
 
-// Kill actual memory operation                        //TODO: Check if the third condition is necessary
-assign dmem_req_kill_o = mem_xcpt | kill_i  | (dmem_resp_replay_i & valid_i);
+// Kill actual memory operation                       
+assign dmem_req_kill_o = mem_xcpt | kill_i;
 
 // Dcache interface is ready
 assign ready_o = dmem_resp_valid_i & (mem_op_i != MEM_STORE);
