@@ -232,18 +232,18 @@ module decoder(
                     F3_SLLI: begin
                         decode_instr_o.instr_type = SLL;
                         // check for illegal isntruction
-                        if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
+                        if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL[6:1]) begin
                             illegal_instruction = 1'b1;
                         end else begin
                             illegal_instruction = 1'b0;
                         end
                     end
                     F3_SRLAI: begin
-                        case (decode_i.inst.rtype.func7)
-                            F7_SRAI_SUB_SRA: begin
+                        case (decode_i.inst.rtype.func7[31:26])
+                            F7_SRAI_SUB_SRA[6:1]: begin
                                 decode_instr_o.instr_type = SRA;
                             end
-                            F7_NORMAL: begin
+                            F7_NORMAL[6:1]: begin
                                 decode_instr_o.instr_type = SRL;
                             end
                             default: begin // check illegal instruction
@@ -283,6 +283,8 @@ module decoder(
                     F3_XOR: begin
                         decode_instr_o.instr_type = XOR;
                     end
+                    // for riscv 64 bits the shamt increases and
+                    // funct7 becomes func6
                     F3_SRL_SRA: begin
                         case (decode_i.inst.rtype.func7)
                             F7_SRAI_SUB_SRA: begin

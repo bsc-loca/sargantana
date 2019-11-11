@@ -57,6 +57,7 @@ module exe_top (
 // Declarations
 bus64_t rs1_data_bypass;
 bus64_t rs2_data_bypass;
+bus64_t rs1_data_def;
 bus64_t rs2_data_def;
 
 bus64_t result_alu;
@@ -91,10 +92,11 @@ assign rs1_data_bypass = ((from_rr_i.instr.rs1 != 0) & (from_rr_i.instr.rs1 == f
 assign rs2_data_bypass = ((from_rr_i.instr.rs2 != 0) & (from_rr_i.instr.rs2 == from_wb_i.rd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
 
 // Select rs2 from imm to avoid bypasses
+assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : rs1_data_bypass;
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : rs2_data_bypass;
 
 alu alu_inst (
-    .data_rs1_i     (rs1_data_bypass),
+    .data_rs1_i     (rs1_data_def),
     .data_rs2_i     (rs2_data_def),
     .instr_type_i   (from_rr_i.instr.instr_type),
     .result_o       (result_alu)

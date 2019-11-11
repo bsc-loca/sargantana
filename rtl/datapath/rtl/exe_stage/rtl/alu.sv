@@ -31,7 +31,11 @@ always_comb begin
             result_o[63:32] = {32{result_o[31]}};
         end
         SLL: begin
-            result_o = data_rs1_i << data_rs2_i;
+            result_o = data_rs1_i << data_rs2_i[5:0];
+        end
+        SLLW: begin
+            result_o[31:0] = data_rs1_i[31:0] << data_rs2_i[4:0];
+            result_o[63:32] = {32{result_o[31]}};
         end
         SLT: begin
             result_o = {63'b0, $signed(data_rs1_i) < $signed(data_rs2_i)};
@@ -43,10 +47,18 @@ always_comb begin
             result_o = data_rs1_i ^ data_rs2_i;
         end
         SRL: begin
-            result_o = data_rs1_i >> data_rs2_i;
+            result_o = data_rs1_i >> data_rs2_i[5:0];
+        end
+        SRLW: begin
+            result_o[31:0] = data_rs1_i[31:0] >> data_rs2_i[4:0];
+            result_o[63:32] = {32{result_o[31]}};
         end
         SRA: begin
-            result_o = data_rs1_i >>> data_rs2_i;
+            result_o = $signed(data_rs1_i) >>> data_rs2_i[5:0];
+        end
+        SRAW: begin
+            result_o[31:0] = $signed(data_rs1_i[31:0]) >>> data_rs2_i[4:0];
+            result_o[63:32] = {32{result_o[31]}};
         end
         OR: begin
             result_o = data_rs1_i | data_rs2_i;

@@ -44,7 +44,7 @@ always_comb begin
             target_o = pc_i + imm_i;
         end
         JALR: begin
-            target_o = pc_i + data_rs1_i + imm_i;
+            target_o = data_rs1_i + imm_i;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
             target_o = pc_i + imm_i;
