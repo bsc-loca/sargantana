@@ -67,10 +67,12 @@ module control_unit(
 
     // logic select which pc to use in fetch
     always_comb begin
-        if (id_cu_i.valid_jal) begin
-            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
-        end else begin
+        if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
+        //end else if (id_cu_i.valid_jal) begin
+            //pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
+        end else begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
     end
 
