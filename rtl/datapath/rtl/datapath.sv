@@ -77,6 +77,7 @@ module datapath(
 
     // Exe
     logic stall_exe_out;
+    exe_cu_t exe_cu_i;
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
     // this can be inserted to rr_exe
@@ -113,6 +114,7 @@ module datapath(
         .rstn_i(rstn_i),
         .valid_fetch(req_icache_cpu_i.valid),
         .wb_cu_i(wb_cu_int),
+        .exe_cu_i(exe_cu_i),
         .pipeline_ctrl_o(control_int),
         .cu_if_o(cu_if_int),
         .id_cu_i(id_cu_int)
@@ -214,7 +216,7 @@ module datapath(
         .csr_eret_i(1'b0),
 
         .to_wb_o(exe_to_wb_exe),
-        .stall_o(stall_exe_out),
+        .stall_o(exe_cu_i.stall),
 
         .dmem_req_valid_o   (req_cpu_dcache_o.dmem_req_valid_o),
         .dmem_req_cmd_o     (req_cpu_dcache_o.dmem_req_cmd_o),
