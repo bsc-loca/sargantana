@@ -238,7 +238,8 @@ module datapath(
         .output_o({wb_instr_int,exe_to_wb_wb})
     );
 
-    assign wb_to_exe_exe.valid  = !control_int.stall_wb & wb_instr_int.regfile_we && wb_instr_int.valid;
+    //assign wb_to_exe_exe.valid  = !control_int.stall_wb & wb_instr_int.regfile_we && wb_instr_int.valid;
+    assign wb_to_exe_exe.valid  = wb_instr_int.regfile_we && wb_instr_int.valid;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = exe_to_wb_wb.result_rd;
 
