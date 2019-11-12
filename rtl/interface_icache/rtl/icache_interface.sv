@@ -15,29 +15,29 @@
 import drac_pkg::*;
 
 module icache_interface(
-  	input logic              clk_i,
-  	input logic              rstn_i,
+    input logic              clk_i,
+    input logic              rstn_i,
 
     // Fetch stage interface - Request packet from fetch_stage
-  	input req_cpu_icache_t   req_fetch_icache_i,
+    input req_cpu_icache_t   req_fetch_icache_i,
 
     // Request input signals from ICache
     input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
-    input logic	             icache_resp_valid_i, // ICACHE_RESP_VALID,
+    input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
     input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
     input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
     
     output logic             icache_invalidate_o, // ICACHE_INVALIDATE
-    output icache_idx_t	     icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
+    output icache_idx_t      icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
     output logic             icache_req_kill_o, // ICACHE_REQ_BITS_KILL,
     output reg               icache_req_valid_o, // ICACHE_REQ_VALID,
-    output reg			     icache_resp_ready_o, // ICACHE_RESP_READY,
-    output icache_vpn_t	     tlb_req_bits_vpn_o, // TLB_REQ_BITS_VPN,
+    output reg               icache_resp_ready_o, // ICACHE_RESP_READY,
+    output icache_vpn_t      tlb_req_bits_vpn_o, // TLB_REQ_BITS_VPN,
     output logic             tlb_req_valid_o, // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-	output req_icache_cpu_t  req_icache_fetch_o
+    output req_icache_cpu_t  req_icache_fetch_o
 );
 
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
@@ -58,10 +58,16 @@ exception_t fetch_ex_int;
 // FSM icache
 icache_state_t state_int, next_state_int;
 
+/*localparam ResetState = 2'b00;
+           NoReq      = 2'b00
+    ReqValid,
+    RespReady
+} icache_state_t;*/
+
 // Sequential procedure to update state
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
-        state_int <= NoReq;
+        state_int <= ResetState;
     end else begin
         state_int <= next_state_int;
     end
@@ -70,6 +76,12 @@ end
 // Combinational logic to update next_state_int
 always_comb begin
     case (state_int)
+        ResetState: begin
+            next_state_int = NoReq;
+            icache_req_valid_o = 1'b0;
+            icache_resp_ready_o = 1'b0;
+            req_icache_fetch_o.valid = 1'b0;
+        end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
@@ -93,7 +105,7 @@ always_comb begin
             
         end 
         default: begin
-            next_state_int =  NoReq;
+            next_state_int =  ResetState;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b0;
             req_icache_fetch_o.valid = 1'b0;
