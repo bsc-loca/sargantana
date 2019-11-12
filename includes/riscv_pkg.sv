@@ -224,7 +224,7 @@ typedef enum logic [11:0] {
 } op_func12_system_t;
 
 typedef enum logic [6:0] {
-    F7_MUL   = 7'b0000001
+    F7_MUL_DIV  = 7'b0000001
 } op_func7_mul_t;
 
 // By RISCV ISA, exceptions are 64 bits
