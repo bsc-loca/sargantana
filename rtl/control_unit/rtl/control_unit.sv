@@ -23,7 +23,7 @@ module control_unit(
     //input if_cu_t           if_cu_i,
     input id_cu_t           id_cu_i,
     //input rr_cu_t           rr_cu_i,
-    //input exe_cu_t          exe_cu_i,
+    input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
@@ -103,11 +103,20 @@ module control_unit(
     // logic stalls
     // TODO
     always_comb begin
-        pipeline_ctrl_o.stall_if  = 1'b0;
-        pipeline_ctrl_o.stall_id  = 1'b0;
-        pipeline_ctrl_o.stall_rr  = 1'b0;
-        pipeline_ctrl_o.stall_exe = 1'b0;
-        pipeline_ctrl_o.stall_wb  = 1'b0;
+        if (exe_cu_i.stall) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end else begin
+            pipeline_ctrl_o.stall_if  = 1'b0;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end
+        
     end
 
 endmodule

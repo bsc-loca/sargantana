@@ -373,6 +373,11 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
+    logic stall;
+} exe_cu_t;
+
+// Control Unit signals
+typedef struct packed {
     logic enable_commit;
 } cu_wb_t;
 
