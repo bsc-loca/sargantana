@@ -73,10 +73,13 @@ module immediate(
             riscv_pkg::OP_SYSTEM: begin
                 // we could filter here for only the important CSR
                 case (instr_i.itype.func3)
+                    F3_CSRRW,
+                    F3_CSRRS,
+                    F3_CSRRC,
                     F3_CSRRWI,
                     F3_CSRRSI,
                     F3_CSRRCI: begin
-                        imm_o = imm_uitype;        
+                        imm_o = {sign_extended,imm_itype};        
                     end
                     default: begin
                         imm_o = 64'b0;

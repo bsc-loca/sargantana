@@ -257,52 +257,72 @@ module decoder(
                 decode_instr_o.regfile_we = 1'b1;
                 // we don't need a default cause all cases are there
                 // TODO: should we check in decoder all possibilities of illegal instruction?
-                unique case (decode_i.inst.rtype.func3)
-                    F3_ADD_SUB: begin
-                        case (decode_i.inst.rtype.func7)
-                            F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.instr_type = SUB;
-                            end
-                            F7_NORMAL: begin
-                                decode_instr_o.instr_type = ADD;
-                            end
-                            default: begin // check illegal instruction
-                                illegal_instruction = 1'b1;
-                            end
-                        endcase
+                unique case ({decode_i.inst.rtype.func7,decode_i.inst.rtype.func3})
+                    {F7_NORMAL,F3_ADD_SUB}: begin
+                        decode_instr_o.instr_type = ADD;
                     end
-                    F3_SLL: begin
+                    {F7_SRAI_SUB_SRA,F3_ADD_SUB}: begin
+                        decode_instr_o.instr_type = SUB;
+                    end
+                    {F7_NORMAL,F3_SLL}: begin
                         decode_instr_o.instr_type = SLL;
                     end
-                    F3_SLT: begin
+                    {F7_NORMAL,F3_SLT}: begin
                         decode_instr_o.instr_type = SLT;
                     end
-                    F3_SLTU: begin
+                    {F7_NORMAL,F3_SLTU}: begin
                         decode_instr_o.instr_type = SLTU;
                     end
-                    F3_XOR: begin
+                    {F7_NORMAL,F3_XOR}: begin
                         decode_instr_o.instr_type = XOR;
                     end
-                    // for riscv 64 bits the shamt increases and
-                    // funct7 becomes func6
-                    F3_SRL_SRA: begin
-                        case (decode_i.inst.rtype.func7)
-                            F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.instr_type = SRA;
-                            end
-                            F7_NORMAL: begin
-                                decode_instr_o.instr_type = SRL;
-                            end
-                            default: begin // check illegal instruction
-                                illegal_instruction = 1'b1;
-                            end
-                        endcase                        
+                    {F7_NORMAL,F3_SRL_SRA}: begin
+                        decode_instr_o.instr_type = SRL;
                     end
-                    F3_OR: begin
+                    {F7_SRAI_SUB_SRA,F3_SRL_SRA}: begin
+                        decode_instr_o.instr_type = SRA;
+                    end
+                    {F7_NORMAL,F3_OR}: begin
                         decode_instr_o.instr_type = OR;
                     end
-                    F3_AND: begin
+                    {F7_NORMAL,F3_AND}: begin
                         decode_instr_o.instr_type = AND;
+                    end
+                    // Mults and Divs
+                    {F7_MUL_DIV,F3_MUL}: begin
+                        decode_instr_o.instr_type = MUL;
+                        decode_instr_o.unit = UNIT_MUL;
+                    end
+                    {F7_MUL_DIV,F3_MULH}: begin
+                        decode_instr_o.instr_type = MULH;
+                        decode_instr_o.unit = UNIT_MUL;
+                    end
+                    {F7_MUL_DIV,F3_MULHSU}: begin
+                        decode_instr_o.instr_type = MULHSU;
+                        decode_instr_o.unit = UNIT_MUL;
+                    end
+                    {F7_MUL_DIV,F3_MULHU}: begin
+                        decode_instr_o.instr_type = MULHU;
+                        decode_instr_o.unit = UNIT_MUL;
+                    end
+                    {F7_MUL_DIV,F3_DIV}: begin
+                        decode_instr_o.instr_type = DIV;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_DIVU}: begin
+                        decode_instr_o.instr_type = DIVU;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_REM}: begin
+                        decode_instr_o.instr_type = REM;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_REMU}: begin
+                        decode_instr_o.instr_type = REMU;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
                     end
                 endcase
             end
@@ -345,35 +365,42 @@ module decoder(
             OP_ALU_W: begin
                 decode_instr_o.regfile_we = 1'b1;
                 decode_instr_o.op_32 = 1'b1;
-                case (decode_i.inst.rtype.func3)
-                    F3_64_ADDW_SUBW: begin
-                        case (decode_i.inst.rtype.func7)
-                            F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.instr_type = SUBW;
-                            end
-                            F7_NORMAL: begin
-                                decode_instr_o.instr_type = ADDW;
-                            end
-                            default: begin // check illegal instruction
-                                illegal_instruction = 1'b1;
-                            end
-                        endcase
+                unique case ({decode_i.inst.rtype.func7,decode_i.inst.rtype.func3})
+                    {F7_NORMAL,F3_64_ADDW_SUBW}: begin
+                        decode_instr_o.instr_type = ADDW;
                     end
-                    F3_64_SLLW: begin
+                    {F7_SRAI_SUB_SRA,F3_64_ADDW_SUBW}: begin
+                        decode_instr_o.instr_type = SUBW;
+                    end
+                    {F7_NORMAL,F3_64_SLLW}: begin
                         decode_instr_o.instr_type = SLLW;
                     end
-                    F3_64_SRLW_SRAW: begin
-                        case (decode_i.inst.rtype.func7)
-                            F7_SRAI_SUB_SRA: begin
-                                decode_instr_o.instr_type = SRAW;
-                            end
-                            F7_NORMAL: begin
-                                decode_instr_o.instr_type = SRLW;
-                            end
-                            default: begin // check illegal instruction
-                                illegal_instruction = 1'b1;
-                            end
-                        endcase                        
+                    {F7_NORMAL,F3_64_SRLW_SRAW}: begin
+                        decode_instr_o.instr_type = SRLW;
+                    end
+                    {F7_SRAI_SUB_SRA,F3_64_SRLW_SRAW}: begin
+                        decode_instr_o.instr_type = SRAW;
+                    end
+                    // Mults and Divs
+                    {F7_MUL_DIV,F3_MULW}: begin
+                        decode_instr_o.instr_type = MULW;
+                        decode_instr_o.unit = UNIT_MUL;
+                    end
+                    {F7_MUL_DIV,F3_DIVW}: begin
+                        decode_instr_o.instr_type = DIVW;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_DIVUW}: begin
+                        decode_instr_o.instr_type = DIVUW;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_REMW}: begin
+                        decode_instr_o.instr_type = REMW;
+                        decode_instr_o.unit = UNIT_DIV;
+                    end
+                    {F7_MUL_DIV,F3_REMUW}: begin
+                        decode_instr_o.instr_type = REMUW;
+                        decode_instr_o.unit = UNIT_DIV;
                     end
                     default: begin
                         illegal_instruction = 1'b1;
@@ -386,7 +413,33 @@ module decoder(
                 decode_instr_o.instr_type = FENCE;
             end
             OP_SYSTEM: begin
-                
+                decode_instr_o.use_imm    = 1'b1;
+                decode_instr_o.regfile_we = 1'b1;
+                decode_instr_o.unit = UNIT_SYSTEM;
+
+                case (decode_i.inst.itype.func3)
+                    F3_CSRRW: begin
+                       decode_instr_o.instr_type = CSRRW;
+                    end
+                    F3_CSRRS: begin
+                        decode_instr_o.instr_type = CSRRS;
+                    end
+                    F3_CSRRC: begin
+                        decode_instr_o.instr_type = CSRRC;             
+                    end
+                    F3_CSRRWI: begin
+                        decode_instr_o.instr_type = CSRRWI;             
+                    end
+                    F3_CSRRSI: begin
+                        decode_instr_o.instr_type = CSRRSI;             
+                    end
+                    F3_CSRRCI: begin
+                        decode_instr_o.instr_type = CSRRCI;             
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase
             end
             default: begin
                 // By default this is not a valid instruction

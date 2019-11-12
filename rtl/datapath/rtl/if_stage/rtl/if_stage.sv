@@ -54,7 +54,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= 'h00000200;
+            pc <= 'h0000024c;
         end else begin
             pc <= next_pc;
         end

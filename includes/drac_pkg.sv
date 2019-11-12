@@ -137,7 +137,8 @@ typedef enum {
     UNIT_MUL,
     UNIT_BRANCH,
     UNIT_MEM,
-    UNIT_CONTROL
+    UNIT_CONTROL,
+    UNIT_SYSTEM
 } functional_unit_t;
 
 typedef enum {
@@ -161,7 +162,9 @@ typedef enum logic [6:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
+   MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA,
+   //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
+   CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions
    LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
    // Atomic Memory Operations
