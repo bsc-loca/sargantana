@@ -138,7 +138,7 @@ assign tlb_req_valid_o = icache_req_valid_o;
 assign req_icache_fetch_o.ex = fetch_ex_int;
 
 assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
+assign fetch_ex_int.origin = {24'b0,req_fetch_icache_i.vaddr};
 // Assign whether it is a misaligned, fault fetch or none
 assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
                             (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE;
