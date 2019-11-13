@@ -54,7 +54,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= 'h0000024c;
+            pc <= 'h00000200;
         end else begin
             pc <= next_pc;
         end
@@ -65,8 +65,8 @@ module if_stage(
         // or of the high part of the addr
         if (|pc[63:40]) begin
             ex_if_addr_fault_int = 1'b1;
-        end else if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_access_fault) begin
+        end else if (req_icache_cpu_i.ex.valid && 
+            req_icache_cpu_i.ex.cause==INSTR_ACCESS_FAULT) begin
             ex_if_addr_fault_int = 1'b1;
         end else begin
             ex_if_addr_fault_int = 1'b0;
@@ -78,8 +78,8 @@ module if_stage(
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
         // check also from icache
-        end else  if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_addr_misaligned) begin
+        end else  if (req_icache_cpu_i.ex.valid && 
+            req_icache_cpu_i.ex.cause==INSTR_ADDR_MISALIGNED) begin
             ex_addr_misaligned_int = 1'b1;
         end else begin
             ex_addr_misaligned_int = 1'b0;
@@ -87,8 +87,8 @@ module if_stage(
     end
     // check exceptions finstr page fault
     always_comb begin
-        if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_page_fault) begin
+        if (req_icache_cpu_i.ex.valid && 
+            req_icache_cpu_i.ex.cause==INSTR_PAGE_FAULT) begin
             ex_if_page_fault_int = 1'b1;
         end else begin
             ex_if_page_fault_int = 1'b0;
