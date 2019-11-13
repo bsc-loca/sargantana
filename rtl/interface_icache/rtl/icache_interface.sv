@@ -13,6 +13,7 @@
 */
 
 import drac_pkg::*;
+import riscv_pkg::*;
 
 module icache_interface(
     input logic              clk_i,
@@ -57,12 +58,6 @@ logic buffer_miss_int;
 exception_t fetch_ex_int;
 // FSM icache
 icache_state_t state_int, next_state_int;
-
-/*localparam ResetState = 2'b00;
-           NoReq      = 2'b00
-    ReqValid,
-    RespReady
-} icache_state_t;*/
 
 // Sequential procedure to update state
 always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -125,7 +120,7 @@ assign icache_invalidate_o = 1'b0;
 assign tlb_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
 assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
-// TODO I am not sure qhen to activate this 
+// TODO I am not sure when to activate this 
 assign icache_req_kill_o = 1'b0;
 // TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;
@@ -139,14 +134,22 @@ assign tlb_req_valid_o = icache_req_valid_o;
 //assign req_icache_fetch_o.ex.cause = (tlb_resp_xcp_if_i) ? FAULT_FETCH : NONE;
 //assign req_icache_fetch_o.ex.origin = req_fetch_icache_i.vaddr;
 //assign req_icache_fetch_o.ex.valid = fetch_ex_int.valid;
-//assign req_icache_fetch_o.ex = fetch_ex_int;
+// Exceptions handling
+assign req_icache_fetch_o.ex = fetch_ex_int;
+
+assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
+assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
+// Assign whether it is a misaligned, fault fetch or none
+assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
+                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE;
+
 // whether there is a misaligned fetch
 assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] | 
                                     req_fetch_icache_i.vaddr[0]) &
                                     req_fetch_icache_i.valid;
 
 //assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-//assign fetch_ex_int.origin = req_fetch_icache_i.vaddr[39:0];
+//assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
 // Assign whether it is a misaligned, fault fetch or none
 //assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
 //                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE; 
@@ -165,6 +168,7 @@ end
 
 always_comb begin
     //icache_line_req_d = (icache_line_int) icache_line_reg_q | icache_resp_valid_i;
+    //valid_buffer_d = valid_buffer_q | (icache_resp_valid_i && state_int==RespReady);
     valid_buffer_d = valid_buffer_q | icache_resp_valid_i;
 end
 
