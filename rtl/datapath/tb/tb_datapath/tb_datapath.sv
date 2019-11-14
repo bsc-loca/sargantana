@@ -134,9 +134,10 @@ module tb_datapath();
             tb_rstn_i<='{default:0};
             //tb_icache_fetch_i.valid<='{default:0};
             //tb_icache_fetch_i.data<='{default:0};
-            tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
-            tb_icache_fetch_i.instr_access_fault<='{default:0};
-            tb_icache_fetch_i.instr_page_fault<='{default:0};
+            tb_icache_fetch_i.ex.valid<={default:0};
+	    //tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
+            //tb_icache_fetch_i.instr_access_fault<='{default:0};
+            //tb_icache_fetch_i.instr_page_fault<='{default:0};
             //tb_addr_i<='{default:0};
             $display("Done");
             
