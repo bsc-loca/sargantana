@@ -57,7 +57,7 @@ module control_unit(
         
         //end 
         //end else if (!if_cu_i.valid_fetch) begin
-        end else if (!valid_fetch) begin
+        end else if (!valid_fetch | pipeline_ctrl_o.stall_if) begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC;
         
         end else begin
@@ -107,7 +107,7 @@ module control_unit(
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end else begin
             pipeline_ctrl_o.stall_if  = 1'b0;
