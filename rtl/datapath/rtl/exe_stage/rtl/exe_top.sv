@@ -207,7 +207,17 @@ always_comb begin
             to_wb_o.result_pc = 0;
         end
         UNIT_DIV: begin
-            to_wb_o.result_rd = result_div;
+            case(from_rr_i.instr.instr_type)
+                DIV,DIVU,DIVW,DIVUW: begin
+                    to_wb_o.result_rd = result_div;
+                end
+                REM,REMU,REMW,REMUW: begin
+                    to_wb_o.result_rd = result_rmd;
+                end
+                default: begin
+                    to_wb_o.result_rd = 0;
+                end
+            endcase
             to_wb_o.result_pc = 0;
         end
         UNIT_BRANCH: begin
