@@ -38,6 +38,7 @@ logic [95:0] result1_q;
 logic [95:0] result2_q;
 bus128_t result_128;
 bus128_t result_128_def;
+bus64_t result_32_aux;
 bus64_t result_32;
 bus64_t result_64;
 
@@ -83,7 +84,8 @@ assign result1_d = src1_def * src2_def[31:0];
 assign result2_d = src1_def * src2_def[63:32];
 
 // 32-bit multiplication MULW, operation finished
-assign result_32 = neg_def ? ~result1_d[63:0] + 64'b1 : result1_d[63:0];
+assign result_32_aux = neg_def ? ~result1_d[63:0] + 64'b1 : result1_d[63:0];
+assign result_32 = {{32{result_32_aux[31]}},result_32_aux[31:0]};
 
 // FSMD state & DATA registers
 always @(posedge clk_i, negedge rstn_i)

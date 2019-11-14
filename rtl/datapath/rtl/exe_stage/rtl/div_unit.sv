@@ -45,6 +45,8 @@ module div_unit (
     logic same_sign;
     bus64_t dvnd_def;
     bus64_t dvsr_def;
+    bus64_t quo_aux;
+    bus64_t rmd_aux;
 
     parameter IDLE = 3'b000,
               OP   = 3'b001,
@@ -145,11 +147,13 @@ module div_unit (
         end
 
     // output
-    assign quo_o = done_tick_o ? (div_zero ? 64'hFFFFFFFFFFFFFFFF :
+    assign quo_aux = done_tick_o ? (div_zero ? 64'hFFFFFFFFFFFFFFFF :
                 (signed_op_i ? (same_sign ? rl_q : ~rl_q + 64'b1) : rl_q)) : 64'b0;
-    assign rmd_o = done_tick_o ? (div_zero ? dvnd_i : (signed_op_i ?
+    assign quo_o = int_32_i ? {{32{quo_aux[31]}},quo_aux[31:0]} : quo_aux;
+    assign rmd_aux = done_tick_o ? (div_zero ? dvnd_i : (signed_op_i ?
                 (((dvnd_i[63] &  !int_32_i) | (dvnd_i[31] & int_32_i)) ?
                 ~rh_q + 64'b1 : rh_q) : rh_q)) : 64'b0;
+    assign rmd_o = int_32_i ? {{32{rmd_aux[31]}},rmd_aux[31:0]} : rmd_aux;
 
 endmodule // divider
 //`default_nettype wire
