@@ -308,6 +308,7 @@ module decoder(
                     {F7_MUL_DIV,F3_DIV}: begin
                         decode_instr_o.instr_type = DIV;
                         decode_instr_o.unit = UNIT_DIV;
+                        decode_instr_o.signed_op = 1'b1;
                     end
                     {F7_MUL_DIV,F3_DIVU}: begin
                         decode_instr_o.instr_type = DIVU;
@@ -316,6 +317,7 @@ module decoder(
                     {F7_MUL_DIV,F3_REM}: begin
                         decode_instr_o.instr_type = REM;
                         decode_instr_o.unit = UNIT_DIV;
+                        decode_instr_o.signed_op = 1'b1;
                     end
                     {F7_MUL_DIV,F3_REMU}: begin
                         decode_instr_o.instr_type = REMU;
@@ -389,6 +391,7 @@ module decoder(
                     {F7_MUL_DIV,F3_DIVW}: begin
                         decode_instr_o.instr_type = DIVW;
                         decode_instr_o.unit = UNIT_DIV;
+                        decode_instr_o.signed_op = 1'b1;
                     end
                     {F7_MUL_DIV,F3_DIVUW}: begin
                         decode_instr_o.instr_type = DIVUW;
@@ -397,6 +400,7 @@ module decoder(
                     {F7_MUL_DIV,F3_REMW}: begin
                         decode_instr_o.instr_type = REMW;
                         decode_instr_o.unit = UNIT_DIV;
+                        decode_instr_o.signed_op = 1'b1;
                     end
                     {F7_MUL_DIV,F3_REMUW}: begin
                         decode_instr_o.instr_type = REMUW;
