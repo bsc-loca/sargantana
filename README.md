@@ -37,7 +37,7 @@ For verification it is used:
 Installation files are in the "/home/drac/Downloads/questasim" folder. You can connect using:
 
 ```
-ssh -X drac@84.88.187.145
+ssh -X drac@192.168.10.38
 ```
 
 The password is "dracdrac"
@@ -90,7 +90,7 @@ chmod 0700 ~/.ssh
 After that, you must copy your public key in the drac server:
 
 ```
-ssh-copy-id -i ~/.ssh/mykey.pub drac@84.88.187.145
+ssh-copy-id -i ~/.ssh/mykey.pub drac@192.168.10.38
 ```
 
 ### Recommendations
