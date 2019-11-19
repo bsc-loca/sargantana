@@ -58,7 +58,7 @@ req_cpu_icache_t req_cpu_icache_int;
 //instance of the struct for interface dcache and cpu
 req_dcache_cpu_t req_dcache_cpu_i;
 // instance of the struct for csr interface
-req_csr_cpu_t req_cpu_csr_int;
+//req_csr_cpu_t req_cpu_csr_int;
 
 //translate from SoC signals to struct
 assign req_dcache_cpu_i.dmem_resp_replay_i = DMEM_RESP_BITS_REPLAY;
@@ -70,7 +70,7 @@ assign req_dcache_cpu_i.dmem_xcpt_ma_st_i  = DMEM_XCPT_MA_ST;
 assign req_dcache_cpu_i.dmem_xcpt_ma_ld_i  = DMEM_XCPT_MA_LD;
 assign req_dcache_cpu_i.dmem_xcpt_pf_st_i  = DMEM_XCPT_PF_ST;
 assign req_dcache_cpu_i.dmem_xcpt_pf_ld_i  = DMEM_XCPT_PF_LD;
-
+/*
 assign req_cpu_csr_int.csr_rw_rdata = CSR_RW_RDATA;
 assign req_cpu_csr_int.csr_replay = 1'b0; // TODO FIX
 assign req_cpu_csr_int.csr_stall = CSR_CSR_STALL;
@@ -79,6 +79,7 @@ assign req_cpu_csr_int.csr_eret = CSR_ERET;
 assign req_cpu_csr_int.csr_evec = CSR_EVEC;
 assign req_cpu_csr_int.csr_interrupt = CSR_INTERRUPT;
 assign req_cpu_csr_int.csr_interrupt_cause = CSR_INTERRUPT_CAUSE;
+*/
 
 
 datapath datapath_inst(
@@ -87,7 +88,8 @@ datapath datapath_inst(
     .soft_rstn_i(SOFT_RST),
     .req_icache_cpu_i(req_icache_cpu_int),//req_icache_cpu_t
     .req_dcache_cpu_i(req_dcache_cpu_i),//req_dcache_cpu_t
-    .req_csr_cpu_i(req_cpu_csr_int),
+//TODO:add csr
+//    .req_csr_cpu_i(req_cpu_csr_int),
 //TODO:connect outputs later
     .req_cpu_dcache_o(), //req_cpu_dcache_t
     .req_cpu_icache_o(req_cpu_icache_int) //req_cpu_icache_t

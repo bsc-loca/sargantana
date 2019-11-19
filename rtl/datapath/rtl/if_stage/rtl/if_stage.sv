@@ -102,10 +102,10 @@ module if_stage(
 
     assign req_cpu_icache_o.vaddr = pc[39:0];
 
+    
     // logic branch predictor
-
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst = req_icache_cpu_i.data; // TODO: add logic of getting the block
+    assign fetch_o.inst = req_icache_cpu_i.data;
     assign fetch_o.valid = req_icache_cpu_i.valid;
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN; // TODO: add bpred
     assign fetch_o.bpred.pred_addr = 64'b0; // TODO: add bpred 

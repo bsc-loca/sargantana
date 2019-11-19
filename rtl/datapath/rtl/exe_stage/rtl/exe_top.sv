@@ -12,8 +12,6 @@
 //`default_nettype none
 import drac_pkg::*;
 
-
-
 module exe_top (
     input logic         clk_i,
     input logic         rstn_i,
