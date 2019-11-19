@@ -25,6 +25,7 @@ module control_unit(
     //input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
+    input req_csr_cpu_t     csr_cu_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output cu_if_t          cu_if_o
@@ -67,7 +68,9 @@ module control_unit(
 
     // logic select which pc to use in fetch
     always_comb begin
-        if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
+        if (csr_cu_i.csr_eret) begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
+        end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
         //end else if (id_cu_i.valid_jal) begin
             //pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
@@ -101,9 +104,15 @@ module control_unit(
 
 
     // logic stalls
-    // TODO
     always_comb begin
-        if (exe_cu_i.stall) begin
+        // TODO: check if this works guillemlp
+        if (csr_cu_i.csr_stall) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end if (exe_cu_i.stall) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;

@@ -22,6 +22,8 @@ parameter ADDR_SIZE = 40;
 parameter REGFILE_WIDTH = 5;
 parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = 28;
+parameter CSR_ADDR_SIZE = 12;
+parameter CSR_CMD_SIZE = 3;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -36,6 +38,10 @@ typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
 typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
 typedef logic [ADDR_SIZE-1:0] addr_t;
 typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
+typedef logic [CSR_ADDR_SIZE-1:0] csr_addr_t;
+typedef reg   [CSR_ADDR_SIZE-1:0] reg_csr_addr_t;
+//typedef logic [CSR_CMD_SIZE-1:0] csr_cmd_t;
+//typedef reg   [CSR_CMD_SIZE-1:0] reg_csr_cmd_t;
 
 typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
 typedef logic [ICACHELINE_SIZE:0] icache_line_t;
@@ -50,8 +56,9 @@ typedef enum {
     NEXT_PC_SEL_JUMP
 } next_pc_sel_t;
 
-typedef enum logic {
+typedef enum logic [1:0] {
     SEL_JUMP_COMMIT,
+    SEL_JUMP_CSR,
     SEL_JUMP_DECODE
 } jump_addr_fetch_t;
 
@@ -86,7 +93,7 @@ typedef struct packed {
     exception_t ex;
     //logic instr_addr_misaligned;
     //logic instr_access_fault;
-    logic instr_page_fault;
+    //logic instr_page_fault;
 } req_icache_cpu_t;
 
 // Req send to ICache
@@ -110,6 +117,7 @@ typedef struct packed {
 } req_dcache_cpu_t;
 
 // dcache access
+// TODO: explain magic numbers
 typedef struct packed {
     logic        dmem_req_valid_o;
     logic [4:0]  dmem_req_cmd_o;
@@ -259,6 +267,17 @@ typedef enum {
     AMO_MAXU
 } amo_op_t;
 
+typedef enum logic[CSR_CMD_SIZE-1:0] {
+    CSR_CMD_NOPE    = 3'b000,
+    CSR_CMD_WRITE   = 3'b001,
+    CSR_CMD_SET     = 3'b010,
+    CSR_CMD_CLEAR   = 3'b011,
+    CSR_CMD_SYS     = 3'b100,
+    CSR_CMD_READ    = 3'b101,
+    CSR_CMD_N1      = 3'b110,
+    CSR_CMD_N2      = 3'b111
+} csr_cmd_t;
+
 // Fetch Stage
 typedef struct packed {
     addrPC_t pc_inst;
@@ -367,6 +386,7 @@ typedef struct packed {
     logic valid;
     logic change_pc_ena;
     logic branch_taken;
+    logic csr_enable_wb;
     //branch_pred_t bpred;
     //exception_t ex;
 } wb_cu_t;
@@ -403,6 +423,58 @@ typedef struct packed {
     logic       valid; // whether is a jal or not
     addrPC_t    jump_addr;
 } jal_id_if_t;
+
+// CSR output
+typedef struct packed {
+    // csr addr or 12 imm bits from system instr
+    csr_addr_t  csr_rw_addr;
+    // internal cmd of csr
+    csr_cmd_t   csr_rw_cmd;
+    // if xcpt, pass misaligned addr
+    // data to write in CSR 
+    bus64_t     csr_rw_data;
+    // exception from wb
+    logic       csr_exception;
+    // every time commit send this
+    logic       csr_retire;
+    // exception cause
+    bus64_t     csr_xcpt_cause;
+    // xcpt pc 
+    bus64_t     csr_pc; 
+} req_cpu_csr_t;
+
+// CSR input
+typedef struct packed {
+    bus64_t     csr_rw_rdata;
+    // if sending a csr command while 
+    // CSR is not responding
+    // EX: send a CSR petition to PCR
+    // but thery are busy, at same cycle 
+    // replay wil be to 1
+    logic       csr_replay;
+    // petition to CSR takes more than one cycle
+    // when down value ready
+    // while up doing req
+    // or WFIdrac
+    logic       csr_stall;
+    // CSR exception
+    // read CSR without enough privilege
+    // or eret/ecall
+    // CSR handles all the usual logic
+    // don't care about cause and do the typical
+    // flush and charge evec? 
+    logic       csr_exception;
+    // old uret, sret, mret
+    // return  from system to user
+    logic       csr_eret;
+    // pc to go if xcpt or eret
+    bus64_t     csr_evec;
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
+} req_csr_cpu_t;
 
 
 
