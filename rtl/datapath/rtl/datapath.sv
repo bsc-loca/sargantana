@@ -46,6 +46,10 @@ module datapath(
     assign stall_exe_int = '0;
     assign stall_wb_int = '0;*/
 
+    bus64_t commit_pc, commit_data;
+    logic commit_valid, commit_reg_we;
+    logic [4:0] commit_addr_reg;
+
     pipeline_ctrl_t control_int;
     cu_if_t cu_if_int;
     // TODO: Remove Stage IF stub
@@ -194,7 +198,7 @@ module datapath(
     regfile rr_stage_inst(
         .clk_i(clk_i),
 
-        .write_enable_i(wb_instr_int.regfile_we),
+        .write_enable_i(wb_instr_int.regfile_we&wb_instr_int.valid),
         .write_addr_i(exe_to_wb_wb.rd),
         .write_data_i(data_wb_rr_int),
         .read_addr1_i(stage_id_rr_q.rs1),
@@ -337,6 +341,12 @@ module datapath(
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
     //assign wb_cu_int.bpred = ;
     //assign wb_cu_int.ex = ;
+
+    assign commit_valid     = wb_instr_int.valid;
+    assign commit_pc        = (wb_instr_int.valid) ? wb_instr_int.pc : 64'b0;
+    assign commit_data      = data_wb_rr_int;
+    assign commit_addr_reg  = wb_instr_int.rd;
+    assign commit_reg_we    = wb_instr_int.regfile_we&wb_instr_int.valid;
 
 
 endmodule
