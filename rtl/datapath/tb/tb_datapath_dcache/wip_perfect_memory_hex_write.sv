@@ -11,7 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`include "drac_pkg.sv"
+//`include "drac_pkg.sv"
 import drac_pkg::*;
 
 // TODO: use interfaces
@@ -21,13 +21,13 @@ module perfect_memory_hex_write #(
     parameter SIZE = 32*1024 * 8,
     parameter LINE_SIZE = 64,
     parameter ADDR_SIZE = 32,
-    parameter DELAY = 1,
-    localparam HEX_LOAD_ADDR = 'h100
+    parameter DELAY = 3,
+    localparam HEX_LOAD_ADDR = 'h0F0
 
 ) (
     input logic                     clk_i,
     input logic                     rstn_i,
-    input logic  [ADDR_SIZE-1:0]    addr_i,
+    input addr_t                    addr_i,
     input logic                     valid_i,
     input logic                     wr_ena_i,
     input bus64_t                   wr_data_i,
@@ -40,7 +40,7 @@ module perfect_memory_hex_write #(
     logic [$clog2(DELAY)-1:0] next_counter;
 
     logic  [ADDR_SIZE-1:0]    addr_int;
-    assign addr_int = {addr_i[31:8],8'b0}+16;
+    assign addr_int = 'h100+({4'b0,addr_i[31:4]}-'h010);
 
     // counter stuff
     assign next_counter = (counter > 0) ? counter-1 : 0;
@@ -62,7 +62,7 @@ module perfect_memory_hex_write #(
         // this case is quite harcoded following the hex 
         // hexadecimal dump of riscv isa test that has
         // 128 bits per line
-        case (addr_i[2])
+        case (addr_i[3])
             1'b0: begin
                 line_o = memory[addr_int][63:0];
             end
@@ -82,7 +82,7 @@ module perfect_memory_hex_write #(
             /*for (integer i = 0; i < LINE_SIZE/8; i++) begin
                 memory[addr + i] 
             end*/
-            case (addr_i[2])
+            case (addr_i[3])
                 1'b0: begin
                     memory[addr_int][63:0] = wr_data_i;
                 end
