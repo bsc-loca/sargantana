@@ -106,6 +106,7 @@ module tb_datapath();
         .valid_i(tb_req_cpu_dcache_o.dmem_req_valid_o),
         .wr_ena_i(tb_req_cpu_dcache_o.dmem_req_cmd_o == 5'b00001),
         .wr_data_i(tb_req_cpu_dcache_o.dmem_req_data_o),
+        .word_size_i({1'b0,tb_req_cpu_dcache_o.dmem_op_type_o}),
         .line_o(tb_req_dcache_cpu_i.dmem_resp_data_i),
         .ready_o(tb_req_dcache_cpu_i.dmem_resp_valid_i)
     );
