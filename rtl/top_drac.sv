@@ -48,7 +48,8 @@ module top_drac(
 req_icache_cpu_t req_icache_cpu_i;
 //translate from SoC signals to struct
 assign req_icache_cpu_i.valid = ICACHE_RESP_VALID;
-assign req_icache_cpu_i.data =  ICACHE_RESP_BITS_DATABLOCK;
+//TODO Remove req_icache_cpu_i.data and connect the interface
+//assign req_icache_cpu_i.data =  ICACHE_RESP_BITS_DATABLOCK;
 //TODO: If not needed remove them from struct
 //req_icache_cpu_i.instr_addr_misaligned = ;
 //req_icache_cpu_i.instr_access_fault = ;
