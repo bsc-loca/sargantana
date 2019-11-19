@@ -86,7 +86,7 @@ typedef struct packed {
     exception_t ex;
     //logic instr_addr_misaligned;
     //logic instr_access_fault;
-    //logic instr_page_fault;
+    logic instr_page_fault;
 } req_icache_cpu_t;
 
 // Req send to ICache
@@ -110,7 +110,6 @@ typedef struct packed {
 } req_dcache_cpu_t;
 
 // dcache access
-// TODO: explain magic numbers
 typedef struct packed {
     logic        dmem_req_valid_o;
     logic [4:0]  dmem_req_cmd_o;

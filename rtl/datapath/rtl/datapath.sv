@@ -20,7 +20,7 @@ module datapath(
     input logic             rstn_i,
     input logic             soft_rstn_i,
     // icache/dcache interface
-    // naming could be improved
+    //TODO: naming could be improved
     input req_icache_cpu_t  req_icache_cpu_i,
     input req_dcache_cpu_t  req_dcache_cpu_i,
 
@@ -169,7 +169,6 @@ module datapath(
     // RR Stage
     regfile rr_stage_inst(
         .clk_i(clk_i),
-
         .write_enable_i(wb_instr_int.regfile_we),
         .write_addr_i(exe_to_wb_wb.rd),
         .write_data_i(exe_to_wb_wb.result_rd),
