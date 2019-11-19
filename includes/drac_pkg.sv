@@ -81,7 +81,7 @@ typedef struct packed {
 // Req coming from ICache
 typedef struct packed {
     logic  valid;
-    inst_t  data;
+    inst_t data;
     //addr_t req_addr; I think it is not completely necessary
     exception_t ex;
     //logic instr_addr_misaligned;
@@ -110,7 +110,6 @@ typedef struct packed {
 } req_dcache_cpu_t;
 
 // dcache access
-// TODO: explain magic numbers
 typedef struct packed {
     logic        dmem_req_valid_o;
     logic [4:0]  dmem_req_cmd_o;

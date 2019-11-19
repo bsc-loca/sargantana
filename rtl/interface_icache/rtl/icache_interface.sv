@@ -16,21 +16,21 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module icache_interface(
-  	input logic              clk_i,
-  	input logic              rstn_i,
+    input logic              clk_i,
+    input logic              rstn_i,
 
     // Fetch stage interface - Request packet from fetch_stage
-  	input req_cpu_icache_t   req_fetch_icache_i,
+    input req_cpu_icache_t   req_fetch_icache_i,
 
     // Request input signals from ICache
     input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
-    input logic	             icache_resp_valid_i, // ICACHE_RESP_VALID,
+    input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
     input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
     input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
     
     output logic             icache_invalidate_o, // ICACHE_INVALIDATE
-    output icache_idx_t	     icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
+    output icache_idx_t      icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
     output logic             icache_req_kill_o, // ICACHE_REQ_BITS_KILL,
     output reg               icache_req_valid_o, // ICACHE_REQ_VALID,
     output reg               icache_resp_ready_o, // ICACHE_RESP_READY,
@@ -38,7 +38,7 @@ module icache_interface(
     output logic             tlb_req_valid_o, // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-	output req_icache_cpu_t  req_icache_fetch_o
+    output req_icache_cpu_t  req_icache_fetch_o
 );
 
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
