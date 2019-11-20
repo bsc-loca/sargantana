@@ -1,3 +1,4 @@
+spyglass_reports/
 *.swp
 *.tmp
 dump_file.vcd
