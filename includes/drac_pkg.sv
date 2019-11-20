@@ -170,7 +170,7 @@ typedef enum logic [6:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA,
+   MRET, SRET, DRET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions
@@ -183,16 +183,6 @@ typedef enum logic [6:0] {
    MUL, MULH, MULHU, MULHSU, MULW,
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
-   // Floating-Point Load and Store Instructions
-   FLD, FLW, FLH, FLB, FSD, FSW, FSH, FSB,
-   // Floating-Point Computational Instructions
-   FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
-   // Floating-Point Conversion and Move Instructions
-   FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
-   // Floating-Point Compare Instructions
-   FCMP,
-   // Floating-Point Classify Instruction
-   FCLASS,
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D
 } instr_type_t;

@@ -48,6 +48,7 @@ module tb_datapath();
     req_cpu_dcache_t tb_req_cpu_dcache_o;
     req_dcache_cpu_t tb_req_dcache_cpu_i;
 
+    req_cpu_csr_t req_cpu_csr_o;
     
 
     logic [31:0] tb_addr_i;
@@ -75,11 +76,15 @@ module tb_datapath();
     datapath datapath_inst( 
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
+        .soft_rstn_i(1'b1),
+
         .req_icache_cpu_i(tb_icache_fetch_i),
+        .req_dcache_cpu_i(tb_req_dcache_cpu_i),
+        .req_csr_cpu_i(197'b0),
+
         .req_cpu_icache_o(tb_fetch_icache_o),
-        .soft_rstn_i(soft_rstn_i),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
-        .req_dcache_cpu_i(tb_req_dcache_cpu_i)
+        .req_cpu_csr_o(req_cpu_csr_o)
 
     );
 
@@ -106,7 +111,7 @@ module tb_datapath();
         .valid_i(tb_req_cpu_dcache_o.dmem_req_valid_o),
         .wr_ena_i(tb_req_cpu_dcache_o.dmem_req_cmd_o == 5'b00001),
         .wr_data_i(tb_req_cpu_dcache_o.dmem_req_data_o),
-        .word_size_i({1'b0,tb_req_cpu_dcache_o.dmem_op_type_o}),
+        .word_size_i(tb_req_cpu_dcache_o.dmem_op_type_o),
         .line_o(tb_req_dcache_cpu_i.dmem_resp_data_i),
         .ready_o(tb_req_dcache_cpu_i.dmem_resp_valid_i)
     );
@@ -125,12 +130,12 @@ module tb_datapath();
     //***task automatic reset_dut***
     task automatic reset_dut;
         begin
-            $display("*** Toggle reset.");
+            //$display("*** Toggle reset.");
             tb_rstn_i <= 1'b0; 
             #CLK_PERIOD;
             tb_rstn_i <= 1'b1;
             #CLK_PERIOD;
-            $display("Done");
+            //$display("Done");
         end
     endtask
 
@@ -142,17 +147,17 @@ module tb_datapath();
     // to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
-            $display("*** init_sim");
+            //$display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
             //tb_icache_fetch_i.valid<='{default:0};
             //tb_icache_fetch_i.data<='{default:0};
-            tb_icache_fetch_i.ex.valid<={default:0};
+            //tb_icache_fetch_i.ex.valid<={default:0};
 	    //tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
             //tb_icache_fetch_i.instr_access_fault<='{default:0};
             //tb_icache_fetch_i.instr_page_fault<='{default:0};
             //tb_addr_i<='{default:0};
-            $display("Done");
+            //$display("Done");
             
         end
     endtask
@@ -162,7 +167,7 @@ module tb_datapath();
     //If you want a subset to modify the parameters of $dumpvars
     task automatic init_dump;
         begin
-            $display("*** init_dump");
+            //$display("*** init_dump");
             $dumpfile("dump_file.vcd");
             $dumpvars(0,datapath_inst);
         end
@@ -180,16 +185,16 @@ module tb_datapath();
     task automatic test_sim;
         begin
             int tmp;
-            $display("*** test_sim");
+            //$display("*** test_sim");
             // check req valid 0
             test_sim1(tmp);
             if (tmp == 1) begin
                 `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
+                        //$display("TEST 1 FAILED.");
                 `END_COLOR_PRINT
             end else begin
                 `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
+                        //$display("TEST 1 PASSED.");
                 `END_COLOR_PRINT
             end
         end
@@ -228,7 +233,7 @@ module tb_datapath();
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim1");
+            //$display("*** test_sim1");
             tick();
             
 
@@ -239,13 +244,32 @@ module tb_datapath();
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
     initial begin
+        string testname;
+        string filename;
+        integer f;
         init_sim();
         init_dump();
         reset_dut();
         test_sim();
+        $value$plusargs({"TESTNAME","=%s"}, testname);
+        //filename="tests_status.txt";
+        $value$plusargs({"FILENAME","=%s"}, filename);
+        f=$fopen(filename,"a");
+        #2000;
+        if (datapath_inst.rr_stage_inst.registers[28] == 1) begin
+            $fwrite(f,"%c[1;34m",27);
+            $fwrite(f,"%s TEST PASSED.",testname);
+            $fwrite(f,"%c[0m",27);
+            $fwrite(f,"\n");
+        end else begin
+            $fwrite(f,"%c[1;31m",27);
+            $fwrite(f,"%s TEST FAILED.",testname);
+            $fwrite(f,"%c[0m",27);
+            $fwrite(f,"\n");
+        end
     end
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
-assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
+//assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
 
 endmodule
 //`default_nettype wire

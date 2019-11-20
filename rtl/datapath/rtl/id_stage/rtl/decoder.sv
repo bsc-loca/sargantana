@@ -421,7 +421,29 @@ module decoder(
                 decode_instr_o.regfile_we = 1'b1;
                 decode_instr_o.unit = UNIT_SYSTEM;
 
-                case (decode_i.inst.itype.func3)
+                case (decode_i.inst.itype.func3)     
+                    F3_ECALL_EBREAK: begin
+                        
+                        decode_instr_o.regfile_we = 1'b0;
+
+                        if (decode_i.inst.itype.rs1 != 'h0 ||
+                            decode_i.inst.itype.rd != 'h0 ) 
+                        begin
+                            illegal_instruction = 1'b1;
+                        end else begin
+                            case (decode_i.inst.itype.imm)
+                                F12_ECALL: begin
+                                    decode_instr_o.instr_type = ECALL;
+                                end
+                                F12_EBREAK: begin
+                                    decode_instr_o.instr_type = EBREAK;
+                                end
+                                default: begin // check illegal instruction
+                                    illegal_instruction = 1'b1;
+                                end
+                            endcase
+                        end
+                    end
                     F3_CSRRW: begin
                        decode_instr_o.instr_type = CSRRW;
                     end

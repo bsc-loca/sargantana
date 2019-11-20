@@ -48,6 +48,8 @@ module tb_datapath();
     req_cpu_dcache_t tb_req_cpu_dcache_o;
     req_dcache_cpu_t tb_req_dcache_cpu_i;
 
+    req_csr_cpu_t req_csr_cpu_i;
+    req_cpu_csr_t req_cpu_csr_o;
     
 
     logic [31:0] tb_addr_i;
@@ -67,6 +69,16 @@ module tb_datapath();
     assign tb_req_dcache_cpu_i.dmem_xcpt_pf_st_i = 1'b0;
     assign tb_req_dcache_cpu_i.dmem_xcpt_pf_ld_i = 1'b0;
 
+
+    assign req_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign req_csr_cpu_i.csr_replay = 1'b0;
+    assign req_csr_cpu_i.csr_stall = 1'b0;
+    assign req_csr_cpu_i.csr_exception = 1'b0;
+    assign req_csr_cpu_i.csr_eret = 1'b0;
+    assign req_csr_cpu_i.csr_evec = 64'h0;
+    assign req_csr_cpu_i.csr_interrupt = 1'b0;
+    assign req_csr_cpu_i.csr_interrupt_cause = 64'b0;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -77,6 +89,8 @@ module tb_datapath();
         .req_icache_cpu_i(tb_icache_fetch_i),
         .req_cpu_icache_o(tb_fetch_icache_o),
         .soft_rstn_i(soft_rstn_i),
+        .req_csr_cpu_i(req_csr_cpu_i),
+        .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
         .req_dcache_cpu_i(tb_req_dcache_cpu_i)
 
@@ -132,9 +146,10 @@ module tb_datapath();
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
+            //req_csr_cpu_i.csr_rw_rdata<='{default:0};
             //tb_icache_fetch_i.valid<='{default:0};
             //tb_icache_fetch_i.data<='{default:0};
-            tb_icache_fetch_i.ex.valid<={default:0};
+            //tb_icache_fetch_i.ex.valid<={default:0};
 	    //tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
             //tb_icache_fetch_i.instr_access_fault<='{default:0};
             //tb_icache_fetch_i.instr_page_fault<='{default:0};
@@ -232,7 +247,7 @@ module tb_datapath();
         test_sim();
     end
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
-assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
+//assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
 
 endmodule
 //`default_nettype wire
