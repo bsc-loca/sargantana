@@ -435,6 +435,7 @@ typedef struct packed {
     bus64_t     csr_tval;
 } resp_csr_cpu_t;
 
+
 typedef struct packed {
     // Triggers a halt on the pipeline 
     logic           halt_valid;
@@ -451,6 +452,26 @@ typedef struct packed {
     // Write to register file data
     bus64_t         reg_write_data;
 } debug_in_t;
+
+// LSQ in/out of instruction signals
+typedef struct packed {
+    logic            valid;          // Valid bit
+    addr_t           addr;           // Address        
+    bus64_t          data;           // Data 
+    instr_type_t     instr_type;   // Type of instruction
+    mem_op_t         mem_op;       // Type of memory access
+    logic [2:0]      funct3;       // Granularity of mem. access
+    reg_t            rd;           // Destination register. Used for identify a pending Miss
+} lsq_interface_t;
+
+// ROB in/out of instruction signals
+typedef struct packed {
+    logic    valid;                   // Valid instruction 
+    reg_t    destination_register;    // Destination Register 
+    reg_t    source_register_1;       // Source register 
+    reg_t    source_register_2;       // Source register 
+    addr_t   program_counter;         // Program counter
+} rob_instruction_in_interface_t;
 
 typedef struct packed {
     // current pc in fetch stage

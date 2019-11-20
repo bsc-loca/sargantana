@@ -77,7 +77,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
         end
     `endif
     
-    always @(posedge clk_i)
+    always_ff @(posedge clk_i)
     begin
         // Read Head
         if (read_enable) begin
