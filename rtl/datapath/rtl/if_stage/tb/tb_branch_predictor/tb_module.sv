@@ -15,12 +15,11 @@
 // includes
 //-----------------------------
 
+
 `timescale 1 ns / 1 ns
 `default_nettype none
 
 `include "colors.vh"
-
-
 
 import drac_pkg::*;
 
@@ -145,7 +144,6 @@ module tb_module();
         end
     endtask
 
-    // New design: Not valid bit and no reset signal. test_sim_1 is deprecated
     // Test that all entries are not valid and set to zero
     // Output should be nothing
     task automatic test_sim_1;
@@ -158,7 +156,6 @@ module tb_module();
             //    assert (tb_branch_predict_is_branch_o == 0);                            // BP says pc is not a branch
             //    tick();
             //end
-
             $display("Test 1 END");
         end
     endtask
@@ -256,7 +253,7 @@ module tb_module();
             tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b0;
-            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};s
 
             // CHECK THAT ADDRESS 0 state machine is equal to 00
             tick();
@@ -445,7 +442,6 @@ module tb_module();
             $display("Test 4 END");
         end
     endtask
-
 
 
     //***init_sim***

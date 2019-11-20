@@ -1,0 +1,296 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/vsoria/Escritorio/drac-inorder/rtl/datapath/rtl/exe_stage/tb/tb_mem_unit
+Xdrac_pkg
+Z1 DXx6 sv_std 3 std 0 22 AD7iAPLo6nTIKk<N0eo=D3
+Z2 DXx4 work 9 riscv_pkg 0 22 TnW:QRjJ;Dz_XX]lA9;H42
+V5AjGE3k[>9b4R?ZS>?:^30
+r1
+!s85 0
+31
+!i10b 1
+!s100 O?JFVYJhWCl0n?NAP=0Yh0
+I5AjGE3k[>9b4R?ZS>?:^30
+S1
+R0
+Z3 w1573574134
+Z4 8../../../../../../includes/drac_pkg.sv
+Z5 F../../../../../../includes/drac_pkg.sv
+Z6 L0 16
+Z7 OV;L;10.5b;63
+Z8 !s108 1573745064.000000
+Z9 !s107 colors.vh|tb_mem_unit.sv|../../rtl/wip_mem_unit_lsq.sv|../../rtl/load_store_queue.sv|../../../../../../rtl/interface_dcache/rtl/interface_dcache.sv|../../../../../../includes/drac_pkg.sv|../../../../../../includes/riscv_pkg.sv|
+Z10 !s90 +acc=rn|+incdir+|../../../../../../includes/riscv_pkg.sv|../../../../../../includes/drac_pkg.sv|../../../../../../rtl/interface_dcache/rtl/interface_dcache.sv|../../rtl/load_store_queue.sv|../../rtl/wip_mem_unit_lsq.sv|tb_mem_unit.sv|colors.vh|
+!i113 1
+Z11 o+acc=rn
+Z12 !s92 +acc=rn +incdir+
+Z13 tCvgOpt 0
+Xdrac_pkg_sv_unit
+R1
+R2
+VbEj>WAMmD?PijC1:zikg40
+r1
+!s85 0
+31
+!i10b 1
+!s100 D][V2k3UmEO55aE7nTR?i1
+IbEj>WAMmD?PijC1:zikg40
+!i103 1
+S1
+R0
+R3
+R4
+R5
+Z14 L0 14
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+vinterface_dcache
+R1
+R2
+Z15 DXx4 work 8 drac_pkg 0 22 5AjGE3k[>9b4R?ZS>?:^30
+DXx4 work 24 interface_dcache_sv_unit 0 22 Bje0^[JngKObN:nI1@Cdj2
+Z16 VDg1SIo80bB@j0V0VzS_@n1
+r1
+!s85 0
+31
+!i10b 1
+!s100 f1<RaAWj49V3eAG_RVoWO2
+I]_aNYji6Wzb9JP2;Em=2A1
+!s105 interface_dcache_sv_unit
+S1
+R0
+Z17 w1573727309
+Z18 8../../../../../../rtl/interface_dcache/rtl/interface_dcache.sv
+Z19 F../../../../../../rtl/interface_dcache/rtl/interface_dcache.sv
+L0 21
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+Xinterface_dcache_sv_unit
+R1
+R2
+R15
+VBje0^[JngKObN:nI1@Cdj2
+r1
+!s85 0
+31
+!i10b 1
+!s100 01lYcGS]46UB6h4L`cI]G0
+IBje0^[JngKObN:nI1@Cdj2
+!i103 1
+S1
+R0
+R17
+R18
+R19
+L0 3
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+vload_store_queue
+R1
+R2
+R15
+DXx4 work 24 load_store_queue_sv_unit 0 22 9]QWXMgQ[@Uf4;W?7D5QH2
+R16
+r1
+!s85 0
+31
+!i10b 1
+!s100 _0EiNSUoMfWPNSQeW`@oM2
+Il:R_eGHaQ9EGFljLf@FaJ2
+!s105 load_store_queue_sv_unit
+S1
+R0
+Z20 w1573727403
+Z21 8../../rtl/load_store_queue.sv
+Z22 F../../rtl/load_store_queue.sv
+Z23 L0 25
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+Xload_store_queue_sv_unit
+R1
+R2
+R15
+V9]QWXMgQ[@Uf4;W?7D5QH2
+r1
+!s85 0
+31
+!i10b 1
+!s100 >o@0mCfc485AW]Vdb5Eg02
+I9]QWXMgQ[@Uf4;W?7D5QH2
+!i103 1
+S1
+R0
+R20
+R21
+R22
+L0 15
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+vmem_unit
+R1
+R2
+R15
+DXx4 work 24 wip_mem_unit_lsq_sv_unit 0 22 :MFO>=91U<@eU2EeC`K?T1
+R16
+r1
+!s85 0
+31
+!i10b 1
+!s100 FYB2L_F9lTd`h0a9UCd3b1
+IIWM32hzeKQ[_@[e_gKZ0b3
+!s105 wip_mem_unit_lsq_sv_unit
+S1
+R0
+Z24 w1573745061
+Z25 8../../rtl/wip_mem_unit_lsq.sv
+Z26 F../../rtl/wip_mem_unit_lsq.sv
+R6
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+Xriscv_pkg
+R1
+!s110 1573745064
+!i10b 1
+!s100 m1go@5JjKDS_^eNHoKzi>0
+ITnW:QRjJ;Dz_XX]lA9;H42
+VTnW:QRjJ;Dz_XX]lA9;H42
+S1
+R0
+w1573312443
+8../../../../../../includes/riscv_pkg.sv
+F../../../../../../includes/riscv_pkg.sv
+R14
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+vtb_mem_unit
+R1
+R2
+R15
+DXx4 work 19 tb_mem_unit_sv_unit 0 22 _XTKe?GRKh8GGdPA3[Wf?2
+R16
+r1
+!s85 0
+31
+!i10b 1
+!s100 WA`h?TdM<VM;K6A?z^O]b3
+I]NL;^SjUT6GUA1<oo3RTn0
+!s105 tb_mem_unit_sv_unit
+S1
+R0
+Z27 w1573745035
+Z28 8tb_mem_unit.sv
+Z29 Ftb_mem_unit.sv
+R23
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+Xtb_mem_unit_sv_unit
+R1
+R2
+R15
+V_XTKe?GRKh8GGdPA3[Wf?2
+r1
+!s85 0
+31
+!i10b 1
+!s100 _9Q[E=oNEXSKDM`G_6ndj2
+I_XTKe?GRKh8GGdPA3[Wf?2
+!i103 1
+S1
+R0
+R27
+R28
+R29
+Fcolors.vh
+L0 23
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13
+Xwip_mem_unit_lsq_sv_unit
+R1
+R2
+R15
+V:MFO>=91U<@eU2EeC`K?T1
+r1
+!s85 0
+31
+!i10b 1
+!s100 5;1gOQIG7decQ=Z3`P]QU0
+I:MFO>=91U<@eU2EeC`K?T1
+!i103 1
+S1
+R0
+R24
+R25
+R26
+R14
+R7
+R8
+R9
+R10
+!i113 1
+R11
+R12
+R13

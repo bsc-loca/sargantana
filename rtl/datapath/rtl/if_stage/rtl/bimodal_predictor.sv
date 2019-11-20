@@ -51,7 +51,7 @@ logic [1:0] past_state_pht;
     // This array stores 1024 states machines for predicting the branches
 
     reg [_BITS_BIMODAL_STATE_MACHINE_ -1:0] pattern_history_table [0:_NUM_BIMODAL_ENTRIES_ -1]; 
-    reg [63:0] branch_target_buffer [0:_NUM_BIMODAL_ENTRIES_-1];
+    reg [ADDR_SIZE-1:0] branch_target_buffer [0:_NUM_BIMODAL_ENTRIES_-1];
 
     
     `ifndef SYNTHESIS
@@ -60,7 +60,7 @@ logic [1:0] past_state_pht;
         initial 
         begin for(i = 0; i < _NUM_BIMODAL_ENTRIES_ ; i = i + 1) begin
                 pattern_history_table[i] = _INITIAL_STATE_BIMODAL_;
-                branch_target_buffer[i] = 64'h0;
+                branch_target_buffer[i] = 40'h0;
               end
         end
     `endif
@@ -96,6 +96,5 @@ logic [1:0] past_state_pht;
     
     // If state is 00 or 01 predict not taken, if 10 or 11 predict taken
     assign bimodal_predict_taken_o = readed_state_pht[1];
- 
 
 endmodule

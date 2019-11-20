@@ -111,6 +111,7 @@ bimodal_predictor bimodal_predictor_inst(
     end
 
 
+
 assign is_branch_prediction = (is_branch_tag == pc_fetch_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1] && is_branch_tag_valid);
 
 
