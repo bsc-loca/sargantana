@@ -426,8 +426,8 @@ module decoder(
                         
                         decode_instr_o.regfile_we = 1'b0;
 
-                        if (decode_i.inst.itype.rs1 == 'h0 ||
-                            decode_i.inst.itype.rd == 'h0 ) 
+                        if (decode_i.inst.itype.rs1 != 'h0 ||
+                            decode_i.inst.itype.rd != 'h0 ) 
                         begin
                             illegal_instruction = 1'b1;
                         end else begin
