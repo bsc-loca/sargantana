@@ -346,7 +346,7 @@ module datapath(
     assign commit_pc        = (wb_instr_int.valid) ? wb_instr_int.pc : 64'b0;
     assign commit_data      = data_wb_rr_int;
     assign commit_addr_reg  = wb_instr_int.rd;
-    assign commit_reg_we    = wb_instr_int.regfile_we&wb_instr_int.valid;
+    assign commit_reg_we    = wb_instr_int.regfile_we && wb_instr_int.valid;
 
 
 endmodule
