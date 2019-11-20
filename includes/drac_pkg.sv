@@ -50,7 +50,7 @@ typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
 typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 
 
-typedef enum {
+typedef enum logic [1:0] {
     NEXT_PC_SEL_PC,
     NEXT_PC_SEL_PC_4,
     NEXT_PC_SEL_JUMP
@@ -130,7 +130,7 @@ typedef struct packed {
     logic        dmem_lock_o;
 } req_cpu_dcache_t;
 
-typedef enum {
+typedef enum logic [2:0] {
     SEL_SRC1_REGFILE,
     SEL_SRC2_REGFILE,
     SEL_IMM,
@@ -139,7 +139,7 @@ typedef enum {
     SEL_BYPASS
 } alu_sel_t;
 
-typedef enum {
+typedef enum logic [2:0]{
     UNIT_ALU,
     UNIT_DIV,
     UNIT_MUL,
@@ -149,7 +149,7 @@ typedef enum {
     UNIT_SYSTEM
 } functional_unit_t;
 
-typedef enum {
+typedef enum logic [1:0]{
     SEL_FROM_MEM,
     SEL_FROM_ALU,
     SEL_FROM_BRANCH,
@@ -187,7 +187,7 @@ typedef enum logic [6:0] {
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D
 } instr_type_t;
 
-typedef enum {
+typedef enum logic [3:0]{
     ALU_ADD,
     ALU_SUB,
     ALU_SLL,
@@ -200,7 +200,7 @@ typedef enum {
     ALU_AND
 } alu_op_t;
 
-typedef enum {
+typedef enum logic [2:0]{
     ALU_MUL,
     ALU_MULH,
     ALU_MULHSU,
@@ -212,7 +212,7 @@ typedef enum {
 } mul_op_t;
 
 
-typedef enum {
+typedef enum logic [2:0]{
     B_EQ,
     B_NE,
     B_LT,
@@ -221,19 +221,19 @@ typedef enum {
     B_GEU
 } branch_op_t;
 
-typedef enum {
+typedef enum logic [1:0]{
     CT_JAL,
     CT_JALR,
     CT_BRANCH
 } ctrl_xfer_op_t;
 
-typedef enum {
+typedef enum logic [1:0]{
     MEM_LOAD,
     MEM_STORE,
     MEM_AMO
 } mem_op_t;
 
-typedef enum {
+typedef enum logic [2:0]{
     BYTE,
     HALFWORD,
     WORD,
@@ -243,7 +243,7 @@ typedef enum {
     WORD_UNSIGNED
 } mem_format_t;
 
-typedef enum {
+typedef enum logic [3:0] {
     AMO_LR,
     AMO_SC,
     AMO_SWAP,
