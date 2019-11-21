@@ -65,7 +65,6 @@ logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 logic write_enable;
 logic read_enable;
 logic checkpoint_enable;
-logic recover_enable;
 
 // User can do checkpoints when there is at least one free copy of the free list
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
@@ -94,6 +93,8 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             tail[0] <= 5'b0;            // Current tail in position 0 
             num[0]  <= 6'b100000;       // Number of free registers 32
 
+            checkpoint_o <= 2'b0;       // Label 00 not XX
+
 
             for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
                register_table[i][0] = i[5:0] + 6'b100000;
@@ -104,14 +105,27 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             version_tail <= version_tail + {1'b0, delete_checkpoint_i};
 
             // On recovery, head points to old checkpoint. Do not rename next instruction.
-            if (recover_enable) begin                    
+            if (do_recover_i) begin                    
                 version_head <= recover_checkpoint_i;
-                if (version_head > version_tail)    // Recompute number of checkpoints
-                    num_checkpoints <= {1'b0, version_head} - {1'b0, version_tail};
+                if (recover_checkpoint_i >= version_tail)    // Recompute number of checkpoints
+                    num_checkpoints <= {1'b0, recover_checkpoint_i} - {1'b0, version_tail};
                 else 
-                    num_checkpoints <= NUM_CHECKPOINTS - {1'b0,version_tail} + {1'b0,version_head};
+                    num_checkpoints <= NUM_CHECKPOINTS - {1'b0, version_tail} + {1'b0, recover_checkpoint_i};
             end
             else begin
+
+                // On checkpoint first do checkpoint and then rename if needed
+                // For checkpoint copy old free list in new. And copy pointers
+                if (checkpoint_enable) begin
+                    for (int i=0; i<NUM_ENTRIES; i++)
+                        register_table[i][version_head + 2'b01] <= register_table[i][version_head];
+                    head[version_head + 2'b01] <= head[version_head];
+                    tail[version_head + 2'b01] <= tail[version_head];
+                    num [version_head + 2'b01] <= num [version_head];
+                    checkpoint_o <= version_head;
+                    version_head <= version_head + 2'b01;
+                end
+
                 // Control State
                 // Recompute number of checkpoints
                 num_checkpoints <= num_checkpoints + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
@@ -122,16 +136,6 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                 // Recompute number of free registers available.
                 num[version_head]  <= num[version_head]  + {5'b0, write_enable} - {5'b0, read_enable};
 
-
-                // On checkpoint first do checkpoint and then rename if needed
-                // For checkpoint copy old free list in new. And copy pointers
-                if (checkpoint_enable) begin
-                    version_head <= version_head + 2'b01;
-                    register_table[version_head] <= register_table[version_head - 2'b01];
-                    head[version_head] <= head[version_head - 2'b1];
-                    tail[version_head] <= tail[version_head - 2'b1];
-                    num [version_head] <= num [version_head - 2'b1];
-                end
 
                 // Read first free register
                 if (read_enable) begin
@@ -158,7 +162,6 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
 `endif
 
 assign empty_o = (num[version_head] == 0);
-assign out_of_checkpoints_o = (num_checkpoints == (NUM_ENTRIES - 1));
-assign checkpoint_o = version_head;
+assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
 endmodule

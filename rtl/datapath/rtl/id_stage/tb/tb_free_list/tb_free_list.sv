@@ -250,12 +250,15 @@ module tb_free_list();
         output int tmp;
         begin
             tb_add_free_register_i <= 1'b0;
+            tb_read_head_i <= 1'b0;
             tick();
 
             // We DO A CHECKPOINT
             tb_do_checkpoint_i <= 1'b1;
 
             tick();
+
+            tb_do_checkpoint_i <= 1'b0;
 
             // Tick for ASSERTS
 
@@ -277,7 +280,7 @@ module tb_free_list();
             assert(free_list_inst.num[1] == 32) else begin tmp++; assert(1 == 0); end
 
             for (int i=1; i<32; i++) begin
-                assert(free_list_inst.register_table[i][0] == i-1) else tmp = 1;
+                assert(free_list_inst.register_table[i][1] == i-1) else begin tmp++; assert(1 == 0); end
             end 
 
             // Check checkpoints pointers state
@@ -288,84 +291,191 @@ module tb_free_list();
             // Check checkpoint label is correct
             assert(tb_checkpoint_o == 0)  else begin tmp++; assert(1 == 0); end
 
-            /*
+
+            // Reads 8 free registers
             tb_read_head_i <= 1'b1;
             tick();
-            for(int i=0; i<32; i++) begin            // Reads 32 free registers
+
+            for(int i=0; i<7; i++) begin            // Reads 8 free registers
                 tick();
-                if (i == 31)
-                    assert(tb_empty_o == 1) else tmp = 1;
-                else
-                    assert(tb_empty_o == 0) else tmp = 1;
-                if (i == 31)
-                    assert(free_list_inst.head == 0) else tmp = 1;           
-                else
-                    assert(free_list_inst.head == i + 1) else tmp = 1;
-                assert(free_list_inst.tail == 5'b0) else tmp = 1;
-                assert(free_list_inst.num == 32 - 1 - i) else tmp = 1;
-                assert(tb_new_register_o == i + 32) else tmp = 1;
+
+                assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.head[1] == i + 2)  else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.tail[1] == 5'h1) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.num[1] == 32 - 1 - i) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_o == i) else begin tmp++; assert(1 == 0); end
             end
 
-            tick(); // Tries to read but is empty
-
-            assert(tb_empty_o == 1) else tmp = 1;
-            assert(free_list_inst.head == 0) else tmp = 1;          
-            assert(free_list_inst.tail == 5'b0) else tmp = 1;
-            assert(free_list_inst.num == 0) else tmp = 1;
-            assert(tb_new_register_o == 0) else tmp = 1;
-
-            // Bypass from tail to head
-
-            tb_free_register_i <= 5'b10101;
-            tb_add_free_register_i <= 1'b1;
-            tick();
-
-            // Check Bypass
             tb_read_head_i <= 1'b0;
-            tb_add_free_register_i <= 1'b0;
+            // Tick for ASSERTS
+
             tick();
+
+            assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+            // Check old version pointers and state
+            assert(free_list_inst.head[0] == 1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[0] == 5'b1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[0] == 32) else begin tmp++; assert(1 == 0); end
+
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i][0] == i-1) else begin tmp++; assert(1 == 0); end
+            end
+
+            // Check new version pointers and state
+            assert(free_list_inst.head[1] == 5'h9)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[1] == 5'b1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[1] == 24) else begin tmp++; assert(1 == 0); end
+
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i][1] == i-1) else begin tmp++; assert(1 == 0); end
+            end 
+
+            // Check checkpoints pointers state
+            assert(free_list_inst.version_head == 1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.version_tail == 0)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num_checkpoints == 1)  else begin tmp++; assert(1 == 0); end
+  
+
+            // We DO A SECOND CHECKPOINT
+            tb_do_checkpoint_i <= 1'b1;
+
+            tick();
+
+            tb_do_checkpoint_i <= 1'b0;
+
+            // Tick for ASSERTS
+
+            tick();
+
+            assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+            // Check old version pointers and state
+            assert(free_list_inst.head[1] == 5'h9) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[1] == 5'b1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[1] == 24) else begin tmp++; assert(1 == 0); end
+
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i][1] == i-1) else begin tmp++; assert(1 == 0); end
+            end
+
+            // Check new version pointers and state
+            assert(free_list_inst.head[2] == 5'h9)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[2] == 5'h1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[2] == 24) else begin tmp++; assert(1 == 0); end
+
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i][2] == i-1) else begin tmp++; assert(1 == 0); end
+            end 
+
+            // Check checkpoints pointers state
+            assert(free_list_inst.version_head == 2)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.version_tail == 0)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num_checkpoints == 2)  else begin tmp++; assert(1 == 0); end
             
-            assert(tb_empty_o == 1) else tmp = 1;
-            assert(free_list_inst.head == 5'h1) else tmp = 1;            
-            assert(free_list_inst.tail == 5'h1) else tmp = 1;
-            assert(free_list_inst.num == 0) else tmp = 1;
-            assert(tb_new_register_o == 5'b10101) else tmp = 1;
+            // Check checkpoint label is correct
+            assert(tb_checkpoint_o == 1)  else begin tmp++; assert(1 == 0); end
 
+            
             tick();
 
-            for(int i=0; i<32; i++) begin            // Frees 32 registers
-                tb_free_register_i <= i[5:0];
+            for(int i=0; i<8; i++) begin            // Frees 8 registers
+                tb_free_register_i <= i[5:0] + 32;
                 tb_add_free_register_i <= 1'b1;
 
                 tick();
                 tb_add_free_register_i <= 1'b0;
 
                 tick();
-                assert(tb_empty_o == 0) else tmp = 1;
-                assert(free_list_inst.head == 1) else tmp = 1;
-                if (i > 29)
-                    assert(free_list_inst.tail == 5'b00000 + i[5:0] - 30) else tmp = 1;
-                else
-                    assert(free_list_inst.tail == 5'b00001 + i[5:0] + 1) else tmp = 1;
-                assert(free_list_inst.num == i + 1) else tmp = 1;
-                assert(tb_new_register_o == 0) else tmp = 1;
+                assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.head[2] == 5'h9) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.tail[2] == 5'h02 + i[5:0]) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.num[2] == i + 1 + 24) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_o == 0) else begin tmp++; assert(1 == 0); end
             end
-            
-            tb_add_free_register_i <= 1'b1;
-            tb_read_head_i <= 1'b0;
 
-            assert(tb_empty_o == 0) else tmp = 1;
-            assert(free_list_inst.head == 1) else tmp = 1;
-            assert(free_list_inst.tail == 5'b1) else tmp = 1;
-            assert(free_list_inst.num == 32) else tmp = 1;
-    
+            // Free Checkpoint
+
+            tb_delete_checkpoint_i <= 1'b1;
+            tick();
+ 
+            tb_delete_checkpoint_i <= 1'b0;
+            // Tick for ASSERTS
+
+            tick();
+
+            assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+            // Check old version pointers and state
+            assert(free_list_inst.head[1] == 5'h9) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[1] == 5'b1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[1] == 24) else begin tmp++; assert(1 == 0); end
+
             for (int i=1; i<32; i++) begin
-                assert(free_list_inst.register_table[i][0] == i-1) else tmp = 1;
+                assert(free_list_inst.register_table[i][1] == i-1) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(free_list_inst.version_head == 0) else tmp = 1;
-            assert(free_list_inst.version_tail == 0) else tmp = 1;
-            assert(free_list_inst.num_checkpoints == 0) else tmp = 1;*/
+            // Check new version pointers and state
+            assert(free_list_inst.head[2] == 5'h9)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[2] == 5'h9)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[2] == 32) else begin tmp++; assert(1 == 0); end
+
+            // Check checkpoints pointers state
+            assert(free_list_inst.version_head == 2)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num_checkpoints == 1)  else begin tmp++; assert(1 == 0); end
+            
+            // Check checkpoint label is correct
+            assert(tb_checkpoint_o == 1)  else begin tmp++; assert(1 == 0); end
+
+            // Recover checkpoint number 2
+            tick();
+            
+            tb_do_recover_i <= 1'b1;
+            tb_recover_checkpoint_i <= 2'b01;            
+
+            tick();
+
+            tb_do_recover_i <= 1'b0;
+
+            tick();
+
+            // Check checpoint recover
+           
+            assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+
+            // Check new version pointers and state
+            assert(free_list_inst.head[1] == 5'h9)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail[1] == 5'b1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num[1] == 24) else begin tmp++; assert(1 == 0); end
+
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i][1] == i-1) else begin tmp++; assert(1 == 0); end
+            end 
+
+            // Check checkpoints pointers state
+            assert(free_list_inst.version_head == 1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num_checkpoints == 0)  else begin tmp++; assert(1 == 0); end
+
+            // Do checkpoints until run out of them
+
+            tb_do_checkpoint_i <= 1'b1;
+            
+            // First
+            tick();
+            // Second
+            tick();
+            // Third
+            tick();
+            
+            tb_do_checkpoint_i <= 1'b0;
+
+            tick();
+
+            // Check checkpoints pointers state
+            assert(free_list_inst.version_head == 0)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.num_checkpoints == 3)  else begin tmp++; assert(1 == 0); end
+            assert(tb_out_of_checkpoints_o == 1)  else begin tmp++; assert(1 == 0); end
+
         end
     endtask
 
