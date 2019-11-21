@@ -13,7 +13,7 @@ mv lib_module /tmp
 vlib lib_module
 vmap work $PWD/lib_module
 vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv\
- $ID_STAGE/wip_free_list.sv tb_free_list.sv colors.vh
+ $ID_STAGE/free_list.sv tb_free_list.sv colors.vh
 vmake lib_module/ > Makefile
 
 if [ -z "$1" ]

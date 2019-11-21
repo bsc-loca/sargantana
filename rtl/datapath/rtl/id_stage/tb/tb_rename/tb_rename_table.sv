@@ -4,7 +4,7 @@
 
 /* -----------------------------------------------
 * Project Name   : DRAC
-* File           : tb_free_list.sv
+* File           : tb_rename.sv
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Victor Soria Pardos
 * Email(s)       : victor.soria@bsc.es
@@ -12,7 +12,7 @@
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description
-*  0.1        | Guillem.LP | 
+*  0.1        | Victor.SP  | 
 * -----------------------------------------------
 */
 
@@ -58,7 +58,7 @@ module tb_free_list();
 // Module
 //-----------------------------
 
-    free_list free_list_inst(
+    rename_table rename_table_inst(
         .clk_i(tb_clk_i),               
         .rstn_i(tb_rstn_i),             
         .read_head_i(tb_read_head_i),   

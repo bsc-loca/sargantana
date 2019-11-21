@@ -13,12 +13,12 @@ mv lib_module /tmp
 vlib lib_module
 vmap work $PWD/lib_module
 vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv\
- $ID_STAGE/wip_free_list.sv tb_free_list.sv colors.vh
+ $ID_STAGE/wip_rename_table.sv tb_rename_table.sv colors.vh
 vmake lib_module/ > Makefile
 
 if [ -z "$1" ]
 then
-      vsim work.tb_free_list -do "view wave -new" -do "do wave.do" -do "run $CYCLES"
+      vsim work.tb_rename_table -do "view wave -new" -do "do wave.do" -do "run $CYCLES"
 else
-      vsim work.tb_free_list $1 -do "run $CYCLES"
+      vsim work.tb_rename_table $1 -do "run $CYCLES"
 fi
