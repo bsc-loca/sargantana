@@ -51,15 +51,15 @@ typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 
 
 typedef enum logic [1:0] {
-    NEXT_PC_SEL_PC,
-    NEXT_PC_SEL_PC_4,
-    NEXT_PC_SEL_JUMP
+    NEXT_PC_SEL_PC_4 = 2'b00,
+    NEXT_PC_SEL_PC   = 2'b01,
+    NEXT_PC_SEL_JUMP = 2'b10
 } next_pc_sel_t;
 
 typedef enum logic [1:0] {
-    SEL_JUMP_COMMIT,
-    SEL_JUMP_CSR,
-    SEL_JUMP_DECODE
+    SEL_JUMP_COMMIT = 2'b00,
+    SEL_JUMP_CSR    = 2'b01,
+    SEL_JUMP_DECODE = 2'b10
 } jump_addr_fetch_t;
 
 typedef enum logic [1:0]{

@@ -106,7 +106,7 @@ module decoder(
                 decode_instr_o.unit = UNIT_BRANCH;
                 // it is valid if there is no misaligned exception
                 ex_addr_misaligned_int = imm_value[1]; 
-                jal_id_if_o.valid = !ex_addr_misaligned_int;
+                jal_id_if_o.valid = !ex_addr_misaligned_int & decode_i.valid;
                 jal_id_if_o.jump_addr = imm_value+decode_i.pc_inst;
                 // handle instr addr misaligned
                 decode_instr_o.ex.cause = INSTR_ADDR_MISALIGNED;
