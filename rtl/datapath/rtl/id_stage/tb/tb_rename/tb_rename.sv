@@ -135,23 +135,21 @@ module tb_free_list();
 
 
 // Check reset of free list
-    task automatic test_sim_1;
-        output int tmp;
+    task automatic test_sim1();
         begin
-            tmp = 0;
             #CLK_PERIOD;
-            assert(tb_empty_o == 0) else tmp = 1;
-            assert(free_list_inst.head == 0)else tmp = 1;
-            assert(free_list_inst.tail == 0)else tmp = 1;
-            assert(free_list_inst.num == 32)else tmp = 1;
+            assert(tb_empty_o == 0);
+            assert(free_list_inst.head == 0);
+            assert(free_list_inst.tail == 0);
+            assert(free_list_inst.num == 32);
     
             for (int i=0; i<32; i++) begin
-                assert(free_list_inst.register_table[i][0] == (i + 32))else tmp = 1;
+                assert(free_list_inst.register_table[i][0] == (i + 32));
             end
 
-            assert(free_list_inst.version_head == 0)else tmp = 1;
-            assert(free_list_inst.version_tail == 0)else tmp = 1;
-            assert(free_list_inst.num_checkpoints == 0)else tmp = 1;
+            assert(free_list_inst.version_head == 0);
+            assert(free_list_inst.version_tail == 0);
+            assert(free_list_inst.num_checkpoints == 0);
             #CLK_PERIOD;
 
         end
@@ -160,8 +158,7 @@ module tb_free_list();
 
 // Reads some free registers and then frees other 8 registers
 // No checkpointing involved
-    task automatic test_sim_2;
-        output int tmp;
+    task automatic test_sim2();
         begin
             tick();
             tb_read_head_i <= 1'b1;
@@ -169,25 +166,25 @@ module tb_free_list();
             for(int i=0; i<32; i++) begin            // Reads 32 free registers
                 tick();
                 if (i == 31)
-                    assert(tb_empty_o == 1) else tmp = 1;
+                    assert(tb_empty_o == 1);
                 else
-                    assert(tb_empty_o == 0) else tmp = 1;
+                    assert(tb_empty_o == 0);
                 if (i == 31)
-                    assert(free_list_inst.head == 0) else tmp = 1;           
+                    assert(free_list_inst.head == 0);            
                 else
-                    assert(free_list_inst.head == i + 1) else tmp = 1;
-                assert(free_list_inst.tail == 5'b0) else tmp = 1;
-                assert(free_list_inst.num == 32 - 1 - i) else tmp = 1;
-                assert(tb_new_register_o == i + 32) else tmp = 1;
+                    assert(free_list_inst.head == i + 1);
+                assert(free_list_inst.tail == 5'b0);
+                assert(free_list_inst.num == 32 - 1 - i);
+                assert(tb_new_register_o == i + 32);
             end
 
             tick(); // Tries to read but is empty
 
-            assert(tb_empty_o == 1) else tmp = 1;
-            assert(free_list_inst.head == 0) else tmp = 1;          
-            assert(free_list_inst.tail == 5'b0) else tmp = 1;
-            assert(free_list_inst.num == 0) else tmp = 1;
-            assert(tb_new_register_o == 0) else tmp = 1;
+            assert(tb_empty_o == 1);
+            assert(free_list_inst.head == 0);            
+            assert(free_list_inst.tail == 5'b0);
+            assert(free_list_inst.num == 0);
+            assert(tb_new_register_o == 0);
 
             // Bypass from tail to head
 
@@ -200,11 +197,11 @@ module tb_free_list();
             tb_add_free_register_i <= 1'b0;
             tick();
             
-            assert(tb_empty_o == 1) else tmp = 1;
-            assert(free_list_inst.head == 5'h1) else tmp = 1;            
-            assert(free_list_inst.tail == 5'h1) else tmp = 1;
-            assert(free_list_inst.num == 0) else tmp = 1;
-            assert(tb_new_register_o == 5'b10101) else tmp = 1;
+            assert(tb_empty_o == 1);
+            assert(free_list_inst.head == 5'h1);            
+            assert(free_list_inst.tail == 5'h1);
+            assert(free_list_inst.num == 0);
+            assert(tb_new_register_o == 5'b10101);
 
             tick();
 
@@ -216,71 +213,42 @@ module tb_free_list();
                 tb_add_free_register_i <= 1'b0;
 
                 tick();
-                assert(tb_empty_o == 0) else tmp = 1;
-                assert(free_list_inst.head == 1) else tmp = 1;
+                assert(tb_empty_o == 0);
+                assert(free_list_inst.head == 1);
                 if (i > 29)
-                    assert(free_list_inst.tail == 5'b00000 + i[5:0] - 30) else tmp = 1;
+                    assert(free_list_inst.tail == 5'b00000 + i[5:0] - 30);
                 else
-                    assert(free_list_inst.tail == 5'b00001 + i[5:0] + 1) else tmp = 1;
-                assert(free_list_inst.num == i + 1) else tmp = 1;
-                assert(tb_new_register_o == 0) else tmp = 1;
+                    assert(free_list_inst.tail == 5'b00001 + i[5:0] + 1);
+                assert(free_list_inst.num == i + 1);
+                assert(tb_new_register_o == 0);
             end
             
             tb_add_free_register_i <= 1'b1;
             tb_read_head_i <= 1'b0;
 
-            assert(tb_empty_o == 0) else tmp = 1;
-            assert(free_list_inst.head == 1) else tmp = 1;
-            assert(free_list_inst.tail == 5'b1) else tmp = 1;
-            assert(free_list_inst.num == 32) else tmp = 1;
+            assert(tb_empty_o == 0);
+            assert(free_list_inst.head == 1);
+            assert(free_list_inst.tail == 5'b1);
+            assert(free_list_inst.num == 32);
     
             for (int i=1; i<32; i++) begin
-                assert(free_list_inst.register_table[i][0] == i-1) else tmp = 1;
+                assert(free_list_inst.register_table[i][0] == i-1);
             end
 
-            assert(free_list_inst.version_head == 0) else tmp = 1;
-            assert(free_list_inst.version_tail == 0) else tmp = 1;
-            assert(free_list_inst.num_checkpoints == 0) else tmp = 1;
+            assert(free_list_inst.version_head == 0);
+            assert(free_list_inst.version_tail == 0);
+            assert(free_list_inst.num_checkpoints == 0);
         end
     endtask
 
 //***task automatic test_sim***
+//This is an empty structure for a test.
     task automatic test_sim;
         begin
-            int tmp;
             $display("*** test_sim");
-            // check reset
-            test_sim_1(tmp); 
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
-                `END_COLOR_PRINT
-            end
-            // Check reading and writing to free list
-            test_sim_2(tmp); 
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 2 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 2 PASSED.");
-                `END_COLOR_PRINT
-            end
-            test_sim_3(tmp); 
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 3 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 3 PASSED.");
-                `END_COLOR_PRINT
-            end
+            // check req valid 0
+            test_sim1();
+            test_sim2();
         end
     endtask
 
@@ -292,6 +260,16 @@ module tb_free_list();
         init_dump();
         reset_dut();
         test_sim();
+        `START_GREEN_PRINT                       
+                $display("PASS, add one of this for each test."); 
+        `END_COLOR_PRINT 
+        if(VERBOSE)
+                $display("Define a parameter (parameter VERBOSE=0;) and keep\n\
+                messages that are not needed. Most of the times with PASS/FAIL name of the \n\
+                tests is enough"); 
+        `START_RED_PRINT
+                $error("FAIL, add one of this for each test");
+        `END_COLOR_PRINT
     end
 
 
