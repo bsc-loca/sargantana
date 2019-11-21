@@ -12,7 +12,9 @@ module register #(
 );
     
     always @(posedge clk_i, negedge rstn_i) begin
-        if (~rstn_i | flush_i) begin
+        if (~rstn_i) begin
+            output_o <= 0;
+        end else if (flush_i) begin
             output_o <= 0;
         end else if (load_i) begin
             output_o <= input_i;
