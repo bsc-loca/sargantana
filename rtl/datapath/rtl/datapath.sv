@@ -354,7 +354,7 @@ module datapath(
 
     assign commit_valid     = wb_instr_int.valid;
     assign commit_pc        = (wb_instr_int.valid) ? wb_instr_int.pc : 64'b0;
-    assign commit_data      = data_wb_rr_int;
+    assign commit_data      = (wb_instr_int.valid) ? data_wb_rr_int  : 64'b0;
     assign commit_addr_reg  = wb_instr_int.rd;
     assign commit_reg_we    = wb_instr_int.regfile_we && wb_instr_int.valid;
     assign commit_branch_taken = exe_to_wb_wb.branch_taken;
