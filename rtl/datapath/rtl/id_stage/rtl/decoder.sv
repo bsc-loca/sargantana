@@ -75,6 +75,9 @@ module decoder(
         jal_id_if_o.valid = 1'b0;
         jal_id_if_o.jump_addr = 64'b0;
 
+        decode_instr_o.aq = 1'b0;
+        decode_instr_o.rl = 1'b0;
+
 
         case (decode_i.inst.common.opcode)
             // Load Upper immediate
@@ -205,6 +208,109 @@ module decoder(
                         illegal_instruction = 1'b1;
                     end
                 endcase
+            end
+            OP_ATOMICS: begin
+                // TODO (guillemlp) what to do with aq and rl?
+                decode_instr_o.regfile_we   = 1'b0;
+                decode_instr_o.use_imm      = 1'b1;
+                decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
+                decode_instr_o.unit         = UNIT_MEM;
+                decode_instr_o.mem_op       = MEM_AMO;
+                decode_instr_o.aq           = decode_i.inst.rtype.func7[26];
+                decode_instr_o.rl           = decode_i.inst.rtype.func7[25];
+                case (decode_i.inst.rtype.func3)
+                    F3_ATOMICS: begin
+                        case (decode_i.inst.rtype.func7[31:27])
+                            LR_W: begin
+                                if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    illegal_instruction = 1'b1;
+                                end else begin
+                                    decode_instr_o.instr_type = AMO_LRW;
+                                end
+                            end
+                            SC_W: begin
+                                decode_instr_o.instr_type = AMO_SCW;
+                            end
+                            AMOSWAP_W: begin
+                                decode_instr_o.instr_type = AMO_SWAPW;
+                            end
+                            AMOADD_W: begin
+                                decode_instr_o.instr_type = AMO_ADDW;
+                            end
+                            AMOXOR_W: begin
+                                decode_instr_o.instr_type = AMO_XORW;
+                            end
+                            AMOAND_W: begin
+                                decode_instr_o.instr_type = AMO_ANDW;
+                            end
+                            AMOOR_W: begin
+                                decode_instr_o.instr_type = AMO_ORW;
+                            end
+                            AMOMIN_W: begin
+                                decode_instr_o.instr_type = AMO_MINW;
+                            end
+                            AMOMAX_W: begin
+                                decode_instr_o.instr_type = AMO_MAXW;
+                            end
+                            AMOMINU_W: begin
+                                decode_instr_o.instr_type = AMO_MINWU;
+                            end
+                            AMOMAXU_W: begin
+                                decode_instr_o.instr_type = AMO_MAXWU;
+                            end
+                            default: begin
+                                illegal_instruction = 1'b1;
+                            end
+                        endcase // decode_i.inst.rtype.func7[31:27]
+                    end
+                    F3_ATOMICS_64: begin
+                        case (decode_i.inst.rtype.func7[31:27])
+                            LR_D: begin
+                                if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    illegal_instruction = 1'b1;
+                                end else begin
+                                    decode_instr_o.instr_type = AMO_LRW;
+                                end
+                            end
+                            SC_D: begin
+                                decode_instr_o.instr_type = AMO_SCD;
+                            end
+                            AMOSWAP_D: begin
+                                decode_instr_o.instr_type = AMO_SWAPD;
+                            end
+                            AMOADD_D: begin
+                                decode_instr_o.instr_type = AMO_ADDD;
+                            end
+                            AMOXOR_D: begin
+                                decode_instr_o.instr_type = AMO_XORD;
+                            end
+                            AMOAND_D: begin
+                                decode_instr_o.instr_type = AMO_ANDD;
+                            end
+                            AMOOR_D: begin
+                                decode_instr_o.instr_type = AMO_ORD;
+                            end
+                            AMOMIN_D: begin
+                                decode_instr_o.instr_type = AMO_MIND;
+                            end
+                            AMOMAX_D: begin
+                                decode_instr_o.instr_type = AMO_MAXD;
+                            end
+                            AMOMINU_D: begin
+                                decode_instr_o.instr_type = AMO_MINDU;
+                            end
+                            AMOMAXU_D: begin
+                                decode_instr_o.instr_type = AMO_MAXDU;
+                            end
+                            default: begin
+                                illegal_instruction = 1'b1;
+                            end
+                        endcase // decode_i.inst.rtype.func7[31:27]
+                    end
+                    default: begin
+                        illegal_instruction = 1'b1;
+                    end
+                endcase // decode_i.inst.rtype.func3
             end
             OP_ALU_I: begin
                 decode_instr_o.use_imm    = 1'b1;

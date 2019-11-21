@@ -109,7 +109,8 @@ typedef enum logic [6:0] {
     OP_ALU_I_W   = 7'b0011011,
     OP_ALU_W     = 7'b0111011,
     OP_FENCE     = 7'b0001111,
-    OP_SYSTEM    = 7'b1110011
+    OP_SYSTEM    = 7'b1110011,
+    OP_ATOMICS   = 7'b0101111
 } op_inst_t;
 
 typedef enum logic [2:0] {
@@ -207,6 +208,39 @@ typedef enum logic [2:0] {
     F3_REMW   = 3'b110,
     F3_REMUW  = 3'b111
 } op_func3_mul64_t;
+
+typedef enum logic [2:0] {
+    F3_ATOMICS      = 3'b010,
+    F3_ATOMICS_64   = 3'b011
+} op_func3_atomics_t;
+
+typedef enum logic [4:0] {
+    LR_W        = 5'b00010,
+    SC_W        = 5'b00011,
+    AMOSWAP_W   = 5'b00001,
+    AMOADD_W    = 5'b00000,
+    AMOXOR_W    = 5'b00100,
+    AMOAND_W    = 5'b01100,
+    AMOOR_W     = 5'b01000,
+    AMOMIN_W    = 5'b10000,
+    AMOMAX_W    = 5'b10100,
+    AMOMINU_W   = 5'b11000,
+    AMOMAXU_W   = 5'b11100
+} op_func7_atomics_t;
+
+typedef enum logic [4:0] {
+    LR_D        = 5'b00010,
+    SC_D        = 5'b00011,
+    AMOSWAP_D   = 5'b00001,
+    AMOADD_D    = 5'b00000,
+    AMOXOR_D    = 5'b00100,
+    AMOAND_D    = 5'b01100,
+    AMOOR_D     = 5'b01000,
+    AMOMIN_D    = 5'b10000,
+    AMOMAX_D    = 5'b10100,
+    AMOMINU_D   = 5'b11000,
+    AMOMAXU_D   = 5'b11100
+} op_func7_atomics_64_t;
 
 
 typedef enum logic [6:0] {

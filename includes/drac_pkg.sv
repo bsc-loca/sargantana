@@ -306,6 +306,8 @@ typedef struct packed {
     logic signed_op;
     logic [2:0] funct3;
     bus64_t imm;
+    logic aq;
+    logic rl;
 } instr_entry_t;
 
 typedef struct packed {
