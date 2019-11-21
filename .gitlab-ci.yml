@@ -11,4 +11,5 @@ generate:verilog:
   stage: generate
   script:
     - verilator --version
-    - make
+    - make lint
+    - make local_spyglass

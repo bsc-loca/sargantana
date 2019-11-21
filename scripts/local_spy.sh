@@ -86,7 +86,6 @@ set_option handlememory
 
 ##Goal Setup Section
 define_goal my_lint -policy {lint} {set_parameter fullpolicy yes} 
-define_goal my_morelint -policy {morelint} {set_parameter fullpolicy yes}
 '> ./$DIR/$N.prj
 
 
@@ -96,6 +95,8 @@ sed -i '/Common Options Section/ r /tmp/optionsspy' ./$DIR/$N.prj
 export SKIP_PLATFORM_CHECK=TRUE
 export LM_LICENSE_FILE=27020@192.168.10.38
 export SNPSLMD_LICENSE_FILE=27020@192.168.10.38
+#TODO: this may not work in all runners. Tested on EPI03
+source /eda/env.sh
 export PATH=$PATH:'/home/drac/synopsys/install/spyglass/SPYGLASS2018.09-SP1-1/SPYGLASS_HOME/bin/'
 echo -e "exports\n"
 echo -e "run_goal lint/lint_rtl\nexit -save\n"| spyglass_main -shell -project $DIR/$N.prj
