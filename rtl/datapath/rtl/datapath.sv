@@ -78,6 +78,7 @@ module datapath(
     instr_entry_t wb_instr_int;
     //exe_wb_instr_t stage_commit;
     wb_cu_t wb_cu_int;
+    rr_cu_t rr_cu_int;
 
     // Control Unit
     id_cu_t id_cu_int;
@@ -86,7 +87,7 @@ module datapath(
 
     // Exe
     logic stall_exe_out;
-    exe_cu_t exe_cu_i;
+    exe_cu_t exe_cu_int;
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
     // this can be inserted to rr_exe
@@ -116,9 +117,10 @@ module datapath(
     // TODO: Ruben
     always_ff @(posedge clk_i, negedge rstn_i) begin
         // What is that?????
-        if(~rstn_i) begin
+        //if(~soft_rstn_i)
+        if(!soft_rstn_i) begin
             io_base_addr <=  40'h0080000000;
-        end else if(~soft_rstn_i) begin
+        end else if(~rstn_i) begin
             io_base_addr <=  40'h0040000000;
         end else begin 
             io_base_addr <= io_base_addr;
@@ -130,8 +132,9 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .valid_fetch(req_icache_cpu_i.valid),
+        .rr_cu_i(rr_cu_int),
         .wb_cu_i(wb_cu_int),
-        .exe_cu_i(exe_cu_i),
+        .exe_cu_i(exe_cu_int),
         .csr_cu_i(req_csr_cpu_i),
         .pipeline_ctrl_o(control_int),
         .cu_if_o(cu_if_int),
@@ -185,6 +188,7 @@ module datapath(
     );
     // valid jal in decode
     assign id_cu_int.valid_jal = jal_id_if_int.valid;
+    assign id_cu_int.stall_csr = stage_id_rr_d.stall_csr && stage_id_rr_d.valid;
 
     // Register ID to RR
     register #($bits(instr_entry_t)) reg_id_inst(
@@ -212,6 +216,8 @@ module datapath(
     //assign stage_rr_exe_d.rs1 = stage_id_rr_q.rs1;
     //assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
     assign stage_rr_exe_d.instr = stage_id_rr_q;
+
+    assign rr_cu_int.stall_csr = stage_rr_exe_d.instr.stall_csr && stage_rr_exe_d.instr.valid;
 
     // Register RR to EXE
     register #($bits(stage_rr_exe_d)) reg_rr_inst(
@@ -246,7 +252,7 @@ module datapath(
         .csr_eret_i(1'b0),
 
         .to_wb_o(exe_to_wb_exe),
-        .stall_o(exe_cu_i.stall),
+        .stall_o(exe_cu_int.stall),
 
         .dmem_req_valid_o   (req_cpu_dcache_o.dmem_req_valid_o),
         .dmem_req_cmd_o     (req_cpu_dcache_o.dmem_req_cmd_o),
@@ -258,6 +264,7 @@ module datapath(
         .dmem_req_kill_o(req_cpu_dcache_o.dmem_req_kill_o),
         .dmem_lock_o(req_cpu_dcache_o.dmem_lock_o)
     );
+    assign exe_cu_int.stall_csr = stage_rr_exe_q.instr.stall_csr && stage_rr_exe_q.instr.valid;
 
     register #($bits(instr_entry_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
@@ -341,6 +348,7 @@ module datapath(
     assign wb_cu_int.change_pc_ena = wb_instr_int.change_pc_ena;
     assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
+    assign wb_cu_int.stall_csr = wb_instr_int.stall_csr && wb_instr_int.valid;
     //assign wb_cu_int.bpred = ;
     //assign wb_cu_int.ex = ;
 

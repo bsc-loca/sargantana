@@ -78,6 +78,9 @@ module decoder(
         decode_instr_o.aq = 1'b0;
         decode_instr_o.rl = 1'b0;
 
+        // TODO remove
+        decode_instr_o.stall_csr = 1'b0;
+
 
         case (decode_i.inst.common.opcode)
             // Load Upper immediate
@@ -553,21 +556,27 @@ module decoder(
                     end
                     F3_CSRRW: begin
                        decode_instr_o.instr_type = CSRRW;
+                       decode_instr_o.stall_csr = 1'b1;
                     end
                     F3_CSRRS: begin
                         decode_instr_o.instr_type = CSRRS;
+                        decode_instr_o.stall_csr = 1'b1;
                     end
                     F3_CSRRC: begin
-                        decode_instr_o.instr_type = CSRRC;             
+                        decode_instr_o.instr_type = CSRRC;
+                        decode_instr_o.stall_csr = 1'b1;             
                     end
                     F3_CSRRWI: begin
-                        decode_instr_o.instr_type = CSRRWI;             
+                        decode_instr_o.instr_type = CSRRWI;
+                        decode_instr_o.stall_csr = 1'b1;             
                     end
                     F3_CSRRSI: begin
-                        decode_instr_o.instr_type = CSRRSI;             
+                        decode_instr_o.instr_type = CSRRSI;
+                        decode_instr_o.stall_csr = 1'b1;             
                     end
                     F3_CSRRCI: begin
-                        decode_instr_o.instr_type = CSRRCI;             
+                        decode_instr_o.instr_type = CSRRCI;
+                        decode_instr_o.stall_csr = 1'b1;             
                     end
                     default: begin
                         illegal_instruction = 1'b1;

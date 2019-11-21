@@ -22,7 +22,7 @@ module control_unit(
     input logic             valid_fetch,
     //input if_cu_t           if_cu_i,
     input id_cu_t           id_cu_i,
-    //input rr_cu_t           rr_cu_i,
+    input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
     input req_csr_cpu_t     csr_cu_i,
@@ -52,15 +52,12 @@ module control_unit(
         // branches or valid jal
         if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        // jal select
-        //end else if (id_cu_i.valid_jal) begin
-        //    cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        
-        //end 
-        //end else if (!if_cu_i.valid_fetch) begin
-        end else if (!valid_fetch | pipeline_ctrl_o.stall_if) begin
+        end else if (!valid_fetch | 
+                     pipeline_ctrl_o.stall_if | 
+                     id_cu_i.stall_csr | 
+                     rr_cu_i.stall_csr | 
+                     exe_cu_i.stall_csr)  begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC;
-        
         end else begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC_4;
         end
@@ -72,20 +69,28 @@ module control_unit(
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
-        //end else if (id_cu_i.valid_jal) begin
-            //pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end else begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
     end
 
+
     // logic about flush the pipeline if branch
     always_comb begin
+
         if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b1;
             pipeline_ctrl_o.flush_rr  = 1'b1;
             pipeline_ctrl_o.flush_exe = 1'b1;
+            pipeline_ctrl_o.flush_wb  = 1'b0;
+        end else if (id_cu_i.stall_csr | 
+                     rr_cu_i.stall_csr | 
+                     exe_cu_i.stall_csr ) begin
+            pipeline_ctrl_o.flush_if  = 1'b1;
+            pipeline_ctrl_o.flush_id  = 1'b0;
+            pipeline_ctrl_o.flush_rr  = 1'b0;
+            pipeline_ctrl_o.flush_exe = 1'b0;
             pipeline_ctrl_o.flush_wb  = 1'b0;
         end else if (id_cu_i.valid_jal) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
@@ -106,19 +111,31 @@ module control_unit(
     // logic stalls
     always_comb begin
         // TODO: check if this works guillemlp
-        if (csr_cu_i.csr_stall) begin
+        if (csr_cu_i.csr_stall || exe_cu_i.stall) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end if (exe_cu_i.stall) begin
+        end /*else if (exe_cu_i.stall_csr) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else begin
+        end /*else if (rr_cu_i.stall_csr) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end else if (id_cu_i.stall_csr) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end */else begin
             pipeline_ctrl_o.stall_if  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
