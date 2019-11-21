@@ -5,11 +5,19 @@ before_script:
   - apt install verilator -y
 
 stages:
-  - generate
+  - verilator
+  - spyglass
 
-generate:verilog:
-  stage: generate
+verilator:verilog:
+  stage: verilator
   script:
     - verilator --version
     - make lint
+
+spyglass:verilog:
+  stage: spyglass
+  tags:
+    - spyglass
+  script:
     - make local_spyglass
+
