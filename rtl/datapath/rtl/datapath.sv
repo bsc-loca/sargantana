@@ -49,6 +49,9 @@ module datapath(
     bus64_t commit_pc, commit_data;
     logic commit_valid, commit_reg_we;
     logic [4:0] commit_addr_reg;
+    logic commit_branch_taken;
+    bus64_t pc_if, pc_id, pc_rr, pc_exe, pc_wb;
+    logic valid_if, valid_id, valid_rr, valid_exe, valid_wb;
 
     pipeline_ctrl_t control_int;
     cu_if_t cu_if_int;
@@ -346,6 +349,16 @@ module datapath(
     assign commit_data      = data_wb_rr_int;
     assign commit_addr_reg  = wb_instr_int.rd;
     assign commit_reg_we    = wb_instr_int.regfile_we && wb_instr_int.valid;
-
+    assign commit_branch_taken = exe_to_wb_wb.branch_taken;
+    assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
+    assign pc_id = (valid_id) ? stage_id_rr_d.pc : 64'b0;
+    assign pc_rr = (valid_rr) ? stage_rr_exe_d.instr.pc : 64'b0;
+    assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
+    assign pc_wb = (valid_wb) ? wb_instr_int.pc : 64'b0;
+    assign valid_if = stage_if_id_d.valid;
+    assign valid_id = stage_id_rr_d.valid;
+    assign valid_rr = stage_rr_exe_d.instr.valid;
+    assign valid_exe = stage_rr_exe_q.instr.valid;
+    assign valid_wb = wb_instr_int.valid;
 
 endmodule
