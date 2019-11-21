@@ -46,16 +46,16 @@ module free_list(
     output logic           empty_o              // Free list is empty
 );
 
-// Point to the head and tail of the fifo
-reg_free_list_entry head;
-reg_free_list_entry tail;
+// Point to the head and tail of the fifo. One pointer for each checkpoint
+reg_free_list_entry head [0:NUM_CHECKPOINTS-1];
+reg_free_list_entry tail [0:NUM_CHECKPOINTS-1];
 
 // Point to the actual version of free list
 checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES):0] num;
+logic [$clog2(NUM_ENTRIES):0] num [0:NUM_CHECKPOINTS-1];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -71,11 +71,11 @@ logic recover_enable;
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
 
 // User can write to the tail of the buffer to add new register
-assign write_enable = add_free_register_i & (num < NUM_ENTRIES) & (~do_recover_i);
+assign write_enable = add_free_register_i & (num[version_head] < NUM_ENTRIES) & (~do_recover_i);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
-assign read_enable = read_head_i & ((num > 0) | add_free_register_i) & (~do_recover_i);
+assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_i) & (~do_recover_i);
 
 `ifndef SRAM_MEMORIES
 
@@ -83,18 +83,25 @@ assign read_enable = read_head_i & ((num > 0) | add_free_register_i) & (~do_reco
 
     phreg_t register_table [0:NUM_ENTRIES-1][0:NUM_CHECKPOINTS-1];
 
-    always @(posedge clk_i, negedge rstn_i)
+    always_ff @(posedge clk_i, negedge rstn_i)
     begin
         integer i,j;
-        if (~rstn_i) begin                                  // On reset clean first table
-            version_head <= 2'b0;       // Control State
+        if (~rstn_i) begin              // On reset clean first table
+            version_head <= 2'b0;       // Current table, 0
             num_checkpoints <= 3'b00;   // No checkpoints
+            version_tail <= 2'b0;       // Last reserved table 0
+            head[0] <= 5'b0;            // Current head in position 0
+            tail[0] <= 5'b0;            // Current tail in position 0 
+            num[0]  <= 6'b100000;       // Number of free registers 32
+
 
             for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
                register_table[i][0] = i[5:0] + 6'b100000;
             end
         end
         else begin
+            // When checkpoint is freed increment tail
+            version_tail <= version_tail + {1'b0, delete_checkpoint_i};
 
             // On recovery, head points to old checkpoint. Do not rename next instruction.
             if (recover_enable) begin                    
@@ -103,34 +110,44 @@ assign read_enable = read_head_i & ((num > 0) | add_free_register_i) & (~do_reco
                     num_checkpoints <= {1'b0, version_head} - {1'b0, version_tail};
                 else 
                     num_checkpoints <= NUM_CHECKPOINTS - {1'b0,version_tail} + {1'b0,version_head};
-                register_table[head][version_head] = register_table[head][version_head-1'b1];
             end
             else begin
                 // Control State
                 // Recompute number of checkpoints
                 num_checkpoints <= num_checkpoints + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
+                // When a free register is selected increment head
+                head[version_head] <= head[version_head] + {4'b00, read_enable};
+                // When a register is freed increment tail
+                tail[version_head] <= tail[version_head] + {4'b00, write_enable};
+                // Recompute number of free registers available.
+                num[version_head]  <= num[version_head]  + {5'b0, write_enable} - {5'b0, read_enable};
+
 
                 // On checkpoint first do checkpoint and then rename if needed
+                // For checkpoint copy old free list in new. And copy pointers
                 if (checkpoint_enable) begin
                     version_head <= version_head + 2'b01;
-                    register_table[head][version_head] = register_table[head][version_head-1'b1];
+                    register_table[version_head] <= register_table[version_head - 2'b01];
+                    head[version_head] <= head[version_head - 2'b1];
+                    tail[version_head] <= tail[version_head - 2'b1];
+                    num [version_head] <= num [version_head - 2'b1];
                 end
 
                 // Read first free register
                 if (read_enable) begin
                     // Special case bypass from tail to head
-                    if ((num == 0) & (add_free_register_i)) begin
+                    if ((num[version_head] == 0) & (add_free_register_i)) begin
                         new_register_o <= free_register_i; 
                     end else begin // Normal case lookup renaming table
-                        new_register_o <= register_table[head][version_head];
+                        new_register_o <= register_table[head[version_head]][version_head];
                     end
                 end else begin // When not reading an entry
                     new_register_o <= 6'h0;
                 end
         
                 // Write new freed register
-                if (write_enable & ~(read_enable & num == 0)) begin
-                    register_table[tail][version_head] <= free_register_i;
+                if (write_enable & ~(read_enable & num[version_head] == 0)) begin
+                    register_table[tail[version_head]][version_head] <= free_register_i;
                 end
             end
         end
@@ -140,30 +157,8 @@ assign read_enable = read_head_i & ((num > 0) | add_free_register_i) & (~do_reco
 
 `endif
 
-// Control State
-always_ff @(posedge clk_i, negedge rstn_i)
-begin
-    if(~rstn_i) begin       // On reset all entries are full and first copy is used
-        head <= 5'b0;
-        tail <= 5'b0;
-        num  <= 6'b100000;
-        version_tail <= 2'b0;
-    end 
-    else begin
-        // When checkpoint is freed increment tail
-        version_tail <= version_tail + {1'b0, delete_checkpoint_i};
-
-        // When a free register is selected increment head
-        head <= head + {4'b00, read_enable};
-        // When a register is freed increment tail
-        tail <= tail + {4'b00, write_enable};
-        // Recompute number of free registers available.
-        num  <= num  + {5'b0, write_enable} - {5'b0, read_enable};
-
-    end
-end
-
-assign empty_o = (num == 0);
+assign empty_o = (num[version_head] == 0);
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_ENTRIES - 1));
+assign checkpoint_o = version_head;
 
 endmodule
