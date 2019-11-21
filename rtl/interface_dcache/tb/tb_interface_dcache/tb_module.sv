@@ -167,18 +167,6 @@ interface_dcache module_inst (
             tb_dmem_xcpt_ma_ld_i<='{default:0};
             tb_dmem_xcpt_pf_st_i<='{default:0};
             tb_dmem_xcpt_pf_ld_i<='{default:0};
-
-            tb_dmem_req_valid_o<='{default:0};
-            tb_dmem_req_cmd_o<='{default:0};
-            tb_dmem_req_addr_o<='{default:0};
-            tb_dmem_op_type_o<='{default:0};
-            tb_dmem_req_data_o<='{default:0};
-            tb_dmem_req_tag_o<='{default:0};
-            tb_dmem_req_invalidate_lr_o<='{default:0};
-            tb_dmem_req_kill_o<='{default:0};
-            tb_ready_o<='{default:0};
-            tb_data_o<='{default:0};
-            tb_lock_o<='{default:0};
             $display("Done");
         end
     endtask
@@ -195,7 +183,6 @@ interface_dcache module_inst (
     endtask
 
     //***task automatic test_sim***
-    //This is an empty structure for a test.
     task automatic test_sim;
         begin
             int tmp;
@@ -247,7 +234,6 @@ interface_dcache module_inst (
     endtask
 
     // Test does a load petition that misses and a load petition that hits the data cache
-    // Output should be nothing 
     task automatic test_sim_1;
         output int tmp;
         begin
@@ -266,33 +252,33 @@ interface_dcache module_inst (
             tb_funct3_i <= 3'b011;
             tb_rd_i <= 5'h3;
             tb_imm_i <= 64'h01;
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             // Check request is done to dcache
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1001);
-            assert (tb_dmem_req_data_o == 64'h1111);
-            assert (tb_dmem_req_tag_o == 8'h06);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h1111) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h06) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b0);     //ONLY CHANGE IN OUTPUT
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1001);
-            assert (tb_dmem_req_data_o == 64'h1111);
-            assert (tb_dmem_req_tag_o == 8'h06);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end     //ONLY CHANGE IN OUTPUT
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h1111) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h06) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
             #CLK_PERIOD;
             tb_dmem_req_ready_i <= 0;   // Simulate dcache blocked by a coherence req.
 
@@ -306,16 +292,16 @@ interface_dcache module_inst (
             tb_dmem_req_ready_i <= 0;
 
             // CHECK NOTHING CHANGES
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1001);
-            assert (tb_dmem_req_data_o == 64'h1111);
-            assert (tb_dmem_req_tag_o == 8'h06);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h1111) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h06) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
             tb_dmem_req_ready_i <= 0;
@@ -341,18 +327,18 @@ interface_dcache module_inst (
             tb_dmem_resp_valid_i <= 1'b0;
             tb_dmem_resp_nack_i <= 1'b0;
  
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1001);
-            assert (tb_dmem_req_data_o == 64'h1111);
-            assert (tb_dmem_req_tag_o == 8'h06);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            //assert (tb_dmem_req_kill_o == 1'b0);        // NOT SURE IF should be 0 or 1
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h1111) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h06)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'h00FF00FF00FF00FF);
-            assert (tb_ready_o == 1'b1);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'h00FF00FF00FF00FF)  else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b1)  else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0)  else begin tmp++; assert(1 == 0); end
 
             // Some non related instructions
             tb_valid_i <= 1'b0;
@@ -376,34 +362,34 @@ interface_dcache module_inst (
             tb_funct3_i <= 3'b011;
             tb_rd_i <= 5'h5;
             tb_imm_i <= 64'h08;
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0)  else begin tmp++; assert(1 == 0); end
 
             // Check request is done
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1008);
-            assert (tb_dmem_req_data_o == 64'hFFFF);
-            assert (tb_dmem_req_tag_o == 8'h0A);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1008)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hFFFF) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0A) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1008);
-            assert (tb_dmem_req_data_o == 64'hFFFF);
-            assert (tb_dmem_req_tag_o == 8'h0A);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1008) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hFFFF) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0A) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             // SERVE HIT
             #CLK_PERIOD;
@@ -426,25 +412,23 @@ interface_dcache module_inst (
             tb_dmem_resp_valid_i <= 1'b0;
             tb_dmem_resp_nack_i <= 1'b0;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1008);
-            assert (tb_dmem_req_data_o == 64'hFFFF);
-            assert (tb_dmem_req_tag_o == 8'h0A);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1008) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hFFFF) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0A) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hFF00FF00FF00FF00);
-            assert (tb_ready_o == 1'b1);
-            assert (tb_lock_o == 1'b0);
-            tmp = 0;
+            assert (tb_data_o == 64'hFF00FF00FF00FF00) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
         end
     endtask
 
 
     // Test does a store petition that misses and a store petition that hits the data cache
-    // Output should be nothing 
     task automatic test_sim_2;
         output int tmp;
         begin
@@ -471,33 +455,33 @@ interface_dcache module_inst (
             tb_funct3_i <= 3'b011;
             tb_rd_i <= 5'h00;
             tb_imm_i <= 64'h02;
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h01);         // Is a store
-            assert (tb_dmem_req_addr_o == 64'h2002);
-            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end   // Is a store
+            assert (tb_dmem_req_addr_o == 64'h2002) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b0);     //ONLY CHANGE IN OUTPUT
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h2002);
-            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end     //ONLY CHANGE IN OUTPUT
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h2002) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
             tb_dmem_req_ready_i <= 0;   // Simulate dcache blocked by a coherence req.
@@ -512,16 +496,16 @@ interface_dcache module_inst (
             tb_dmem_req_ready_i <= 0;
 
             // CHECK NOTHING CHANGES
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h2002);
-            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h2002) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
             tb_dmem_req_ready_i <= 0;
@@ -548,17 +532,17 @@ interface_dcache module_inst (
             tb_dmem_resp_nack_i <= 1'b0;
             tb_dmem_resp_data_i <= 64'h00AA00AA00AA00AA;
  
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h2002);
-            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b1);        // NOT SURE IF should be 0 or 1
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h2002) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h00AA00AA00AA00AA) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_ready_o == 1'b0);               // Store has no ready
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end  // Store has no ready
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             tb_valid_i <= 1'b0;
             tb_instr_type_i <= ADD;
@@ -585,29 +569,29 @@ interface_dcache module_inst (
             assert (tb_lock_o == 1'b0);
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h0);
-            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h0);
-            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             // SERVE HIT
             #CLK_PERIOD;
@@ -630,27 +614,24 @@ interface_dcache module_inst (
             tb_dmem_resp_valid_i <= 1'b0;
             tb_dmem_resp_nack_i <= 1'b0;
  
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h0);
-            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hAA00AA00AA00AA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hDEADBEEFDEADBEEF);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hDEADBEEFDEADBEEF)  else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             tb_valid_i <= 0;
-
-            tmp = 0;
         end
     endtask
 
     // Test performs memory accesses that rise exceptions
-    // Output should be nothing 
     task automatic test_sim_3;
         output int tmp;
         begin
@@ -672,19 +653,19 @@ interface_dcache module_inst (
             tb_funct3_i <= 3'b001;
             tb_rd_i <= 5'h07;
             tb_imm_i <= 64'h09;
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b001);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_dmem_req_ready_i <= 1'b1;
             tb_dmem_resp_replay_i <= 1'b0;
@@ -700,34 +681,34 @@ interface_dcache module_inst (
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b001);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hBA00BA00BA00BA00);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             tb_kill_i <= 1;
             tb_valid_i <= 0;
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h00);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b1);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b001);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hBA00BA00BA00BA00);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
 
@@ -763,16 +744,16 @@ interface_dcache module_inst (
             assert (tb_lock_o == 1'b0);
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_data_o == 64'hAB00AB00AB00AB00);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b001);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'hAB00AB00AB00AB00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_dmem_req_ready_i <= 1'b1;
             tb_dmem_resp_replay_i <= 1'b0;
@@ -780,7 +761,7 @@ interface_dcache module_inst (
             tb_dmem_resp_data_i <= 64'hBA00BA00BA00BA00;
             tb_dmem_resp_nack_i <= 1'b0;
 
-            // NO EXCEPTIONS
+            // Memory alignment exception
             tb_dmem_xcpt_ma_st_i <= 1'b1;
             tb_dmem_xcpt_ma_ld_i <= 1'b0;
             tb_dmem_xcpt_pf_st_i <= 1'b0;
@@ -788,34 +769,34 @@ interface_dcache module_inst (
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b001);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hBA00BA00BA00BA00);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             tb_kill_i <= 1;
             tb_valid_i <= 0;
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1019);
-            assert (tb_dmem_req_tag_o == 8'h0E);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b1);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b001);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1019) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h0E) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b001) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hBA00BA00BA00BA00);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
 
@@ -833,7 +814,6 @@ interface_dcache module_inst (
             tb_dmem_xcpt_pf_st_i <= 1'b0;
             tb_dmem_xcpt_pf_ld_i <= 1'b0;
 
-            tmp = 0;
         end
     endtask
 
@@ -866,33 +846,33 @@ interface_dcache module_inst (
             tb_funct3_i <= 3'b011;
             tb_rd_i <= 5'h0;
             tb_imm_i <= 64'h0;
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_ready_o == 1'b0)  else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             // SERVE HIT
             #CLK_PERIOD;
@@ -908,16 +888,16 @@ interface_dcache module_inst (
             tb_dmem_xcpt_pf_st_i <= 1'b0;
             tb_dmem_xcpt_pf_ld_i <= 1'b0;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);
-            assert (tb_dmem_op_type_o == 3'b011);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
             // Stop serving
@@ -926,18 +906,18 @@ interface_dcache module_inst (
             tb_dmem_resp_valid_i <= 1'b0;
             tb_dmem_resp_nack_i <= 1'b0;
  
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hDEADBEEFDEADBEEF);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_data_o == 64'hDEADBEEFDEADBEEF) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
             #CLK_PERIOD;
@@ -948,18 +928,18 @@ interface_dcache module_inst (
 
             #CLK_PERIOD;
     
-            assert (tb_dmem_req_valid_o == 1'b1);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b0);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hDEADBEEFDEADBEEF);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b1);
+            assert (tb_data_o == 64'hDEADBEEFDEADBEEF) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_dmem_req_ready_i <= 1'b1;
             tb_dmem_resp_replay_i <= 1'b0;
@@ -975,40 +955,38 @@ interface_dcache module_inst (
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b0);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hDEADBEEFDEADBEEF);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hDEADBEEFDEADBEEF) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             tb_kill_i <= 1;
             tb_valid_i <= 0;
 
             #CLK_PERIOD;
 
-            assert (tb_dmem_req_valid_o == 1'b0);
-            assert (tb_dmem_req_cmd_o == 5'h01);
-            assert (tb_dmem_req_addr_o == 64'h1000);
-            assert (tb_dmem_req_data_o == 64'h0001);
-            assert (tb_dmem_req_tag_o == 8'h00);
-            assert (tb_dmem_req_invalidate_lr_o == 1'b1);
-            assert (tb_dmem_req_kill_o == 1'b1);        
-            assert (tb_dmem_op_type_o == 3'b011);
+            assert (tb_dmem_req_valid_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_cmd_o == 5'h01) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_addr_o == 64'h1000) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_data_o == 64'h0001) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_tag_o == 8'h00) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_invalidate_lr_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_req_kill_o == 1'b1) else begin tmp++; assert(1 == 0); end
+            assert (tb_dmem_op_type_o == 3'b011) else begin tmp++; assert(1 == 0); end
 
-            assert (tb_data_o == 64'hDEADBEEFDEADBEEF);
-            assert (tb_ready_o == 1'b0);
-            assert (tb_lock_o == 1'b0);
+            assert (tb_data_o == 64'hDEADBEEFDEADBEEF) else begin tmp++; assert(1 == 0); end
+            assert (tb_ready_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_lock_o == 1'b0) else begin tmp++; assert(1 == 0); end
 
             #CLK_PERIOD;
-
-            tmp = 0;
         end
     endtask
 

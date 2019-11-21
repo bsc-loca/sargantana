@@ -68,7 +68,7 @@ module decoder(
         decode_instr_o.imm = imm_value;
         decode_instr_o.funct3 = decode_i.inst.common.func3;
         decode_instr_o.signed_op = 1'b0;
-        decode_instr_o.mem_op = MEM_LOAD;
+        decode_instr_o.mem_op = MEM_NOP;
 
         ex_addr_misaligned_int = 1'b0;
 
@@ -158,6 +158,7 @@ module decoder(
                 decode_instr_o.use_imm = 1'b1;
                 decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                 decode_instr_o.unit = UNIT_MEM;
+                decode_instr_o.mem_op = MEM_LOAD;
                 case (decode_i.inst.itype.func3)
                     F3_LB: begin
                         decode_instr_o.instr_type = LB;

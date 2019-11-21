@@ -228,6 +228,7 @@ typedef enum logic [1:0]{
 } ctrl_xfer_op_t;
 
 typedef enum logic [1:0]{
+    MEM_NOP,
     MEM_LOAD,
     MEM_STORE,
     MEM_AMO
