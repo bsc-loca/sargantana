@@ -2,6 +2,8 @@
 
 This repo contains the code of the drac in-order (based on Lagarto). It is a core with 5 stages (Fetch-Decode-ReadRegister-Execution-Commit). It is built with educational purposes but with the ASIC in mind. It has some current development and uses the RISCV ISA: 64 bits with M & A extensions and privileged specification.
 
+[develop] status: [![pipeline status](https://repo.hca.bsc.es/gitlab/lagarto/drac-inorder/badges/develop/pipeline.svg)](https://repo.hca.bsc.es/gitlab/lagarto/drac-inorder/commits/develop)
+
 ## Project structure
 
 The project structure is the following:
