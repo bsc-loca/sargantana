@@ -486,7 +486,7 @@ module tb_free_list();
             $display("*** test_sim");
             // check reset
             test_sim_1(tmp); 
-            if (tmp == 1) begin
+            if (tmp >= 1) begin
                 `START_RED_PRINT
                         $display("TEST 1 FAILED.");
                 `END_COLOR_PRINT
@@ -497,7 +497,7 @@ module tb_free_list();
             end
             // Check reading and writing to free list
             test_sim_2(tmp); 
-            if (tmp == 1) begin
+            if (tmp >= 1) begin
                 `START_RED_PRINT
                         $display("TEST 2 FAILED.");
                 `END_COLOR_PRINT
@@ -507,7 +507,7 @@ module tb_free_list();
                 `END_COLOR_PRINT
             end
             test_sim_3(tmp); 
-            if (tmp == 1) begin
+            if (tmp >= 1) begin
                 `START_RED_PRINT
                         $display("TEST 3 FAILED.");
                 `END_COLOR_PRINT

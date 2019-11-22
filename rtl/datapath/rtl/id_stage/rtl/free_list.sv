@@ -115,7 +115,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             else begin
 
                 // On checkpoint first do checkpoint and then rename if needed
-                // For checkpoint copy old free list in new. And copy pointers
+                // For checkpoint copy old free list in new. And copy pointers      //TODO: Do checkpoint, read and write. All at same time
                 if (checkpoint_enable) begin
                     for (int i=0; i<NUM_ENTRIES; i++)
                         register_table[i][version_head + 2'b01] <= register_table[i][version_head];
