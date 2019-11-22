@@ -48,6 +48,10 @@ module if_stage(
                 next_pc = pc + 64'h04;
             NEXT_PC_SEL_JUMP:
                 next_pc = pc_jump_i;
+            default: begin
+                $error("next pc not defined error in if stage");
+                next_pc = pc + 64'h04;
+            end
         endcase
     end
 
@@ -65,30 +69,31 @@ module if_stage(
         // or of the high part of the addr
         if (|pc[63:40]) begin
             ex_if_addr_fault_int = 1'b1;
-        end else if (req_icache_cpu_i.ex.valid && 
-            req_icache_cpu_i.ex.cause==INSTR_ACCESS_FAULT) begin
+        end else if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_access_fault) begin
             ex_if_addr_fault_int = 1'b1;
         end else begin
             ex_if_addr_fault_int = 1'b0;
         end
     end
     // check misaligned fetch
-    // TODO: (guillemlp) I think this cannot happen
     always_comb begin
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
         // check also from icache
-        end else  if (req_icache_cpu_i.ex.valid && 
-            req_icache_cpu_i.ex.cause==INSTR_ADDR_MISALIGNED) begin
+        end /*else  
+        if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_addr_misaligned) begin
             ex_addr_misaligned_int = 1'b1;
-        end else begin
+        end */
+        else begin
             ex_addr_misaligned_int = 1'b0;
         end
     end
-    // check exceptions finstr page fault
+    // check exceptions instr page fault
     always_comb begin
-        if (req_icache_cpu_i.ex.valid && 
-            req_icache_cpu_i.ex.cause==INSTR_PAGE_FAULT) begin
+        if (req_icache_cpu_i.valid && 
+            req_icache_cpu_i.instr_page_fault) begin
             ex_if_page_fault_int = 1'b1;
         end else begin
             ex_if_page_fault_int = 1'b0;
@@ -96,9 +101,9 @@ module if_stage(
     end
 
     // logic for icache access
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & 
-                                    !ex_if_addr_fault_int & 
-                                    !ex_if_page_fault_int;
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int; //& 
+                                    //!ex_if_addr_fault_int & 
+                                    //!ex_if_page_fault_int;
 
     assign req_cpu_icache_o.vaddr = pc[39:0];
 

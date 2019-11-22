@@ -115,9 +115,8 @@ module datapath(
 
     // What is this????
     // TODO: Ruben
-    always_ff @(posedge clk_i, negedge rstn_i) begin
+    always_ff @(posedge clk_i, negedge rstn_i, negedge soft_rstn_i) begin
         // What is that?????
-        //if(~soft_rstn_i)
         if(!soft_rstn_i) begin
             io_base_addr <=  40'h0080000000;
         end else if(~rstn_i) begin

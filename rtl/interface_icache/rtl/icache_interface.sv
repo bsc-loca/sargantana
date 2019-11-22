@@ -51,11 +51,11 @@ logic icache_access_needed_int;
 // internal wire to select the correct bits 
 //inst_t inst_out_int;
 //Internal wire to say if there is a misaligned fetch
-logic misaligned_fetch_ex_int;
+//logic misaligned_fetch_ex_int;
 //Internal wire to say if there is a buffer miss
 logic buffer_miss_int;
 // Exception in the fetch: misaligned or fault fetch
-exception_t fetch_ex_int;
+//exception_t fetch_ex_int;
 // FSM icache
 icache_state_t state_int, next_state_int;
 
@@ -111,8 +111,8 @@ end
 //    - there is a new request that is not
 //    misaligned and ther is a miss buffer
 assign icache_access_needed_int =   req_fetch_icache_i.valid & 
-                                    buffer_miss_int & 
-                                    !misaligned_fetch_ex_int;
+                                    buffer_miss_int /*& 
+                                    !misaligned_fetch_ex_int*/;
 // Icache output connections
 // TODO:(guillemlp) what is invalidate?
 assign icache_invalidate_o = 1'b0;
@@ -133,20 +133,24 @@ assign tlb_req_valid_o = icache_req_valid_o;
 // Assign if there is any exception
 //assign req_icache_fetch_o.ex.cause = (tlb_resp_xcp_if_i) ? FAULT_FETCH : NONE;
 //assign req_icache_fetch_o.ex.origin = req_fetch_icache_i.vaddr;
-//assign req_icache_fetch_o.ex.valid = fetch_ex_int.valid;
+//assign req_icache_fetch_o.ex.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
 // Exceptions handling
-assign req_icache_fetch_o.ex = fetch_ex_int;
+//assign req_icache_fetch_o.ex = fetch_ex_int;
 
-assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-assign fetch_ex_int.origin = {24'b0,req_fetch_icache_i.vaddr};
+//assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
+//assign fetch_ex_int.origin = {24'b0,req_fetch_icache_i.vaddr};
 // Assign whether it is a misaligned, fault fetch or none
-assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
-                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE;
+//assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
+//                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE;
 
 // whether there is a misaligned fetch
-assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] | 
-                                    req_fetch_icache_i.vaddr[0]) &
-                                    req_fetch_icache_i.valid;
+//assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] | 
+//                                    req_fetch_icache_i.vaddr[0]) &
+//                                    req_fetch_icache_i.valid;
+
+//assign req_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
+assign req_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i;
+assign req_icache_fetch_o.instr_page_fault = 1'b0;
 
 //assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
 //assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
@@ -156,7 +160,7 @@ assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] |
 
 // sequential logic cacheline register buffer
 // TODO manage invalidations etc...
-always_ff @(posedge clk_i, negedge rstn_i, posedge icache_resp_valid_i) begin
+always_ff @(posedge clk_i, negedge rstn_i) begin //, posedge icache_resp_valid_i
     if(!rstn_i) begin
         icache_line_reg_q <= 128'b0;
         valid_buffer_q <= 1'b0;

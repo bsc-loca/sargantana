@@ -90,10 +90,10 @@ typedef struct packed {
     logic  valid;
     inst_t data;
     //addr_t req_addr; I think it is not completely necessary
-    exception_t ex;
+    //exception_t ex;
     //logic instr_addr_misaligned;
-    //logic instr_access_fault;
-    //logic instr_page_fault;
+    logic instr_access_fault;
+    logic instr_page_fault;
 } req_icache_cpu_t;
 
 // Req send to ICache
