@@ -21,8 +21,9 @@ add wave -noupdate -expand -group Intern /tb_rename_table/rename_table_inst/vers
 add wave -noupdate -expand -group Intern /tb_rename_table/rename_table_inst/num_checkpoints
 add wave -noupdate -expand -group Intern /tb_rename_table/rename_table_inst/write_enable
 add wave -noupdate -expand -group Intern /tb_rename_table/rename_table_inst/read_enable
+add wave -noupdate /tb_rename_table/rename_table_inst/register_table
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {6 ns} 0}
+WaveRestoreCursors {{Cursor 1} {140 ns} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 395
 configure wave -valuecolwidth 153
@@ -38,4 +39,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ns} {22 ns}
+WaveRestoreZoom {128 ns} {150 ns}

@@ -244,8 +244,8 @@ module tb_free_list();
         end
     endtask
 
-// Reads some free registers and then frees other 8 registers
-// No checkpointing involved
+
+// Checkpointing test
     task automatic test_sim_3;
         output int tmp;
         begin

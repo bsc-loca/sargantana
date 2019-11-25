@@ -108,11 +108,14 @@ assign read_enable = (~do_recover_i);
             end
             else begin
 
+                // Recompute number of checkpoints
+                num_checkpoints <= num_checkpoints + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
+
                 // On checkpoint first do checkpoint and then rename if needed
                 // For checkpoint advance pointers
                 if (checkpoint_enable) begin
                     for (int i=0; i<NUM_ISA_REGISTERS; i++)
-                        register_table[i][version_head] <= register_table[i][version_head -  2'b01];
+                        register_table[i][version_head + 2'b1] <= register_table[i][version_head];
                     checkpoint_o <= version_head;
                     version_head <= version_head + 2'b01;
                 end
@@ -125,7 +128,7 @@ assign read_enable = (~do_recover_i);
                 end
 
                 // Third write new destination register
-                if (read_enable) begin
+                if (write_enable) begin
                     register_table[old_dst_i][version_head] <= new_dst_i;
                 end
             end
