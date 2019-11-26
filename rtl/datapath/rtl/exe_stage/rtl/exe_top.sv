@@ -235,9 +235,9 @@ always_comb begin
 end
 
 assign to_wb_o.rd = from_rr_i.instr.rd;
-assign stall_o = (from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
-                 (from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
-                 (from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :
+assign stall_o = (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
+                 (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
+                 (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :
                  0;
 
 endmodule
