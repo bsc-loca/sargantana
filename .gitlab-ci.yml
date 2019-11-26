@@ -21,4 +21,4 @@ spyglass:verilog:
     - spyglass
   script:
     - make local_spyglass
-
+  allow_failure: true
