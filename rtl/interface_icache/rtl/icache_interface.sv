@@ -28,7 +28,7 @@ module icache_interface(
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
     input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
     input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
-    
+    // Request output signals to Icache
     output logic             icache_invalidate_o, // ICACHE_INVALIDATE
     output icache_idx_t      icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
     output logic             icache_req_kill_o, // ICACHE_REQ_BITS_KILL,
@@ -45,17 +45,15 @@ icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
 icache_line_t icache_line_int;
 reg_addr_t pc_buffer_d, pc_buffer_q;
 reg valid_buffer_q,valid_buffer_d;
+
 logic buffer_diff_int;
 // wire that says if we need to access icache
 logic icache_access_needed_int;
-// internal wire to select the correct bits 
-//inst_t inst_out_int;
-//Internal wire to say if there is a misaligned fetch
-//logic misaligned_fetch_ex_int;
+
+
 //Internal wire to say if there is a buffer miss
 logic buffer_miss_int;
-// Exception in the fetch: misaligned or fault fetch
-//exception_t fetch_ex_int;
+
 // FSM icache
 icache_state_t state_int, next_state_int;
 
@@ -108,58 +106,31 @@ always_comb begin
     endcase;
 end
 // We need and access when:
-//    - there is a new request that is not
-//    misaligned and ther is a miss buffer
+//    - there is a new request that is valid and
+//      there is a miss buffer
 assign icache_access_needed_int =   req_fetch_icache_i.valid & 
-                                    buffer_miss_int /*& 
-                                    !misaligned_fetch_ex_int*/;
+                                    buffer_miss_int;
 // Icache output connections
 // TODO:(guillemlp) what is invalidate?
+// when we want to send invalidation of request?
 assign icache_invalidate_o = 1'b0;
+
 // Connect vaddr to the corresponding tlb and idx
 assign tlb_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
 assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
-// TODO I am not sure when to activate this 
+// TODO (guillemlp) I am not sure when to activate this 
 assign icache_req_kill_o = 1'b0;
+
 // TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;
-
-// assign req_icache_fetch_o.data =;
-// TODO make a register
-//assign req_icache_fetch_o.req_addr = 40'b0;
-
-// TODO fix and add fetch misaligned
-// Assign if there is any exception
-//assign req_icache_fetch_o.ex.cause = (tlb_resp_xcp_if_i) ? FAULT_FETCH : NONE;
-//assign req_icache_fetch_o.ex.origin = req_fetch_icache_i.vaddr;
-//assign req_icache_fetch_o.ex.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-// Exceptions handling
-//assign req_icache_fetch_o.ex = fetch_ex_int;
-
-//assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-//assign fetch_ex_int.origin = {24'b0,req_fetch_icache_i.vaddr};
-// Assign whether it is a misaligned, fault fetch or none
-//assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
-//                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE;
-
-// whether there is a misaligned fetch
-//assign misaligned_fetch_ex_int =   (req_fetch_icache_i.vaddr[1] | 
-//                                    req_fetch_icache_i.vaddr[0]) &
-//                                    req_fetch_icache_i.valid;
 
 //assign req_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
 assign req_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i;
 assign req_icache_fetch_o.instr_page_fault = 1'b0;
 
-//assign fetch_ex_int.valid = misaligned_fetch_ex_int | tlb_resp_xcp_if_i;
-//assign fetch_ex_int.origin = req_fetch_icache_i.vaddr;
-// Assign whether it is a misaligned, fault fetch or none
-//assign fetch_ex_int.cause = (misaligned_fetch_ex_int) ? INSTR_ADDR_MISALIGNED : 
-//                            (tlb_resp_xcp_if_i) ? INSTR_ACCESS_FAULT : NONE; 
-
 // sequential logic cacheline register buffer
-// TODO manage invalidations etc...
+// TODO (guillemlp) manage invalidations etc...
 always_ff @(posedge clk_i, negedge rstn_i) begin //, posedge icache_resp_valid_i
     if(!rstn_i) begin
         icache_line_reg_q <= 128'b0;
@@ -191,7 +162,6 @@ assign icache_line_int = (icache_resp_valid_i) ? icache_resp_datablock_i : icach
 // It is a miss on the datablock buffered
 // We check for all the address if there is the need to access the TLB
 // don't speculate
-
 assign pc_buffer_d = (icache_resp_valid_i) ? req_fetch_icache_i.vaddr : pc_buffer_q; 
 
 assign buffer_diff_int = (pc_buffer_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);

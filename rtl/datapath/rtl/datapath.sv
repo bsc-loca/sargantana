@@ -79,6 +79,7 @@ module datapath(
     //exe_wb_instr_t stage_commit;
     wb_cu_t wb_cu_int;
     rr_cu_t rr_cu_int;
+    cu_rr_t cu_rr_int;
 
     // Control Unit
     id_cu_t id_cu_int;
@@ -100,6 +101,7 @@ module datapath(
     //dec_exe_instr_t dec_to_exe_exe;
     //rr_exe_instr_t rr_to_exe_exe;
     wb_exe_instr_t wb_to_exe_exe;
+    logic wb_xcpt;
 
     reg_addr_t io_base_addr;
 
@@ -132,6 +134,7 @@ module datapath(
         .rstn_i(rstn_i),
         .valid_fetch(req_icache_cpu_i.valid),
         .rr_cu_i(rr_cu_int),
+        .cu_rr_o(cu_rr_int),
         .wb_cu_i(wb_cu_int),
         .exe_cu_i(exe_cu_int),
         .csr_cu_i(req_csr_cpu_i),
@@ -203,7 +206,7 @@ module datapath(
     regfile rr_stage_inst(
         .clk_i(clk_i),
 
-        .write_enable_i(wb_instr_int.regfile_we&wb_instr_int.valid),
+        .write_enable_i(cu_rr_int.write_enable),
         .write_addr_i(exe_to_wb_wb.rd),
         .write_data_i(data_wb_rr_int),
         .read_addr1_i(stage_id_rr_q.rs1),
@@ -279,55 +282,67 @@ module datapath(
     //assign wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
     // TODO (guillemlp): change that the enable is when puting any CSR
     always_comb begin
-        case (wb_instr_int.instr_type)
-            CSRRW: begin
-                wb_csr_cmd_int = CSR_CMD_WRITE;
-                wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            CSRRS: begin
-                wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            CSRRC: begin
-                wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            CSRRWI: begin
-                wb_csr_cmd_int = CSR_CMD_WRITE;
-                wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            CSRRSI: begin
-                wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            CSRRCI: begin
-                // do we extend sign?
-                wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};  
-                wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-            end
-            default: begin
-                wb_csr_cmd_int = CSR_CMD_NOPE;
-                wb_csr_rw_data_int = 64'b0;
-                wb_csr_ena_int = 1'b0;
-            end
-        endcase // wb_instr_int.instr_type
+        if (wb_instr_int.valid) begin
+            case (wb_instr_int.instr_type)
+                CSRRW: begin
+                    wb_csr_cmd_int = CSR_CMD_WRITE;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                CSRRS: begin
+                    wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                CSRRC: begin
+                    wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                CSRRWI: begin
+                    wb_csr_cmd_int = CSR_CMD_WRITE;
+                    wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                CSRRSI: begin
+                    wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
+                    wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                CSRRCI: begin
+                    // do we extend sign?
+                    wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
+                    wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};  
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                default: begin
+                    wb_csr_cmd_int = CSR_CMD_NOPE;
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = 1'b0;
+                end
+            endcase // wb_instr_int.instr_type
+        end else begin
+            wb_csr_cmd_int = CSR_CMD_NOPE;
+            wb_csr_rw_data_int = 64'b0;
+            wb_csr_ena_int = 1'b0;
+        end
     end
 
+    // CSR and Exceptions
     assign req_cpu_csr_o.csr_rw_addr = (wb_csr_ena_int) ? wb_instr_int.imm[CSR_ADDR_SIZE-1:0] : {CSR_ADDR_SIZE{1'b0}};
+    // if csr not enabled send command NOP
     assign req_cpu_csr_o.csr_rw_cmd = (wb_csr_ena_int) ? CSR_CMD_NOPE : wb_csr_cmd_int;
-    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? 64'b0 : wb_csr_rw_data_int;
-    assign req_cpu_csr_o.csr_exception =    wb_instr_int.ex.valid | 
-                                            (req_csr_cpu_i.csr_interrupt) |
-                                            (req_csr_cpu_i.csr_exception); 
+    // if csr not enabled send the interesting addr that you are accesing, exception help
+    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_instr_int.ex.origin : wb_csr_rw_data_int;
+    // if there is an exception that can be from:
+    // the instruction itself
+    assign wb_xcpt = wb_instr_int.ex.valid | req_csr_cpu_i.csr_interrupt;
+
+    assign req_cpu_csr_o.csr_exception = wb_xcpt;
+
     // if we can retire an instruction
-    assign req_cpu_csr_o.csr_retire = wb_instr_int.valid;
-    // TODO CHANGE it!
+    assign req_cpu_csr_o.csr_retire = wb_instr_int.valid && !wb_xcpt;
+    // 
     assign req_cpu_csr_o.csr_xcpt_cause = (req_csr_cpu_i.csr_interrupt) ?   req_csr_cpu_i.csr_interrupt_cause : 
                                                                             wb_instr_int.ex.cause;
     assign req_cpu_csr_o.csr_pc = wb_instr_int.pc;
@@ -343,25 +358,30 @@ module datapath(
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = data_wb_rr_int;
 
+    // Control Unit
     assign wb_cu_int.valid = wb_instr_int.valid;//; & !control_int.stall_wb; // and not flush???
     assign wb_cu_int.change_pc_ena = wb_instr_int.change_pc_ena;
     assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
     assign wb_cu_int.stall_csr = wb_instr_int.stall_csr && wb_instr_int.valid;
+    assign wb_cu_int.xcpt = wb_xcpt;
+    assign wb_cu_int.write_enable = wb_instr_int.regfile_we;
     //assign wb_cu_int.bpred = ;
-    //assign wb_cu_int.ex = ;
 
+    // Debug signals
     assign commit_valid     = wb_instr_int.valid;
     assign commit_pc        = (wb_instr_int.valid) ? wb_instr_int.pc : 64'b0;
     assign commit_data      = (wb_instr_int.valid) ? data_wb_rr_int  : 64'b0;
     assign commit_addr_reg  = wb_instr_int.rd;
     assign commit_reg_we    = wb_instr_int.regfile_we && wb_instr_int.valid;
     assign commit_branch_taken = exe_to_wb_wb.branch_taken;
+    // PC
     assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
     assign pc_id = (valid_id) ? stage_id_rr_d.pc : 64'b0;
     assign pc_rr = (valid_rr) ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? wb_instr_int.pc : 64'b0;
+    // Valid
     assign valid_if = stage_if_id_d.valid;
     assign valid_id = stage_id_rr_d.valid;
     assign valid_rr = stage_rr_exe_d.instr.valid;

@@ -28,9 +28,9 @@ module control_unit(
     input req_csr_cpu_t     csr_cu_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
-    output cu_if_t          cu_if_o
+    output cu_if_t          cu_if_o,
     //output cu_id_t          cu_id_o,
-    //output cu_rr_t          cu_rr_o,
+    output cu_rr_t          cu_rr_o
     //output cu_exe_t         cu_exe_o,
     //output cu_wb_t          cu_wb_o,
 
@@ -41,13 +41,29 @@ module control_unit(
     // jump enable logic
     // TODO add exceptions and csr
     always_comb begin
-        jump_enable_int = (wb_cu_i.valid && 
-                           wb_cu_i.change_pc_ena && 
-                           wb_cu_i.branch_taken) || id_cu_i.valid_jal;
+        jump_enable_int =  (wb_cu_i.valid && 
+                            wb_cu_i.xcpt) ||
+                           // branch at commit
+                           (wb_cu_i.valid && 
+                            wb_cu_i.change_pc_ena && 
+                            wb_cu_i.branch_taken) || 
+                           // valid jal
+                            id_cu_i.valid_jal;
+    end
+
+    // logic enable write regoister file at commit
+    always_comb begin
+        if (wb_cu_i.valid &&
+           !wb_cu_i.xcpt &&
+            wb_cu_i.write_enable) 
+        begin
+            cu_rr_o.write_enable = 1'b1;
+        end else begin
+            cu_rr_o.write_enable = 1'b0;
+        end
     end
     // logic to select the next pc
     // TODO: Branch Predictor
-    // TODO: exception
     always_comb begin
         // branches or valid jal
         if (jump_enable_int) begin
@@ -65,7 +81,8 @@ module control_unit(
 
     // logic select which pc to use in fetch
     always_comb begin
-        if (csr_cu_i.csr_eret) begin
+        // if exception or eret select from csr
+        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
@@ -77,8 +94,9 @@ module control_unit(
 
     // logic about flush the pipeline if branch
     always_comb begin
-
-        if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
+        // if exception
+        if (wb_cu_i.xcpt & wb_cu_i.valid ||
+                     wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b1;
             pipeline_ctrl_o.flush_rr  = 1'b1;
@@ -86,6 +104,7 @@ module control_unit(
             pipeline_ctrl_o.flush_wb  = 1'b0;
         end else if (id_cu_i.stall_csr | 
                      rr_cu_i.stall_csr | 
+                     exe_cu_i.stall_csr |
                      exe_cu_i.stall_csr ) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b0;

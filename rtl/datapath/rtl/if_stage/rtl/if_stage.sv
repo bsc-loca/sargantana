@@ -35,7 +35,8 @@ module if_stage(
     addrPC_t next_pc;
     regPC_t pc;
 
-    // exceptions
+    // Exceptions
+    // mislaigned is checked here while the others on icache
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
     logic ex_if_page_fault_int;
@@ -58,7 +59,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= 'h00000200;
+            pc <= 'h0000024C;
         end else begin
             pc <= next_pc;
         end
@@ -67,9 +68,10 @@ module if_stage(
     // check addr fault fetch
     always_comb begin
         // or of the high part of the addr
-        if (|pc[63:40]) begin
+        /*if (|pc[63:40]) begin
             ex_if_addr_fault_int = 1'b1;
-        end else if (req_icache_cpu_i.valid && 
+        end else*/ 
+        if (req_icache_cpu_i.valid && 
             req_icache_cpu_i.instr_access_fault) begin
             ex_if_addr_fault_int = 1'b1;
         end else begin
@@ -80,7 +82,6 @@ module if_stage(
     always_comb begin
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
-        // check also from icache
         end /*else  
         if (req_icache_cpu_i.valid && 
             req_icache_cpu_i.instr_addr_misaligned) begin
@@ -100,20 +101,20 @@ module if_stage(
         end
     end
 
-    // logic for icache access
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int; //& 
-                                    //!ex_if_addr_fault_int & 
-                                    //!ex_if_page_fault_int;
+    // logic for icache access: if not misaligned and not stall
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & !stall_i;
 
     assign req_cpu_icache_o.vaddr = pc[39:0];
 
     
-    // logic branch predictor
+    // Output fetch
     assign fetch_o.pc_inst = pc;
     assign fetch_o.inst = req_icache_cpu_i.data;
     assign fetch_o.valid = req_icache_cpu_i.valid;
-    assign fetch_o.bpred.decision = PRED_NOT_TAKEN; // TODO: add bpred
-    assign fetch_o.bpred.pred_addr = 64'b0; // TODO: add bpred 
+
+    // TODO: add branch predictor
+    assign fetch_o.bpred.decision = PRED_NOT_TAKEN;
+    assign fetch_o.bpred.pred_addr = 64'b0; 
 
     // exceptions ordering
     always_comb begin

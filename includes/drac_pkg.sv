@@ -81,7 +81,7 @@ typedef struct packed {
 
 typedef struct packed {
     riscv_pkg::exception_cause_t cause;
-    addrPC_t origin; // this will be the addr or pc but maybe other things?
+    bus64_t origin; // this will be the addr or pc but maybe other things?
     logic valid;
 } exception_t;
 
@@ -376,10 +376,14 @@ typedef struct packed {
     logic stall_csr;
 } rr_cu_t;
 
-// Control Unit signals
+
 typedef struct packed {
     next_pc_sel_t next_pc;
 } cu_if_t;
+
+typedef struct packed {
+    logic write_enable;
+} cu_rr_t;
 
 // Control Unit signals
 typedef struct packed {
@@ -393,9 +397,10 @@ typedef struct packed {
     logic change_pc_ena;
     logic branch_taken;
     logic csr_enable_wb;
+    logic write_enable;
     logic stall_csr;
+    logic xcpt;
     //branch_pred_t bpred;
-    //exception_t ex;
 } wb_cu_t;
 
 
