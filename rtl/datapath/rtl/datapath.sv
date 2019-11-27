@@ -280,7 +280,7 @@ module datapath(
     // WB
     // CSR
     //assign wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
-    // TODO (guillemlp): change that the enable is when puting any CSR
+    // TODO (guillemlp): add a module thatn handles this
     always_comb begin
         if (wb_instr_int.valid) begin
             case (wb_instr_int.instr_type)
@@ -310,9 +310,16 @@ module datapath(
                     wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
                 end
                 CSRRCI: begin
-                    // do we extend sign?
+                    // TODO (guillemlp) do we extend sign?
                     wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};  
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                ECALL: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
                 end
                 default: begin
