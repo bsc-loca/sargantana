@@ -69,6 +69,8 @@ module datapath(
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
 
+    exe_if_branch_pred_t exe_if_branch_pred_int;   
+
     wb_exe_instr_t wb_to_exe_exe;
     logic wb_xcpt;
 
@@ -141,7 +143,8 @@ module datapath(
         .pc_jump_i(pc_jump_if_int),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
-        .fetch_o(stage_if_id_d)
+        .fetch_o(stage_if_id_d),
+        .exe_if_branch_pred_i(exe_if_branch_pred_int)
     );
 
     // Register IF to ID
@@ -218,7 +221,8 @@ module datapath(
         .to_wb_o(exe_to_wb_exe),
         .stall_o(exe_cu_int.stall),
 
-        .req_cpu_dcache_o(req_cpu_dcache_o)
+        .req_cpu_dcache_o(req_cpu_dcache_o),
+        .exe_if_branch_pred_o   (exe_if_branch_pred_int)
     );
 
     assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;

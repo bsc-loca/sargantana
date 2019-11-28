@@ -11,6 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
+`default_nettype none
 
 import drac_pkg::*;
 import riscv_pkg::*;
@@ -29,6 +30,8 @@ module if_stage(
     input addrPC_t              pc_jump_i,
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
+    // Signals for branch predictor from exe stage 
+    input exe_if_branch_pred_t      exe_if_branch_pred_i,
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,
     // fetch data output
@@ -119,8 +122,20 @@ module if_stage(
     assign fetch_o.valid   = resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int);  // valid if the response of the cache is valid or xcpt
 
     // TODO: add branch predictor
-    assign fetch_o.bpred.decision = PRED_NOT_TAKEN;
-    assign fetch_o.bpred.pred_addr = 64'b0; 
+    branch_predictor brach_predictor_inst (
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .pc_fetch_i(pc),
+        .pc_execution_i(exe_if_branch_pred_i.pc_execution),
+        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
+        .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
+        .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
+       // .push_return_address_i(push_return_address_i),
+       // .pop_return_address_i(pop_return_address_i),
+       //.branch_predict_is_branch_o(branch_predict_is_branch_o),
+       .branch_predict_taken_o(fetch_o.bpred.decision),
+       .branch_predict_addr_o(fetch_o.bpred.pred_addr)
+    );
 
     // exceptions ordering
     always_comb begin
@@ -143,3 +158,4 @@ module if_stage(
    
 
 endmodule
+`default_nettype wire
