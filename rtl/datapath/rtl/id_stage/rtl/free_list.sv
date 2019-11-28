@@ -11,22 +11,13 @@
  * -----------------------------------------------
  */
 
-// TODO: Add checkpointing to recover state fast.
-
 //`default_nettype none
 import drac_pkg::*;
 
-// TODO: Define proper types in drac package. Define a phisical register and isa_register
-// TODO: Edit register file width to 64 registers
-typedef logic [REGFILE_WIDTH:0] phreg_t;
-typedef reg [REGFILE_WIDTH-1:0] reg_free_list_entry;
+localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
-
-// TODO: Define these constants and types in drac package
-localparam NUM_CHECKPOINTS = 4;
-typedef logic [$clog2(NUM_CHECKPOINTS)-1:0] checkpoint_ptr;
-
-localparam NUM_ENTRIES = 32; // Number of entries in circular buffer
+// Free list Pointer
+typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
 
 module free_list(
     input wire             clk_i,               // Clock Singal
@@ -55,11 +46,10 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES):0] num [0:NUM_CHECKPOINTS-1];
+logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num [0:NUM_CHECKPOINTS-1];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
-
 
 // Determines if is gonna be read or writen
 logic write_enable;
@@ -70,7 +60,7 @@ logic checkpoint_enable;
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
 
 // User can write to the tail of the buffer to add new register
-assign write_enable = add_free_register_i & (num[version_head] < NUM_ENTRIES) & (~do_recover_i);
+assign write_enable = add_free_register_i & (num[version_head] < NUM_ENTRIES_FREE_LIST[5:0]) & (~do_recover_i);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
@@ -80,7 +70,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
 
     // FIFO Memory structure
 
-    phreg_t register_table [0:NUM_ENTRIES-1][0:NUM_CHECKPOINTS-1];
+    phreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1][0:NUM_CHECKPOINTS-1];
 
     always_ff @(posedge clk_i, negedge rstn_i)
     begin
@@ -96,7 +86,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             checkpoint_o <= 2'b0;       // Label 00 not XX
 
 
-            for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
+            for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
                register_table[i][0] = i[5:0] + 6'b100000;
             end
         end
@@ -117,7 +107,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                 // On checkpoint first do checkpoint and then rename if needed
                 // For checkpoint copy old free list in new. And copy pointers      //TODO: Do checkpoint, read and write. All at same time
                 if (checkpoint_enable) begin
-                    for (int i=0; i<NUM_ENTRIES; i++)
+                    for (int i=0; i<NUM_ENTRIES_FREE_LIST; i++)
                         register_table[i][version_head + 2'b01] <= register_table[i][version_head];
                     head[version_head + 2'b01] <= head[version_head];
                     tail[version_head + 2'b01] <= tail[version_head];

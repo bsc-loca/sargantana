@@ -11,19 +11,8 @@
  * -----------------------------------------------
  */
 
-localparam NUM_ISA_REGISTERS = 32;
-
 //`default_nettype none
 import drac_pkg::*;
-
-// TODO: Define proper types in drac package. Define a phisical register and isa_register
-// TODO: Edit register file width to 64 registers
-typedef logic [REGFILE_WIDTH:0] phreg_t;
-typedef reg [REGFILE_WIDTH-1:0] reg_free_list_entry;
-
-// TODO: Define these constants and types in drac package
-localparam NUM_CHECKPOINTS = 4;
-typedef logic [$clog2(NUM_CHECKPOINTS)-1:0] checkpoint_ptr;
 
 module rename_table(
     input wire             clk_i,               // Clock Singal

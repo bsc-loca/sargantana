@@ -50,6 +50,15 @@ typedef reg   [ICACHELINE_SIZE:0] icache_line_reg_t;
 typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
 typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 
+// Physical registers 
+parameter NUM_PHISICAL_REGISTERS = 64;
+parameter PHISICAL_REGFILE_WIDTH = 6;
+typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
+
+// Register checkpointing
+parameter NUM_CHECKPOINTS = 4;
+typedef logic [$clog2(NUM_CHECKPOINTS)-1:0] checkpoint_ptr;
+
 // Branch predictor
 // Least significative bit from address used to index
 parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
@@ -253,6 +262,13 @@ typedef struct packed {
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
+    phreg_t prs1;                       // Physical register source 1
+    phreg_t prs2;                       // Physical register source 2
+    phreg_t prd;                        // Physical register destination 
+} id_rr_stage_t;
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
     bus64_t data_rs2;                   // Data operand 2
     // any interrupt
@@ -260,6 +276,9 @@ typedef struct packed {
     // save until the instruction then 
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
+    phreg_t prs1;                       // Physical register source 1
+    phreg_t prs2;                       // Physical register source 2
+    phreg_t prd;                        // Physical register destination 
 } rr_exe_instr_t;       //  Read Regfile to Execution stage
 
 typedef struct packed {
@@ -282,12 +301,14 @@ typedef struct packed {
     `endif
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
-// For bypass
 typedef struct packed {
     logic valid;                        // Valid instruction
     reg_t rd;                           // Destination register
     bus64_t data;                       // Result data
-} wb_exe_instr_t;      // WB Stage to Execution
+    phreg_t prs1;                       // Physical register source 1
+    phreg_t prs2;                       // Physical register source 2
+    phreg_t prd;                        // Physical register destination 
+} wb_exe_instr_t;   // WB Stage to Execution
 
 // Control Unit signals
 typedef struct packed {

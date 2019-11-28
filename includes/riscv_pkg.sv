@@ -16,6 +16,7 @@ package riscv_pkg;
 parameter XLEN = 64; 
 parameter OPCODE_WIDTH = 6;
 parameter REG_WIDTH = 5;
+parameter NUM_ISA_REGISTERS = 32;
 parameter INST_SIZE = 32;
 
 

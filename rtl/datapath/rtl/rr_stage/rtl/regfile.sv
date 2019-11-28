@@ -9,6 +9,7 @@
 * Revision History
 *  Revision   | Author     | Commit | Description
 *  0.1        | Guillem.LP | 
+*  0.2        | Victor.SP  |        | Add phisical reg.
 * -----------------------------------------------
 */
 
@@ -20,18 +21,18 @@ module regfile (
     input   logic                   clk_i,
     // write port input
     input   logic                   write_enable_i,
-    input   [REGFILE_WIDTH-1:0]     write_addr_i,
+    input   phreg_t                 write_addr_i,
     input   bus64_t                 write_data_i,
     // read ports input
-    input   [REGFILE_WIDTH-1:0]     read_addr1_i,
-    input   [REGFILE_WIDTH-1:0]     read_addr2_i,
+    input   phreg_t                 read_addr1_i,
+    input   phreg_t                 read_addr2_i,
     // read port output
     output  bus64_t                 read_data1_o,
     output  bus64_t                 read_data2_o
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [1:31];
+reg64_t registers [1:NUM_PHISICAL_REGISTERS-1];
 
 // these assigns select data of register at position x 
 // if x = 0 then return 0
