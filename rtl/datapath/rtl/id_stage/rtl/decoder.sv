@@ -25,7 +25,6 @@ module decoder(
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
     logic xcpt_addr_misaligned_int;
-    exception_t xcpt_int;
 
     immediate immediate_inst(
         .instr_i(decode_i.inst),
@@ -543,6 +542,18 @@ module decoder(
                                     end
                                     F12_EBREAK: begin
                                         decode_instr_o.instr_type = EBREAK;
+                                    end
+                                    F12_URET: begin
+                                        decode_instr_o.instr_type = URET;
+                                    end
+                                    F12_SRET: begin
+                                        decode_instr_o.instr_type = SRET;
+                                    end
+                                    F12_MRET: begin
+                                        decode_instr_o.instr_type = MRET;
+                                    end
+                                    F12_WFI: begin
+                                        decode_instr_o.instr_type = WFI;
                                     end
                                     default: begin // check illegal instruction
                                         xcpt_illegal_instruction_int = 1'b1;

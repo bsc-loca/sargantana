@@ -322,6 +322,27 @@ module datapath(
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
                 end
+                URET: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                SRET: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
+                MRET: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
                 default: begin
                     wb_csr_cmd_int = CSR_CMD_NOPE;
                     wb_csr_rw_data_int = 64'b0;
@@ -342,14 +363,14 @@ module datapath(
     // if csr not enabled send the interesting addr that you are accesing, exception help
     assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_instr_int.ex.origin : wb_csr_rw_data_int;
     // if there is an exception that can be from:
-    // the instruction itself
+    // the instruction itself or the interrupt
     assign wb_xcpt = wb_instr_int.ex.valid | req_csr_cpu_i.csr_interrupt;
 
     assign req_cpu_csr_o.csr_exception = wb_xcpt;
 
     // if we can retire an instruction
     assign req_cpu_csr_o.csr_retire = wb_instr_int.valid && !wb_xcpt;
-    // 
+    // if there is a csr interrupt we take the interrupt?
     assign req_cpu_csr_o.csr_xcpt_cause = (req_csr_cpu_i.csr_interrupt) ?   req_csr_cpu_i.csr_interrupt_cause : 
                                                                             wb_instr_int.ex.cause;
     assign req_cpu_csr_o.csr_pc = wb_instr_int.pc;
@@ -360,7 +381,6 @@ module datapath(
                                                 exe_to_wb_wb.result_rd; 
      
     // For bypasses
-    //assign wb_to_exe_exe.valid  = !control_int.stall_wb & wb_instr_int.regfile_we && wb_instr_int.valid;
     assign wb_to_exe_exe.valid  = wb_instr_int.regfile_we && wb_instr_int.valid;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = data_wb_rr_int;

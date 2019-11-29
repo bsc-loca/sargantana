@@ -72,14 +72,14 @@ always_comb begin
         ResetState: begin
             next_state_int = NoReq;
             icache_req_valid_o = 1'b0;
-            icache_resp_ready_o = 1'b0;
+            icache_resp_ready_o = 1'b1;
             req_icache_fetch_o.valid = 1'b0;
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
-            icache_resp_ready_o = 1'b0;
+            icache_resp_ready_o = 1'b1;
             req_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
             
         end
@@ -93,14 +93,14 @@ always_comb begin
         RespReady:begin
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
-            icache_resp_ready_o = 1'b0;
+            icache_resp_ready_o = 1'b1;
             req_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
             
         end 
         default: begin
             next_state_int =  ResetState;
             icache_req_valid_o = 1'b0;
-            icache_resp_ready_o = 1'b0;
+            icache_resp_ready_o = 1'b1;
             req_icache_fetch_o.valid = 1'b0;
         end
     endcase;
