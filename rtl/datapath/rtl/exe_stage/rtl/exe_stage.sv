@@ -18,6 +18,7 @@ module exe_stage (
     input logic             clk_i,
     input logic             rstn_i,
     input logic             kill_i,
+    input logic             flush_i,
 
     input logic             csr_interrupt_i, // interrupt detected on the csr
     input bus64_t           csr_interrupt_cause_i,  // which interrupt has been detected
@@ -67,7 +68,19 @@ addrPC_t linked_pc;
 bus64_t result_mem;
 logic stall_mem;
 
+logic ready_interface_mem;
+bus64_t data_interface_mem;
+logic lock_interface_mem;
 
+lsq_interface_t load_store_instruction;
+logic valid_mem_interface;
+bus64_t data_rs1_mem_interface;
+bus64_t data_rs2_mem_interface;
+instr_type_t instr_type_mem_interface;
+mem_op_t mem_op_mem_interface;
+logic [2:0] funct3_mem_interface;
+reg_t rd_mem_interface;
+bus64_t imm_mem_interface;
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -131,8 +144,8 @@ branch_unit branch_unit_inst (
 
     .taken_o            (taken_branch),
     .result_o           (result_branch),
-    .link_pc_o          (linked_pc)
-);
+    .reg_data_o         (reg_data_branch),
+)
 
 // Request to DCACHE INTERFACE
 assign req_cpu_dcache_o.valid         = (from_rr_i.instr.unit == UNIT_MEM) && from_rr_i.instr.valid;
@@ -149,6 +162,37 @@ assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 assign result_mem   = resp_dcache_cpu_i.data;
 assign stall_mem    = resp_dcache_cpu_i.lock;
 
+assign load_store_instruction.valid = (from_rr_i.instr.unit == UNIT_MEM);
+assign load_store_instruction.addr = (1'b1) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.imm; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
+assign load_store_instruction.data = rs2_data_bypass;
+assign load_store_instruction.instr_type = from_rr_i.instr.instr_type;
+assign load_store_instruction.mem_op = from_rr_i.instr.mem_op;
+assign load_store_instruction.funct3 = from_rr_i.instr.funct3;
+assign load_store_instruction.rd = from_rr_i.instr.rd;
+
+
+mem_unit mem_unit_inst(
+    .clk_i(clk_i),
+    .rstn_i(rstn_i),
+    .interface_i(load_store_instruction),
+    .kill_i(kill_i),
+    .flush_i(flush_i),
+    .ready_i(ready_interface_mem),
+    .data_i(data_interface_mem),
+    .lock_i(lock_interface_mem),
+    .valid_o(valid_mem_interface),
+    .data_rs1_o(data_rs1_mem_interface),
+    .data_rs2_o(data_rs2_mem_interface),
+    .instr_type_o(instr_type_mem_interface),
+    .mem_op_o(mem_op_mem_interface),
+    .funct3_o(funct3_mem_interface),
+    .rd_o(rd_mem_interface),
+    .imm_o(imm_mem_interface),
+    .data_o(result_mem),
+    .ls_queue_entry_o(),
+    .ready_o(ready_mem),
+    .lock_o(stall_mem)
+);
 
 //------------------------------------------------------------------------------
 // DATA  TO WRITE_BACK

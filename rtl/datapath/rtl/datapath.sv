@@ -93,6 +93,7 @@ module datapath(
     checkpoint_ptr checkpoint_free_list;
     checkpoint_ptr checkpoint_rename;
 
+    logic src_select_id_rr_q;
 
     // Exe
     logic stall_exe_out;
@@ -279,13 +280,16 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(control_int.flush_id),
-        .load_i(control_int.stall_id), // Can be 1 always
+        .load_i(1'b1), // This register is always storing a one cycle old copy of reg_id_inst and the renaming.
         .input_i(stage_no_stall_rr_q),
         .output_o(stage_stall_rr_q)
     );
 
-    //Mux to decide between decode + rename or stored 
-    assign stage_id_rr_q = (!control_int.stall_id)? stage_no_stall_rr_q : stage_stall_rr_q;    
+    // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
+    always @(posedge clk_i) begin
+        src_select_id_rr_q <= !control_int.stall_id;
+    end
+    assign stage_id_rr_q = (src_select_id_rr_q)? stage_no_stall_rr_q : stage_stall_rr_q;    
 
     assign reg_wr_data   = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_rr_int;
     assign reg_wr_addr   = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : exe_to_wb_wb.prd;

@@ -108,7 +108,7 @@ end
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         stored_instr_to_dcache.valid <= 1'b0;
-        stored_instr_to_dcache.addr <= 40'h0;
+        stored_instr_to_dcache.addr <= 64'h0;
         stored_instr_to_dcache.data <= 64'h0;
         stored_instr_to_dcache.instr_type <= ADD;
         stored_instr_to_dcache.mem_op <= MEM_LOAD;
@@ -125,7 +125,7 @@ always_comb begin
         // Reset state
         ResetState: begin
             valid_o = 1'b0;              // Invalid instruction
-            data_rs1_o = 40'h0;
+            data_rs1_o = 64'h0;
             data_rs2_o = 64'h0;
             instr_type_o = ADD;
             mem_op_o = MEM_LOAD;
@@ -138,7 +138,7 @@ always_comb begin
         ReadHead: begin
             if (kill_i) begin
                 valid_o = 1'b0;              // Invalid instruction
-                data_rs1_o = 40'h0;
+                data_rs1_o = 64'h0;
                 data_rs2_o = 64'h0;
                 instr_type_o = ADD;
                 mem_op_o = MEM_LOAD;
@@ -162,7 +162,7 @@ always_comb begin
         WaitResponse: begin
             if (kill_i) begin
                 valid_o = 1'b0;              // Invalid instruction
-                data_rs1_o = 40'h0;
+                data_rs1_o = 64'h0;
                 data_rs2_o = 64'h0;
                 instr_type_o = ADD;
                 mem_op_o = MEM_LOAD;

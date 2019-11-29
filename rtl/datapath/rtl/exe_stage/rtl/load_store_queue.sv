@@ -62,7 +62,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
     // FIFO Memory structure
 
     reg64_t data_table [0:NUM_ENTRIES-1]; 
-    reg_addr_t addr_table [0:NUM_ENTRIES-1];
+    regPC_t addr_table [0:NUM_ENTRIES-1];
     reg_control_cell control_table[0:NUM_ENTRIES-1];
 
     `ifndef SYNTHESIS
@@ -71,7 +71,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
         initial 
         begin for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
                 data_table[i] = 64'h0;
-                addr_table[i] = 40'h0;
+                addr_table[i] = 64'h0;
                 control_table[i] = 17'h0;
               end
         end
@@ -94,7 +94,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
 
             end
         end else begin // When not reading an entry
-            instruction_o.addr <= 40'h0;
+            instruction_o.addr <= 64'h0;
             instruction_o.data <= 64'h0;
             {instruction_o.instr_type,
              instruction_o.mem_op,

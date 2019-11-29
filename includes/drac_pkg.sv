@@ -477,7 +477,7 @@ typedef struct packed {
 // LSQ in/out of instruction signals
 typedef struct packed {
     logic            valid;          // Valid bit
-    addr_t           addr;           // Address        
+    regPC_t           addr;           // Address        
     bus64_t          data;           // Data 
     instr_type_t     instr_type;   // Type of instruction
     mem_op_t         mem_op;       // Type of memory access
