@@ -223,7 +223,7 @@ module top_drac(
         input  io_fpu_sboard_clr,
         input [4:0] io_fpu_sboard_clra,
         input                       DMEM_REPLAY_NEXT_VALID,
-        input    `WORD_DATA         DMEM_RESP_BITS_DATA,
+        input   bus64_t         DMEM_RESP_BITS_DATA,
         input                       DMEM_RESP_BITS_HAS_DATA
     `endif   
 );
