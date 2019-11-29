@@ -343,6 +343,13 @@ module datapath(
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
                 end
+                ERET: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                end
                 default: begin
                     wb_csr_cmd_int = CSR_CMD_NOPE;
                     wb_csr_rw_data_int = 64'b0;

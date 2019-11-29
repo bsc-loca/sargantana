@@ -170,7 +170,7 @@ typedef enum logic [6:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA,
+   MRET, SRET, URET, ERET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions

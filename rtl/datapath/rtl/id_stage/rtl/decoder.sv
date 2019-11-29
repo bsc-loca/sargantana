@@ -546,6 +546,9 @@ module decoder(
                                     F12_URET: begin
                                         decode_instr_o.instr_type = URET;
                                     end
+                                    F12_ERET: begin
+                                        decode_instr_o.instr_type = ERET;
+                                    end
                                     F12_SRET: begin
                                         decode_instr_o.instr_type = SRET;
                                     end
