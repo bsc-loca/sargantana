@@ -85,50 +85,19 @@ typedef struct packed {
     logic valid;
 } exception_t;
 
-// Req coming from ICache
+// Response coming from ICache
 typedef struct packed {
     logic  valid;
     inst_t data;
-    //addr_t req_addr; I think it is not completely necessary
-    //exception_t ex;
-    //logic instr_addr_misaligned;
     logic instr_access_fault;
     logic instr_page_fault;
-} req_icache_cpu_t;
+} resp_icache_cpu_t;
 
-// Req send to ICache
+// Request send to ICache
 typedef struct packed {
     logic  valid;
     addr_t vaddr;
 } req_cpu_icache_t;
-
-// dcache response
-// TODO: explain what is everything
-typedef struct packed {
-    logic     dmem_resp_replay_i;
-    bus64_t   dmem_resp_data_i;
-    logic     dmem_req_ready_i;
-    logic     dmem_resp_valid_i;
-    logic     dmem_resp_nack_i;
-    logic     dmem_xcpt_ma_st_i;
-    logic     dmem_xcpt_ma_ld_i;
-    logic     dmem_xcpt_pf_st_i;
-    logic     dmem_xcpt_pf_ld_i;
-} req_dcache_cpu_t;
-
-// dcache access
-// TODO: explain magic numbers
-typedef struct packed {
-    logic        dmem_req_valid_o;
-    logic [4:0]  dmem_req_cmd_o;
-    addr_t       dmem_req_addr_o;
-    logic [3:0]  dmem_op_type_o;
-    bus64_t      dmem_req_data_o;
-    logic [7:0]  dmem_req_tag_o;
-    logic        dmem_req_invalidate_lr_o;
-    logic        dmem_req_kill_o;
-    logic        dmem_lock_o;
-} req_cpu_dcache_t;
 
 typedef enum logic [2:0] {
     SEL_SRC1_REGFILE,
@@ -268,6 +237,28 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_N1      = 3'b110,
     CSR_CMD_N2      = 3'b111
 } csr_cmd_t;
+
+// Response coming from ICache
+typedef struct packed {
+    logic        ready; // Dcache_interface ready to accept mem. access
+    bus64_t      data;  // Data from load
+    logic        lock;   // Dcache cannot accept more mem. accesses
+} resp_dcache_cpu_t;
+
+// Request send to ICache
+typedef struct packed {
+    logic         valid;             // New memory request
+    logic         kill;              // Exception detected at Commit
+    logic         csr_eret;          // Exception from CSR Register File
+    bus64_t       data_rs1;          // Data operand 1
+    bus64_t       data_rs2;          // Data operand 2
+    instr_type_t  instr_type;        // Type of instruction
+    mem_op_t      mem_op;            // Type of memory access
+    logic [2:0]   funct3;            // Granularity of mem. access
+    reg_t         rd;                // Destination register. Used for identify a pending Miss
+    bus64_t       imm;               // Inmmediate 
+    addr_t        io_base_addr;      // Address Base Pointer of INPUT/OUPUT
+} req_cpu_dcache_t;
 
 // Fetch Stage
 typedef struct packed {
@@ -482,7 +473,7 @@ typedef struct packed {
     // save until the instruction then 
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
-} req_csr_cpu_t;
+} resp_csr_cpu_t;
 
 
 

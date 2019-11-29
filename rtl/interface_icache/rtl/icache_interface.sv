@@ -38,7 +38,7 @@ module icache_interface(
     output logic             tlb_req_valid_o, // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-    output req_icache_cpu_t  req_icache_fetch_o
+    output resp_icache_cpu_t  resp_icache_fetch_o
 );
 
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
@@ -73,35 +73,35 @@ always_comb begin
             next_state_int = NoReq;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b1;
-            req_icache_fetch_o.valid = 1'b0;
+            resp_icache_fetch_o.valid = 1'b0;
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
             icache_resp_ready_o = 1'b1;
-            req_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
             
         end
         ReqValid: begin
             next_state_int = (icache_resp_valid_i) ? RespReady : ReqValid;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b1;
-            req_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
+            resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
             
         end
         RespReady:begin
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
             icache_resp_ready_o = 1'b1;
-            req_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
             
         end 
         default: begin
             next_state_int =  ResetState;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b1;
-            req_icache_fetch_o.valid = 1'b0;
+            resp_icache_fetch_o.valid = 1'b0;
         end
     endcase;
 end
@@ -125,9 +125,9 @@ assign icache_req_kill_o = 1'b0;
 // TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;
 
-//assign req_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
-assign req_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i;
-assign req_icache_fetch_o.instr_page_fault = 1'b0;
+//assign resp_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
+assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i;
+assign resp_icache_fetch_o.instr_page_fault = 1'b0;
 
 // sequential logic cacheline register buffer
 // TODO (guillemlp) manage invalidations etc...
@@ -173,19 +173,19 @@ assign buffer_miss_int = !valid_buffer_q |
 always_comb begin
     case(req_fetch_icache_i.vaddr[3:2])
         2'b00: begin
-            req_icache_fetch_o.data = icache_line_int[31:0];
+            resp_icache_fetch_o.data = icache_line_int[31:0];
         end
         2'b01: begin
-            req_icache_fetch_o.data = icache_line_int[63:32]; 
+            resp_icache_fetch_o.data = icache_line_int[63:32]; 
         end
         2'b10: begin
-            req_icache_fetch_o.data = icache_line_int[95:64]; 
+            resp_icache_fetch_o.data = icache_line_int[95:64]; 
         end
         2'b11: begin
-            req_icache_fetch_o.data = icache_line_int[127:96]; 
+            resp_icache_fetch_o.data = icache_line_int[127:96]; 
         end
         default: begin
-            req_icache_fetch_o.data = 32'h0;
+            resp_icache_fetch_o.data = 32'h0;
         end
     endcase
 end

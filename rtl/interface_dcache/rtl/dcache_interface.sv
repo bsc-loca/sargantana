@@ -18,22 +18,11 @@ import drac_pkg::*;
  
 // Interface with Data Cache. Stores a Memory request until it finishes
 
-module interface_dcache (
+module dcache_interface (
     input  wire         clk_i,               // Clock
     input  wire         rstn_i,              // Negative Reset Signal
 
-    input logic         valid_i,             // New memory request
-    input logic         kill_i,              // Exception detected at Commit
-    input logic         csr_eret_i,          // Exception from CSR Register File
-    input bus64_t       data_rs1_i,          // Data operand 1
-    input bus64_t       data_rs2_i,          // Data operand 2
-    input instr_type_t  instr_type_i,        // Type of instruction
-    input mem_op_t      mem_op_i,            // Type of memory access
-    input logic [2:0]   funct3_i,            // Granularity of mem. access
-    input reg_t         rd_i,                // Destination register. Used for identify a pending Miss
-    input bus64_t       imm_i,               // Inmmediate 
-
-    input  addr_t       io_base_addr_i,      // Address Base Pointer of INPUT/OUPUT
+    input req_cpu_dcache_t req_cpu_dcache_i, // Interface with cpu
 
     // DCACHE Answer
     input  logic        dmem_resp_replay_i,  // Miss ready
@@ -58,9 +47,7 @@ module interface_dcache (
     output logic        dmem_req_kill_o,     // Kill actual memory access
 
     // DCACHE Answer to WB
-    output logic        ready_o,             // Dcache_interface ready to accept mem. access
-    output bus64_t      data_o,              // Data from load
-    output logic        lock_o               // Dcache cannot accept more mem. accesses
+    output resp_dcache_cpu_t resp_dcache_cpu_o // Dcache to CPU
 );
 
 // Declarations of internal variables
@@ -87,17 +74,17 @@ assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dm
 
 // The address is in the INPUT/OUTPUT space
 //TODO: Make next line parametric
-assign io_address_space = (dmem_req_addr_o >= io_base_addr_i) & (dmem_req_addr_o <= 40'h80020053);
+assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (dmem_req_addr_o <= 40'h80020053);
 
 //////////////////////////////////////////////////////////////////////
 // For clarity we have two kill signals. There are two possible cases
 //////////////////////////////////////////////////////////////////////
 
 // Address is in INPUT/OUTPUT space
-assign kill_io_resp =  io_address_space & (mem_op_i == MEM_STORE);
+assign kill_io_resp =  io_address_space & (req_cpu_dcache_i.mem_op == MEM_STORE);
 
 // There has been a exception
-assign kill_mem_ope = mem_xcpt | kill_i;
+assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -119,24 +106,24 @@ always_comb begin
         // IN RESET STATE
         ResetState: begin
             dmem_req_valid_o = 1'b0;  // NO request
-            lock_o = 1'b0;            // NOT busy
+            resp_dcache_cpu_o.lock = 1'b0;            // NOT busy
             next_state = Idle;        // Next state IDLE
         end
         // IN IDLE STATE
         Idle: begin
-            dmem_req_valid_o = !kill_i & valid_i & dmem_req_ready_i;
-            lock_o = !kill_i & valid_i;
+            dmem_req_valid_o = !req_cpu_dcache_i.kill & req_cpu_dcache_i.valid & dmem_req_ready_i;
+            resp_dcache_cpu_o.lock = !req_cpu_dcache_i.kill & req_cpu_dcache_i.valid;
             next_state = dmem_req_valid_o ?  MakeRequest : Idle;
         end
         // IN MAKE REQUEST STATE
         MakeRequest: begin
             if(dmem_resp_valid_i & dmem_req_ready_i) begin // case: io response uart
                 dmem_req_valid_o = 1'b0;
-                lock_o = 1'b0;
+                resp_dcache_cpu_o.lock = 1'b0;
                 next_state = Idle;
             end else begin
                 dmem_req_valid_o = 1'b0;
-                lock_o = !kill_mem_ope;
+                resp_dcache_cpu_o.lock = !kill_mem_ope;
                 next_state = (!kill_mem_ope) ? WaitResponse : Idle;
             end
         end
@@ -145,15 +132,15 @@ always_comb begin
             if(dmem_resp_valid_i) begin
                 dmem_req_valid_o = 1'b0;
                 next_state = Idle;
-                lock_o = 1'b0;
+                resp_dcache_cpu_o.lock = 1'b0;
             end else if(dmem_resp_nack_i) begin
                 dmem_req_valid_o = 1'b0;
                 next_state = Idle;
-                lock_o = 1'b1;
+                resp_dcache_cpu_o.lock = 1'b1;
             end else begin
                 dmem_req_valid_o = 1'b0;
                 next_state = (kill_mem_ope | kill_io_resp) ? Idle : WaitResponse;
-                lock_o = !(kill_mem_ope | kill_io_resp);
+                resp_dcache_cpu_o.lock = !(kill_mem_ope | kill_io_resp);
             end
         end
         default: begin
@@ -167,7 +154,7 @@ end
 
 // Decide type of memory operation
 always_comb begin
-    case(instr_type_i)
+    case(req_cpu_dcache_i.instr_type)
         AMO_LRW,AMO_LRD:            dmem_req_cmd_o = 5'b00110; // lr
         AMO_SCW,AMO_SCD:            dmem_req_cmd_o = 5'b00111; // sc
         AMO_SWAPW,AMO_SWAPD:        dmem_req_cmd_o = 5'b00100; // amoswap
@@ -192,28 +179,28 @@ end
 
 // Address calculation
 // TODO: IS NOT REALIST TO DO ADDRESS CALCULATION HERE. IT SHOULD TAKE ONE CYCLE. FOR 50MHZ IS OK.
-assign dmem_req_addr_o = (mem_op_i == MEM_AMO) ? data_rs1_i[39:0] : data_rs1_i[39:0] + imm_i[39:0];
+assign dmem_req_addr_o = (req_cpu_dcache_i.mem_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1[39:0] : req_cpu_dcache_i.data_rs1[39:0] + req_cpu_dcache_i.imm[39:0];
 
 // Granularity of mem. access. (BYTE, HALFWORD, WORD)
-assign dmem_op_type_o = {1'b0,funct3_i};
+assign dmem_op_type_o = {1'b0,req_cpu_dcache_i.funct3};
 
 // Data to store if needed
-assign dmem_req_data_o = data_rs2_i;
+assign dmem_req_data_o = req_cpu_dcache_i.data_rs2;
 
 // TAG for MSHR. Identifies a MEMORY access
-assign dmem_req_tag_o = {2'b00,rd_i,1'b0};
+assign dmem_req_tag_o = {2'b00,req_cpu_dcache_i.rd,1'b0};
 
 // Reset load-reserved/store-conditional 
-assign dmem_req_invalidate_lr_o = kill_i;
+assign dmem_req_invalidate_lr_o = req_cpu_dcache_i.kill;
 
 // Kill actual memory operation                       
-assign dmem_req_kill_o = mem_xcpt | kill_i;
+assign dmem_req_kill_o = mem_xcpt | req_cpu_dcache_i.kill;
 
 // Dcache interface is ready
-assign ready_o = dmem_resp_valid_i & (mem_op_i != MEM_STORE);
+assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (req_cpu_dcache_i.mem_op != MEM_STORE);
 
 // Readed data from load
-assign data_o = dmem_resp_data_i;
+assign resp_dcache_cpu_o.data = dmem_resp_data_i;
 
 endmodule
 //`default_nettype wire

@@ -24,8 +24,8 @@ module if_stage(
     input next_pc_sel_t         next_pc_sel_i,
     // PC comming from commit/decode/ecall
     input addrPC_t              pc_jump_i,
-    // Request packet coming from Icache
-    input req_icache_cpu_t      req_icache_cpu_i,
+    // Response packet coming from Icache
+    input resp_icache_cpu_t      resp_icache_cpu_i,
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,
     // fetch data output
@@ -71,8 +71,8 @@ module if_stage(
         /*if (|pc[63:40]) begin
             ex_if_addr_fault_int = 1'b1;
         end else*/ 
-        if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_access_fault) begin
+        if (resp_icache_cpu_i.valid && 
+            resp_icache_cpu_i.instr_access_fault) begin
             ex_if_addr_fault_int = 1'b1;
         end else begin
             ex_if_addr_fault_int = 1'b0;
@@ -83,8 +83,8 @@ module if_stage(
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
         end /*else  
-        if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_addr_misaligned) begin
+        if (resp_icache_cpu_i.valid && 
+            resp_icache_cpu_i.instr_addr_misaligned) begin
             ex_addr_misaligned_int = 1'b1;
         end */
         else begin
@@ -93,8 +93,8 @@ module if_stage(
     end
     // check exceptions instr page fault
     always_comb begin
-        if (req_icache_cpu_i.valid && 
-            req_icache_cpu_i.instr_page_fault) begin
+        if (resp_icache_cpu_i.valid && 
+            resp_icache_cpu_i.instr_page_fault) begin
             ex_if_page_fault_int = 1'b1;
         end else begin
             ex_if_page_fault_int = 1'b0;
@@ -109,8 +109,8 @@ module if_stage(
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst = req_icache_cpu_i.data;
-    assign fetch_o.valid = req_icache_cpu_i.valid;
+    assign fetch_o.inst = resp_icache_cpu_i.data;
+    assign fetch_o.valid = resp_icache_cpu_i.valid;
 
     // TODO: add branch predictor
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN;

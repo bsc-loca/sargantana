@@ -25,7 +25,7 @@ module control_unit(
     input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
-    input req_csr_cpu_t     csr_cu_i,
+    input resp_csr_cpu_t    csr_cu_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output cu_if_t          cu_if_o,

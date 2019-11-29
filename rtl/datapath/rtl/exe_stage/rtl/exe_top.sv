@@ -6,50 +6,34 @@
  * Email(s)       : ruben.langarita@bsc.es
  * -----------------------------------------------
  * Revision History
- *  Revision   | Author   | Description
+ *  Revision   | Author    | Description
+ *  0.1        | Victor SP | Remove dcache interface
  * -----------------------------------------------
  */
 //`default_nettype none
 import drac_pkg::*;
 
 module exe_top (
-    input logic         clk_i,
-    input logic         rstn_i,
-    input logic         kill_i,
-    input logic         csr_eret_i,
+    input logic             clk_i,
+    input logic             rstn_i,
+    input logic             kill_i,
+    input logic             csr_eret_i,
 
     // INPUTS
     input rr_exe_instr_t    from_rr_i,
     input wb_exe_instr_t    from_wb_i,
+    input resp_dcache_cpu_t resp_dcache_cpu_i, // Response from dcache interface
 
-    // Response from cache
-    input addr_t   io_base_addr_i,
-
-    input logic     dmem_resp_replay_i,
-    input bus64_t   dmem_resp_data_i,
-    input logic     dmem_req_ready_i,
-    input logic     dmem_resp_valid_i,
-    input logic     dmem_resp_nack_i,
-    input logic     dmem_xcpt_ma_st_i,
-    input logic     dmem_xcpt_ma_ld_i,
-    input logic     dmem_xcpt_pf_st_i,
-    input logic     dmem_xcpt_pf_ld_i,
+    // I/O base space pointer to dcache interface
+    input addr_t            io_base_addr_i,
 
     // OUTPUTS
-    output exe_wb_instr_t to_wb_o,
-    output logic stall_o,
+    output exe_wb_instr_t   to_wb_o,
+    output logic            stall_o,
 
-    // Request to cache
-    output logic        dmem_req_valid_o,
-    output logic [4:0]  dmem_req_cmd_o,
-    output addr_t       dmem_req_addr_o,
-    output logic [3:0]  dmem_op_type_o,
-    output bus64_t      dmem_req_data_o,
-    output logic [7:0]  dmem_req_tag_o,
-    output logic        dmem_req_invalidate_lr_o,
-    output logic        dmem_req_kill_o,
+    output req_cpu_dcache_t req_cpu_dcache_o, // Request to dcache interface 
 
-    output logic        dmem_lock_o // TODO connect
+    output logic            dmem_lock_o // TODO connect
 );
 
 // Declarations
@@ -75,6 +59,8 @@ bus64_t reg_data_branch;
 logic ready_mem;
 bus64_t result_mem;
 logic stall_mem;
+
+
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -144,49 +130,24 @@ branch_unit branch_unit_inst (
     .reg_data_o         (reg_data_branch)
 );
 
-interface_dcache interface_dcache_inst (
-    .clk_i                          (clk_i),
-    .rstn_i                         (rstn_i),
+// Request to DCACHE INTERFACE
+assign req_cpu_dcache_o.valid         = from_rr_i.instr.unit == UNIT_MEM;
+assign req_cpu_dcache_o.kill          = kill_i;
+assign req_cpu_dcache_o.csr_eret      = csr_eret_i;
+assign req_cpu_dcache_o.data_rs1      = rs1_data_bypass;
+assign req_cpu_dcache_o.data_rs2      = rs2_data_bypass;
+assign req_cpu_dcache_o.instr_type    = from_rr_i.instr.instr_type;
+assign req_cpu_dcache_o.mem_op        = from_rr_i.instr.mem_op;
+assign req_cpu_dcache_o.funct3        = from_rr_i.instr.funct3;
+assign req_cpu_dcache_o.rd             = from_rr_i.instr.rd;
+assign req_cpu_dcache_o.imm           = from_rr_i.instr.imm;
+assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
-    .valid_i                        (from_rr_i.instr.unit == UNIT_MEM),
-    .kill_i                         (kill_i),
-    .csr_eret_i                     (csr_eret_i),
-    .data_rs1_i                     (rs1_data_bypass),
-    .data_rs2_i                     (rs2_data_bypass),
-    .instr_type_i                   (from_rr_i.instr.instr_type),
-    .mem_op_i                       (from_rr_i.instr.mem_op),
-    .funct3_i                       (from_rr_i.instr.funct3),
-    .rd_i                           (from_rr_i.instr.rd),
-    .imm_i                          (from_rr_i.instr.imm),
+// RESPONSE FROM DCACHE INTERFACE
+assign ready_mem    = resp_dcache_cpu_i.ready;  
+assign result_mem   = resp_dcache_cpu_i.data;
+assign stall_mem    = resp_dcache_cpu_i.lock;
 
-    .io_base_addr_i                 (io_base_addr_i),
-
-    // dcache answer
-    .dmem_resp_replay_i             (dmem_resp_replay_i),
-    .dmem_resp_data_i               (dmem_resp_data_i),
-    .dmem_req_ready_i               (dmem_req_ready_i),
-    .dmem_resp_valid_i              (dmem_resp_valid_i),
-    .dmem_resp_nack_i               (dmem_resp_nack_i),
-    .dmem_xcpt_ma_st_i              (dmem_xcpt_ma_st_i),
-    .dmem_xcpt_ma_ld_i              (dmem_xcpt_ma_ld_i),
-    .dmem_xcpt_pf_st_i              (dmem_xcpt_pf_st_i),
-    .dmem_xcpt_pf_ld_i              (dmem_xcpt_pf_ld_i),
-
-    // request to dcache
-    .dmem_req_valid_o               (dmem_req_valid_o),
-    .dmem_op_type_o                 (dmem_op_type_o),
-    .dmem_req_cmd_o                 (dmem_req_cmd_o),
-    .dmem_req_data_o                (dmem_req_data_o),
-    .dmem_req_addr_o                (dmem_req_addr_o),
-    .dmem_req_tag_o                 (dmem_req_tag_o),
-    .dmem_req_invalidate_lr_o       (dmem_req_invalidate_lr_o),
-    .dmem_req_kill_o                (dmem_req_kill_o),
-
-    // output to wb
-    .ready_o                        (ready_mem),
-    .data_o                         (result_mem),
-    .lock_o                         (stall_mem)
-);
 
 //------------------------------------------------------------------------------
 // DATA  TO WRITE_BACK

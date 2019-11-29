@@ -21,14 +21,13 @@ module datapath(
     input logic             soft_rstn_i,
     // icache/dcache interface
     // naming could be improved
-    input req_icache_cpu_t  req_icache_cpu_i,
-    input req_dcache_cpu_t  req_dcache_cpu_i,
-    input req_csr_cpu_t     req_csr_cpu_i,
+    input resp_icache_cpu_t  resp_icache_cpu_i,
+    input resp_dcache_cpu_t  resp_dcache_cpu_i,
+    input resp_csr_cpu_t     resp_csr_cpu_i,
 
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o
-
 );
 // RISCV TESTS
 
@@ -132,12 +131,12 @@ module datapath(
     control_unit control_unit_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .valid_fetch(req_icache_cpu_i.valid),
+        .valid_fetch(resp_icache_cpu_i.valid),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
         .wb_cu_i(wb_cu_int),
         .exe_cu_i(exe_cu_int),
-        .csr_cu_i(req_csr_cpu_i),
+        .csr_cu_i(resp_csr_cpu_i),
         .pipeline_ctrl_o(control_int),
         .cu_if_o(cu_if_int),
         .id_cu_i(id_cu_int)
@@ -150,7 +149,7 @@ module datapath(
         if (control_int.sel_addr_if == SEL_JUMP_COMMIT) begin
             pc_jump_if_int = exe_to_wb_wb.result_pc;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
-            pc_jump_if_int = req_csr_cpu_i.csr_evec;
+            pc_jump_if_int = resp_csr_cpu_i.csr_evec;
         end else begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
         end
@@ -167,7 +166,7 @@ module datapath(
         .stall_i(control_int.stall_if),
         .next_pc_sel_i(cu_if_int.next_pc),
         .pc_jump_i(pc_jump_if_int),
-        .req_icache_cpu_i(req_icache_cpu_i),
+        .resp_icache_cpu_i(resp_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_id_d)
     );
@@ -235,37 +234,24 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
+        // Not sure what they do
+        .kill_i(1'b0),
+        .csr_eret_i(1'b0),
+
         //.from_rr_i(dec_to_exe_exe),
         .from_rr_i(stage_rr_exe_q),
         .from_wb_i(wb_to_exe_exe),
 
+        .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .io_base_addr_i(io_base_addr),
-        .dmem_resp_replay_i(req_dcache_cpu_i.dmem_resp_replay_i),
-        .dmem_resp_data_i(req_dcache_cpu_i.dmem_resp_data_i),
-        .dmem_req_ready_i(req_dcache_cpu_i.dmem_req_ready_i),
-        .dmem_resp_valid_i(req_dcache_cpu_i.dmem_resp_valid_i),
-        .dmem_resp_nack_i(req_dcache_cpu_i.dmem_resp_nack_i),
-        .dmem_xcpt_ma_st_i(req_dcache_cpu_i.dmem_xcpt_ma_st_i),
-        .dmem_xcpt_ma_ld_i(req_dcache_cpu_i.dmem_xcpt_ma_ld_i),
-        .dmem_xcpt_pf_st_i(req_dcache_cpu_i.dmem_xcpt_pf_st_i),
-        .dmem_xcpt_pf_ld_i(req_dcache_cpu_i.dmem_xcpt_pf_ld_i),
-        // Not sure what it does
-        .kill_i(1'b0),
-        .csr_eret_i(1'b0),
 
         .to_wb_o(exe_to_wb_exe),
         .stall_o(exe_cu_int.stall),
 
-        .dmem_req_valid_o   (req_cpu_dcache_o.dmem_req_valid_o),
-        .dmem_req_cmd_o     (req_cpu_dcache_o.dmem_req_cmd_o),
-        .dmem_req_addr_o    (req_cpu_dcache_o.dmem_req_addr_o),
-        .dmem_op_type_o     (req_cpu_dcache_o.dmem_op_type_o),
-        .dmem_req_data_o    (req_cpu_dcache_o.dmem_req_data_o),
-        .dmem_req_tag_o     (req_cpu_dcache_o.dmem_req_tag_o),
-        .dmem_req_invalidate_lr_o(req_cpu_dcache_o.dmem_req_invalidate_lr_o),
-        .dmem_req_kill_o(req_cpu_dcache_o.dmem_req_kill_o),
-        .dmem_lock_o(req_cpu_dcache_o.dmem_lock_o)
+        .req_cpu_dcache_o(req_cpu_dcache_o),
+        //.dmem_lock_o()
     );
+
     assign exe_cu_int.stall_csr = stage_rr_exe_q.instr.stall_csr && stage_rr_exe_q.instr.valid;
 
     register #($bits(instr_entry_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
@@ -279,7 +265,7 @@ module datapath(
 
     // WB
     // CSR
-    //assign wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+    //assign wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
     // TODO (guillemlp): add a module thatn handles this
     always_comb begin
         if (wb_instr_int.valid) begin
@@ -287,68 +273,68 @@ module datapath(
                 CSRRW: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRS: begin
                     wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRC: begin
                     wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRWI: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRSI: begin
                     wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRCI: begin
                     // TODO (guillemlp) do we extend sign?
                     wb_csr_cmd_int = (wb_instr_int.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = {59'b0,wb_instr_int.rs1};  
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 ECALL: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 URET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 SRET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 MRET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 ERET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !req_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
                 default: begin
                     wb_csr_cmd_int = CSR_CMD_NOPE;
@@ -371,20 +357,20 @@ module datapath(
     assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_instr_int.ex.origin : wb_csr_rw_data_int;
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
-    assign wb_xcpt = wb_instr_int.ex.valid | req_csr_cpu_i.csr_interrupt;
+    assign wb_xcpt = wb_instr_int.ex.valid | resp_csr_cpu_i.csr_interrupt;
 
     assign req_cpu_csr_o.csr_exception = wb_xcpt;
 
     // if we can retire an instruction
     assign req_cpu_csr_o.csr_retire = wb_instr_int.valid && !wb_xcpt;
     // if there is a csr interrupt we take the interrupt?
-    assign req_cpu_csr_o.csr_xcpt_cause = (req_csr_cpu_i.csr_interrupt) ?   req_csr_cpu_i.csr_interrupt_cause : 
+    assign req_cpu_csr_o.csr_xcpt_cause = (resp_csr_cpu_i.csr_interrupt) ?   resp_csr_cpu_i.csr_interrupt_cause : 
                                                                             wb_instr_int.ex.cause;
     assign req_cpu_csr_o.csr_pc = wb_instr_int.pc;
     
     
     // data to write to regfile at WB from CSR or exe stage
-    assign data_wb_rr_int = (wb_csr_ena_int) ?  req_csr_cpu_i.csr_rw_rdata : 
+    assign data_wb_rr_int = (wb_csr_ena_int) ?  resp_csr_cpu_i.csr_rw_rdata : 
                                                 exe_to_wb_wb.result_rd; 
      
     // For bypasses
