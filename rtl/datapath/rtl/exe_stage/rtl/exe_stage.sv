@@ -144,8 +144,9 @@ branch_unit branch_unit_inst (
 
     .taken_o            (taken_branch),
     .result_o           (result_branch),
-    .reg_data_o         (reg_data_branch),
-)
+    .reg_data_o         (reg_data_branch)
+);
+
 
 // Request to DCACHE INTERFACE
 assign req_cpu_dcache_o.valid         = (from_rr_i.instr.unit == UNIT_MEM) && from_rr_i.instr.valid;
