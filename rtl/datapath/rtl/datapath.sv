@@ -338,6 +338,8 @@ module datapath(
 
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .io_base_addr_i(io_base_addr),
+        .flush_i(1'b0),
+
 
         .to_wb_o(exe_to_wb_exe),
         .stall_o(exe_cu_int.stall),
