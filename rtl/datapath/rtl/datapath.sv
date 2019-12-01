@@ -249,7 +249,7 @@ module datapath(
         .stall_o(exe_cu_int.stall),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
-        .dmem_lock_o(1'b0)
+        .dmem_lock_o()
     );
 
     assign exe_cu_int.stall_csr = stage_rr_exe_q.instr.stall_csr && stage_rr_exe_q.instr.valid;
