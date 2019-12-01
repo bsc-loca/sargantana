@@ -42,13 +42,13 @@ module tb_datapath();
     reg     tb_clk_i;
     reg     tb_rstn_i;
 
-    req_icache_cpu_t tb_icache_fetch_i;
+    resp_icache_cpu_t tb_icache_fetch_i;
     req_cpu_icache_t tb_fetch_icache_o;
 
     req_cpu_dcache_t tb_req_cpu_dcache_o;
-    req_dcache_cpu_t tb_req_dcache_cpu_i;
+    resp_dcache_cpu_t tb_resp_dcache_cpu_i;
 
-    req_csr_cpu_t req_csr_cpu_i;
+    resp_csr_cpu_t resp_csr_cpu_i;
     req_cpu_csr_t req_cpu_csr_o;
     
 
@@ -59,25 +59,16 @@ module tb_datapath();
     assign tb_icache_fetch_i.data = tb_line_o;
     assign tb_addr_i = tb_fetch_icache_o.vaddr;
 
-    assign tb_req_dcache_cpu_i.dmem_resp_replay_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_resp_data_i = 64'b0;
-    assign tb_req_dcache_cpu_i.dmem_req_ready_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_resp_valid_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_resp_nack_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_st_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_ld_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_st_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_ld_i = 1'b0;
+    assign tb_resp_dcache_cpu_i.lock = 1'b0;
 
-
-    assign req_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
-    assign req_csr_cpu_i.csr_replay = 1'b0;
-    assign req_csr_cpu_i.csr_stall = 1'b0;
-    assign req_csr_cpu_i.csr_exception = 1'b0;
-    assign req_csr_cpu_i.csr_eret = 1'b0;
-    assign req_csr_cpu_i.csr_evec = 64'h0;
-    assign req_csr_cpu_i.csr_interrupt = 1'b0;
-    assign req_csr_cpu_i.csr_interrupt_cause = 64'b0;
+    assign resp_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign resp_csr_cpu_i.csr_replay = 1'b0;
+    assign resp_csr_cpu_i.csr_stall = 1'b0;
+    assign resp_csr_cpu_i.csr_exception = 1'b0;
+    assign resp_csr_cpu_i.csr_eret = 1'b0;
+    assign resp_csr_cpu_i.csr_evec = 64'h0;
+    assign resp_csr_cpu_i.csr_interrupt = 1'b0;
+    assign resp_csr_cpu_i.csr_interrupt_cause = 64'b0;
 
 //-----------------------------
 // Module
@@ -86,13 +77,13 @@ module tb_datapath();
     datapath datapath_inst( 
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
-        .req_icache_cpu_i(tb_icache_fetch_i),
+        .resp_icache_cpu_i(tb_icache_fetch_i),
         .req_cpu_icache_o(tb_fetch_icache_o),
         .soft_rstn_i(soft_rstn_i),
-        .req_csr_cpu_i(req_csr_cpu_i),
+        .resp_csr_cpu_i(resp_csr_cpu_i),
         .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
-        .req_dcache_cpu_i(tb_req_dcache_cpu_i)
+        .resp_dcache_cpu_i(tb_resp_dcache_cpu_i)
 
     );
 

@@ -42,11 +42,11 @@ module tb_datapath();
     reg     tb_clk_i;
     reg     tb_rstn_i;
 
-    req_icache_cpu_t tb_icache_fetch_i;
+    resp_icache_cpu_t tb_icache_fetch_i;
     req_cpu_icache_t tb_fetch_icache_o;
 
     req_cpu_dcache_t tb_req_cpu_dcache_o;
-    req_dcache_cpu_t tb_req_dcache_cpu_i;
+    resp_dcache_cpu_t tb_resp_dcache_cpu_i;
 
     req_cpu_csr_t req_cpu_csr_o;
     
@@ -58,17 +58,7 @@ module tb_datapath();
     assign tb_icache_fetch_i.data = tb_line_o;
     assign tb_addr_i = tb_fetch_icache_o.vaddr;
 
-    assign tb_req_dcache_cpu_i.dmem_resp_replay_i = 1'b0;
-    //assign tb_req_dcache_cpu_i.dmem_resp_data_i = 64'b0;
-    //assign tb_req_dcache_cpu_i.dmem_req_ready_i = 1'b0;
-    //assign tb_req_dcache_cpu_i.dmem_resp_valid_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_resp_nack_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_st_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_ma_ld_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_st_i = 1'b0;
-    assign tb_req_dcache_cpu_i.dmem_xcpt_pf_ld_i = 1'b0;
 
-    assign tb_req_dcache_cpu_i.dmem_req_ready_i = 1;//tb_req_dcache_cpu_i.dmem_resp_valid_i;
 //-----------------------------
 // Module
 //-----------------------------
