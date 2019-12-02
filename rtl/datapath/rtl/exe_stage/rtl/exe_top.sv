@@ -153,6 +153,31 @@ assign stall_mem    = resp_dcache_cpu_i.lock;
 // DATA  TO WRITE_BACK
 //------------------------------------------------------------------------------
 
+assign to_wb_o.instr.valid = from_rr_i.instr.valid;
+assign to_wb_o.instr.pc = from_rr_i.instr.pc;
+assign to_wb_o.instr.bpred = from_rr_i.instr.bpred;
+assign to_wb_o.instr.ex = from_rr_i.instr.ex;
+assign to_wb_o.instr.rs1 = from_rr_i.instr.rs1;
+assign to_wb_o.instr.rs2 = from_rr_i.instr.rs2;
+assign to_wb_o.instr.rd = from_rr_i.instr.rd;
+assign to_wb_o.instr.use_imm = from_rr_i.instr.use_imm;
+assign to_wb_o.instr.use_pc = from_rr_i.instr.use_pc;
+assign to_wb_o.instr.op_32 = from_rr_i.instr.op_32;
+assign to_wb_o.instr.alu_op = from_rr_i.instr.alu_op;
+assign to_wb_o.instr.unit = from_rr_i.instr.unit;
+assign to_wb_o.instr.change_pc_ena = from_rr_i.instr.change_pc_ena;
+assign to_wb_o.instr.regfile_we = from_rr_i.instr.regfile_we;
+assign to_wb_o.instr.regfile_w_sel = from_rr_i.instr.regfile_w_sel;
+assign to_wb_o.instr.instr_type = from_rr_i.instr.instr_type;
+assign to_wb_o.instr.result = from_rr_i.instr.result;
+assign to_wb_o.instr.mem_op = from_rr_i.instr.mem_op;
+assign to_wb_o.instr.signed_op = from_rr_i.instr.signed_op;
+assign to_wb_o.instr.funct3 = from_rr_i.instr.funct3;
+assign to_wb_o.instr.imm = from_rr_i.instr.imm;
+assign to_wb_o.instr.aq = from_rr_i.instr.aq;
+assign to_wb_o.instr.rl = from_rr_i.instr.rl;
+assign to_wb_o.instr.stall_csr = from_rr_i.instr.stall_csr;
+
 always_comb begin
     to_wb_o.branch_taken = 1'b0;
     case(from_rr_i.instr.unit)
