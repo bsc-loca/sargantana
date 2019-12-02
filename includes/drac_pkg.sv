@@ -66,7 +66,7 @@ typedef enum logic [1:0]{
     ResetState = 2'b00,
     NoReq      = 2'b01,
     ReqValid   = 2'b10,
-    RespReady  = 2'b11
+    Replay     = 2'b11
 } icache_state_t;
 
 typedef enum logic {

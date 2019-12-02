@@ -27,6 +27,7 @@ module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
     input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
     input logic                 ICACHE_RESP_VALID,
+    input logic                 ICACHE_REQ_READY,
     input logic                 PTWINVALIDATE,
     input logic                 TLB_RESP_MISS,
     input logic                 TLB_RESP_XCPT_IF,
@@ -285,7 +286,8 @@ icache_interface icache_interface_inst(
 
     // Inputs ICache
     .icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK), 
-    .icache_resp_valid_i(ICACHE_RESP_VALID), 
+    .icache_resp_valid_i(ICACHE_RESP_VALID),
+    .icache_req_ready_i(ICACHE_REQ_READY), 
     .ptw_invalidate_i(PTWINVALIDATE),
     .tlb_resp_miss_i(TLB_RESP_MISS),
     .tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),

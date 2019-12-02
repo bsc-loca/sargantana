@@ -25,6 +25,7 @@ module icache_interface(
     // Request input signals from ICache
     input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
     input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
+    input logic              icache_req_ready_i, // ICACHE_REQ_READY,
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
     input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
     input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
@@ -84,19 +85,18 @@ always_comb begin
             
         end
         ReqValid: begin
-            next_state_int = (icache_resp_valid_i) ? RespReady : ReqValid;
+            next_state_int = (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b1;
             resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
             
         end
-        RespReady:begin
-            next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
-            icache_req_valid_o = icache_access_needed_int;
+        Replay:begin
+            next_state_int = (icache_req_ready_i) ? ReqValid : Replay;
+            icache_req_valid_o = icache_req_ready_i;
             icache_resp_ready_o = 1'b1;
             resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
-            
-        end 
+        end
         default: begin
             next_state_int =  ResetState;
             icache_req_valid_o = 1'b0;
