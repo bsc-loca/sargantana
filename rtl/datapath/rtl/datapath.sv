@@ -253,7 +253,7 @@ module datapath(
 
     assign exe_cu_int.stall_csr = stage_rr_exe_q.instr.stall_csr && stage_rr_exe_q.instr.valid;
 
-    register #($bits(instr_entry_t)+$bits(exe_wb_instr_t)) reg_exe_inst(
+    register #($bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(control_int.flush_exe),
