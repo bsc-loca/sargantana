@@ -353,7 +353,7 @@ module datapath(
     // if csr not enabled send command NOP
     assign req_cpu_csr_o.csr_rw_cmd = (wb_csr_ena_int) ? wb_csr_cmd_int : CSR_CMD_NOPE;
     // if csr not enabled send the interesting addr that you are accesing, exception help
-    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : wb_instr_int.ex.origin;
+    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.instr.ex.origin;
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
@@ -385,8 +385,8 @@ module datapath(
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
     assign wb_cu_int.stall_csr = exe_to_wb_wb.instr.stall_csr && exe_to_wb_wb.instr.valid;
     assign wb_cu_int.xcpt = wb_xcpt;
-    assign wb_cu_int.write_enable = wb_instr_int.regfile_we;
-    assign wb_cu_int.ecall_taken = (wb_instr_int.instr_type == ECALL);
+    assign wb_cu_int.write_enable = exe_to_wb_wb.instr.regfile_we;
+    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL);
 
     //assign wb_cu_int.bpred = ;
 

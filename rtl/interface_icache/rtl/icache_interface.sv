@@ -45,6 +45,8 @@ module icache_interface(
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
 icache_line_t icache_line_int;
 reg_addr_t pc_buffer_d, pc_buffer_q;
+// pc requested on the last cycle
+reg_addr_t old_pc_req_d, old_pc_req_q;
 reg valid_buffer_q,valid_buffer_d;
 
 logic buffer_diff_int;
@@ -85,17 +87,30 @@ always_comb begin
             
         end
         ReqValid: begin
-            next_state_int = (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
-            icache_req_valid_o = 1'b0;
-            icache_resp_ready_o = 1'b1;
-            resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
-            
+            if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
+                next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
+                icache_req_valid_o = icache_access_needed_int;
+                icache_resp_ready_o = 1'b1;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            end else begin
+                next_state_int = (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
+                icache_req_valid_o = 1'b0;
+                icache_resp_ready_o = 1'b1;
+                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
+            end
         end
         Replay:begin
-            next_state_int = (icache_req_ready_i) ? ReqValid : Replay;
-            icache_req_valid_o = icache_req_ready_i;
-            icache_resp_ready_o = 1'b1;
-            resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
+                next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
+                icache_req_valid_o = icache_access_needed_int;
+                icache_resp_ready_o = 1'b1;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            end else begin
+                next_state_int = (icache_req_ready_i) ? ReqValid : Replay;
+                icache_req_valid_o = icache_req_ready_i;
+                icache_resp_ready_o = 1'b1;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            end
         end
         default: begin
             next_state_int =  ResetState;
@@ -151,10 +166,15 @@ end
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
         pc_buffer_q <= {ADDR_SIZE{1'b0}};
+        old_pc_req_q <= {ADDR_SIZE{1'b0}};
     end else begin
         pc_buffer_q <= pc_buffer_d;
+        old_pc_req_q <= old_pc_req_d;
     end
 end
+
+// old pc is the pc of the last cycle
+assign old_pc_req_d = req_fetch_icache_i.vaddr;
 
 // Multiplexor to select the correct cacheline
 assign icache_line_int = (icache_resp_valid_i) ? icache_resp_datablock_i : icache_line_reg_q;
