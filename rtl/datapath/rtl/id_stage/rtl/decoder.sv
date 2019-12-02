@@ -78,7 +78,7 @@ module decoder(
         decode_instr_o.stall_csr = 1'b0;
 
 
-        if (!decode_i.ex.valid) begin
+        if (!decode_i.ex.valid && decode_i.valid ) begin
 
 
             case (decode_i.inst.common.opcode)
@@ -527,7 +527,7 @@ module decoder(
                     decode_instr_o.unit = UNIT_SYSTEM;
 
                     case (decode_i.inst.itype.func3)     
-                        F3_ECALL_EBREAK: begin
+                        F3_ECALL_EBREAK_ERET: begin
                             
                             decode_instr_o.regfile_we = 1'b0;
 

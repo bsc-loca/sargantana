@@ -164,13 +164,13 @@ typedef enum logic [2:0] {
 } op_func3_alu_t;
 
 typedef enum logic [2:0] {
-    F3_ECALL_EBREAK = 3'b000,
-    F3_CSRRW        = 3'b001,
-    F3_CSRRS        = 3'b010,
-    F3_CSRRC        = 3'b011,
-    F3_CSRRWI       = 3'b101,
-    F3_CSRRSI       = 3'b110,
-    F3_CSRRCI       = 3'b111
+    F3_ECALL_EBREAK_ERET = 3'b000,
+    F3_CSRRW             = 3'b001,
+    F3_CSRRS             = 3'b010,
+    F3_CSRRC             = 3'b011,
+    F3_CSRRWI            = 3'b101,
+    F3_CSRRSI            = 3'b110,
+    F3_CSRRCI            = 3'b111
 } op_func3_system_t;
 
 

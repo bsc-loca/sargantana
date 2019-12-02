@@ -41,14 +41,15 @@ module control_unit(
     // jump enable logic
     // TODO add exceptions and csr
     always_comb begin
-        jump_enable_int =  (wb_cu_i.valid && 
-                            wb_cu_i.xcpt) ||
-                           // branch at commit
-                           (wb_cu_i.valid && 
-                            wb_cu_i.change_pc_ena && 
-                            wb_cu_i.branch_taken) || 
-                           // valid jal
-                            id_cu_i.valid_jal;
+        jump_enable_int =   (wb_cu_i.valid && wb_cu_i.xcpt) ||
+                            // branch at commit
+                            (wb_cu_i.valid && wb_cu_i.change_pc_ena && wb_cu_i.branch_taken) || 
+                            // valid jal
+                            id_cu_i.valid_jal ||
+                            // jump to evec when eret
+                            csr_cu_i.csr_eret ||
+                            // jump to evec when ecall
+                            (wb_cu_i.valid && wb_cu_i.ecall_taken);
     end
 
     // logic enable write regoister file at commit
@@ -82,7 +83,8 @@ module control_unit(
     // logic select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
-        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret) begin
+        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret ||
+                     (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
@@ -95,8 +97,10 @@ module control_unit(
     // logic about flush the pipeline if branch
     always_comb begin
         // if exception
-        if (wb_cu_i.xcpt & wb_cu_i.valid ||
-                     wb_cu_i.branch_taken & wb_cu_i.valid) begin
+        if ((wb_cu_i.xcpt & wb_cu_i.valid) ||
+                     (wb_cu_i.branch_taken & wb_cu_i.valid) || 
+                     (csr_cu_i.csr_eret) ||
+                     (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b1;
             pipeline_ctrl_o.flush_rr  = 1'b1;

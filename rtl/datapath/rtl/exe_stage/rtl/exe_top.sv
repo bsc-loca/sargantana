@@ -188,6 +188,10 @@ always_comb begin
             to_wb_o.result_rd = result_mem;
             to_wb_o.result_pc = 0;
         end
+        UNIT_SYSTEM: begin
+            to_wb_o.result_rd = rs1_data_bypass;
+            to_wb_o.result_pc = 0;
+        end
         default: begin
             to_wb_o.result_rd = 0;
             to_wb_o.result_pc = 0;

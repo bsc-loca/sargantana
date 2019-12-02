@@ -391,6 +391,7 @@ typedef struct packed {
     logic write_enable;
     logic stall_csr;
     logic xcpt;
+    logic ecall_taken;
     //branch_pred_t bpred;
 } wb_cu_t;
 

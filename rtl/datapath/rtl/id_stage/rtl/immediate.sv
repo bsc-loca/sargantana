@@ -78,7 +78,8 @@ module immediate(
                     F3_CSRRC,
                     F3_CSRRWI,
                     F3_CSRRSI,
-                    F3_CSRRCI: begin
+                    F3_CSRRCI,
+                    F3_ECALL_EBREAK_ERET : begin
                         imm_o = {sign_extended,imm_itype};        
                     end
                     default: begin
