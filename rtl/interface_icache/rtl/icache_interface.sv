@@ -24,6 +24,7 @@ module icache_interface(
 
     // Request input signals from ICache
     input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
+    input addr_t             icache_resp_vaddr_i, // ICACHE_RESP_BITS_VADDR
     input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
     input logic              icache_req_ready_i, // ICACHE_REQ_READY,
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
@@ -35,6 +36,7 @@ module icache_interface(
     output logic             icache_req_kill_o, // ICACHE_REQ_BITS_KILL,
     output reg               icache_req_valid_o, // ICACHE_REQ_VALID,
     output reg               icache_resp_ready_o, // ICACHE_RESP_READY,
+    output icache_vpn_t      icache_req_bits_vpn_o, // ICACHE_REQ_BITS_VPN,
     output icache_vpn_t      tlb_req_bits_vpn_o, // TLB_REQ_BITS_VPN,
     output logic             tlb_req_valid_o, // TLB_REQ_VALID
     
@@ -96,7 +98,10 @@ always_comb begin
                 next_state_int = (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
                 icache_req_valid_o = 1'b0;
                 icache_resp_ready_o = 1'b1;
-                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i;
+                // is valid if the data from the core is cvalid and no exceptions plus the address
+                // of the data form the cache is the same as the address form the fetch
+                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i &
+                        (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
             end
         end
         Replay:begin
@@ -132,6 +137,7 @@ assign icache_invalidate_o = 1'b0;
 
 // Connect vaddr to the corresponding tlb and idx
 assign tlb_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
+assign icahe_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
 assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
 // TODO (guillemlp) I am not sure when to activate this 

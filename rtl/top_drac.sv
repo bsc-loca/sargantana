@@ -26,6 +26,7 @@ module top_drac(
 // I-CANCHE INPUT INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
     input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
+    input addr_t                ICACHE_RESP_BITS_VADDR,
     input logic                 ICACHE_RESP_VALID,
     input logic                 ICACHE_REQ_READY,
     input logic                 PTWINVALIDATE,
@@ -81,6 +82,7 @@ module top_drac(
     output logic                ICACHE_REQ_BITS_KILL,
     output logic                ICACHE_REQ_VALID,
     output logic                ICACHE_RESP_READY,
+    output logic [27:0]         ICACHE_REQ_BITS_VPN,
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
 
@@ -285,7 +287,8 @@ icache_interface icache_interface_inst(
     .rstn_i(RST),
 
     // Inputs ICache
-    .icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK), 
+    .icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK),
+    .icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
     .icache_resp_valid_i(ICACHE_RESP_VALID),
     .icache_req_ready_i(ICACHE_REQ_READY), 
     .ptw_invalidate_i(PTWINVALIDATE),
@@ -301,6 +304,7 @@ icache_interface icache_interface_inst(
     .icache_req_kill_o(ICACHE_REQ_BITS_KILL), 
     .icache_req_valid_o(ICACHE_REQ_VALID),
     .icache_resp_ready_o(ICACHE_RESP_READY),
+    .icache_req_bits_vpn_o(ICACHE_REQ_BITS_VPN), 
     .tlb_req_bits_vpn_o(TLB_REQ_BITS_VPN), 
     .tlb_req_valid_o(TLB_REQ_VALID),
 
