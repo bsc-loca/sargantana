@@ -65,17 +65,6 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
     regPC_t addr_table [0:NUM_ENTRIES-1];
     reg_control_cell control_table[0:NUM_ENTRIES-1];
 
-    `ifndef SYNTHESIS
-        // Initialize all the entries of lsq with the initial state
-        integer i;
-        initial 
-        begin for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
-                data_table[i] = 64'h0;
-                addr_table[i] = 64'h0;
-                control_table[i] = 17'h0;
-              end
-        end
-    `endif
     
     always_ff @(posedge clk_i)
     begin

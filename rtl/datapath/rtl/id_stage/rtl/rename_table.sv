@@ -13,6 +13,7 @@
 
 //`default_nettype none
 import drac_pkg::*;
+import riscv_pkg::*;
 
 module rename_table(
     input wire             clk_i,               // Clock Singal

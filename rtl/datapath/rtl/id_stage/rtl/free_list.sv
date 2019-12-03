@@ -13,6 +13,7 @@
 
 //`default_nettype none
 import drac_pkg::*;
+import riscv_pkg::*;
 
 localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 

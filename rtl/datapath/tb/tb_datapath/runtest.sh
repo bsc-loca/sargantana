@@ -13,7 +13,6 @@ done < <(find tests -iname \*.hex )
 #remove empty character at the end
 isa_tests=${isa_tests::-1}
 
-
 #iterate over all the listed isa_tests
 echo "*** Start ISA tests form: tb_datapath "
 while read p; do
