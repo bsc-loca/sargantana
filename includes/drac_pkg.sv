@@ -243,6 +243,11 @@ typedef struct packed {
     logic        ready; // Dcache_interface ready to accept mem. access
     bus64_t      data;  // Data from load
     logic        lock;   // Dcache cannot accept more mem. accesses
+    logic xcpt_ma_st;
+    logic xcpt_ma_ld;
+    logic xcpt_pf_st;
+    logic xcpt_pf_ld;
+    bus64_t addr;
 } resp_dcache_cpu_t;
 
 // Request send to ICache

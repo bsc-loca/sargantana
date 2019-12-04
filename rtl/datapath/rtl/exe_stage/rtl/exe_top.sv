@@ -139,7 +139,7 @@ assign req_cpu_dcache_o.data_rs2      = rs2_data_bypass;
 assign req_cpu_dcache_o.instr_type    = from_rr_i.instr.instr_type;
 assign req_cpu_dcache_o.mem_op        = from_rr_i.instr.mem_op;
 assign req_cpu_dcache_o.funct3        = from_rr_i.instr.funct3;
-assign req_cpu_dcache_o.rd             = from_rr_i.instr.rd;
+assign req_cpu_dcache_o.rd            = from_rr_i.instr.rd;
 assign req_cpu_dcache_o.imm           = from_rr_i.instr.imm;
 assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
@@ -156,7 +156,6 @@ assign stall_mem    = resp_dcache_cpu_i.lock;
 assign to_wb_o.instr.valid = from_rr_i.instr.valid;
 assign to_wb_o.instr.pc = from_rr_i.instr.pc;
 assign to_wb_o.instr.bpred = from_rr_i.instr.bpred;
-assign to_wb_o.instr.ex = from_rr_i.instr.ex;
 assign to_wb_o.instr.rs1 = from_rr_i.instr.rs1;
 assign to_wb_o.instr.rs2 = from_rr_i.instr.rs2;
 assign to_wb_o.instr.rd = from_rr_i.instr.rd;
@@ -177,6 +176,60 @@ assign to_wb_o.instr.imm = from_rr_i.instr.imm;
 assign to_wb_o.instr.aq = from_rr_i.instr.aq;
 assign to_wb_o.instr.rl = from_rr_i.instr.rl;
 assign to_wb_o.instr.stall_csr = from_rr_i.instr.stall_csr;
+
+always_comb begin
+    if(from_rr_i.instr.ex.valid) begin // Bypass exception from previous stages
+        to_wb_o.instr.ex = from_rr_i.instr.ex;
+    end else if(from_rr_i.instr.valid) begin // Check exceptions in exe stage
+        if(resp_dcache_cpu_i.xcpt_ma_st) begin // Misaligned store
+            to_wb_o.instr.ex.cause = ST_AMO_ADDR_MISALIGNED;
+            to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+            to_wb_o.instr.ex.valid = 1;
+        end else if (resp_dcache_cpu_i.xcpt_ma_ld) begin // Misaligned load
+            to_wb_o.instr.ex.cause = LD_ADDR_MISALIGNED;
+            to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+            to_wb_o.instr.ex.valid = 1;
+        end else if (resp_dcache_cpu_i.xcpt_pf_st) begin // Page fault store
+            to_wb_o.instr.ex.cause = ST_AMO_PAGE_FAULT;
+            to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+            to_wb_o.instr.ex.valid = 1;
+        end else if (resp_dcache_cpu_i.xcpt_pf_ld) begin // Page fault load
+            to_wb_o.instr.ex.cause = LD_PAGE_FAULT;
+            to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+            to_wb_o.instr.ex.valid = 1;
+        end else if (resp_dcache_cpu_i.addr[63:40] != 0 && from_rr_i.instr.unit == UNIT_MEM) begin // invalid address
+            case(from_rr_i.instr.instr_type)
+                SD, SW, SH, SB, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
+                AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
+                AMO_MAXWU, AMO_MINW, AMO_MINWU, AMO_SWAPD, AMO_ADDD,
+                AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU: begin
+                    to_wb_o.instr.ex.cause = ST_AMO_ACCESS_FAULT;
+                    to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+                    to_wb_o.instr.ex.valid = 1;
+                end
+                LD,LW,LWU,LH,LHU,LB,LBU: begin
+                    to_wb_o.instr.ex.cause = LD_ACCESS_FAULT;
+                    to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
+                    to_wb_o.instr.ex.valid = 1;
+                end
+                default: begin
+                    to_wb_o.instr.ex.cause = 0;
+                    to_wb_o.instr.ex.origin = 0;
+                    to_wb_o.instr.ex.valid = 0;
+                end
+            endcase
+        end else begin
+            to_wb_o.instr.ex.cause = 0;
+            to_wb_o.instr.ex.origin = 0;
+            to_wb_o.instr.ex.valid = 0;
+        end
+    end else begin
+        to_wb_o.instr.ex.cause = 0;
+        to_wb_o.instr.ex.origin = 0;
+        to_wb_o.instr.ex.valid = 0;
+    end
+end
+
 
 always_comb begin
     to_wb_o.branch_taken = 1'b0;

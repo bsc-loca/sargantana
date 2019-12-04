@@ -276,7 +276,7 @@ typedef enum logic[XLEN-1:0] {
     LD_ADDR_MISALIGNED      = 64'h04,
     LD_ACCESS_FAULT         = 64'h05,
     ST_AMO_ADDR_MISALIGNED  = 64'h06,
-    ST_AMO_ACCES_FAULT      = 64'h07,
+    ST_AMO_ACCESS_FAULT     = 64'h07,
     USER_ECALL              = 64'h08,
     SUPERVISOR_ECALL        = 64'h09,
     INSTR_PAGE_FAULT        = 64'h0C,
