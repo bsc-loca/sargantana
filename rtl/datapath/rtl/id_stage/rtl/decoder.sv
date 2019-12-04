@@ -210,7 +210,7 @@ module decoder(
                 end
                 OP_ATOMICS: begin
                     // TODO (guillemlp) what to do with aq and rl?
-                    decode_instr_o.regfile_we   = 1'b0;
+                    decode_instr_o.regfile_we   = 1'b1;
                     decode_instr_o.use_imm      = 1'b1;
                     decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit         = UNIT_MEM;
