@@ -57,6 +57,7 @@ logic kill_io_resp;
 logic kill_mem_ope;
 logic [1:0] state;
 logic [1:0] next_state;
+bus64_t dmem_req_addr_64;
 
 // Possible states of the control automata
 parameter ResetState  = 2'b00,
@@ -179,7 +180,8 @@ end
 
 // Address calculation
 // TODO: IS NOT REALIST TO DO ADDRESS CALCULATION HERE. IT SHOULD TAKE ONE CYCLE. FOR 50MHZ IS OK.
-assign dmem_req_addr_o = (req_cpu_dcache_i.mem_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1[39:0] : req_cpu_dcache_i.data_rs1[39:0] + req_cpu_dcache_i.imm[39:0];
+assign dmem_req_addr_64 = (req_cpu_dcache_i.mem_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
+assign dmem_req_addr_o = dmem_req_addr_64[39:0];
 
 // Granularity of mem. access. (BYTE, HALFWORD, WORD)
 assign dmem_op_type_o = {1'b0,req_cpu_dcache_i.funct3};
@@ -201,6 +203,13 @@ assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (req_cpu_dcache_i.mem_op !=
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;
+
+// Fill exceptions for exe stage
+assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_i;
+assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_i;
+assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_i;
+assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
+assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
 
 endmodule
 //`default_nettype wire
