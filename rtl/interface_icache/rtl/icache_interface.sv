@@ -137,7 +137,7 @@ assign icache_invalidate_o = 1'b0;
 
 // Connect vaddr to the corresponding tlb and idx
 assign tlb_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
-assign icahe_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
+assign icache_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
 assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
 // TODO (guillemlp) I am not sure when to activate this 
