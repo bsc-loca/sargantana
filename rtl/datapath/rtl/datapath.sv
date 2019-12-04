@@ -116,15 +116,15 @@ module datapath(
         .cu_if_o(cu_if_int),
         .invalidate_icache_o(invalidate_icache_int),
         .invalidate_buffer_o(invalidate_buffer_int),
-        .id_cu_i(id_cu_int)
-
+        .id_cu_i(id_cu_int),
+        .correct_branch_pred_i(correct_branch_pred)
     );
 
-    // COmbinational logic select the jum addr
+    // Combinational logic select the jum addr
     // from decode, wb 
     always_comb begin
-        if (control_int.sel_addr_if == SEL_JUMP_COMMIT) begin
-            pc_jump_if_int = exe_to_wb_wb.result_pc;
+        if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
+            pc_jump_if_int = exe_to_wb_exe.result_pc;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = resp_csr_cpu_i.csr_evec;
         end else begin
@@ -223,8 +223,12 @@ module datapath(
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
         .exe_if_branch_pred_o   (exe_if_branch_pred_int)
+        .correct_branch_pred_o  (correct_branch_pred)
     );
 
+    assign exe_cu_int.valid = stage_rr_exe_q.instr.valid;
+    assign exe_cu_int.branch_taken = exe_to_wb_exe.branch_taken;
+    assign exe_cu_int.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
     assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;
 
     register #($bits(exe_wb_instr_t)) reg_exe_inst(

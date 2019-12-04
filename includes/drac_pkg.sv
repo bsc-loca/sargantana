@@ -59,16 +59,16 @@ parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
 
 
 typedef enum logic [1:0] {
-    NEXT_PC_SEL_PC_4 = 2'b00,
-    NEXT_PC_SEL_PC   = 2'b01,
+    NEXT_PC_SEL_BP_OR_PC_4 = 2'b00,
+    NEXT_PC_SEL_KEEP_PC   = 2'b01,
     NEXT_PC_SEL_JUMP = 2'b10
 } next_pc_sel_t;    // Enum PC Selection
 
 typedef enum logic [1:0] {
-    SEL_JUMP_COMMIT = 2'b00,
-    SEL_JUMP_CSR    = 2'b01,
-    SEL_JUMP_DECODE = 2'b10
-} jump_addr_fetch_t; // Enum JUMP Selection
+    SEL_JUMP_EXECUTION = 2'b00,
+    SEL_JUMP_CSR       = 2'b01,
+    SEL_JUMP_DECODE    = 2'b10
+} jump_addr_fetch_t;
 
 typedef enum logic [1:0]{
     TLBMiss    = 2'b00,
@@ -301,9 +301,12 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
+    logic valid;
+    logic change_pc_ena;
+    logic branch_taken;
     logic stall;                // Execution unit stalled
     logic stall_csr_fence;      // CSR or fence
-} exe_cu_t;     // Execution Stage to Control Unit
+} exe_cu_t;
 
 // Control Unit signals
 typedef struct packed {

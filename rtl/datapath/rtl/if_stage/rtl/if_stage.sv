@@ -11,7 +11,7 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-`default_nettype none
+//`default_nettype none
 
 import drac_pkg::*;
 import riscv_pkg::*;
@@ -47,12 +47,21 @@ module if_stage(
     logic ex_if_addr_fault_int;
     logic ex_if_page_fault_int;
 
+    // Branch Predictor wires
+    logic       branch_predict_is_branch;
+    logic       branch_predict_taken;
+    addrPC_t    branch_predict_addr;
+
     always_comb begin
         priority case (cu_if_i.next_pc)
-            NEXT_PC_SEL_PC:
+            NEXT_PC_SEL_KEEP_PC:
                 next_pc = pc;
-            NEXT_PC_SEL_PC_4:
-                next_pc = pc + 64'h04;
+            NEXT_PC_SEL_BP_OR_PC_4: begin 
+                if (branch_predict_is_branch && branch_predict_taken) 
+                    next_pc = branch_predict_addr;
+                else
+                    next_pc = pc + 64'h04;
+            end
             NEXT_PC_SEL_JUMP:
                 next_pc = pc_jump_i;
             default: begin
@@ -121,7 +130,7 @@ module if_stage(
     assign fetch_o.inst    = resp_icache_cpu_i.data;
     assign fetch_o.valid   = resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int);  // valid if the response of the cache is valid or xcpt
 
-    // TODO: add branch predictor
+    // Branch predictor and RAS
     branch_predictor brach_predictor_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -130,11 +139,11 @@ module if_stage(
         .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
-       // .push_return_address_i(push_return_address_i),
-       // .pop_return_address_i(pop_return_address_i),
-       //.branch_predict_is_branch_o(branch_predict_is_branch_o),
-       .branch_predict_taken_o(fetch_o.bpred.decision),
-       .branch_predict_addr_o(fetch_o.bpred.pred_addr)
+        .push_return_address_i(1'b0),
+        .pop_return_address_i(1'b0),
+        .branch_predict_is_branch_o(branch_predict_is_branch),
+        .branch_predict_taken_o(branch_predict_taken),
+        .branch_predict_addr_o(branch_predict_addr)
     );
 
     // exceptions ordering
@@ -154,8 +163,12 @@ module if_stage(
             fetch_o.ex.valid = 1'b0;
         end
     end
+
     assign fetch_o.ex.origin = pc;
    
+    // Pipeline branch prediction to exe stage
+    assign fetch_o.bpred.decision = (branch_predict_taken)? PRED_TAKEN : PRED_NOT_TAKEN;
+    assign fetch_o.bpred.pred_addr = branch_predict_addr;
 
 endmodule
 `default_nettype wire
