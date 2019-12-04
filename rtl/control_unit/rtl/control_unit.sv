@@ -48,14 +48,17 @@ module control_unit(
                             id_cu_i.valid_jal ||
                             // jump to evec when eret
                             csr_cu_i.csr_eret ||
+                            // jump to evec when xcpt from csr
+                            csr_cu_i.csr_exception ||
                             // jump to evec when ecall
                             (wb_cu_i.valid && wb_cu_i.ecall_taken);
     end
 
-    // logic enable write regoister file at commit
+    // logic enable write register file at commit
     always_comb begin
         if (wb_cu_i.valid &&
            !wb_cu_i.xcpt &&
+           !csr_cu_i.csr_exception &&
             wb_cu_i.write_enable) 
         begin
             cu_rr_o.write_enable = 1'b1;
@@ -83,7 +86,7 @@ module control_unit(
     // logic select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
-        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret ||
+        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret || csr_cu_i.csr_exception ||
                      (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
@@ -100,6 +103,7 @@ module control_unit(
         if ((wb_cu_i.xcpt & wb_cu_i.valid) ||
                      (wb_cu_i.branch_taken & wb_cu_i.valid) || 
                      (csr_cu_i.csr_eret) ||
+                     (csr_cu_i.csr_exception) ||
                      (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b1;

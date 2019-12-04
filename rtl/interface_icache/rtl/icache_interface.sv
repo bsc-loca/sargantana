@@ -183,12 +183,16 @@ end
 assign old_pc_req_d = req_fetch_icache_i.vaddr;
 
 // Multiplexor to select the correct cacheline
-assign icache_line_int = (icache_resp_valid_i) ? icache_resp_datablock_i : icache_line_reg_q;
+assign icache_line_int = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
+                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]))  
+                    ? icache_resp_datablock_i : icache_line_reg_q;
 
 // It is a miss on the datablock buffered
 // We check for all the address if there is the need to access the TLB
 // don't speculate
-assign pc_buffer_d = (icache_resp_valid_i) ? req_fetch_icache_i.vaddr : pc_buffer_q; 
+assign pc_buffer_d = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
+                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) 
+                    ? req_fetch_icache_i.vaddr : pc_buffer_q; 
 
 assign buffer_diff_int = (pc_buffer_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
 

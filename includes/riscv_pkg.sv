@@ -257,10 +257,11 @@ typedef enum logic [11:0] {
     F12_ECALL   = 12'b000000000000,
     F12_EBREAK  = 12'b000000000001,
     F12_URET    = 12'b000000000010,
-    F12_ERET    = 12'b000100000000,
     F12_SRET    = 12'b000100000010,
     F12_MRET    = 12'b001100000010,
-    F12_WFI     = 12'b000100000011
+    F12_WFI     = 12'b000100000011,
+    F12_ERET    = 12'b000100000000, //Old ISA
+    F12_MRTS    = 12'b001100000101 //Old ISA
 } op_func12_system_t;
 
 typedef enum logic [6:0] {

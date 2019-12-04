@@ -546,9 +546,6 @@ module decoder(
                                     F12_URET: begin
                                         decode_instr_o.instr_type = URET;
                                     end
-                                    F12_ERET: begin
-                                        decode_instr_o.instr_type = ERET;
-                                    end
                                     F12_SRET: begin
                                         decode_instr_o.instr_type = SRET;
                                     end
@@ -557,6 +554,12 @@ module decoder(
                                     end
                                     F12_WFI: begin
                                         decode_instr_o.instr_type = WFI;
+                                    end
+                                    F12_ERET: begin // Old ISA
+                                        decode_instr_o.instr_type = ERET;
+                                    end
+                                    F12_MRTS: begin // Old ISA
+                                        decode_instr_o.instr_type = MRTS;
                                     end
                                     default: begin // check illegal instruction
                                         xcpt_illegal_instruction_int = 1'b1;

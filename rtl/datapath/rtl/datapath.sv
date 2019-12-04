@@ -328,7 +328,14 @@ module datapath(
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
-                ERET: begin
+                ERET: begin // Old ISA
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                end
+                MRTS: begin // Old ISA
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
@@ -386,7 +393,8 @@ module datapath(
     assign wb_cu_int.stall_csr = exe_to_wb_wb.instr.stall_csr && exe_to_wb_wb.instr.valid;
     assign wb_cu_int.xcpt = wb_xcpt;
     assign wb_cu_int.write_enable = exe_to_wb_wb.instr.regfile_we;
-    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL);
+    // TODO: the MRTH is a old isa instruction, remove in a future
+    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL || exe_to_wb_wb.instr.instr_type == MRTS);
 
     //assign wb_cu_int.bpred = ;
 
