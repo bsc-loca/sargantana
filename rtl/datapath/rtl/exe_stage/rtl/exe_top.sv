@@ -181,19 +181,19 @@ always_comb begin
     if(from_rr_i.instr.ex.valid) begin // Bypass exception from previous stages
         to_wb_o.instr.ex = from_rr_i.instr.ex;
     end else if(from_rr_i.instr.valid) begin // Check exceptions in exe stage
-        if(resp_dcache_cpu_i.xcpt_ma_st) begin // Misaligned store
+        if(resp_dcache_cpu_i.xcpt_ma_st && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned store
             to_wb_o.instr.ex.cause = ST_AMO_ADDR_MISALIGNED;
             to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.instr.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_ma_ld) begin // Misaligned load
+        end else if (resp_dcache_cpu_i.xcpt_ma_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned load
             to_wb_o.instr.ex.cause = LD_ADDR_MISALIGNED;
             to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.instr.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_pf_st) begin // Page fault store
+        end else if (resp_dcache_cpu_i.xcpt_pf_st && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault store
             to_wb_o.instr.ex.cause = ST_AMO_PAGE_FAULT;
             to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.instr.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_pf_ld) begin // Page fault load
+        end else if (resp_dcache_cpu_i.xcpt_pf_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault load
             to_wb_o.instr.ex.cause = LD_PAGE_FAULT;
             to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.instr.ex.valid = 1;

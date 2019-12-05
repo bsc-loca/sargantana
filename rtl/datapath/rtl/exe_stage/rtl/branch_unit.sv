@@ -41,10 +41,12 @@ assign less_u = data_rs1_i < data_rs2_i;
 always_comb begin
     case (instr_type_i)
         JAL: begin
-            target_o = pc_i + imm_i;
+            // Jal always puts a zero in the lower bit
+            target_o = (pc_i + imm_i) & 64'hFFFFFFFFFFFFFFFE; 
         end
         JALR: begin
-            target_o = data_rs1_i + imm_i;
+            // Jalr always puts a zero in the lower bit
+            target_o = (data_rs1_i + imm_i) & 64'hFFFFFFFFFFFFFFFE;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
             target_o = pc_i + imm_i;
