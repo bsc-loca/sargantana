@@ -50,7 +50,9 @@ module if_stage(
             NEXT_PC_SEL_JUMP:
                 next_pc = pc_jump_i;
             default: begin
+                `ifdef VERIFICATION
                 $error("next pc not defined error in if stage");
+                `endif
                 next_pc = pc + 64'h04;
             end
         endcase

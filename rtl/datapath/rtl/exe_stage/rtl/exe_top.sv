@@ -220,7 +220,7 @@ always_comb begin
                     to_wb_o.instr.ex.valid = 1;
                 end
                 default: begin
-                    to_wb_o.instr.ex.cause = 0;
+                    to_wb_o.instr.ex.cause = INSTR_ADDR_MISALIGNED;
                     to_wb_o.instr.ex.origin = 0;
                     to_wb_o.instr.ex.valid = 0;
                 end
@@ -230,12 +230,12 @@ always_comb begin
                     to_wb_o.instr.ex.origin = result_branch;
                     to_wb_o.instr.ex.valid = 1;
         end else begin
-            to_wb_o.instr.ex.cause = 0;
+            to_wb_o.instr.ex.cause = INSTR_ADDR_MISALIGNED;
             to_wb_o.instr.ex.origin = 0;
             to_wb_o.instr.ex.valid = 0;
         end
     end else begin
-        to_wb_o.instr.ex.cause = 0;
+        to_wb_o.instr.ex.cause = INSTR_ADDR_MISALIGNED;
         to_wb_o.instr.ex.origin = 0;
         to_wb_o.instr.ex.valid = 0;
     end
