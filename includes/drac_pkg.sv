@@ -256,7 +256,7 @@ typedef struct packed {
 typedef struct packed {
     logic         valid;             // New memory request
     logic         kill;              // Exception detected at Commit
-    logic         csr_eret;          // Exception from CSR Register File
+    //logic         csr_eret;          // Exception from CSR Register File //TODO:not needed
     bus64_t       data_rs1;          // Data operand 1
     bus64_t       data_rs2;          // Data operand 2
     instr_type_t  instr_type;        // Type of instruction

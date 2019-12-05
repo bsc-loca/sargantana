@@ -235,7 +235,8 @@ module datapath(
 
         // Not sure what they do
         .kill_i(1'b0),
-        .csr_eret_i(1'b0),
+        .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
+        .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 
         //.from_rr_i(dec_to_exe_exe),
         .from_rr_i(stage_rr_exe_q),
@@ -307,6 +308,13 @@ module datapath(
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
                 end
+                EBREAK: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                end
                 URET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
@@ -364,15 +372,14 @@ module datapath(
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
-    assign wb_xcpt = exe_to_wb_wb.instr.ex.valid | resp_csr_cpu_i.csr_interrupt;
+    assign wb_xcpt = exe_to_wb_wb.instr.ex.valid;
 
     assign req_cpu_csr_o.csr_exception = wb_xcpt;
 
     // if we can retire an instruction
     assign req_cpu_csr_o.csr_retire = exe_to_wb_wb.instr.valid && !wb_xcpt;
     // if there is a csr interrupt we take the interrupt?
-    assign req_cpu_csr_o.csr_xcpt_cause = (resp_csr_cpu_i.csr_interrupt) ?   resp_csr_cpu_i.csr_interrupt_cause : 
-                                                                            exe_to_wb_wb.instr.ex.cause;
+    assign req_cpu_csr_o.csr_xcpt_cause = exe_to_wb_wb.instr.ex.cause;
     assign req_cpu_csr_o.csr_pc = exe_to_wb_wb.instr.pc;
     
     
@@ -394,7 +401,9 @@ module datapath(
     assign wb_cu_int.xcpt = wb_xcpt;
     assign wb_cu_int.write_enable = exe_to_wb_wb.instr.regfile_we;
     // TODO: the MRTH is a old isa instruction, remove in a future
-    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL || exe_to_wb_wb.instr.instr_type == MRTS);
+    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL ||
+                                    exe_to_wb_wb.instr.instr_type == MRTS ||
+                                    exe_to_wb_wb.instr.instr_type == EBREAK );
 
     //assign wb_cu_int.bpred = ;
 

@@ -17,7 +17,9 @@ module exe_top (
     input logic             clk_i,
     input logic             rstn_i,
     input logic             kill_i,
-    input logic             csr_eret_i,
+
+    input logic             csr_interrupt_i, // interrupt detected on the csr
+    input bus64_t           csr_interrupt_cause_i,  // which interrupt has been detected
 
     // INPUTS
     input rr_exe_instr_t    from_rr_i,
@@ -133,7 +135,7 @@ branch_unit branch_unit_inst (
 // Request to DCACHE INTERFACE
 assign req_cpu_dcache_o.valid         = from_rr_i.instr.unit == UNIT_MEM;
 assign req_cpu_dcache_o.kill          = kill_i;
-assign req_cpu_dcache_o.csr_eret      = csr_eret_i;
+//assign req_cpu_dcache_o.csr_eret      = csr_eret_i;
 assign req_cpu_dcache_o.data_rs1      = rs1_data_bypass;
 assign req_cpu_dcache_o.data_rs2      = rs2_data_bypass;
 assign req_cpu_dcache_o.instr_type    = from_rr_i.instr.instr_type;
@@ -181,7 +183,12 @@ always_comb begin
     if(from_rr_i.instr.ex.valid) begin // Bypass exception from previous stages
         to_wb_o.instr.ex = from_rr_i.instr.ex;
     end else if(from_rr_i.instr.valid) begin // Check exceptions in exe stage
-        if(resp_dcache_cpu_i.xcpt_ma_st && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned store
+        //Interrupt comming from csr, if there are a memory operation is better to finish it
+        if(from_rr_i.instr.unit != UNIT_MEM && csr_interrupt_i) begin 
+            to_wb_o.instr.ex.cause = csr_interrupt_cause_i;
+            to_wb_o.instr.ex.origin = 64'b0;
+            to_wb_o.instr.ex.valid = 1;
+        end else if(resp_dcache_cpu_i.xcpt_ma_st && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned store
             to_wb_o.instr.ex.cause = ST_AMO_ADDR_MISALIGNED;
             to_wb_o.instr.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.instr.ex.valid = 1;
