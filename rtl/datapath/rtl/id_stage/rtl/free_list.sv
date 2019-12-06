@@ -15,7 +15,7 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
-localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
+localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS - 1; // Number of entries in circular buffer
 
 // Free list Pointer
 typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
@@ -47,7 +47,7 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num [0:NUM_CHECKPOINTS-1];
+logic [$clog2(NUM_ENTRIES_FREE_LIST+1):0] num [0:NUM_CHECKPOINTS-1];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -71,7 +71,8 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
 
     // FIFO Memory structure
 
-    phreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1][0:NUM_CHECKPOINTS-1];
+    phreg_t first_free_register[0:NUM_CHECKPOINTS-1];       // Register used to read asyncronously
+    phreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1][0:NUM_CHECKPOINTS-1];    // SRAM used to store the restant free register. Read syncronous.
 
     always_ff @(posedge clk_i, negedge rstn_i)
     begin
@@ -86,9 +87,10 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
 
             checkpoint_o <= 2'b0;       // Label 00 not XX
 
+            first_free_register[0] <= 6'b100000;
 
             for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
-               register_table[i][0] = i[5:0] + 6'b100000;
+               register_table[i][0] = i[5:0] + 6'b100001;
             end
         end
         else begin
@@ -110,6 +112,8 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                 if (checkpoint_enable) begin
                     for (int i=0; i<NUM_ENTRIES_FREE_LIST; i++)
                         register_table[i][version_head + 2'b01] <= register_table[i][version_head];
+                    first_free_register[version_head + 2'b01] <= first_free_register[version_head];
+
                     head[version_head + 2'b01] <= head[version_head];
                     tail[version_head + 2'b01] <= tail[version_head];
                     num [version_head + 2'b01] <= num [version_head];
@@ -128,20 +132,17 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                 num[version_head]  <= num[version_head]  + {5'b0, write_enable} - {5'b0, read_enable};
 
 
-                // Read first free register
-                if (read_enable) begin
-                    // Special case bypass from tail to head
-                    if ((num[version_head] == 0) & (add_free_register_i)) begin
-                        new_register_o <= free_register_i; 
-                    end else begin // Normal case lookup renaming table
-                        new_register_o <= register_table[head[version_head]][version_head];
-                    end
-                end else begin // When not reading an entry
-                    new_register_o <= 6'h0;
+                // Write to first free register
+                if (read_enable & (num[version_head] >= 1)) begin
+                    first_free_register[version_head] <= register_table[head[version_head]][version_head];
+                end
+
+                if (write_enable & (num[version_head] == 0) & (~read_enable)) begin
+                    first_free_register[version_head] <= free_register_i; 
                 end
         
                 // Write new freed register
-                if (write_enable & ~(read_enable & num[version_head] == 0)) begin
+                if (write_enable & (num[version_head] >= 1) & ~(read_enable & num[version_head] == 0)) begin
                     register_table[tail[version_head]][version_head] <= free_register_i;
                 end
             end
@@ -151,6 +152,8 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
 `else
 
 `endif
+
+assign new_register_o = (~read_enable)? 6'h0 : ((num[version_head] == 0) & (add_free_register_i))? free_register_i : first_free_register[version_head];
 
 assign empty_o = (num[version_head] == 0);
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
