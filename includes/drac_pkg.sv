@@ -299,16 +299,16 @@ typedef struct packed {
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     `endif
+    phreg_t prd;                        // Physical register destination 
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
 typedef struct packed {
     logic valid;                        // Valid instruction
     reg_t rd;                           // Destination register
     bus64_t data;                       // Result data
-    phreg_t prs1;                       // Physical register source 1
-    phreg_t prs2;                       // Physical register source 2
     phreg_t prd;                        // Physical register destination 
 } wb_exe_instr_t;   // WB Stage to Execution
+
 
 // Control Unit signals
 typedef struct packed {

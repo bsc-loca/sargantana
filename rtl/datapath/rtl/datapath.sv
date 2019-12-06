@@ -229,12 +229,12 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .read_head_i(1'b0), //.read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
-        .add_free_register_i(free_a_register),
-        .free_register_i(freed_register),
-        .do_checkpoint_i(do_checkpoint),
-        .do_recover_i(do_recover),
-        .delete_checkpoint_i(delete_checkpoint),
-        .recover_checkpoint_i(recover_checkpoint),
+        .add_free_register_i(1'b0),//free_a_register),
+        .free_register_i(6'h0),//freed_register),
+        .do_checkpoint_i(1'b0),//do_checkpoint),
+        .do_recover_i(1'b0),//do_recover),
+        .delete_checkpoint_i(1'b0),//delete_checkpoint),
+        .recover_checkpoint_i(2'h0),//recover_checkpoint),
         .new_register_o(free_register_to_rename),
         .checkpoint_o(checkpoint_free_list),
         .out_of_checkpoints_o(out_of_checkpoints_free_list),
@@ -249,11 +249,11 @@ module datapath(
         .read_src2_i(stage_id_rr_d.instr.rs2),
         .old_dst_i(stage_id_rr_d.instr.rd),
         .write_dst_i(1'b0), //.write_dst_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
-        .new_dst_i(free_register_to_rename),
-        .do_checkpoint_i(do_checkpoint),
-        .do_recover_i(do_recover),
-        .delete_checkpoint_i(delete_checkpoint),
-        .recover_checkpoint_i(recover_checkpoint),
+        .new_dst_i({1'b0,stage_id_rr_d.instr.rd}),//free_register_to_rename),
+        .do_checkpoint_i(1'b0),//do_checkpoint),
+        .do_recover_i(1'b0),//do_recover),
+        .delete_checkpoint_i(1'b0),//delete_checkpoint),
+        .recover_checkpoint_i(2'h0),//recover_checkpoint),
         .src1_o(stage_no_stall_rr_q.prs1),
         .src2_o(stage_no_stall_rr_q.prs2),
         .old_dst_o(stage_no_stall_rr_q.prd),
@@ -289,6 +289,7 @@ module datapath(
     always @(posedge clk_i) begin
         src_select_id_rr_q <= !control_int.stall_id;
     end
+
     assign stage_id_rr_q = (src_select_id_rr_q)? stage_no_stall_rr_q : stage_stall_rr_q;    
 
     assign reg_wr_data   = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_rr_int;
@@ -312,6 +313,10 @@ module datapath(
     assign stage_rr_exe_d.instr = stage_id_rr_q;
     assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
     assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
+
+    assign stage_rr_exe_d.prd = stage_id_rr_q.prd;
+    assign stage_rr_exe_d.prs1 = stage_id_rr_q.prs1;
+    assign stage_rr_exe_d.prs2 = stage_id_rr_q.prs2;
 
     assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
 
@@ -399,7 +404,8 @@ module datapath(
     // of forwarding the result of a CSR to increasse the frequency
     assign wb_to_exe_exe.valid  = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
-    assign wb_to_exe_exe.data   = exe_to_wb_wb.result;
+    assign wb_to_exe_exe.prd    = exe_to_wb_wb.prd;
+    assign wb_to_exe_exe.data   = data_wb_rr_int;
 
     // Control Unit
     assign wb_cu_int.valid = exe_to_wb_wb.valid;//; & !control_int.stall_wb; // and not flush???
