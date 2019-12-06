@@ -12,6 +12,7 @@
  */
 //`default_nettype none
 import drac_pkg::*;
+import riscv_pkg::*;
 
 module exe_top (
     input logic             clk_i,
@@ -185,7 +186,7 @@ always_comb begin
     end else if(from_rr_i.instr.valid) begin // Check exceptions in exe stage
         //Interrupt comming from csr, if there are a memory operation is better to finish it
         if(from_rr_i.instr.unit != UNIT_MEM && csr_interrupt_i) begin 
-            to_wb_o.instr.ex.cause = csr_interrupt_cause_i;
+            to_wb_o.instr.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             to_wb_o.instr.ex.origin = 64'b0;
             to_wb_o.instr.ex.valid = 1;
         end else if(resp_dcache_cpu_i.xcpt_ma_st && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned store
