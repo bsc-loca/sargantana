@@ -21,11 +21,12 @@ module if_stage(
     
     input logic                 stall_i,
     // which pc to select
-    input next_pc_sel_t         next_pc_sel_i,
+    //input next_pc_sel_t         next_pc_sel_i,
+    cu_if_t                     cu_if_i,
     // PC comming from commit/decode/ecall
     input addrPC_t              pc_jump_i,
     // Response packet coming from Icache
-    input resp_icache_cpu_t      resp_icache_cpu_i,
+    input resp_icache_cpu_t     resp_icache_cpu_i,
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,
     // fetch data output
@@ -42,7 +43,7 @@ module if_stage(
     logic ex_if_page_fault_int;
 
     always_comb begin
-        priority case (next_pc_sel_i)
+        priority case (cu_if_i.next_pc)
             NEXT_PC_SEL_PC:
                 next_pc = pc;
             NEXT_PC_SEL_PC_4:
@@ -105,14 +106,14 @@ module if_stage(
 
     // logic for icache access: if not misaligned and not stall
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & !stall_i;
-
     assign req_cpu_icache_o.vaddr = pc[39:0];
+    assign req_cpu_icache_o.invalidate_icache = cu_if_i.invalidate_icache;
 
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst = resp_icache_cpu_i.data;
-    assign fetch_o.valid = resp_icache_cpu_i.valid;
+    assign fetch_o.inst    = resp_icache_cpu_i.data;
+    assign fetch_o.valid   = resp_icache_cpu_i.valid; 
 
     // TODO: add branch predictor
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN;

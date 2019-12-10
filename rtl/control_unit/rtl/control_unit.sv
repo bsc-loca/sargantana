@@ -77,7 +77,7 @@ module control_unit(
                      id_cu_i.stall_csr_fence  || 
                      rr_cu_i.stall_csr_fence  || 
                      exe_cu_i.stall_csr_fence || 
-                     (wb_cu_i.valid && wb_cu_i.fence) )  begin
+                     (wb_cu_i.valid && wb_cu_i.fence))  begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC;
         end else begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC_4;
@@ -96,6 +96,9 @@ module control_unit(
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
     end
+
+    // logic invalidate icache
+    assign cu_if_o.invalidate_icache = (wb_cu_i.valid && wb_cu_i.fence);
 
 
     // logic about flush the pipeline if branch

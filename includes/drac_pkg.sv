@@ -97,6 +97,7 @@ typedef struct packed {
 typedef struct packed {
     logic  valid;
     addr_t vaddr;
+    logic  invalidate_icache;
 } req_cpu_icache_t;
 
 typedef enum logic [2:0] {
@@ -378,6 +379,7 @@ typedef struct packed {
 
 typedef struct packed {
     next_pc_sel_t next_pc;
+    logic invalidate_icache;
 } cu_if_t;
 
 typedef struct packed {

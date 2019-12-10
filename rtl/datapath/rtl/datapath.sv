@@ -160,7 +160,8 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .stall_i(control_int.stall_if),
-        .next_pc_sel_i(cu_if_int.next_pc),
+        .cu_if_i(cu_if_int),
+        //.next_pc_sel_i(cu_if_int.next_pc),
         .pc_jump_i(pc_jump_if_int),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
@@ -401,6 +402,10 @@ module datapath(
     assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL ||
                                     exe_to_wb_wb.instr.instr_type == MRTS ||
                                     exe_to_wb_wb.instr.instr_type == EBREAK );
+    // tell cu that there is a fence
+    assign wb_cu_int.fence = (exe_to_wb_wb.instr.instr_type == FENCE_I || 
+                              exe_to_wb_wb.instr.instr_type == FENCE);
+
 
     //assign wb_cu_int.bpred = ;
 
