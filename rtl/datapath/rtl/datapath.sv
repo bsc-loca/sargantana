@@ -262,7 +262,7 @@ module datapath(
 
     // WB
     // CSR
-    //assign wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+    //assign wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
     // TODO (guillemlp): add a module thatn handles this
     always_comb begin
         if (exe_to_wb_wb.instr.valid) begin
@@ -270,82 +270,82 @@ module datapath(
                 CSRRW: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRS: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRC: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRWI: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRSI: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRCI: begin
                     // TODO (guillemlp) do we extend sign?
                     wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};  
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 ECALL: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 EBREAK: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 URET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 SRET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 MRET: begin
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 ERET: begin // Old ISA
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 MRTS: begin // Old ISA
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = !resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 default: begin
                     wb_csr_cmd_int = CSR_CMD_NOPE;
