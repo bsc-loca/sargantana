@@ -112,15 +112,12 @@ module datapath(
     // data to write to RR from wb
     bus64_t data_wb_rr_int;
 
-
-    // What is this????
     // TODO: Ruben
-    always_ff @(posedge clk_i, negedge rstn_i, negedge soft_rstn_i) begin
-        // What is that?????
-        if(!soft_rstn_i) begin
-            io_base_addr <=  40'h0080000000;
-        end else if(~rstn_i) begin
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(!rstn_i) begin
             io_base_addr <=  40'h0040000000;
+        end else if(!soft_rstn_i) begin
+            io_base_addr <=  40'h0080000000;
         end else begin 
             io_base_addr <= io_base_addr;
         end
