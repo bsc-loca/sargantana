@@ -185,7 +185,7 @@ module datapath(
     );
     // valid jal in decode
     assign id_cu_int.valid_jal = jal_id_if_int.valid;
-    assign id_cu_int.stall_csr = stage_id_rr_d.stall_csr && stage_id_rr_d.valid;
+    assign id_cu_int.stall_csr_fence = stage_id_rr_d.stall_csr_fence && stage_id_rr_d.valid;
 
     // Register ID to RR
     register #($bits(instr_entry_t)) reg_id_inst(
@@ -214,7 +214,7 @@ module datapath(
     //assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
     assign stage_rr_exe_d.instr = stage_id_rr_q;
 
-    assign rr_cu_int.stall_csr = stage_rr_exe_d.instr.stall_csr && stage_rr_exe_d.instr.valid;
+    assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
 
     // Register RR to EXE
     register #($bits(stage_rr_exe_d)) reg_rr_inst(
@@ -249,7 +249,7 @@ module datapath(
         .dmem_lock_o()
     );
 
-    assign exe_cu_int.stall_csr = stage_rr_exe_q.instr.stall_csr && stage_rr_exe_q.instr.valid;
+    assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;
 
     register #($bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
@@ -394,7 +394,7 @@ module datapath(
     assign wb_cu_int.change_pc_ena = exe_to_wb_wb.instr.change_pc_ena;
     assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
-    assign wb_cu_int.stall_csr = exe_to_wb_wb.instr.stall_csr && exe_to_wb_wb.instr.valid;
+    assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.instr.stall_csr_fence && exe_to_wb_wb.instr.valid;
     assign wb_cu_int.xcpt = wb_xcpt;
     assign wb_cu_int.write_enable = exe_to_wb_wb.instr.regfile_we;
     // TODO: the MRTH is a old isa instruction, remove in a future

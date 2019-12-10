@@ -178,7 +178,7 @@ assign to_wb_o.instr.funct3 = from_rr_i.instr.funct3;
 assign to_wb_o.instr.imm = from_rr_i.instr.imm;
 assign to_wb_o.instr.aq = from_rr_i.instr.aq;
 assign to_wb_o.instr.rl = from_rr_i.instr.rl;
-assign to_wb_o.instr.stall_csr = from_rr_i.instr.stall_csr;
+assign to_wb_o.instr.stall_csr_fence = from_rr_i.instr.stall_csr_fence;
 
 always_comb begin
     if(from_rr_i.instr.ex.valid) begin // Bypass exception from previous stages

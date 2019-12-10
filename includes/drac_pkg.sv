@@ -308,7 +308,7 @@ typedef struct packed {
     logic aq;
     logic rl;
     // TODO remove
-    logic stall_csr;
+    logic stall_csr_fence;
 } instr_entry_t;
 
 typedef struct packed {
@@ -368,11 +368,11 @@ typedef struct packed {
 
 typedef struct packed {
     logic valid_jal;
-    logic stall_csr;
+    logic stall_csr_fence;
 } id_cu_t;
 
 typedef struct packed {
-    logic stall_csr;
+    logic stall_csr_fence;
 } rr_cu_t;
 
 
@@ -387,7 +387,7 @@ typedef struct packed {
 // Control Unit signals
 typedef struct packed {
     logic stall;
-    logic stall_csr;
+    logic stall_csr_fence;
 } exe_cu_t;
 
 // Control Unit signals
@@ -397,9 +397,10 @@ typedef struct packed {
     logic branch_taken;
     logic csr_enable_wb;
     logic write_enable;
-    logic stall_csr;
+    logic stall_csr_fence;
     logic xcpt;
     logic ecall_taken;
+    logic fence;
     //branch_pred_t bpred;
 } wb_cu_t;
 

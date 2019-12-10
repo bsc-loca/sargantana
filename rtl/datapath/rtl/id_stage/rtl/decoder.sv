@@ -75,7 +75,7 @@ module decoder(
         decode_instr_o.rl = 1'b0;
 
         // TODO remove
-        decode_instr_o.stall_csr = 1'b0;
+        decode_instr_o.stall_csr_fence = 1'b0;
 
 
         if (!decode_i.ex.valid && decode_i.valid ) begin
@@ -520,6 +520,8 @@ module decoder(
                 OP_FENCE: begin
                     // Not sure what we should do
                     decode_instr_o.instr_type = FENCE;
+                    // It behaves similarly as a fence
+                    decode_instr_o.stall_csr_fence = 1'b1;
                 end
                 OP_SYSTEM: begin
                     decode_instr_o.use_imm    = 1'b1;
@@ -569,27 +571,27 @@ module decoder(
                         end
                         F3_CSRRW: begin
                            decode_instr_o.instr_type = CSRRW;
-                           decode_instr_o.stall_csr = 1'b1;
+                           decode_instr_o.stall_csr_fence = 1'b1;
                         end
                         F3_CSRRS: begin
                             decode_instr_o.instr_type = CSRRS;
-                            decode_instr_o.stall_csr = 1'b1;
+                            decode_instr_o.stall_csr_fence = 1'b1;
                         end
                         F3_CSRRC: begin
                             decode_instr_o.instr_type = CSRRC;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRWI: begin
                             decode_instr_o.instr_type = CSRRWI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRSI: begin
                             decode_instr_o.instr_type = CSRRSI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRCI: begin
                             decode_instr_o.instr_type = CSRRCI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

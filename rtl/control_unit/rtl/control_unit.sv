@@ -72,11 +72,12 @@ module control_unit(
         // branches or valid jal
         if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        end else if (!valid_fetch | 
-                     pipeline_ctrl_o.stall_if | 
-                     id_cu_i.stall_csr | 
-                     rr_cu_i.stall_csr | 
-                     exe_cu_i.stall_csr)  begin
+        end else if (!valid_fetch || 
+                     pipeline_ctrl_o.stall_if || 
+                     id_cu_i.stall_csr_fence  || 
+                     rr_cu_i.stall_csr_fence  || 
+                     exe_cu_i.stall_csr_fence || 
+                     (wb_cu_i.valid && wb_cu_i.fence) )  begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC;
         end else begin
             cu_if_o.next_pc = NEXT_PC_SEL_PC_4;
@@ -110,16 +111,17 @@ module control_unit(
             pipeline_ctrl_o.flush_rr  = 1'b1;
             pipeline_ctrl_o.flush_exe = 1'b1;
             pipeline_ctrl_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.stall_csr | 
-                     rr_cu_i.stall_csr | 
-                     exe_cu_i.stall_csr |
-                     exe_cu_i.stall_csr ) begin
+        end else if (id_cu_i.stall_csr_fence | 
+                     rr_cu_i.stall_csr_fence | 
+                     exe_cu_i.stall_csr_fence |
+                     exe_cu_i.stall_csr_fence ) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b0;
             pipeline_ctrl_o.flush_rr  = 1'b0;
             pipeline_ctrl_o.flush_exe = 1'b0;
             pipeline_ctrl_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.valid_jal) begin
+        end else if (id_cu_i.valid_jal ||
+                    (wb_cu_i.valid && wb_cu_i.fence)) begin
             pipeline_ctrl_o.flush_if  = 1'b1;
             pipeline_ctrl_o.flush_id  = 1'b0;
             pipeline_ctrl_o.flush_rr  = 1'b0;
@@ -144,19 +146,19 @@ module control_unit(
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end /*else if (exe_cu_i.stall_csr) begin
+        end /*else if (exe_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end /*else if (rr_cu_i.stall_csr) begin
+        end /*else if (rr_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (id_cu_i.stall_csr) begin
+        end else if (id_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
