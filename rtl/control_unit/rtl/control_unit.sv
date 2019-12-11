@@ -29,6 +29,7 @@ module control_unit(
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output cu_if_t          cu_if_o,
+    output logic            invalidate_icache_o,
     //output cu_id_t          cu_id_o,
     output cu_rr_t          cu_rr_o
     //output cu_exe_t         cu_exe_o,
@@ -98,7 +99,7 @@ module control_unit(
     end
 
     // logic invalidate icache
-    assign cu_if_o.invalidate_icache = (wb_cu_i.valid && wb_cu_i.fence);
+    assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence);
 
 
     // logic about flush the pipeline if branch

@@ -22,7 +22,8 @@ module if_stage(
     input logic                 stall_i,
     // which pc to select
     //input next_pc_sel_t         next_pc_sel_i,
-    cu_if_t                     cu_if_i,
+    input cu_if_t               cu_if_i,
+    input logic                 invalidate_icache_i,
     // PC comming from commit/decode/ecall
     input addrPC_t              pc_jump_i,
     // Response packet coming from Icache
@@ -107,7 +108,7 @@ module if_stage(
     // logic for icache access: if not misaligned and not stall
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & !stall_i;
     assign req_cpu_icache_o.vaddr = pc[39:0];
-    assign req_cpu_icache_o.invalidate_icache = cu_if_i.invalidate_icache;
+    assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
 
     
     // Output fetch

@@ -59,12 +59,18 @@ logic [1:0] state;
 logic [1:0] next_state;
 bus64_t dmem_req_addr_64;
 
+logic [1:0] type_of_op;
+
 // Possible states of the control automata
 parameter ResetState  = 2'b00,
           Idle = 2'b01,
           MakeRequest = 2'b10,
           WaitResponse = 2'b11;
 
+parameter MEM_NOP   = 2'b00,
+          MEM_LOAD  = 2'b01,
+          MEM_STORE = 2'b10,
+          MEM_AMO   = 2'b11;
 
 //-------------------------------------------------------------
 // CONTROL SIGNALS
@@ -82,7 +88,7 @@ assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (
 //////////////////////////////////////////////////////////////////////
 
 // Address is in INPUT/OUTPUT space
-assign kill_io_resp =  io_address_space & (req_cpu_dcache_i.mem_op == MEM_STORE);
+assign kill_io_resp =  io_address_space & (type_of_op == MEM_STORE);
 
 // There has been a exception
 assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
@@ -155,20 +161,60 @@ end
 
 // Decide type of memory operation
 always_comb begin
+    type_of_op = MEM_NOP;
     case(req_cpu_dcache_i.instr_type)
-        AMO_LRW,AMO_LRD:            dmem_req_cmd_o = 5'b00110; // lr
-        AMO_SCW,AMO_SCD:            dmem_req_cmd_o = 5'b00111; // sc
-        AMO_SWAPW,AMO_SWAPD:        dmem_req_cmd_o = 5'b00100; // amoswap
-        AMO_ADDW,AMO_ADDD:          dmem_req_cmd_o = 5'b01000; // amoadd
-        AMO_XORW,AMO_XORD:          dmem_req_cmd_o = 5'b01001; // amoxor
-        AMO_ANDW,AMO_ANDD:          dmem_req_cmd_o = 5'b01011; // amoand
-        AMO_ORW,AMO_ORD:            dmem_req_cmd_o = 5'b01010; // amoor
-        AMO_MINW,AMO_MIND:          dmem_req_cmd_o = 5'b01100; // amomin
-        AMO_MAXW,AMO_MAXD:          dmem_req_cmd_o = 5'b01101; // amomax
-        AMO_MINWU,AMO_MINDU:        dmem_req_cmd_o = 5'b01110; // amominu
-        AMO_MAXWU,AMO_MAXDU:        dmem_req_cmd_o = 5'b01111; // amomaxu
-        LD,LW,LWU,LH,LHU,LB,LBU:    dmem_req_cmd_o = 5'b00000; // Load
-        SD,SW,SH,SB:                dmem_req_cmd_o = 5'b00001; // Store
+        AMO_LRW,AMO_LRD:         begin
+                                    dmem_req_cmd_o = 5'b00110; // lr
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_SCW,AMO_SCD:         begin
+                                    dmem_req_cmd_o = 5'b00111; // sc
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_SWAPW,AMO_SWAPD:     begin
+                                    dmem_req_cmd_o = 5'b00100; // amoswap
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_ADDW,AMO_ADDD:       begin
+                                    dmem_req_cmd_o = 5'b01000; // amoadd
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_XORW,AMO_XORD:       begin
+                                    dmem_req_cmd_o = 5'b01001; // amoxor
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_ANDW,AMO_ANDD:       begin
+                                    dmem_req_cmd_o = 5'b01011; // amoand
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_ORW,AMO_ORD:         begin
+                                    dmem_req_cmd_o = 5'b01010; // amoor
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_MINW,AMO_MIND:       begin
+                                    dmem_req_cmd_o = 5'b01100; // amomin
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_MAXW,AMO_MAXD:       begin
+                                    dmem_req_cmd_o = 5'b01101; // amomax
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_MINWU,AMO_MINDU:     begin
+                                    dmem_req_cmd_o = 5'b01110; // amominu
+                                    type_of_op = MEM_AMO;
+        end
+        AMO_MAXWU,AMO_MAXDU:     begin  
+                                    dmem_req_cmd_o = 5'b01111; // amomaxu
+                                    type_of_op = MEM_AMO;
+        end
+        LD,LW,LWU,LH,LHU,LB,LBU: begin
+                                    dmem_req_cmd_o = 5'b00000; // Load
+                                    type_of_op = MEM_LOAD;
+        end
+        SD,SW,SH,SB:             begin
+                                    dmem_req_cmd_o = 5'b00001; // Store
+                                    type_of_op = MEM_STORE;
+        end
         default: begin
                                     dmem_req_cmd_o = 5'b00000;
                                     `ifdef ASSERTIONS
@@ -180,11 +226,11 @@ end
 
 // Address calculation
 // TODO: IS NOT REALIST TO DO ADDRESS CALCULATION HERE. IT SHOULD TAKE ONE CYCLE. FOR 50MHZ IS OK.
-assign dmem_req_addr_64 = (req_cpu_dcache_i.mem_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
+assign dmem_req_addr_64 = (type_of_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
 assign dmem_req_addr_o = dmem_req_addr_64[39:0];
 
 // Granularity of mem. access. (BYTE, HALFWORD, WORD)
-assign dmem_op_type_o = {1'b0,req_cpu_dcache_i.funct3};
+assign dmem_op_type_o = {1'b0,req_cpu_dcache_i.mem_size};
 
 // Data to store if needed
 assign dmem_req_data_o = req_cpu_dcache_i.data_rs2;
@@ -199,7 +245,7 @@ assign dmem_req_invalidate_lr_o = req_cpu_dcache_i.kill;
 assign dmem_req_kill_o = mem_xcpt | req_cpu_dcache_i.kill;
 
 // Dcache interface is ready
-assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (req_cpu_dcache_i.mem_op != MEM_STORE);
+assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (type_of_op != MEM_STORE);
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;

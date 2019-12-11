@@ -52,6 +52,7 @@ module datapath(
     // Fetch
     if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
     if_id_stage_t stage_if_id_q; // this is the next or output of reg
+    logic invalidate_icache_int;
     // Decode
     instr_entry_t stage_id_rr_d;
     instr_entry_t stage_id_rr_q;
@@ -113,6 +114,7 @@ module datapath(
         .csr_cu_i(resp_csr_cpu_i),
         .pipeline_ctrl_o(control_int),
         .cu_if_o(cu_if_int),
+        .invalidate_icache_o(invalidate_icache_int),
         .id_cu_i(id_cu_int)
 
     );
@@ -135,6 +137,7 @@ module datapath(
         .rstn_i(rstn_i),
         .stall_i(control_int.stall_if),
         .cu_if_i(cu_if_int),
+        .invalidate_icache_i(invalidate_icache_int),
         //.next_pc_sel_i(cu_if_int.next_pc),
         .pc_jump_i(pc_jump_if_int),
         .resp_icache_cpu_i(resp_icache_cpu_i),
