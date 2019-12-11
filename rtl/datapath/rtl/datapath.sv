@@ -33,17 +33,6 @@ module datapath(
 
 
     // Stages: if -- id -- rr -- ex -- wb
-    // Signals stalls to be coming from the control unit
-    /*logic stall_if_int;
-    logic stall_id_int;
-    logic stall_rr_int;
-    logic stall_exe_int;
-    logic stall_wb_int;
-    assign stall_if_int = '0;
-    assign stall_id_int = '0;
-    assign stall_rr_int = '0;
-    assign stall_exe_int = '0;
-    assign stall_wb_int = '0;*/
 
     bus64_t commit_pc, commit_data;
     logic commit_valid, commit_reg_we;
@@ -59,7 +48,6 @@ module datapath(
     addrPC_t pc_jump_if_int;
 
     
-    //assign next_pc_sel_if_int = NEXT_PC_SEL_PC_4;
     // Pipelines stages data
     // Fetch
     if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
@@ -70,14 +58,6 @@ module datapath(
     // RR
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
-    // EXE
-    //exe_wb_instr_t stage_exe_wb_d;
-    //exe_wb_instr_t stage_exe_wb_q;
-    // WB->Commit
-    //exe_wb_instr_t stage_commit;
-    wb_cu_t wb_cu_int;
-    rr_cu_t rr_cu_int;
-    cu_rr_t cu_rr_int;
 
     // Control Unit
     id_cu_t id_cu_int;
@@ -89,19 +69,17 @@ module datapath(
     exe_cu_t exe_cu_int;
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
-    // this can be inserted to rr_exe
-    //dec_wb_instr_t dec_to_wb_exe;
-    //dec_wb_instr_t dec_to_wb_wb;
 
-    //rr_exe_instr_t stage_rr_exe_d;
-    //rr_exe_instr_t stage_rr_exe_q;
-
-    //dec_exe_instr_t dec_to_exe_exe;
-    //rr_exe_instr_t rr_to_exe_exe;
     wb_exe_instr_t wb_to_exe_exe;
     logic wb_xcpt;
 
     reg_addr_t io_base_addr;
+
+    // WB->Commit
+    //exe_wb_instr_t stage_commit;
+    wb_cu_t wb_cu_int;
+    rr_cu_t rr_cu_int;
+    cu_rr_t cu_rr_int;
 
     // wb csr
     bus64_t wb_csr_rw_data_int;
@@ -150,10 +128,6 @@ module datapath(
             pc_jump_if_int = jal_id_if_int.jump_addr;
         end
     end
-
-    // Multiplexor select jump pc from decode or fetch
-    //assign pc_jump_if_int = (control_int.sel_addr_if == SEL_JUMP_COMMIT) ? exe_to_wb_wb.result_pc : 
-    //                                                    jal_id_if_int.jump_addr;
 
     // IF Stage
     if_stage if_stage_inst(
@@ -211,8 +185,6 @@ module datapath(
         .read_data2_o(stage_rr_exe_d.data_rs2)
     );
 
-    //assign stage_rr_exe_d.rs1 = stage_id_rr_q.rs1;
-    //assign stage_rr_exe_d.rs2 = stage_id_rr_q.rs2;
     assign stage_rr_exe_d.instr = stage_id_rr_q;
 
     assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
@@ -227,7 +199,7 @@ module datapath(
         .output_o(stage_rr_exe_q)
     );
 
-    exe_top exe_stage_inst(
+    exe_stage exe_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
@@ -246,8 +218,7 @@ module datapath(
         .to_wb_o(exe_to_wb_exe),
         .stall_o(exe_cu_int.stall),
 
-        .req_cpu_dcache_o(req_cpu_dcache_o),
-        .dmem_lock_o()
+        .req_cpu_dcache_o(req_cpu_dcache_o)
     );
 
     assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;
@@ -263,40 +234,43 @@ module datapath(
 
     // WB
     // CSR
-    //assign wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+
     // TODO (guillemlp): add a module thatn handles this
     always_comb begin
-        if (exe_to_wb_wb.instr.valid) begin
-            case (exe_to_wb_wb.instr.instr_type)
+        wb_csr_cmd_int = CSR_CMD_NOPE;
+        wb_csr_rw_data_int = 64'b0;
+        wb_csr_ena_int = 1'b0;
+        if (exe_to_wb_wb.valid) begin
+            case (exe_to_wb_wb.instr_type)
                 CSRRW: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRS: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRC: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result_rd;
+                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
+                    wb_csr_rw_data_int = exe_to_wb_wb.result;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRWI: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};
+                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRSI: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};
+                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
+                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRCI: begin
                     // TODO (guillemlp) do we extend sign?
-                    wb_csr_cmd_int = (exe_to_wb_wb.instr.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.instr.rs1};  
+                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
+                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};  
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 ECALL: begin
@@ -349,84 +323,78 @@ module datapath(
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 default: begin
-                    wb_csr_cmd_int = CSR_CMD_NOPE;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b0;
+                    `ifdef ASSERTIONS
+                       assert (1 == 0);
+                    `endif
+                     wb_csr_ena_int = 1'b0;
                 end
-            endcase // exe_to_wb_wb.instr.instr_type
-        end else begin
-            wb_csr_cmd_int = CSR_CMD_NOPE;
-            wb_csr_rw_data_int = 64'b0;
-            wb_csr_ena_int = 1'b0;
+            endcase
         end
     end
 
     // CSR and Exceptions
-    assign req_cpu_csr_o.csr_rw_addr = (wb_csr_ena_int) ? exe_to_wb_wb.instr.imm[CSR_ADDR_SIZE-1:0] : {CSR_ADDR_SIZE{1'b0}};
+    assign req_cpu_csr_o.csr_rw_addr = (wb_csr_ena_int) ? exe_to_wb_wb.csr_addr : {CSR_ADDR_SIZE{1'b0}};
     // if csr not enabled send command NOP
     assign req_cpu_csr_o.csr_rw_cmd = (wb_csr_ena_int) ? wb_csr_cmd_int : CSR_CMD_NOPE;
     // if csr not enabled send the interesting addr that you are accesing, exception help
-    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.instr.ex.origin;
+    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.ex.origin;
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
-    assign wb_xcpt = exe_to_wb_wb.instr.ex.valid;
+    assign wb_xcpt = exe_to_wb_wb.ex.valid;
 
     assign req_cpu_csr_o.csr_exception = wb_xcpt;
 
     // if we can retire an instruction
-    assign req_cpu_csr_o.csr_retire = exe_to_wb_wb.instr.valid && !wb_xcpt;
+    assign req_cpu_csr_o.csr_retire = exe_to_wb_wb.valid && !wb_xcpt;
     // if there is a csr interrupt we take the interrupt?
-    assign req_cpu_csr_o.csr_xcpt_cause = exe_to_wb_wb.instr.ex.cause;
-    assign req_cpu_csr_o.csr_pc = exe_to_wb_wb.instr.pc;
+    assign req_cpu_csr_o.csr_xcpt_cause = exe_to_wb_wb.ex.cause;
+    assign req_cpu_csr_o.csr_pc = exe_to_wb_wb.pc;
     
     
     // data to write to regfile at WB from CSR or exe stage
     assign data_wb_rr_int = (wb_csr_ena_int) ?  resp_csr_cpu_i.csr_rw_rdata : 
-                                                exe_to_wb_wb.result_rd; 
+                                                exe_to_wb_wb.result; 
      
     // For bypasses
-    assign wb_to_exe_exe.valid  = exe_to_wb_wb.instr.regfile_we && exe_to_wb_wb.instr.valid;
+    assign wb_to_exe_exe.valid  = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
     assign wb_to_exe_exe.data   = data_wb_rr_int;
 
     // Control Unit
-    assign wb_cu_int.valid = exe_to_wb_wb.instr.valid;//; & !control_int.stall_wb; // and not flush???
-    assign wb_cu_int.change_pc_ena = exe_to_wb_wb.instr.change_pc_ena;
+    assign wb_cu_int.valid = exe_to_wb_wb.valid;//; & !control_int.stall_wb; // and not flush???
+    assign wb_cu_int.change_pc_ena = exe_to_wb_wb.change_pc_ena;
     assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
-    assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.instr.stall_csr_fence && exe_to_wb_wb.instr.valid;
+    assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.stall_csr_fence && exe_to_wb_wb.valid;
     assign wb_cu_int.xcpt = wb_xcpt;
-    assign wb_cu_int.write_enable = exe_to_wb_wb.instr.regfile_we;
+    assign wb_cu_int.write_enable = exe_to_wb_wb.regfile_we;
     // TODO: the MRTH is a old isa instruction, remove in a future
-    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr.instr_type == ECALL ||
-                                    exe_to_wb_wb.instr.instr_type == MRTS ||
-                                    exe_to_wb_wb.instr.instr_type == EBREAK );
+    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr_type == ECALL ||
+                                    exe_to_wb_wb.instr_type == MRTS  ||
+                                    exe_to_wb_wb.instr_type == EBREAK );
     // tell cu that there is a fence
-    assign wb_cu_int.fence = (exe_to_wb_wb.instr.instr_type == FENCE_I || 
-                              exe_to_wb_wb.instr.instr_type == FENCE);
-
-
-    //assign wb_cu_int.bpred = ;
+    assign wb_cu_int.fence = (exe_to_wb_wb.instr_type == FENCE_I || 
+                              exe_to_wb_wb.instr_type == FENCE);
 
     // Debug signals
-    assign commit_valid     = exe_to_wb_wb.instr.valid;
-    assign commit_pc        = (exe_to_wb_wb.instr.valid) ? exe_to_wb_wb.instr.pc : 64'b0;
-    assign commit_data      = (exe_to_wb_wb.instr.valid) ? data_wb_rr_int  : 64'b0;
-    assign commit_addr_reg  = exe_to_wb_wb.instr.rd;
-    assign commit_reg_we    = exe_to_wb_wb.instr.regfile_we && exe_to_wb_wb.instr.valid;
+    assign commit_valid     = exe_to_wb_wb.valid;
+    assign commit_pc        = (exe_to_wb_wb.valid) ? exe_to_wb_wb.pc : 64'b0;
+    assign commit_data      = (exe_to_wb_wb.valid) ? data_wb_rr_int  : 64'b0;
+    assign commit_addr_reg  = exe_to_wb_wb.rd;
+    assign commit_reg_we    = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
     assign commit_branch_taken = exe_to_wb_wb.branch_taken;
     // PC
     assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
     assign pc_id = (valid_id) ? stage_id_rr_d.pc : 64'b0;
     assign pc_rr = (valid_rr) ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
-    assign pc_wb = (valid_wb) ? exe_to_wb_wb.instr.pc : 64'b0;
+    assign pc_wb = (valid_wb) ? exe_to_wb_wb.pc : 64'b0;
     // Valid
     assign valid_if = stage_if_id_d.valid;
     assign valid_id = stage_id_rr_d.valid;
     assign valid_rr = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
-    assign valid_wb = exe_to_wb_wb.instr.valid;
+    assign valid_wb = exe_to_wb_wb.valid;
 
 endmodule

@@ -54,77 +54,77 @@ typedef enum logic [1:0] {
     NEXT_PC_SEL_PC_4 = 2'b00,
     NEXT_PC_SEL_PC   = 2'b01,
     NEXT_PC_SEL_JUMP = 2'b10
-} next_pc_sel_t;
+} next_pc_sel_t;    // Enum PC Selection
 
 typedef enum logic [1:0] {
     SEL_JUMP_COMMIT = 2'b00,
     SEL_JUMP_CSR    = 2'b01,
     SEL_JUMP_DECODE = 2'b10
-} jump_addr_fetch_t;
+} jump_addr_fetch_t; // Enum JUMP Selection
 
 typedef enum logic [1:0]{
     ResetState = 2'b00,
     NoReq      = 2'b01,
     ReqValid   = 2'b10,
     Replay     = 2'b11
-} icache_state_t;
+} icache_state_t;   // Enum Icache Interface Machine
 
 typedef enum logic {
     PRED_NOT_TAKEN,
     PRED_TAKEN
-} branch_pred_decision_t;
+} branch_pred_decision_t;   // Enum Branch Prediction resolution
 
 typedef struct packed {
-    branch_pred_decision_t decision;
-    addrPC_t pred_addr;
-} branch_pred_t;
+    branch_pred_decision_t decision;    // Taken or not taken
+    addrPC_t pred_addr;                 // Predicted Address
+} branch_pred_t;            // Struct for Branch Prediction
 
 typedef struct packed {
-    riscv_pkg::exception_cause_t cause;
-    bus64_t origin; // this will be the addr or pc but maybe other things?
-    logic valid;
-} exception_t;
+    riscv_pkg::exception_cause_t cause; // Cause of exception vector 64 bits
+    bus64_t origin; // Addr or PC generating exception
+    logic valid;    // There is an eception
+} exception_t;              // Struct contains exceptions
 
 // Response coming from ICache
 typedef struct packed {
-    logic  valid;
-    inst_t data;
-    logic instr_access_fault;
-    logic instr_page_fault;
+    logic  valid;               // Response valid
+    inst_t data;                // Word of 32 bits from Icache
+    logic instr_access_fault;   // Upper 24 bits of PC are used. We have 40 bits of PC
+    logic instr_page_fault;     // Page Fault from TLB
 } resp_icache_cpu_t;
 
 // Request send to ICache
 typedef struct packed {
-    logic  valid;
-    addr_t vaddr;
-    logic  invalidate_icache;
+    logic  valid;               // Request valid
+    addr_t vaddr;               // Virtual Addr requested
+    logic  invalidate_icache;   // Petition to invalidate cache content
 } req_cpu_icache_t;
 
 typedef enum logic [2:0] {
-    SEL_SRC1_REGFILE,
-    SEL_SRC2_REGFILE,
-    SEL_IMM,
-    SEL_PC,
-    SEL_PC_4,
-    SEL_BYPASS
-} alu_sel_t;
+    SEL_SRC1_REGFILE,           // Source one from register file
+    SEL_SRC2_REGFILE,           // Source two from register file
+    SEL_IMM,                    // Immediate from decode
+    SEL_PC,                     // Select PC
+    SEL_PC_4,                   // Select PC + 4
+    SEL_BYPASS                  // Select bypass from previous stage
+} alu_sel_t;        // ALU Source Selection
 
 typedef enum logic [2:0]{
-    UNIT_ALU,
-    UNIT_DIV,
-    UNIT_MUL,
-    UNIT_BRANCH,
-    UNIT_MEM,
-    UNIT_CONTROL,
-    UNIT_SYSTEM
-} functional_unit_t;
+    UNIT_ALU,                   // Select ALU
+    UNIT_DIV,                   // Select DIVISION
+    UNIT_MUL,                   // Select MULTIPLICATION
+    UNIT_BRANCH,                // Select Branch computation
+    UNIT_MEM,                   // Select Memory unit
+    UNIT_CONTROL,               // Select CONTROL
+    UNIT_SYSTEM                 // Select CSR
+} functional_unit_t;   // Selection of funtional unit in exe stage 
 
 typedef enum logic [1:0]{
-    SEL_FROM_MEM,
-    SEL_FROM_ALU,
-    SEL_FROM_BRANCH,
-    SEL_FROM_CONTROL
-} reg_sel_t;
+    SEL_FROM_MEM,               // Select source from Memory
+    SEL_FROM_ALU,               // Select source from ALU
+    SEL_FROM_BRANCH,            // Select source from Branch computation
+    SEL_FROM_CONTROL            // Select source from control
+} reg_sel_t;          // Selection of the result from functional unit 
 
 typedef enum logic [6:0] { 
     // basic ALU op
@@ -136,7 +136,7 @@ typedef enum logic [6:0] {
    // comparisons
    BLT, BLTU, BGE, BGEU, BEQ, BNE,
    // jumps
-   JALR, JAL, BRANCH,
+   JALR, JAL,
    // set lower than operations
    SLT, SLTU,
    // CSR functions
@@ -159,77 +159,6 @@ typedef enum logic [6:0] {
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D
 } instr_type_t;
 
-typedef enum logic [3:0]{
-    ALU_ADD,
-    ALU_SUB,
-    ALU_SLL,
-    ALU_SLT,
-    ALU_SLTU,
-    ALU_XOR,
-    ALU_SRL,
-    ALU_SRA,
-    ALU_OR,
-    ALU_AND
-} alu_op_t;
-
-typedef enum logic [2:0]{
-    ALU_MUL,
-    ALU_MULH,
-    ALU_MULHSU,
-    ALU_MULHS,
-    ALU_DIV,
-    ALU_DIVU,
-    ALU_REM,
-    ALU_REMU
-} mul_op_t;
-
-
-typedef enum logic [2:0]{
-    B_EQ,
-    B_NE,
-    B_LT,
-    B_GE,
-    B_LTU,
-    B_GEU
-} branch_op_t;
-
-typedef enum logic [1:0]{
-    CT_JAL,
-    CT_JALR,
-    CT_BRANCH
-} ctrl_xfer_op_t;
-
-typedef enum logic [1:0]{
-    MEM_NOP,
-    MEM_LOAD,
-    MEM_STORE,
-    MEM_AMO
-} mem_op_t;
-
-typedef enum logic [2:0]{
-    BYTE,
-    HALFWORD,
-    WORD,
-    DOUBLEWORD,
-    BYTE_UNSIGNED,
-    HALFWORD_UNSIGNED,
-    WORD_UNSIGNED
-} mem_format_t;
-
-typedef enum logic [3:0] {
-    AMO_LR,
-    AMO_SC,
-    AMO_SWAP,
-    AMO_ADD,
-    AMO_XOR,
-    AMO_AND,
-    AMO_OR,
-    AMO_MIN,
-    AMO_MAX,
-    AMO_MINU,
-    AMO_MAXU
-} amo_op_t;
-
 typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_NOPE    = 3'b000,
     CSR_CMD_WRITE   = 3'b001,
@@ -239,30 +168,28 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_READ    = 3'b101,
     CSR_CMD_N1      = 3'b110,
     CSR_CMD_N2      = 3'b111
-} csr_cmd_t;
+} csr_cmd_t;                // Comands to lowrisc CSR
 
-// Response coming from ICache
+// Response coming from Dcache
 typedef struct packed {
-    logic        ready; // Dcache_interface ready to accept mem. access
-    bus64_t      data;  // Data from load
-    logic        lock;   // Dcache cannot accept more mem. accesses
-    logic xcpt_ma_st;
-    logic xcpt_ma_ld;
-    logic xcpt_pf_st;
-    logic xcpt_pf_ld;
-    bus64_t addr;
+    logic        ready;     // Dcache_interface ready to accept mem. access
+    bus64_t      data;      // Data from load
+    logic        lock;      // Dcache cannot accept more mem. accesses
+    logic  xcpt_ma_st;      // Misaligned store exception
+    logic  xcpt_ma_ld;      // Misaligned load exception
+    logic  xcpt_pf_st;      // Page fault store
+    logic  xcpt_pf_ld;      // Page fault load 
+    bus64_t      addr;
 } resp_dcache_cpu_t;
 
-// Request send to ICache
+// Request send to DCache
 typedef struct packed {
     logic         valid;             // New memory request
     logic         kill;              // Exception detected at Commit
-    //logic         csr_eret;          // Exception from CSR Register File //TODO:not needed
     bus64_t       data_rs1;          // Data operand 1
     bus64_t       data_rs2;          // Data operand 2
     instr_type_t  instr_type;        // Type of instruction
-    mem_op_t      mem_op;            // Type of memory access
-    logic [2:0]   funct3;            // Granularity of mem. access
+    logic [2:0]   mem_size;          // Granularity of mem. access
     reg_t         rd;                // Destination register. Used for identify a pending Miss
     bus64_t       imm;               // Inmmediate 
     addr_t        io_base_addr;      // Address Base Pointer of INPUT/OUPUT
@@ -270,164 +197,135 @@ typedef struct packed {
 
 // Fetch Stage
 typedef struct packed {
-    addrPC_t pc_inst;
-    riscv_pkg::instruction_t inst;
-    logic valid;
-    branch_pred_t bpred;
-    exception_t ex;
-} if_id_stage_t;
+    addrPC_t pc_inst;                   // Actual PC
+    riscv_pkg::instruction_t inst;      // Bits of the instruction
+    logic valid;                        // Valid instruction
+    branch_pred_t bpred;                // Branch prediction
+    exception_t ex;                     // Exceptions
+} if_id_stage_t;       // FETCH STAGE TO DECODE STAGE
 
 // This is created by decode
-//
 typedef struct packed {
-    logic valid;
-    addrPC_t pc;
-    branch_pred_t bpred;
-    exception_t ex;
-    reg_t rs1;
-    reg_t rs2;
-    reg_t rd;
+    logic valid;                        // Valid instruction
+    addrPC_t pc;                        // PC of the instruction
+    branch_pred_t bpred;                // Branch Prediciton
+    exception_t ex;                     // Exceptions
+    reg_t rs1;                          // Register Source 1
+    reg_t rs2;                          // Register Source 2
+    reg_t rd;                           // Destination register
     
-    logic use_imm;
-    logic use_pc;
-    logic op_32;
-    alu_op_t alu_op;
-    functional_unit_t unit;
-    // control bits
-    logic change_pc_ena;
-    logic regfile_we;
-    reg_sel_t regfile_w_sel;
-    // future
-    instr_type_t instr_type;
-    bus64_t result; // it can be used as the immediate
+    logic use_imm;                      // Use Immediate later
+    logic use_pc;                       // Use PC later
+    logic op_32;                        // Operation of 32 bits
+    functional_unit_t unit;             // Functional unit
 
-    // Added by Ruben
-    mem_op_t mem_op;
-    logic signed_op;
-    logic [2:0] funct3;
-    bus64_t imm;
-    logic aq;
-    logic rl;
-    // TODO remove
-    logic stall_csr_fence;
+    // Control bits
+    logic change_pc_ena;                // Change PC 
+    logic regfile_we;                   // Write to register file
+    instr_type_t instr_type;            // Type of instruction
+    bus64_t result;                     // Result or Immediate
+    logic signed_op;                    // Signed Operation
+    logic [2:0] mem_size;               // Memory operation size (Byte, Word)
+    // TODO re-think
+    logic stall_csr_fence;              // CSR or fence
 } instr_entry_t;
 
 typedef struct packed {
-    functional_unit_t functional_unit;
-    logic int_32;
-
-    // ALU signals
-    alu_op_t alu_op;
-    mul_op_t mul_op;
-    logic use_imm;
-    bus64_t imm;
-
-    // Branch unit signals
-    ctrl_xfer_op_t ctrl_xfer_op;
-    branch_op_t branch_op;
-    addrPC_t pc;
-
-    // Memory unit signals
-    mem_op_t mem_op;
-    // BAD NAMING FUNCT3
-    logic [2:0] funct3;
-    mem_format_t mem_format;
-    amo_op_t amo_op;
-    reg_t rd;
-} dec_exe_instr_t;
+    instr_entry_t instr;                // Instruction
+    bus64_t data_rs1;                   // Data operand 1
+    bus64_t data_rs2;                   // Data operand 2
+} rr_exe_instr_t;       //  Read Regfile to Execution stage
 
 typedef struct packed {
-    logic regfile_we;
-    logic change_pc_ena;
-} dec_wb_instr_t;
-
-typedef struct packed {
-    instr_entry_t instr;
-    bus64_t data_rs1;
-    bus64_t data_rs2;
-} rr_exe_instr_t;
-
-typedef struct packed {
-    instr_entry_t instr;
-    addrPC_t result_pc;
-    reg_t rd;
-    bus64_t result_rd;
-    logic branch_taken;
-} exe_wb_instr_t;
+    logic valid;                        // Valid instruction
+    addrPC_t pc;                        // PC of the instruction
+    reg_t rs1;                          // Register Source 1
+    instr_type_t instr_type;            // Type of instruction
+    addrPC_t result_pc;                 // PC result
+    reg_t rd;                           // Destination Register
+    bus64_t result;                     // Result or immediate                  
+    logic branch_taken;                 // Branch taken
+    branch_pred_t bpred;                // Branch Prediciton
+    exception_t ex;                     // Exceptions
+    logic regfile_we;                   // Write to register file
+    logic change_pc_ena;                // Change PC
+    logic stall_csr_fence;              // CSR or fence
+    reg_csr_addr_t csr_addr;            // CSR Address
+} exe_wb_instr_t;       //  Execution Stage to Write Back
 
 // For bypass
 typedef struct packed {
-    logic valid;
-    reg_t rd;
-    bus64_t data;
-} wb_exe_instr_t;
+    logic valid;                        // Valid instruction
+    reg_t rd;                           // Destination register
+    bus64_t data;                       // Result data
+} wb_exe_instr_t;      // WB Stage to Execution
 
 // Control Unit signals
 typedef struct packed {
-    logic valid_fetch;
-} if_cu_t;
+    logic valid_fetch;      // Fetch is valid
+} if_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {
-    logic valid_jal;
-    logic stall_csr_fence;
-} id_cu_t;
+    logic valid_jal;        // JAL is valid
+    logic stall_csr_fence;  // CSR or fence
+} id_cu_t;      // Decode to Control Unit
 
 typedef struct packed {
-    logic stall_csr_fence;
-} rr_cu_t;
-
-
-typedef struct packed {
-    next_pc_sel_t next_pc;
-    logic invalidate_icache;
-} cu_if_t;
+    logic stall_csr_fence;  // CSR or fence
+} rr_cu_t;      // Read Register to Control Unit 
 
 typedef struct packed {
-    logic write_enable;
-} cu_rr_t;
+    next_pc_sel_t next_pc;      // Select next PC
+    logic invalidate_icache;    // Invalidate ICache content
+} cu_if_t;      // Control Unit to Fetch
+
+typedef struct packed {
+    logic write_enable;         // Enable write on register file
+} cu_rr_t;      // Control unit to Register File
 
 // Control Unit signals
 typedef struct packed {
-    logic stall;
-    logic stall_csr_fence;
-} exe_cu_t;
+    logic stall;                // Execution unit stalled
+    logic stall_csr_fence;      // CSR or fence
+} exe_cu_t;     // Execution Stage to Control Unit
 
 // Control Unit signals
 typedef struct packed {
-    logic valid;
-    logic change_pc_ena;
-    logic branch_taken;
-    logic csr_enable_wb;
-    logic write_enable;
-    logic stall_csr_fence;
-    logic xcpt;
-    logic ecall_taken;
-    logic fence;
-    //branch_pred_t bpred;
-} wb_cu_t;
+    addrPC_t pc;                // PC of the instruction
+    logic valid;                // Valid Intruction
+    logic change_pc_ena;        // Enable PC write
+    logic branch_taken;         // Branch taken
+    logic csr_enable_wb;        // CSR that needs to write to register file
+    logic write_enable;         // Write Enable to Register File
+    logic stall_csr_fence;      // CSR or fence
+    logic xcpt;                 // Exception
+    logic ecall_taken;          // Ecall 
+    logic fence;                // Is fence
+} wb_cu_t;      // Write Back to Control Unit
 
 
 // Control Unit signals
 typedef struct packed {
-    logic enable_commit;
-} cu_wb_t;
+    logic enable_commit;        // Enable Commit
+} cu_wb_t;      // Control Unit to Write Back
 
 // Pipeline control
 typedef struct packed {
-    logic stall_if;
-    logic stall_id;
-    logic stall_rr;
-    logic stall_exe;
-    logic stall_wb;
+    logic stall_if;         // Stop Fetch
+    logic stall_id;         // Stop Decode
+    logic stall_rr;         // Stop Read Register
+    logic stall_exe;        // Stop Exe
+    logic stall_wb;         // Stop Write Back
 
-    logic flush_if;
-    logic flush_id;
-    logic flush_rr;
-    logic flush_exe;
-    logic flush_wb;
+    logic flush_if;         // Flush Fetch
+    logic flush_id;         // Flush instruction in Decode
+    logic flush_rr;         // Flush instruction in Read Register
+    logic flush_exe;        // Flush instruction in Execution Stage
+    logic flush_wb;         // Flush instruction in Write Back
+
     // whether insert in fetch from dec or commit
     jump_addr_fetch_t sel_addr_if;
-} pipeline_ctrl_t;
+} pipeline_ctrl_t;  // Control signals of the pipeline
 
 // Pipeline control
 typedef struct packed {

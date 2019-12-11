@@ -46,7 +46,6 @@ module decoder(
         // By default all enables to zero
         decode_instr_o.change_pc_ena = 1'b0;
         decode_instr_o.regfile_we    = 1'b0;
-        decode_instr_o.regfile_w_sel = SEL_FROM_ALU;
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
@@ -55,7 +54,6 @@ module decoder(
         decode_instr_o.instr_type = ADD;
 
         
-        decode_instr_o.alu_op = ALU_ADD;
         decode_instr_o.unit   = UNIT_ALU;
         // not sure if we should have this
         //decode_instr_o.instr_type;
@@ -63,16 +61,12 @@ module decoder(
         decode_instr_o.result = 64'b0;
 
         // TODO review
-        decode_instr_o.imm = imm_value;
-        decode_instr_o.funct3 = decode_i.inst.common.func3;
+        decode_instr_o.result = imm_value;
+        decode_instr_o.mem_size = decode_i.inst.common.func3;
         decode_instr_o.signed_op = 1'b0;
-        decode_instr_o.mem_op = MEM_NOP;
 
         jal_id_if_o.valid = 1'b0;
         jal_id_if_o.jump_addr = 64'b0;
-
-        decode_instr_o.aq = 1'b0;
-        decode_instr_o.rl = 1'b0;
 
         // TODO remove
         decode_instr_o.stall_csr_fence = 1'b0;
@@ -87,14 +81,12 @@ module decoder(
                     decode_instr_o.regfile_we  = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.rs1 = '0;
-                    decode_instr_o.alu_op = ALU_OR;
                     decode_instr_o.instr_type = OR;
                 end
                 OP_AUIPC:begin
                     decode_instr_o.regfile_we  = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
-                    decode_instr_o.alu_op = ALU_ADD;
                     decode_instr_o.instr_type = ADD;          
                 end
                 OP_JAL: begin
@@ -104,7 +96,6 @@ module decoder(
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
                     decode_instr_o.instr_type = JAL;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
                     xcpt_addr_misaligned_int = |imm_value[1:0]; 
@@ -117,7 +108,6 @@ module decoder(
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
                     decode_instr_o.instr_type = JALR;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                 end
                 OP_BRANCH: begin
@@ -125,7 +115,6 @@ module decoder(
                     decode_instr_o.change_pc_ena = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                     case (decode_i.inst.btype.func3)
                         F3_BEQ: begin
@@ -154,9 +143,7 @@ module decoder(
                 OP_LOAD:begin
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit = UNIT_MEM;
-                    decode_instr_o.mem_op = MEM_LOAD;
                     case (decode_i.inst.itype.func3)
                         F3_LB: begin
                             decode_instr_o.instr_type = LB;
@@ -187,9 +174,7 @@ module decoder(
                 OP_STORE: begin
                     decode_instr_o.regfile_we = 1'b0;
                     decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit = UNIT_MEM;
-                    decode_instr_o.mem_op = MEM_STORE;
                     case (decode_i.inst.itype.func3)
                         STORE_SB: begin
                             decode_instr_o.instr_type = SB;
@@ -212,11 +197,7 @@ module decoder(
                     // TODO (guillemlp) what to do with aq and rl?
                     decode_instr_o.regfile_we   = 1'b1;
                     decode_instr_o.use_imm      = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit         = UNIT_MEM;
-                    decode_instr_o.mem_op       = MEM_AMO;
-                    decode_instr_o.aq           = decode_i.inst.rtype.func7[26];
-                    decode_instr_o.rl           = decode_i.inst.rtype.func7[25];
                     case (decode_i.inst.rtype.func3)
                         F3_ATOMICS: begin
                             case (decode_i.inst.rtype.func7[31:27])
