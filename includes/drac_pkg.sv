@@ -264,7 +264,8 @@ typedef struct packed {
     instr_entry_t instr;                // Instruction
     phreg_t prs1;                       // Physical register source 1
     phreg_t prs2;                       // Physical register source 2
-    phreg_t prd;                        // Physical register destination 
+    phreg_t prd;                        // Physical register destination
+    phreg_t old_prd;
 } id_rr_stage_t;
 
 typedef struct packed {
@@ -279,6 +280,7 @@ typedef struct packed {
     phreg_t prs1;                       // Physical register source 1
     phreg_t prs2;                       // Physical register source 2
     phreg_t prd;                        // Physical register destination 
+    phreg_t old_prd;                    // Old Physical register destination
 } rr_exe_instr_t;       //  Read Regfile to Execution stage
 
 typedef struct packed {
@@ -299,16 +301,17 @@ typedef struct packed {
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     `endif
-    phreg_t prd;                        // Physical register destination 
+    phreg_t prd;                        // Physical register destination
+    phreg_t old_prd;                    // Old Physical register destination
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
 typedef struct packed {
     logic valid;                        // Valid instruction
     reg_t rd;                           // Destination register
     bus64_t data;                       // Result data
-    phreg_t prd;                        // Physical register destination 
+    phreg_t prd;                        // Physical register destination
+    phreg_t old_prd;                    // Old Physical register destination
 } wb_exe_instr_t;   // WB Stage to Execution
-
 
 // Control Unit signals
 typedef struct packed {
@@ -477,22 +480,27 @@ typedef struct packed {
 // LSQ in/out of instruction signals
 typedef struct packed {
     logic            valid;          // Valid bit
-    regPC_t           addr;           // Address        
+    regPC_t          addr;           // Address        
     bus64_t          data;           // Data 
-    instr_type_t     instr_type;   // Type of instruction
-    mem_op_t         mem_op;       // Type of memory access
-    logic [2:0]      funct3;       // Granularity of mem. access
-    reg_t            rd;           // Destination register. Used for identify a pending Miss
+    instr_type_t     instr_type;     // Type of instruction
+    mem_op_t         mem_op;         // Type of memory access
+    logic [2:0]      funct3;         // Granularity of mem. access
+    reg_t            rd;             // Destination register. Used for identify a pending Miss
 } lsq_interface_t;
 
-// ROB in/out of instruction signals
+// Graduation List in/out of instruction signals
 typedef struct packed {
-    logic    valid;                   // Valid instruction 
-    reg_t    destination_register;    // Destination Register 
-    reg_t    source_register_1;       // Source register 
-    reg_t    source_register_2;       // Source register 
-    addr_t   program_counter;         // Program counter
-} rob_instruction_in_interface_t;
+    logic           valid;                  // Valid instruction
+    instr_type_t    instr_type;             // Type of instruction
+    reg_t           rd;                     // Destination Register
+    reg_t           rs1;                    // Source register 1
+    reg_t           rs2;                    // Source register 2
+    addrPC_t        pc;                     // Program counter
+    bus64_t         imm;                    // Immediate
+    exception_t     exception;             // Exceptions
+} gl_instruction_t;
+
+typedef logic [31:0] gl_index;
 
 typedef struct packed {
     // current pc in fetch stage
@@ -514,6 +522,7 @@ typedef struct packed {
     // write-back register file read data
     bus64_t         reg_read_data;
 } debug_out_t;
+
 
 endpackage
 

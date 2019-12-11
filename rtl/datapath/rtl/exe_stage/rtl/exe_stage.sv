@@ -321,6 +321,10 @@ always_comb begin
 end
 
 assign to_wb_o.prd = from_rr_i.prd;
+<<<<<<< HEAD:rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
+=======
+assign to_wb_o.old_prd = from_rr_i.old_prd;
+>>>>>>> e6ac281... Added graduation list:rtl/datapath/rtl/exe_stage/rtl/exe_top.sv
 
 assign stall_o = (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
                  (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV) ? stall_div :

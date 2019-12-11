@@ -53,14 +53,14 @@ logic checkpoint_enable;
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
 
 // User can write to table to add new destination register
-assign write_enable = write_dst_i & (~do_recover_i);
+assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0);
 
 // User can read the table if no recover action is being done
 assign read_enable = (~do_recover_i);
 
 `ifndef SRAM_MEMORIES
 
-    // Look up table
+    // Look up table. Not for r0
 
     phreg_t register_table [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
 

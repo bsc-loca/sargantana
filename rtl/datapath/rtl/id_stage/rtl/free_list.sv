@@ -15,7 +15,7 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
-localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS - 1; // Number of entries in circular buffer
+localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
 // Free list Pointer
 typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
@@ -47,7 +47,7 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES_FREE_LIST+1):0] num [0:NUM_CHECKPOINTS-1];
+logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num [0:NUM_CHECKPOINTS-1];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -61,7 +61,7 @@ logic checkpoint_enable;
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
 
 // User can write to the tail of the buffer to add new register
-assign write_enable = add_free_register_i & (num[version_head] < NUM_ENTRIES_FREE_LIST[5:0]) & (~do_recover_i);
+assign write_enable = add_free_register_i & (num[version_head] < NUM_ENTRIES_FREE_LIST[5:0]) & (~do_recover_i) & (free_register_i != 6'h0);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
@@ -81,7 +81,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             version_head <= 2'b0;       // Current table, 0
             num_checkpoints <= 3'b00;   // No checkpoints
             version_tail <= 2'b0;       // Last reserved table 0
-            head[0] <= 5'b0;            // Current head in position 0
+            head[0] <= 5'b1;            // Current head in position 1
             tail[0] <= 5'b0;            // Current tail in position 0 
             num[0]  <= 6'b100000;       // Number of free registers 32
 
@@ -90,7 +90,7 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
             first_free_register[0] <= 6'b100000;
 
             for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
-               register_table[i][0] = i[5:0] + 6'b100001;
+               register_table[i][0] = i[5:0] + 6'b100000;
             end
         end
         else begin
@@ -121,17 +121,6 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                     version_head <= version_head + 2'b01;
                 end
 
-                // Control State
-                // Recompute number of checkpoints
-                num_checkpoints <= num_checkpoints + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
-                // When a free register is selected increment head
-                head[version_head] <= head[version_head] + {4'b00, read_enable};
-                // When a register is freed increment tail
-                tail[version_head] <= tail[version_head] + {4'b00, write_enable};
-                // Recompute number of free registers available.
-                num[version_head]  <= num[version_head]  + {5'b0, write_enable} - {5'b0, read_enable};
-
-
                 // Write to first free register
                 if (read_enable & (num[version_head] >= 1)) begin
                     first_free_register[version_head] <= register_table[head[version_head]][version_head];
@@ -145,6 +134,17 @@ assign read_enable = read_head_i & ((num[version_head] > 0) | add_free_register_
                 if (write_enable & (num[version_head] >= 1) & ~(read_enable & num[version_head] == 0)) begin
                     register_table[tail[version_head]][version_head] <= free_register_i;
                 end
+
+
+                // Control State
+                // Recompute number of checkpoints
+                num_checkpoints <= num_checkpoints + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
+                // When a free register is selected increment head
+                head[version_head] <= head[version_head] + {4'b00, read_enable};
+                // When a register is freed increment tail
+                tail[version_head] <= tail[version_head] + {4'b00, write_enable};
+                // Recompute number of free registers available.
+                num[version_head]  <= num[version_head]  + {5'b0, write_enable} - {5'b0, read_enable};
             end
         end
     end

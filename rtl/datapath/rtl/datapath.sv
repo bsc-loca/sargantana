@@ -229,8 +229,8 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
-        .add_free_register_i(1'b0),//free_a_register),
-        .free_register_i(6'h0),//freed_register),
+        .add_free_register_i(cu_rr_int.write_enable),
+        .free_register_i(exe_to_wb_wb.old_prd),
         .do_checkpoint_i(1'b0),//do_checkpoint),
         .do_recover_i(1'b0),//do_recover),
         .delete_checkpoint_i(1'b0),//delete_checkpoint),
@@ -256,7 +256,7 @@ module datapath(
         .recover_checkpoint_i(2'h0),//recover_checkpoint),
         .src1_o(stage_no_stall_rr_q.prs1),
         .src2_o(stage_no_stall_rr_q.prs2),
-        .old_dst_o(stage_no_stall_rr_q.prd),
+        .old_dst_o(stage_no_stall_rr_q.old_prd),
         .checkpoint_o(checkpoint_rename),
         .out_of_checkpoints_o(out_of_checkpoints_rename)
     );
@@ -266,13 +266,13 @@ module datapath(
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
 
     // Register ID to RR
-    register #($bits(instr_entry_t)) reg_id_inst(
+    register #($bits(instr_entry_t) + $bits(phreg_t)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_id),
         .load_i(!control_int.stall_id),
-        .input_i(stage_id_rr_d.instr),
-        .output_o(stage_no_stall_rr_q.instr)
+        .input_i({stage_id_rr_d.instr,free_register_to_rename}),
+        .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd})
     );
 
     // Second ID to RR. To store rename in case of stall
@@ -290,7 +290,54 @@ module datapath(
         src_select_id_rr_q <= !control_int.stall_id;
     end
 
-    assign stage_id_rr_q = (src_select_id_rr_q)? stage_no_stall_rr_q : stage_stall_rr_q;    
+    assign stage_id_rr_q = (src_select_id_rr_q)? stage_no_stall_rr_q : stage_stall_rr_q;
+
+    assign instruction_to_gl.valid      = stage_id_rr_q.instr.valid;
+    assign instruction_to_gl.instr_type = stage_id_rr_q.instr.instr_type;
+    assign instruction_to_gl.rd         = stage_id_rr_q.instr.rd;
+    assign instruction_to_gl.rs1        = stage_id_rr_q.instr.rs1;
+    assign instruction_to_gl.rs2        = stage_id_rr_q.instr.rs2;
+    assign instruction_to_gl.pc         = stage_id_rr_q.instr.pc;
+    assign instruction_to_gl.imm        = stage_id_rr_q.instr.imm;
+    assign instruction_to_gl.exception  = stage_id_rr_q.instr.ex;
+
+    graduation_list #(32, 1)(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .instruction_i(instruction_to_gl),
+        .read_head_i(),
+        .read_tail_i(),
+        .instruction_writeback_i(),
+        .instruction_exc_i(),
+        .instruction_exc_enable_i(),
+        .assigned_gl_entry_o(),
+        .instruction_o(),
+        .full_o(),
+        .empty_o()
+
+
+
+    input gl_instruction_in_interface_t  instruction_i[NUM_PORTS],
+
+    read_head_i,      // Read oldest instruction
+    read_tail_i,      // Read newest instruction
+
+    input gl_index                       instruction_writeback_i, // Mark instruction as finished
+    instruction_writeback_enable_i, // Write enabled for finished
+
+    input gl_index                       instruction_exc_i, // Mark instruction as exception
+    instruction_exc_enable_i, // Write enabled for exception
+    input exception_t                     instruction_exc_data_i, // Data of the generated exception
+
+    // Output Signals from added instructions
+    output gl_index                      assigned_gl_entry_o[NUM_PORTS],
+
+    output gl_instruction_in_interface_t instruction_o[NUM_PORTS],
+
+    output logic                          full_o,           // Rob has no free entries
+    output logic                          empty_o           // Rob has no filled entries
+    );
+
 
     assign reg_wr_data   = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_rr_int;
     assign reg_wr_addr   = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : exe_to_wb_wb.prd;
@@ -313,10 +360,10 @@ module datapath(
     assign stage_rr_exe_d.instr = stage_id_rr_q;
     assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
     assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
-
     assign stage_rr_exe_d.prd = stage_id_rr_q.prd;
     assign stage_rr_exe_d.prs1 = stage_id_rr_q.prs1;
     assign stage_rr_exe_d.prs2 = stage_id_rr_q.prs2;
+    assign stage_rr_exe_d.old_prd = stage_id_rr_q.old_prd;
 
     assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
 
