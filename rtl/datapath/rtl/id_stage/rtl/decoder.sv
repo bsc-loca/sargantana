@@ -30,6 +30,7 @@ module decoder(
         .instr_i(decode_i.inst),
         .imm_o(imm_value)
     );
+    logic [6:0] func7;
 
     always_comb begin
         xcpt_illegal_instruction_int = 1'b0;
@@ -515,6 +516,7 @@ module decoder(
                             if (decode_i.inst.itype.rd != 'h0 ) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
+                                func7=decode_i.inst.rtype.func7;
                                 case (decode_i.inst.rtype.func7)
                                     F7_ECALL_EBREAK_URET: begin
                                         if (decode_i.inst.itype.rs1 != 'h0) begin
@@ -524,7 +526,7 @@ module decoder(
                                                 RS2_ECALL_ERET: begin
                                                     decode_instr_o.instr_type = ECALL;
                                                 end
-                                                RS2_EBREAK: begin
+                                                RS2_EBREAK_SFENCEVM: begin
                                                     decode_instr_o.instr_type = EBREAK;
                                                 end
                                                 RS2_URET_SRET_MRET: begin
@@ -536,7 +538,7 @@ module decoder(
                                             endcase // decode_i.inst.rtype.rs2
                                         end
                                     end
-                                    F7_SRET_WFI_ERET: begin
+                                    F7_SRET_WFI_ERET_SFENCE: begin
                                         if (decode_i.inst.itype.rs1 != 'h0) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
@@ -546,6 +548,10 @@ module decoder(
                                                 end
                                                 RS2_WFI: begin
                                                     decode_instr_o.instr_type = WFI;
+                                                end
+                                                RS2_EBREAK_SFENCEVM: begin
+                                                    decode_instr_o.instr_type = FENCE;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 RS2_ECALL_ERET: begin
                                                     decode_instr_o.instr_type = ERET;
@@ -573,7 +579,7 @@ module decoder(
                                             endcase // decode_i.inst.rtype.rs2
                                         end
                                     end
-                                    F7_SFENCE:begin
+                                    F7_SFENCE_VM:begin
                                         decode_instr_o.instr_type = FENCE;
                                         decode_instr_o.stall_csr_fence = 1'b1;
                                     end
