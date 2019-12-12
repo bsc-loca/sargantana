@@ -498,7 +498,7 @@ module decoder(
                 end
                 OP_FENCE: begin
                     // Not sure what we should do
-                    decode_instr_o.instr_type = FENCE;
+                    decode_instr_o.instr_type = FENCE_I;
                     // It behaves similarly as a fence
                     decode_instr_o.stall_csr_fence = 1'b1;
                 end

@@ -318,6 +318,13 @@ module datapath(
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
+                FENCE: begin
+                    // what happens if interrup and ecall?????
+                    wb_csr_cmd_int = CSR_CMD_SYS;
+                    // TODO (guillemlp) check correctness
+                    wb_csr_rw_data_int = 64'b0;
+                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                end
                 MRTS: begin // Old ISA
                     // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
