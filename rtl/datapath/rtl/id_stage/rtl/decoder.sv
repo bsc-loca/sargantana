@@ -55,8 +55,6 @@ module decoder(
 
         
         decode_instr_o.unit   = UNIT_ALU;
-        // not sure if we should have this
-        //decode_instr_o.instr_type;
         // By default use the imm value then it will change along the process
         decode_instr_o.result = 64'b0;
 
@@ -514,35 +512,70 @@ module decoder(
                             
                             decode_instr_o.regfile_we = 1'b0;
 
-                            if (decode_i.inst.itype.rs1 != 'h0 ||
-                                decode_i.inst.itype.rd != 'h0 ) 
-                            begin
+                            if (decode_i.inst.itype.rd != 'h0 ) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
-                                case (decode_i.inst.itype.imm)
-                                    F12_ECALL: begin
-                                        decode_instr_o.instr_type = ECALL;
+                                case (decode_i.inst.rtype.func7)
+                                    F7_ECALL_EBREAK_URET: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_ECALL_ERET: begin
+                                                    decode_instr_o.instr_type = ECALL;
+                                                end
+                                                RS2_EBREAK: begin
+                                                    decode_instr_o.instr_type = EBREAK;
+                                                end
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = URET;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end   
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_EBREAK: begin
-                                        decode_instr_o.instr_type = EBREAK;
+                                    F7_SRET_WFI_ERET: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = SRET;
+                                                end
+                                                RS2_WFI: begin
+                                                    decode_instr_o.instr_type = WFI;
+                                                end
+                                                RS2_ECALL_ERET: begin
+                                                    decode_instr_o.instr_type = ERET;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end 
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_URET: begin
-                                        decode_instr_o.instr_type = URET;
+                                    F7_MRET_MRTS: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = MRET;
+                                                end
+                                                RS2_MRTS: begin
+                                                    decode_instr_o.instr_type = MRTS;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end 
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_SRET: begin
-                                        decode_instr_o.instr_type = SRET;
-                                    end
-                                    F12_MRET: begin
-                                        decode_instr_o.instr_type = MRET;
-                                    end
-                                    F12_WFI: begin
-                                        decode_instr_o.instr_type = WFI;
-                                    end
-                                    F12_ERET: begin // Old ISA
-                                        decode_instr_o.instr_type = ERET;
-                                    end
-                                    F12_MRTS: begin // Old ISA
-                                        decode_instr_o.instr_type = MRTS;
+                                    F7_SFENCE:begin
+                                        decode_instr_o.instr_type = FENCE;
+                                        decode_instr_o.stall_csr_fence = 1'b1;
                                     end
                                     default: begin // check illegal instruction
                                         xcpt_illegal_instruction_int = 1'b1;
