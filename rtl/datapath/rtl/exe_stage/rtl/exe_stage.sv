@@ -132,7 +132,7 @@ branch_unit branch_unit_inst (
 );
 
 // Request to DCACHE INTERFACE
-assign req_cpu_dcache_o.valid         = from_rr_i.instr.unit == UNIT_MEM;
+assign req_cpu_dcache_o.valid         = (from_rr_i.instr.unit == UNIT_MEM) && from_rr_i.instr.valid;
 assign req_cpu_dcache_o.kill          = kill_i;
 assign req_cpu_dcache_o.data_rs1      = rs1_data_bypass;
 assign req_cpu_dcache_o.data_rs2      = rs2_data_bypass;
