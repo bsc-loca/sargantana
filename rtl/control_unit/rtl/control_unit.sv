@@ -30,6 +30,7 @@ module control_unit(
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output cu_if_t          cu_if_o,
     output logic            invalidate_icache_o,
+    output logic            invalidate_buffer_o,
     //output cu_id_t          cu_id_o,
     output cu_rr_t          cu_rr_o
     //output cu_exe_t         cu_exe_o,
@@ -99,7 +100,14 @@ module control_unit(
     end
 
     // logic invalidate icache
+    // when there is a fence, it could be a self modifying code
+    // invalidate icache
     assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence);
+    // logic invalidate buffer and repeat fetch
+    // when a fence, invalidate buffer and also when csr eret
+    // when it is a csr it should be checked more?
+    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | //wb_cu_i.csr_enable_wb | 
+                                                    csr_cu_i.csr_eret));
 
 
     // logic about flush the pipeline if branch

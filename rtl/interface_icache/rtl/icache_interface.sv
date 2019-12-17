@@ -77,7 +77,9 @@ assign icache_resp_ready_o = 1'b1;
 always_comb begin
     case (state_int)
         TLBMiss: begin
-            next_state_int = (tlb_resp_miss_i) ? TLBMiss : NoReq;;
+            next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                             (tlb_resp_miss_i) ? TLBMiss : 
+                             NoReq;;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
         end
@@ -90,11 +92,18 @@ always_comb begin
         end
         ReqValid: begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_access_needed_int) ? ReqValid : NoReq;
+                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                                 (tlb_resp_miss_i) ? TLBMiss :
+                                 (icache_access_needed_int) ? ReqValid :
+                                 NoReq;
                 icache_req_valid_o = icache_access_needed_int;
                 resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end else begin
-                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
+                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                                 (tlb_resp_miss_i) ? TLBMiss :
+                                 (icache_resp_valid_i) ? NoReq :
+                                 (~icache_req_ready_i) ? Replay :
+                                 ReqValid;
                 icache_req_valid_o = 1'b0;
                 // is valid if the data from the core is cvalid and no exceptions plus the address
                 // of the data form the cache is the same as the address form the fetch
@@ -104,11 +113,17 @@ always_comb begin
         end
         Replay:begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_access_needed_int) ? ReqValid : NoReq;
+                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                                 (tlb_resp_miss_i) ? TLBMiss : 
+                                 (icache_access_needed_int) ? ReqValid : 
+                                 NoReq;
                 icache_req_valid_o = icache_access_needed_int;
                 resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end else begin
-                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_req_ready_i) ? ReqValid : Replay;
+                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                                 (tlb_resp_miss_i) ? TLBMiss :
+                                 (icache_req_ready_i) ? ReqValid : 
+                                 Replay;
                 icache_req_valid_o = icache_req_ready_i;
                 resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end
@@ -138,7 +153,7 @@ assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
 // TODO (guillemlp) I am not sure when to activate this 
 // when there is a tlb miss?
-assign icache_req_kill_o = tlb_resp_miss_i;
+assign icache_req_kill_o = tlb_resp_miss_i | ptw_invalidate_i | tlb_resp_xcp_if_i;
 
 // TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
@@ -163,7 +178,7 @@ always_comb begin
     //icache_line_req_d = (icache_line_int) icache_line_reg_q | icache_resp_valid_i;
     //valid_buffer_d = valid_buffer_q | (icache_resp_valid_i && state_int==RespReady);
     valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) & 
-                    !(req_fetch_icache_i.invalidate_icache) &
+                    !(req_fetch_icache_i.invalidate_buffer) &
                     !(ptw_invalidate_i) &
                     !tlb_resp_miss_i;
 end

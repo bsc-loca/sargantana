@@ -33,7 +33,6 @@ module datapath(
 
 
     // Stages: if -- id -- rr -- ex -- wb
-
     bus64_t commit_pc, commit_data;
     logic commit_valid, commit_reg_we;
     logic [4:0] commit_addr_reg;
@@ -43,8 +42,6 @@ module datapath(
 
     pipeline_ctrl_t control_int;
     cu_if_t cu_if_int;
-    // TODO: Remove Stage IF stub
-    //next_pc_sel_t next_pc_sel_if_int;
     addrPC_t pc_jump_if_int;
 
     
@@ -53,6 +50,7 @@ module datapath(
     if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
     if_id_stage_t stage_if_id_q; // this is the next or output of reg
     logic invalidate_icache_int;
+    logic invalidate_buffer_int;
     // Decode
     instr_entry_t stage_id_rr_d;
     instr_entry_t stage_id_rr_q;
@@ -60,10 +58,9 @@ module datapath(
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
 
-    // Control Unit
+    // Control Unit Decode
     id_cu_t id_cu_int;
     jal_id_if_t jal_id_if_int;
-
 
     // Exe
     logic stall_exe_out;
@@ -77,7 +74,6 @@ module datapath(
     reg_addr_t io_base_addr;
 
     // WB->Commit
-    //exe_wb_instr_t stage_commit;
     wb_cu_t wb_cu_int;
     rr_cu_t rr_cu_int;
     cu_rr_t cu_rr_int;
@@ -115,6 +111,7 @@ module datapath(
         .pipeline_ctrl_o(control_int),
         .cu_if_o(cu_if_int),
         .invalidate_icache_o(invalidate_icache_int),
+        .invalidate_buffer_o(invalidate_buffer_int),
         .id_cu_i(id_cu_int)
 
     );
@@ -138,7 +135,7 @@ module datapath(
         .stall_i(control_int.stall_if),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
-        //.next_pc_sel_i(cu_if_int.next_pc),
+        .invalidate_buffer_i(invalidate_buffer_int),
         .pc_jump_i(pc_jump_if_int),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .req_cpu_icache_o(req_cpu_icache_o),
