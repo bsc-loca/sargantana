@@ -65,7 +65,7 @@ icache_state_t state_int, next_state_int;
 // Sequential procedure to update state
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
-        state_int <= ResetState;
+        state_int <= NoReq;
     end else begin
         state_int <= next_state_int;
     end
@@ -76,8 +76,8 @@ assign icache_resp_ready_o = 1'b1;
 
 always_comb begin
     case (state_int)
-        ResetState: begin
-            next_state_int = NoReq;
+        TLBMiss: begin
+            next_state_int = (tlb_resp_miss_i) ? TLBMiss : NoReq;;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
         end
@@ -90,31 +90,31 @@ always_comb begin
         end
         ReqValid: begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
+                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_access_needed_int) ? ReqValid : NoReq;
                 icache_req_valid_o = icache_access_needed_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end else begin
-                next_state_int = (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
+                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_resp_valid_i) ? NoReq : (~icache_req_ready_i)? Replay : ReqValid;
                 icache_req_valid_o = 1'b0;
                 // is valid if the data from the core is cvalid and no exceptions plus the address
                 // of the data form the cache is the same as the address form the fetch
-                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i &
+                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i & !tlb_resp_miss_i &
                         (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
             end
         end
         Replay:begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
+                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_access_needed_int) ? ReqValid : NoReq;
                 icache_req_valid_o = icache_access_needed_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i ;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end else begin
-                next_state_int = (icache_req_ready_i) ? ReqValid : Replay;
+                next_state_int = (tlb_resp_miss_i) ? TLBMiss : (icache_req_ready_i) ? ReqValid : Replay;
                 icache_req_valid_o = icache_req_ready_i;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i ;
+                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
             end
         end
         default: begin
-            next_state_int =  ResetState;
+            next_state_int =  NoReq;
             icache_req_valid_o = 1'b0;
             icache_resp_ready_o = 1'b1;
             resp_icache_fetch_o.valid = 1'b0;
@@ -137,7 +137,8 @@ assign icache_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
 assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
 // TODO (guillemlp) I am not sure when to activate this 
-assign icache_req_kill_o = 1'b0;
+// when there is a tlb miss?
+assign icache_req_kill_o = tlb_resp_miss_i;
 
 // TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
@@ -161,7 +162,10 @@ end
 always_comb begin
     //icache_line_req_d = (icache_line_int) icache_line_reg_q | icache_resp_valid_i;
     //valid_buffer_d = valid_buffer_q | (icache_resp_valid_i && state_int==RespReady);
-    valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) & !(req_fetch_icache_i.invalidate_icache);
+    valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) & 
+                    !(req_fetch_icache_i.invalidate_icache) &
+                    !(ptw_invalidate_i) &
+                    !tlb_resp_miss_i;
 end
 
 // Manage the pc_int_register
@@ -186,8 +190,8 @@ assign icache_line_int = (icache_resp_valid_i & !tlb_resp_xcp_if_i &
 // It is a miss on the datablock buffered
 // We check for all the address if there is the need to access the TLB
 // don't speculate
-assign pc_buffer_d = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
-                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) 
+assign pc_buffer_d = (icache_resp_valid_i & !tlb_resp_xcp_if_i & !tlb_resp_miss_i & 
+                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) 
                     ? req_fetch_icache_i.vaddr : pc_buffer_q; 
 
 // whether the buffer addr is different than the pc req

@@ -63,7 +63,7 @@ typedef enum logic [1:0] {
 } jump_addr_fetch_t; // Enum JUMP Selection
 
 typedef enum logic [1:0]{
-    ResetState = 2'b00,
+    TLBMiss    = 2'b00,
     NoReq      = 2'b01,
     ReqValid   = 2'b10,
     Replay     = 2'b11
