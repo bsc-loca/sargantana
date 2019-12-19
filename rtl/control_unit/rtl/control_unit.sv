@@ -113,6 +113,16 @@ module control_unit(
     // logic about flush the pipeline if branch
     always_comb begin
         // if exception
+        pipeline_ctrl_o.flush_if  = 1'b0;
+        pipeline_ctrl_o.flush_id  = 1'b0;
+        pipeline_ctrl_o.flush_rr  = 1'b0;
+        pipeline_ctrl_o.flush_exe = 1'b0;
+        pipeline_ctrl_o.flush_wb  = 1'b0;
+        pipeline_ctrl_o.stall_if  = 1'b0;
+        pipeline_ctrl_o.stall_id  = 1'b0;
+        pipeline_ctrl_o.stall_rr  = 1'b0;
+        pipeline_ctrl_o.stall_exe = 1'b0;
+        pipeline_ctrl_o.stall_wb  = 1'b0;
         if ((wb_cu_i.xcpt & wb_cu_i.valid) ||
                      (wb_cu_i.branch_taken & wb_cu_i.valid) || 
                      (csr_cu_i.csr_eret) ||
@@ -123,6 +133,12 @@ module control_unit(
             pipeline_ctrl_o.flush_rr  = 1'b1;
             pipeline_ctrl_o.flush_exe = 1'b1;
             pipeline_ctrl_o.flush_wb  = 1'b0;
+        end else if (csr_cu_i.csr_stall || exe_cu_i.stall) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.stall_csr_fence | 
                      rr_cu_i.stall_csr_fence | 
                      exe_cu_i.stall_csr_fence |
@@ -145,10 +161,15 @@ module control_unit(
             pipeline_ctrl_o.flush_rr  = 1'b0;
             pipeline_ctrl_o.flush_exe = 1'b0;
             pipeline_ctrl_o.flush_wb  = 1'b0;
+            pipeline_ctrl_o.stall_if  = 1'b0;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
         end
     end
 
-
+/*
     // logic stalls
     always_comb begin
         // TODO: check if this works guillemlp
@@ -158,7 +179,7 @@ module control_unit(
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end /*else if (exe_cu_i.stall_csr_fence) begin
+        end else if (exe_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
@@ -176,7 +197,7 @@ module control_unit(
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end */else begin
+        end else begin
             pipeline_ctrl_o.stall_if  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
@@ -185,5 +206,5 @@ module control_unit(
         end
         
     end
-
+*/
 endmodule

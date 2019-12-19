@@ -184,11 +184,11 @@ always_comb begin
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_st && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault store
-            to_wb_o.ex.cause = ST_AMO_PAGE_FAULT;
+            to_wb_o.ex.cause = ST_AMO_ACCESS_FAULT;//ST_AMO_PAGE_FAULT;
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault load
-            to_wb_o.ex.cause = LD_PAGE_FAULT;
+            to_wb_o.ex.cause = LD_ACCESS_FAULT;//LD_PAGE_FAULT;
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.addr[63:40] != 0 && from_rr_i.instr.unit == UNIT_MEM) begin // invalid address

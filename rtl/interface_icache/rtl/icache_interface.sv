@@ -87,7 +87,7 @@ always_comb begin
             // If req from fetch valid change state_int to REQ VALID
             next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
-            resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i;
+            resp_icache_fetch_o.valid = !buffer_miss_int  | tlb_resp_xcp_if_i /*& !tlb_resp_xcp_if_i*/;
             
         end
         ReqValid: begin
@@ -97,7 +97,7 @@ always_comb begin
                                  (icache_access_needed_int) ? ReqValid :
                                  NoReq;
                 icache_req_valid_o = icache_access_needed_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
+                resp_icache_fetch_o.valid = (!buffer_miss_int &/*!tlb_resp_xcp_if_i &*/ !tlb_resp_miss_i) | tlb_resp_xcp_if_i;
             end else begin
                 next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
                                  (tlb_resp_miss_i) ? TLBMiss :
@@ -107,8 +107,8 @@ always_comb begin
                 icache_req_valid_o = 1'b0;
                 // is valid if the data from the core is cvalid and no exceptions plus the address
                 // of the data form the cache is the same as the address form the fetch
-                resp_icache_fetch_o.valid = icache_resp_valid_i & !tlb_resp_xcp_if_i & !tlb_resp_miss_i &
-                        (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
+                resp_icache_fetch_o.valid = (icache_resp_valid_i & /*!tlb_resp_xcp_if_i &*/ !tlb_resp_miss_i &
+                        (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) | tlb_resp_xcp_if_i;
             end
         end
         Replay:begin
@@ -118,14 +118,14 @@ always_comb begin
                                  (icache_access_needed_int) ? ReqValid : 
                                  NoReq;
                 icache_req_valid_o = icache_access_needed_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
+                resp_icache_fetch_o.valid = (!buffer_miss_int /*& !tlb_resp_xcp_if_i*/ & !tlb_resp_miss_i) | tlb_resp_xcp_if_i;
             end else begin
                 next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
                                  (tlb_resp_miss_i) ? TLBMiss :
                                  (icache_req_ready_i) ? ReqValid : 
                                  Replay;
                 icache_req_valid_o = icache_req_ready_i;
-                resp_icache_fetch_o.valid = !buffer_miss_int & !tlb_resp_xcp_if_i & !tlb_resp_miss_i;
+                resp_icache_fetch_o.valid = (!buffer_miss_int /*& !tlb_resp_xcp_if_i*/ & !tlb_resp_miss_i) | tlb_resp_xcp_if_i;
             end
         end
         default: begin

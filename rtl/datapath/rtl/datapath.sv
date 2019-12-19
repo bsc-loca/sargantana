@@ -204,7 +204,7 @@ module datapath(
         .rstn_i(rstn_i),
 
         // Not sure what they do
-        .kill_i(1'b0),
+        .kill_i(control_int.flush_exe),
         .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
         .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 
