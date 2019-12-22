@@ -34,7 +34,10 @@ module datapath(
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
-// RISCV TESTS
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// SIGNAL DECLARATION                                                                           /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifdef VERILATOR
     // Stages: if -- id -- rr -- ex -- wb
@@ -66,6 +69,9 @@ module datapath(
     id_rr_stage_t stage_id_rr_q;
     id_rr_stage_t stage_stall_rr_q;
     id_rr_stage_t stage_no_stall_rr_q;
+
+    cu_id_t cu_id_int;
+
     // RR
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
@@ -95,6 +101,12 @@ module datapath(
 
     logic src_select_id_rr_q;
 
+    // Graduation List
+
+    gl_instruction_t instruction_decode_gl;
+    gl_instruction_t instruction_writeback_gl;
+    gl_instruction_t instruction_gl_commit; 
+    
     // Exe
     logic stall_exe_out;
     /* verilator lint_off UNOPTFLAT */
@@ -106,24 +118,31 @@ module datapath(
     exe_if_branch_pred_t exe_if_branch_pred_int;   
 
     wb_exe_instr_t wb_to_exe_exe;
-    logic wb_xcpt;
 
     reg_addr_t io_base_addr;
 
     // WB->Commit
     wb_cu_t wb_cu_int;
+    cu_wb_t cu_wb_int;
     rr_cu_t rr_cu_int;
     cu_rr_t cu_rr_int;
 
-    // wb csr
-    logic   wb_csr_ena_int;
+    // Commit signals
+    commit_cu_t commit_cu_int;
+    cu_commit_t cu_commit_int;
+    logic commit_xcpt;
 
-    // data to write to RR from wb
+    // CSR signals
+    logic   csr_ena_int;
+
+    // Data to write to RR from WB or CSR
     bus64_t data_wb_rr_int;
+    phreg_t write_addr_int;
 
-    // codifies if the branch was correctly predicted 
-    // this signal goes from exe stage to fetch stage
-    logic correct_branch_pred;
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// IO ADDRESS SPACE                                                                             /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     // Debug signals
     bus64_t  reg_wr_data;
@@ -144,6 +163,10 @@ module datapath(
         end
     end
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// CONTROL UNIT                                                                                 /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // Control Unit
     control_unit control_unit_inst(
         .clk_i(clk_i),
@@ -152,6 +175,7 @@ module datapath(
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
         .wb_cu_i(wb_cu_int),
+        .cu_wb_o(cu_wb_int),
         .exe_cu_i(exe_cu_int),
         .csr_cu_i(resp_csr_cpu_i),
         .pipeline_ctrl_o(control_int),
@@ -163,7 +187,10 @@ module datapath(
         .correct_branch_pred_i(correct_branch_pred),
         .debug_halt_i(debug_i.halt_valid),
         .debug_change_pc_i(debug_i.change_pc_valid),
-        .debug_wr_valid_i(debug_i.reg_write_valid)
+        .debug_wr_valid_i(debug_i.reg_write_valid),
+        .cu_id_o(cu_id_int),
+        .commit_cu_i(commit_cu_int),
+        .cu_commit_o(cu_commit_int)
     );
 
     // Combinational logic select the jump addr
@@ -184,6 +211,11 @@ module datapath(
     end
 
     assign stall_if = control_int.stall_if || debug_i.halt_valid;
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// FETCH                  STAGE                                                                 /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // IF Stage
     if_stage if_stage_inst(
         .clk_i(clk_i),
@@ -212,6 +244,10 @@ module datapath(
         .output_o(stage_if_id_q)
     );
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// DECODER, RENAME AND FREE LIST     STAGE                                                      /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // ID Stage
     decoder id_decode_inst(
         .decode_i(stage_if_id_q),
@@ -222,19 +258,21 @@ module datapath(
     // valid jal in decode
     assign id_cu_int.valid_jal = jal_id_if_int.valid;
 
-    assign id_cu_int.stall_csr_fence = stage_id_rr_d.stall_csr_fence && stage_id_rr_d.valid;
+    assign id_cu_int.stall_csr_fence = stage_id_rr_d.instr.stall_csr_fence && stage_id_rr_d.instr.valid;
 
     // Free List
     free_list free_list_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
-        .add_free_register_i(cu_rr_int.write_enable),
-        .free_register_i(exe_to_wb_wb.old_prd),
-        .do_checkpoint_i(1'b0),//do_checkpoint),
-        .do_recover_i(1'b0),//do_recover),
-        .delete_checkpoint_i(1'b0),//delete_checkpoint),
-        .recover_checkpoint_i(2'h0),//recover_checkpoint),
+        .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (stage_id_rr_d.instr.rd != 'h0)),
+        .add_free_register_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid),
+        .free_register_i(instruction_gl_commit.old_prd),
+        .do_checkpoint_i(cu_id_int.do_checkpoint),
+        .do_recover_i(cu_id_int.do_recover),
+        .delete_checkpoint_i(cu_id_int.delete_checkpoint),
+        .recover_checkpoint_i(cu_id_int.recover_checkpoint),
+        .commit_read_head_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid & & (instruction_gl_commit.rd != 'h0)),
+        .commit_roll_back_i(commit_xcpt),
         .new_register_o(free_register_to_rename),
         .checkpoint_o(checkpoint_free_list),
         .out_of_checkpoints_o(out_of_checkpoints_free_list),
@@ -250,10 +288,14 @@ module datapath(
         .old_dst_i(stage_id_rr_d.instr.rd),
         .write_dst_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
         .new_dst_i(free_register_to_rename),
-        .do_checkpoint_i(1'b0),//do_checkpoint),
-        .do_recover_i(1'b0),//do_recover),
-        .delete_checkpoint_i(1'b0),//delete_checkpoint),
-        .recover_checkpoint_i(2'h0),//recover_checkpoint),
+        .do_checkpoint_i(cu_id_int.do_checkpoint),
+        .do_recover_i(cu_id_int.do_recover),
+        .delete_checkpoint_i(cu_id_int.delete_checkpoint),
+        .recover_checkpoint_i(cu_id_int.recover_checkpoint),
+        .recover_commit_i(commit_xcpt), 
+        .commit_old_dst_i(instruction_gl_commit.rd),    
+        .commit_write_dst_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid),  
+        .commit_new_dst_i(instruction_gl_commit.prd),
         .src1_o(stage_no_stall_rr_q.prs1),
         .src2_o(stage_no_stall_rr_q.prs2),
         .old_dst_o(stage_no_stall_rr_q.old_prd),
@@ -265,14 +307,25 @@ module datapath(
     always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
 
+    assign stage_no_stall_rr_q.chkp = checkpoint_rename;
+
+    assign id_cu_int.empty_free_list = free_list_empty;
+    assign id_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
+    assign id_cu_int.is_branch = (stage_id_rr_d.instr.instr_type == BLT)  ||
+                                 (stage_id_rr_d.instr.instr_type == BLTU) ||
+                                 (stage_id_rr_d.instr.instr_type == BGE)  ||
+                                 (stage_id_rr_d.instr.instr_type == BGEU) ||
+                                 (stage_id_rr_d.instr.instr_type == BEQ)  ||
+                                 (stage_id_rr_d.instr.instr_type == BNE);
+
     // Register ID to RR
-    register #($bits(instr_entry_t) + $bits(phreg_t)) reg_id_inst(
+    register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(logic)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_id),
         .load_i(!control_int.stall_id),
-        .input_i({stage_id_rr_d.instr,free_register_to_rename}),
-        .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd})
+        .input_i({stage_id_rr_d.instr,free_register_to_rename,cu_id_int.do_checkpoint}),
+        .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd,stage_no_stall_rr_q.checkpoint_done})
     );
 
     // Second ID to RR. To store rename in case of stall
@@ -292,55 +345,42 @@ module datapath(
 
     assign stage_id_rr_q = (src_select_id_rr_q)? stage_no_stall_rr_q : stage_stall_rr_q;
 
-    assign instruction_to_gl.valid      = stage_id_rr_q.instr.valid;
-    assign instruction_to_gl.instr_type = stage_id_rr_q.instr.instr_type;
-    assign instruction_to_gl.rd         = stage_id_rr_q.instr.rd;
-    assign instruction_to_gl.rs1        = stage_id_rr_q.instr.rs1;
-    assign instruction_to_gl.rs2        = stage_id_rr_q.instr.rs2;
-    assign instruction_to_gl.pc         = stage_id_rr_q.instr.pc;
-    assign instruction_to_gl.imm        = stage_id_rr_q.instr.imm;
-    assign instruction_to_gl.exception  = stage_id_rr_q.instr.ex;
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// GRADUATION LIST AND READ REGISTER  STAGE                                                     /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    graduation_list #(32, 1)(
+    assign instruction_decode_gl.valid                  = stage_id_rr_q.instr.valid;
+    assign instruction_decode_gl.instr_type             = stage_id_rr_q.instr.instr_type;
+    assign instruction_decode_gl.rd                     = stage_id_rr_q.instr.rd;
+    assign instruction_decode_gl.rs1                    = stage_id_rr_q.instr.rs1;
+    assign instruction_decode_gl.pc                     = stage_id_rr_q.instr.pc;
+    assign instruction_decode_gl.exception              = stage_id_rr_q.instr.ex;
+    assign instruction_decode_gl.stall_csr_fence        = stage_id_rr_q.instr.stall_csr_fence;
+    assign instruction_decode_gl.old_prd                = stage_id_rr_q.old_prd;
+    assign instruction_decode_gl.prd                    = stage_id_rr_q.prd;
+    assign instruction_decode_gl.regfile_we             = stage_id_rr_q.instr.regfile_we;
+
+    graduation_list graduation_list_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .instruction_i(instruction_to_gl),
-        .read_head_i(),
-        .read_tail_i(),
-        .instruction_writeback_i(),
-        .instruction_exc_i(),
-        .instruction_exc_enable_i(),
-        .assigned_gl_entry_o(),
-        .instruction_o(),
+        .instruction_i(instruction_decode_gl),
+        .read_head_i(cu_commit_int.enable_commit),
+        .read_tail_i(1'b0),
+        .instruction_writeback_i(exe_to_wb_wb.gl_index),
+        .instruction_writeback_enable_i(exe_to_wb_wb.valid),
+        .instruction_writeback_data_i(instruction_writeback_gl),
+        .flush_i(cu_wb_int.flush_gl),
+        .flush_index_i(cu_wb_int.flush_gl_index),
+        .assigned_gl_entry_o(stage_rr_exe_d.gl_index),
+        .instruction_o(instruction_gl_commit),
+        .commit_gl_entry_o(commit_cu_int.gl_index),
         .full_o(),
         .empty_o()
-
-
-
-    input gl_instruction_in_interface_t  instruction_i[NUM_PORTS],
-
-    read_head_i,      // Read oldest instruction
-    read_tail_i,      // Read newest instruction
-
-    input gl_index                       instruction_writeback_i, // Mark instruction as finished
-    instruction_writeback_enable_i, // Write enabled for finished
-
-    input gl_index                       instruction_exc_i, // Mark instruction as exception
-    instruction_exc_enable_i, // Write enabled for exception
-    input exception_t                     instruction_exc_data_i, // Data of the generated exception
-
-    // Output Signals from added instructions
-    output gl_index                      assigned_gl_entry_o[NUM_PORTS],
-
-    output gl_instruction_in_interface_t instruction_o[NUM_PORTS],
-
-    output logic                          full_o,           // Rob has no free entries
-    output logic                          empty_o           // Rob has no filled entries
     );
 
 
     assign reg_wr_data   = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_rr_int;
-    assign reg_wr_addr   = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : exe_to_wb_wb.prd;
+    assign reg_wr_addr   = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : write_addr_int;
     assign reg_rd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_id_rr_q.prs1;
     
     // RR Stage
@@ -357,13 +397,15 @@ module datapath(
         .read_data2_o(stage_rr_exe_d.data_rs2)
     );
 
-    assign stage_rr_exe_d.instr = stage_id_rr_q;
+    assign stage_rr_exe_d.instr = stage_id_rr_q.instr;
     assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
     assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
     assign stage_rr_exe_d.prd = stage_id_rr_q.prd;
     assign stage_rr_exe_d.prs1 = stage_id_rr_q.prs1;
     assign stage_rr_exe_d.prs2 = stage_id_rr_q.prs2;
     assign stage_rr_exe_d.old_prd = stage_id_rr_q.old_prd;
+    assign stage_rr_exe_d.chkp = stage_id_rr_q.chkp;
+    assign stage_rr_exe_d.checkpoint_done = stage_id_rr_q.checkpoint_done;
 
     assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
 
@@ -376,6 +418,10 @@ module datapath(
         .input_i(stage_rr_exe_d),
         .output_o(stage_rr_exe_q)
     );
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// EXECUTION STAGE                                                                              /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     exe_stage exe_stage_inst(
         .clk_i(clk_i),
@@ -422,21 +468,54 @@ module datapath(
         .output_o(exe_to_wb_wb)
     );
 
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// WRITE BACK STAGE                                                                             /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    assign wb_cu_int.is_branch = (stage_id_rr_d.instr.instr_type == BLT)  ||
+                                 (stage_id_rr_d.instr.instr_type == BLTU) ||
+                                 (stage_id_rr_d.instr.instr_type == BGE)  ||
+                                 (stage_id_rr_d.instr.instr_type == BGEU) ||
+                                 (stage_id_rr_d.instr.instr_type == BEQ)  ||
+                                 (stage_id_rr_d.instr.instr_type == BNE);
+
+    assign instruction_writeback_gl.csr_addr = exe_to_wb_wb.csr_addr;
+    assign instruction_writeback_gl.exception = exe_to_wb_wb.ex;
+    assign instruction_writeback_gl.result = exe_to_wb_wb.result;
+
+    // Write data regfile from WB or from Commit (CSR)
+    // CSR are exclusive with the rest of instrucitons. Therefore, there are no conflicts
+    assign data_wb_rr_int = (commit_cu_int.write_enable) ?  resp_csr_cpu_i.csr_rw_rdata : 
+                                                exe_to_wb_wb.result;
+     
+    assign write_addr_int = (commit_cu_int.write_enable) ? instruction_gl_commit.prd : exe_to_wb_wb.prd;
+    
+    // For bypasses
+    // IMPORTANT: since we can not do bypassig of a CSR, we will not take into acount the case 
+    // of forwarding the result of a CSR to increasse the frequency
+    assign wb_to_exe_exe.valid  = exe_to_wb_wb.valid;
+    assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
+    assign wb_to_exe_exe.prd    = exe_to_wb_wb.prd;
+    assign wb_to_exe_exe.data   = data_wb_rr_int;
+    
+
+    // Control Unit From Write Back
+    assign wb_cu_int.valid = exe_to_wb_wb.valid;
+    assign wb_cu_int.change_pc_ena = exe_to_wb_wb.change_pc_ena;
+    assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
+    assign wb_cu_int.write_enable = exe_to_wb_wb.regfile_we;
+    assign wb_cu_int.checkpoint_done = exe_to_wb_wb.checkpoint_done;
+    assign wb_cu_int.chkp = exe_to_wb_wb.chkp;
+    assign wb_cu_int.gl_index = exe_to_wb_wb.gl_index;
+
     csr_interface csr_interface_inst(
-        .wb_xcpt_i(wb_xcpt),
-        .exe_to_wb_wb_i(exe_to_wb_wb),
+        .wb_xcpt_i(commit_xcpt),
+        .exe_to_wb_wb_i(instruction_gl_commit),
         .stall_exe_i(control_int.stall_exe),
-        .wb_csr_ena_int_o(wb_csr_ena_int),
+        .wb_csr_ena_int_o(csr_ena_int),
         .req_cpu_csr_o(req_cpu_csr_o)
     );
-    
-    // if there is an exception that can be from:
-    // the instruction itself or the interrupt
-    assign wb_xcpt = exe_to_wb_wb.ex.valid;
-    
-    // data to write to regfile at WB from CSR or exe stage
-    assign data_wb_rr_int = (wb_csr_ena_int) ?  resp_csr_cpu_i.csr_rw_rdata : 
-                                                exe_to_wb_wb.result; 
 
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -446,41 +525,63 @@ module datapath(
             pc_evec_q <= resp_csr_cpu_i.csr_evec;
         end
     end
-    // For bypasses
-    // IMPORTANT: since we can not do bypassig of a  CSR, we will not take into acount the case 
-    // of forwarding the result of a CSR to increasse the frequency
-    assign wb_to_exe_exe.valid  = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
-    assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
-    assign wb_to_exe_exe.prd    = exe_to_wb_wb.prd;
-    assign wb_to_exe_exe.data   = data_wb_rr_int;
 
-    // Control Unit
-    assign wb_cu_int.valid = exe_to_wb_wb.valid;//; & !control_int.stall_wb; // and not flush???
-    assign wb_cu_int.change_pc_ena = exe_to_wb_wb.change_pc_ena;
-    assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
-    assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.stall_csr_fence && exe_to_wb_wb.valid;
-    assign wb_cu_int.xcpt = wb_xcpt;
-    assign wb_cu_int.write_enable = exe_to_wb_wb.regfile_we;
-    assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr_type == ECALL ||
-                                    exe_to_wb_wb.instr_type == MRTS  ||
-                                    exe_to_wb_wb.instr_type == EBREAK );
+    // CSR and Exceptions
+    assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? instruction_gl_commit.csr_addr : {CSR_ADDR_SIZE{1'b0}};
+    // if csr not enabled send command NOP
+    assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
+    // if csr not enabled send the interesting addr that you are accesing, exception help
+    assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : instruction_gl_commit.exception.origin;
+
+    // if there is an exception that can be from:
+    // the instruction itself or the interrupt
+    assign commit_xcpt = instruction_gl_commit.exception.valid;
+
+    assign req_cpu_csr_o.csr_exception = commit_xcpt;
+
+    // if we can retire an instruction
+    assign req_cpu_csr_o.csr_retire = instruction_gl_commit.valid && !commit_xcpt;
+    // if there is a csr interrupt we take the interrupt?
+    assign req_cpu_csr_o.csr_xcpt_cause = instruction_gl_commit.exception.cause;
+    assign req_cpu_csr_o.csr_pc = instruction_gl_commit.pc;
+
+    // Control Unit From Commit
+    assign commit_cu_int.valid = instruction_gl_commit.valid;
+    assign commit_cu_int.csr_enable = csr_ena_int;
+    assign commit_cu_int.stall_csr_fence = instruction_gl_commit.stall_csr_fence && instruction_gl_commit.valid;
+    assign commit_cu_int.xcpt = commit_xcpt;
+    // tell cu that ecall was taken
+    assign commit_cu_int.ecall_taken = (instruction_gl_commit.instr_type == ECALL  ||
+                                        instruction_gl_commit.instr_type == MRTS   ||
+                                        instruction_gl_commit.instr_type == EBREAK );
+
     // tell cu that there is a fence or fence_i
-    assign wb_cu_int.fence = (exe_to_wb_wb.instr_type == FENCE_I || 
-                              exe_to_wb_wb.instr_type == FENCE || 
-                              exe_to_wb_wb.instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence = (instruction_gl_commit.instr_type == FENCE_I || 
+                                  instruction_gl_commit.instr_type == FENCE || 
+                                  instruction_gl_commit.instr_type == SFENCE_VMA);
     // tell cu there is a fence i to flush the icache
-    assign wb_cu_int.fence_i = (exe_to_wb_wb.instr_type == FENCE_I || 
-                                exe_to_wb_wb.instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence_i = (instruction_gl_commit.instr_type == FENCE_I || 
+                                    instruction_gl_commit.instr_type == SFENCE_VMA);
+
+    // tell cu that commit needs to write there is a fence
+    assign commit_cu_int.write_enable = (instruction_gl_commit.instr_type == CSRRW  ||
+                                         instruction_gl_commit.instr_type == CSRRS  ||
+                                         instruction_gl_commit.instr_type == CSRRC  ||
+                                         instruction_gl_commit.instr_type == CSRRWI ||
+                                         instruction_gl_commit.instr_type == CSRRSI ||
+                                         instruction_gl_commit.instr_type == CSRRCI );
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// DEBUG SIGNALS                                                                                /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifdef VERILATOR
     // Debug signals
-    assign commit_valid     = exe_to_wb_wb.valid;
-    assign commit_pc        = (exe_to_wb_wb.valid) ? exe_to_wb_wb.pc : 64'b0;
-    assign commit_data      = (exe_to_wb_wb.valid) ? data_wb_rr_int  : 64'b0;
-    assign commit_addr_reg  = exe_to_wb_wb.rd;
-    assign commit_reg_we    = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
-    assign commit_branch_taken = exe_to_wb_wb.branch_taken;
-`endif
+    assign commit_valid     = instruction_gl_commit.valid;
+    assign commit_pc        = (instruction_gl_commit.valid) ? instruction_gl_commit.pc : 64'b0;
+    assign commit_data      = (instruction_gl_commit.valid) ? data_wb_rr_int  : 64'b0;
+    assign commit_addr_reg  = instruction_gl_commit.rd;
 
     // PC
     assign pc_if  = stage_if_id_d.pc_inst;
@@ -508,8 +609,8 @@ module datapath(
             .inst(exe_to_wb_wb.inst),
             .reg_dst(commit_addr_reg),
             .data(commit_data),
-            .xcpt(wb_xcpt),
-            .xcpt_cause(exe_to_wb_wb.ex.cause),
+            .xcpt(commit_xcpt),
+            .xcpt_cause(instruction_gl_commit.exception.cause),
             .csr_priv_lvl(csr_priv_lvl_i),
             .csr_rw_data(req_cpu_csr_o.csr_rw_data),
             .csr_xcpt(resp_csr_cpu_i.csr_exception),

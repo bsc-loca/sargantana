@@ -59,6 +59,9 @@ typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
 parameter NUM_CHECKPOINTS = 4;
 typedef logic [$clog2(NUM_CHECKPOINTS)-1:0] checkpoint_ptr;
 
+// Graduation List
+typedef logic [4:0] gl_index_t;
+
 // Branch predictor
 // Least significative bit from address used to index
 parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
@@ -265,7 +268,10 @@ typedef struct packed {
     phreg_t prs1;                       // Physical register source 1
     phreg_t prs2;                       // Physical register source 2
     phreg_t prd;                        // Physical register destination
-    phreg_t old_prd;
+    phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch  
 } id_rr_stage_t;
 
 typedef struct packed {
@@ -281,6 +287,11 @@ typedef struct packed {
     phreg_t prs2;                       // Physical register source 2
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
 } rr_exe_instr_t;       //  Read Regfile to Execution stage
 
 typedef struct packed {
@@ -303,14 +314,17 @@ typedef struct packed {
     `endif
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
 typedef struct packed {
     logic valid;                        // Valid instruction
-    reg_t rd;                           // Destination register
     bus64_t data;                       // Result data
     phreg_t prd;                        // Physical register destination
-    phreg_t old_prd;                    // Old Physical register destination
 } wb_exe_instr_t;   // WB Stage to Execution
 
 // Control Unit signals
@@ -319,8 +333,11 @@ typedef struct packed {
 } if_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {
-    logic valid_jal;        // JAL is valid
-    logic stall_csr_fence;  // CSR or fence
+    logic valid_jal;                    // JAL is valid
+    logic stall_csr_fence;              // CSR or fence
+    logic out_of_checkpoints;           // Rename out of checkpoints
+    logic is_branch;                    // Decode instruction is a branch
+    logic empty_free_list;              // Free list out of registers
 } id_cu_t;      // Decode to Control Unit
 
 typedef struct packed {
@@ -330,6 +347,14 @@ typedef struct packed {
 typedef struct packed {
     next_pc_sel_t next_pc;      // Select next PC
 } cu_if_t;      // Control Unit to Fetch
+
+typedef struct packed {
+    logic do_checkpoint;                // Invalidate ICache content
+    logic delete_checkpoint;            // Delete last checkpoint
+    logic do_recover;                   // Recover checkpoint
+    checkpoint_ptr recover_checkpoint;  // Label of the checkpoint to recover   
+} cu_id_t;      // Control Unit to Decode
+
 
 typedef struct packed {
     logic write_enable;         // Enable write on register file
@@ -347,22 +372,41 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
-    addrPC_t pc;                // PC of the instruction
     logic valid;                // Valid Intruction
     logic change_pc_ena;        // Enable PC write
-    logic csr_enable_wb;        // CSR that needs to write to register file
+    logic branch_taken;         // Branch taken
     logic write_enable;         // Write Enable to Register File
+
+    logic is_branch;            // Decode instruction is a branch
+    logic checkpoint_done;      // It has a checkpoint
+    checkpoint_ptr  chkp;       // Label of the checkpoint     
+
+    gl_index_t gl_index;        // Graduation List entry
+    logic fence_i;              // Is fence i
+} wb_cu_t;      // Write Back to Control Unit
+
+// Control Unit signals
+typedef struct packed {
+    logic valid;                // Valid Intruction
+    logic csr_enable;           // CSR that needs to write to register file
     logic stall_csr_fence;      // CSR or fence
     logic xcpt;                 // Exception
     logic ecall_taken;          // Ecall 
     logic fence;                // Is fence
-    logic fence_i;              // Is fence i
-} wb_cu_t;      // Write Back to Control Unit
-
+    logic write_enable;         // Write Enable to Register File
+    
+    gl_index_t gl_index;        // Graduation List entry
+} commit_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
 typedef struct packed {
     logic enable_commit;        // Enable Commit
+} cu_commit_t;      // Control Unit to Commit
+
+// Control Unit signals
+typedef struct packed {
+    logic      flush_gl;         // Enable Commit
+    gl_index_t flush_gl_index;   // Enable Commit
 } cu_wb_t;      // Control Unit to Write Back
 
 // Pipeline control
@@ -483,21 +527,24 @@ typedef struct packed {
     regPC_t          addr;           // Address        
     bus64_t          data;           // Data 
     instr_type_t     instr_type;     // Type of instruction
-    mem_op_t         mem_op;         // Type of memory access
-    logic [2:0]      funct3;         // Granularity of mem. access
+    logic [2:0]      mem_size;       // Granularity of mem. access
     reg_t            rd;             // Destination register. Used for identify a pending Miss
 } lsq_interface_t;
 
 // Graduation List in/out of instruction signals
 typedef struct packed {
     logic           valid;                  // Valid instruction
+    addrPC_t        pc;                     // PC of the instruction
     instr_type_t    instr_type;             // Type of instruction
     reg_t           rd;                     // Destination Register
     reg_t           rs1;                    // Source register 1
-    reg_t           rs2;                    // Source register 2
-    addrPC_t        pc;                     // Program counter
-    bus64_t         imm;                    // Immediate
-    exception_t     exception;             // Exceptions
+    reg_csr_addr_t  csr_addr;               // CSR Address
+    exception_t     exception;              // Exceptions
+    bus64_t         result;                 // Result or immediate
+    logic           stall_csr_fence;        // CSR or fence
+    logic           regfile_we;             // Write to register file
+    phreg_t         prd;                    // Physical register destination to write      
+    phreg_t         old_prd;                // Old Physical register destination      
 } gl_instruction_t;
 
 typedef logic [31:0] gl_index;
@@ -522,7 +569,6 @@ typedef struct packed {
     // write-back register file read data
     bus64_t         reg_read_data;
 } debug_out_t;
-
 
 endpackage
 

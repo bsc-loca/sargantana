@@ -77,8 +77,7 @@ logic valid_mem_interface;
 bus64_t data_rs1_mem_interface;
 bus64_t data_rs2_mem_interface;
 instr_type_t instr_type_mem_interface;
-mem_op_t mem_op_mem_interface;
-logic [2:0] funct3_mem_interface;
+logic [2:0] mem_size_mem_interface;
 reg_t rd_mem_interface;
 bus64_t imm_mem_interface;
 
@@ -161,11 +160,10 @@ assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
 
 assign load_store_instruction.valid = (from_rr_i.instr.unit == UNIT_MEM);
-assign load_store_instruction.addr = (1'b1) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.imm; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
+assign load_store_instruction.addr = (1'b1) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.result; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
 assign load_store_instruction.data = rs2_data_bypass;
 assign load_store_instruction.instr_type = from_rr_i.instr.instr_type;
-assign load_store_instruction.mem_op = from_rr_i.instr.mem_op;
-assign load_store_instruction.funct3 = from_rr_i.instr.funct3;
+assign load_store_instruction.mem_size = from_rr_i.instr.mem_size;
 assign load_store_instruction.rd = from_rr_i.instr.rd;
 
 
@@ -182,8 +180,7 @@ mem_unit mem_unit_inst(
     .data_rs1_o(data_rs1_mem_interface),
     .data_rs2_o(data_rs2_mem_interface),
     .instr_type_o(instr_type_mem_interface),
-    .mem_op_o(mem_op_mem_interface),
-    .funct3_o(funct3_mem_interface),
+    .mem_size_o(mem_size_mem_interface),
     .rd_o(rd_mem_interface),
     .imm_o(imm_mem_interface),
     .data_o(result_mem),
@@ -206,6 +203,11 @@ assign to_wb_o.regfile_we = from_rr_i.instr.regfile_we;
 assign to_wb_o.instr_type = from_rr_i.instr.instr_type;
 assign to_wb_o.stall_csr_fence = from_rr_i.instr.stall_csr_fence;
 assign to_wb_o.csr_addr = from_rr_i.instr.result[CSR_ADDR_SIZE-1:0];
+assign to_wb_o.prd = from_rr_i.prd;
+assign to_wb_o.old_prd = from_rr_i.old_prd;
+assign to_wb_o.checkpoint_done = from_rr_i.checkpoint_done;
+assign to_wb_o.chkp = from_rr_i.chkp;
+assign to_wb_o.gl_index = from_rr_i.gl_index;
 
 `ifdef VERILATOR
 assign to_wb_o.inst = from_rr_i.instr.inst;
@@ -319,12 +321,6 @@ always_comb begin
         end
     endcase
 end
-
-assign to_wb_o.prd = from_rr_i.prd;
-<<<<<<< HEAD:rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
-=======
-assign to_wb_o.old_prd = from_rr_i.old_prd;
->>>>>>> e6ac281... Added graduation list:rtl/datapath/rtl/exe_stage/rtl/exe_top.sv
 
 assign stall_o = (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
                  (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV) ? stall_div :

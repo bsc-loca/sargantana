@@ -25,6 +25,11 @@ module rename_table(
     input logic            write_dst_i,         // Needs to write to old destination register
     input phreg_t          new_dst_i,           // Wich register write to old destination register
 
+    input logic            recover_commit_i,    // Copy commit table on register table
+    input reg_t            commit_old_dst_i,    // Read and write to old destination register at commit table
+    input logic            commit_write_dst_i,  // Needs to write to old destination register at commit table
+    input phreg_t          commit_new_dst_i,    // Wich register write to old destination register at commit table
+
     input wire             do_checkpoint_i,     // After renaming do a checkpoint
     input wire             do_recover_i,        // Recover a checkpoint
     input wire             delete_checkpoint_i, // Delete tail checkpoint
@@ -50,19 +55,23 @@ logic read_enable;
 logic checkpoint_enable;
 
 // User can do checkpoints when there is at least one free copy of the free list
-assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i);
+assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
 
 // User can write to table to add new destination register
-assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0);
+assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
+
+// User can wirte to commit table to add new destination register
+assign commit_write_enable = commit_write_dst_i & (commit_old_dst_i != 5'h0) & (~recover_commit_i);
 
 // User can read the table if no recover action is being done
-assign read_enable = (~do_recover_i);
+assign read_enable = (~do_recover_i) & (~recover_commit_i);
 
 `ifndef SRAM_MEMORIES
 
     // Look up table. Not for r0
 
     phreg_t register_table [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
+    phreg_t commit_table   [0:NUM_ISA_REGISTERS-1];
 
     always_ff @(posedge clk_i, negedge rstn_i) 
     begin
@@ -76,12 +85,11 @@ assign read_enable = (~do_recover_i);
             version_head <= 2'b0;       // Current table, 0
             num_checkpoints <= 3'b00;   // No checkpoints
             version_tail <= 2'b0;       // Last reserved table 0
-            checkpoint_o <= 2'b0;       // Label 00 not XX
 
             // Output signals
             src1_o <= 0;
             src2_o <= 0;
-            old_dst_o <= 0;                              // TODO: CUIDADO PUEDE LIBERAR EL REG 0
+            old_dst_o <= 0;                              
         end 
         else begin
 
@@ -106,7 +114,6 @@ assign read_enable = (~do_recover_i);
                 if (checkpoint_enable) begin
                     for (int i=0; i<NUM_ISA_REGISTERS; i++)
                         register_table[i][version_head + 2'b1] <= register_table[i][version_head];
-                    checkpoint_o <= version_head;
                     version_head <= version_head + 2'b01;
                 end
 
@@ -122,6 +129,29 @@ assign read_enable = (~do_recover_i);
                     register_table[old_dst_i][version_head] <= new_dst_i;
                 end
             end
+
+            // Update commit table
+            if (commit_write_enable) begin
+                commit_table[commit_old_dst_i] <= commit_new_dst_i;
+            end
+
+
+            // Recover commit table because exception
+            if (recover_commit_i) begin
+                for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
+                    register_table[j][0] = commit_table[j];
+                end
+                version_head <= 2'b0;       // Current table, 0
+                num_checkpoints <= 3'b00;   // No checkpoints
+                version_tail <= 2'b0;       // Last reserved table 0
+
+                // Output signals
+                src1_o <= 0;
+                src2_o <= 0;
+                old_dst_o <= 0;  
+            end
+
+            checkpoint_o <= version_head;
         end
     end
 

@@ -33,8 +33,7 @@ module mem_unit (
     output bus64_t         data_rs1_o,          // Data operand 1
     output bus64_t         data_rs2_o,          // Data operand 2
     output instr_type_t    instr_type_o,        // Type of instruction
-    output mem_op_t        mem_op_o,            // Type of memory access
-    output logic [2:0]     funct3_o,            // Granularity of mem. access
+    output logic [2:0]     mem_size_o,          // Granularity of mem. access
     output reg_t           rd_o,                // Destination register. Used for identify a pending Miss
     output bus64_t         imm_o,               // Inmmediate
 
@@ -111,8 +110,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         stored_instr_to_dcache.addr <= 64'h0;
         stored_instr_to_dcache.data <= 64'h0;
         stored_instr_to_dcache.instr_type <= ADD;
-        stored_instr_to_dcache.mem_op <= MEM_LOAD;
-        stored_instr_to_dcache.funct3 <= 3'h0;
+        stored_instr_to_dcache.mem_size <= 3'h0;
         stored_instr_to_dcache.rd <= 5'h0;
     end else
         if (instruction_to_dcache.valid)
@@ -128,8 +126,7 @@ always_comb begin
             data_rs1_o = 64'h0;
             data_rs2_o = 64'h0;
             instr_type_o = ADD;
-            mem_op_o = MEM_LOAD;
-            funct3_o = 3'h0;
+            mem_size_o = 3'h0;
             rd_o = 5'h0;
             next_state = ReadHead;        // Next state Read Head
             read_head_sq = 1'b1;          // Read head of LSQ
@@ -141,8 +138,7 @@ always_comb begin
                 data_rs1_o = 64'h0;
                 data_rs2_o = 64'h0;
                 instr_type_o = ADD;
-                mem_op_o = MEM_LOAD;
-                funct3_o = 3'h0;
+                mem_size_o = 3'h0;
                 rd_o = 5'h0;
                 next_state = ReadHead;        // Next state Read Head
                 read_head_sq = 1'b1;          // Read head of LSQ           
@@ -151,8 +147,7 @@ always_comb begin
                 data_rs1_o = instruction_to_dcache.addr;
                 data_rs2_o = instruction_to_dcache.data;
                 instr_type_o = instruction_to_dcache.instr_type;
-                mem_op_o = instruction_to_dcache.mem_op;
-                funct3_o = instruction_to_dcache.funct3;
+                mem_size_o = instruction_to_dcache.mem_size;
                 rd_o = instruction_to_dcache.rd;
                 next_state = (instruction_to_dcache.valid) ?  WaitResponse : ReadHead;
                 read_head_sq = ~instruction_to_dcache.valid;     // If valid do not read new head
@@ -165,8 +160,7 @@ always_comb begin
                 data_rs1_o = 64'h0;
                 data_rs2_o = 64'h0;
                 instr_type_o = ADD;
-                mem_op_o = MEM_LOAD;
-                funct3_o = 3'h0;
+                mem_size_o = 3'h0;
                 rd_o = 5'h0;
                 next_state = ReadHead;        // Next state Read Head
                 read_head_sq = 1'b1;          // Read head of LSQ  
@@ -175,8 +169,7 @@ always_comb begin
                 data_rs1_o = stored_instr_to_dcache.addr;
                 data_rs2_o = stored_instr_to_dcache.data;
                 instr_type_o = stored_instr_to_dcache.instr_type;
-                mem_op_o = stored_instr_to_dcache.mem_op;
-                funct3_o = stored_instr_to_dcache.funct3;
+                mem_size_o = stored_instr_to_dcache.mem_size;
                 rd_o = stored_instr_to_dcache.rd;
                 if (lock_i) begin
                     next_state = WaitResponse;

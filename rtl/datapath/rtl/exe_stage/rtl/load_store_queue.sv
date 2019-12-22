@@ -75,8 +75,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
                 instruction_o <= instruction_i; 
             end else begin 
                 {instruction_o.instr_type,
-                 instruction_o.mem_op,
-                 instruction_o.funct3,
+                 instruction_o.mem_size,
                  instruction_o.rd } <= control_table[head];
                 instruction_o.addr <= addr_table[head];
                 instruction_o.data <= data_table[head];
@@ -86,8 +85,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
             instruction_o.addr <= 64'h0;
             instruction_o.data <= 64'h0;
             {instruction_o.instr_type,
-             instruction_o.mem_op,
-             instruction_o.funct3,
+             instruction_o.mem_size,
              instruction_o.rd } <= 17'h0;
         end
         
@@ -96,8 +94,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
             addr_table[tail] <= instruction_i.addr;
             data_table[tail] <= instruction_i.data;
             control_table[tail] <= {instruction_i.instr_type,
-                                    instruction_i.mem_op,
-                                    instruction_i.funct3,
+                                    instruction_i.mem_size,
                                     instruction_i.rd};
         end
         instruction_o.valid <= read_enable;
