@@ -526,6 +526,7 @@ module decoder(
                     decode_instr_o.use_imm    = 1'b1;
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.unit = UNIT_SYSTEM;
+                    decode_instr_o.stall_csr_fence = 1'b1;
 
                     case (decode_i.inst.itype.func3)     
                         F3_ECALL_EBREAK_ERET: begin
