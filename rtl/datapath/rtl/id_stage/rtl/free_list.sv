@@ -153,7 +153,7 @@ assign commit_read_enable = commit_read_head_i & (~commit_roll_back_i);
             checkpoint_o <= version_head;
 
             // Update commit head 
-            commit_head <= commit_head + {5'b0, commit_read_enable};
+            commit_head <= commit_head + {4'b0, commit_read_enable};
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //////// RECOVER OLD CHECKPOINT                                                                       /////////

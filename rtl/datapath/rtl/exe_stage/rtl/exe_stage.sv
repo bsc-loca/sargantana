@@ -146,19 +146,6 @@ branch_unit branch_unit_inst (
     .reg_data_o         (reg_data_branch)
 );
 
-
-// Request to DCACHE INTERFACE
-assign req_cpu_dcache_o.valid         = (from_rr_i.instr.unit == UNIT_MEM) && from_rr_i.instr.valid;
-assign req_cpu_dcache_o.kill          = kill_i;
-assign req_cpu_dcache_o.data_rs1      = rs1_data_bypass;
-assign req_cpu_dcache_o.data_rs2      = rs2_data_bypass;
-assign req_cpu_dcache_o.instr_type    = from_rr_i.instr.instr_type;
-assign req_cpu_dcache_o.mem_size      = from_rr_i.instr.mem_size;
-assign req_cpu_dcache_o.rd            = from_rr_i.instr.rd;
-assign req_cpu_dcache_o.imm           = from_rr_i.instr.result;
-assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
-
-
 assign load_store_instruction.valid = (from_rr_i.instr.unit == UNIT_MEM);
 assign load_store_instruction.addr = (1'b1) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.result; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
 assign load_store_instruction.data = rs2_data_bypass;
@@ -188,6 +175,17 @@ mem_unit mem_unit_inst(
     .ready_o(ready_mem),
     .lock_o(stall_mem)
 );
+
+// Request to DCACHE INTERFACE
+assign req_cpu_dcache_o.valid         = valid_mem_interface;
+assign req_cpu_dcache_o.kill          = kill_i;
+assign req_cpu_dcache_o.data_rs1      = data_rs1_mem_interface;
+assign req_cpu_dcache_o.data_rs2      = data_rs2_mem_interface;
+assign req_cpu_dcache_o.instr_type    = instr_type_mem_interface;
+assign req_cpu_dcache_o.mem_size      = mem_size_mem_interface;
+assign req_cpu_dcache_o.rd            = rd_mem_interface;
+assign req_cpu_dcache_o.imm           = imm_mem_interface;
+assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
 //------------------------------------------------------------------------------
 // DATA  TO WRITE_BACK

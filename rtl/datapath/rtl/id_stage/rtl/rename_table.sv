@@ -53,6 +53,7 @@ logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 logic write_enable;
 logic read_enable;
 logic checkpoint_enable;
+logic commit_write_enable;
 
 // User can do checkpoints when there is at least one free copy of the free list
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);

@@ -17,8 +17,8 @@ import drac_pkg::*;
 typedef logic [$clog2(NUM_ENTRIES)-1:0] ls_queue_entry;
 typedef reg [$clog2(NUM_ENTRIES)-1:0] reg_ls_queue_entry;
 
-typedef logic [16:0] control_cell;
-typedef reg [16:0] reg_control_cell;
+typedef logic [14:0] control_cell;
+typedef reg [14:0] reg_control_cell;
 
 localparam NUM_ENTRIES = 8; // Number of entries in circular buffer
 
@@ -86,7 +86,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
             instruction_o.data <= 64'h0;
             {instruction_o.instr_type,
              instruction_o.mem_size,
-             instruction_o.rd } <= 17'h0;
+             instruction_o.rd } <= 15'h0;
         end
         
         // Write tail

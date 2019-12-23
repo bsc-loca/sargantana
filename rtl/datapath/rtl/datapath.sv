@@ -384,7 +384,7 @@ module datapath(
     assign reg_rd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_id_rr_q.prs1;
     
     // RR Stage
-    regfile rr_stage_inst(
+    regfile regfile(
         .clk_i(clk_i),
 
         .write_enable_i(cu_rr_int.write_enable | cu_rr_int.write_enable_dbg),

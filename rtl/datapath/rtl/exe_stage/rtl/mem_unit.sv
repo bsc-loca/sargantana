@@ -117,6 +117,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             stored_instr_to_dcache <= instruction_to_dcache;
 end
 
+/*
 // Mealy Output and Nexy State
 always_comb begin
     case(state)
@@ -150,7 +151,7 @@ always_comb begin
                 mem_size_o = instruction_to_dcache.mem_size;
                 rd_o = instruction_to_dcache.rd;
                 next_state = (instruction_to_dcache.valid) ?  WaitResponse : ReadHead;
-                read_head_sq = ~instruction_to_dcache.valid;     // If valid do not read new head
+                read_head_sq = 1'b1;
             end
         end
         // Waiting response of Dcache interface
@@ -187,6 +188,79 @@ always_comb begin
             next_state = ResetState;
         end
     endcase
+end*/
+
+
+// Mealy Output and Nexy State
+always_comb begin
+    case(state)
+        // Reset state
+        ResetState: begin
+            valid_o = 1'b0;              // Invalid instruction
+            data_rs1_o = 64'h0;
+            data_rs2_o = 64'h0;
+            instr_type_o = ADD;
+            mem_size_o = 3'h0;
+            rd_o = 5'h0;
+            next_state = ReadHead;        // Next state Read Head
+            read_head_sq = 1'b0;          // Read head of LSQ
+        end
+        // Read head of LSQ
+        ReadHead: begin
+            if (kill_i) begin
+                valid_o = 1'b0;              // Invalid instruction
+                data_rs1_o = 64'h0;
+                data_rs2_o = 64'h0;
+                instr_type_o = ADD;
+                mem_size_o = 3'h0;
+                rd_o = 5'h0;
+                next_state = ReadHead;        // Next state Read Head
+                read_head_sq = 1'b0;          // Read head of LSQ           
+            end else begin
+                valid_o = interface_i.valid;
+                data_rs1_o = interface_i.addr;
+                data_rs2_o = interface_i.data;
+                instr_type_o = interface_i.instr_type;
+                mem_size_o = interface_i.mem_size;
+                rd_o = interface_i.rd;
+                next_state = (interface_i.valid) ?  WaitResponse : ReadHead;
+                read_head_sq = 1'b0;
+            end
+        end
+        // Waiting response of Dcache interface
+        WaitResponse: begin
+            if (kill_i) begin
+                valid_o = 1'b0;              // Invalid instruction
+                data_rs1_o = 64'h0;
+                data_rs2_o = 64'h0;
+                instr_type_o = ADD;
+                mem_size_o = 3'h0;
+                rd_o = 5'h0;
+                next_state = ReadHead;        // Next state Read Head
+                read_head_sq = 1'b0;          // Read head of LSQ  
+            end else begin
+                valid_o = interface_i.valid;
+                data_rs1_o = interface_i.addr;
+                data_rs2_o = interface_i.data;
+                instr_type_o = interface_i.instr_type;
+                mem_size_o = interface_i.mem_size;
+                rd_o = interface_i.rd;
+                if (lock_i) begin
+                    next_state = WaitResponse;
+                    read_head_sq = 1'b0; 
+                end else begin
+                    next_state = ReadHead;
+                    read_head_sq = 1'b0; 
+                end
+            end
+        end
+        default: begin
+            `ifdef ASSERTIONS
+                assert(1 == 0);
+            `endif
+            next_state = ResetState;
+        end
+    endcase
 end
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -197,8 +271,8 @@ end
 
 assign imm_o = 64'h0;
 
-
-assign lock_o   = full_lsq;
+assign lock_o = lock_i;
+//assign lock_o   = full_lsq;
 assign ready_o  = ready_i;
 assign data_o   = data_i;
 

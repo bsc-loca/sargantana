@@ -61,7 +61,7 @@ logic read_enable;
 logic read_inverse_enable;
 
 // Register for valid bit
-reg [0:0] valid_bit [0:NUM_ENTRIES-1];
+reg valid_bit [0:NUM_ENTRIES-1];
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
@@ -89,11 +89,11 @@ assign read_inverse_enable = read_tail_i & (num > 0);
                 if ((num == 0) & (instruction_i.valid)) begin // Imposible case
                     instruction_o <= instruction_i;
                 end else begin
-                    instruction_o <= {valid_bit[head], entries[head]};
+                    instruction_o <= {entries[head]};
                     commit_gl_entry_o <= head;
                 end
             end else if (read_inverse_enable) begin
-                instruction_o <= {valid_bit[$unsigned(int'(tail) - 1) % NUM_ENTRIES], entries[$unsigned(int'(tail) - 1) % NUM_ENTRIES]};
+                instruction_o <= entries[tail - 'b1];
             end else begin
                 instruction_o.valid <= 1'b0;
                 instruction_o.instr_type <= ADD;
@@ -133,7 +133,7 @@ begin
         if ( (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-1{1'b0}}, read_enable}) )    // Recompute number of entries
             num <= ({1'b0, flush_index_i} + {{num_bits_index-1{1'b0}}, 1'b1}) - ({1'b0, head} + {{num_bits_index-1{1'b0}}, read_enable});
         else 
-            num <= NUM_ENTRIES - ({1'b0, head} + {{num_bits_index-1{1'b0}}, read_enable}) +  ({1'b0, flush_index_i} + {{num_bits_index-1{1'b0}}, 1'b1});
+            num <= NUM_ENTRIES[num_bits_index:0] - ({1'b0, head} + {{num_bits_index-1{1'b0}}, read_enable}) +  ({1'b0, flush_index_i} + {{num_bits_index-1{1'b0}}, 1'b1});
     end else begin
         tail <= tail + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-1{1'b0}}, read_inverse_enable};
         head <= head + {{num_bits_index-1{1'b0}}, read_enable};
