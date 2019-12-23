@@ -318,15 +318,18 @@ typedef struct packed {
     logic stall_exe;        // Stop Exe
     logic stall_wb;         // Stop Write Back
 
+    // whether insert in fetch from dec or commit
+    jump_addr_fetch_t sel_addr_if;
+} pipeline_ctrl_t;  // Control signals of the pipeline
+
+// Pipeline control
+typedef struct packed {
     logic flush_if;         // Flush Fetch
     logic flush_id;         // Flush instruction in Decode
     logic flush_rr;         // Flush instruction in Read Register
     logic flush_exe;        // Flush instruction in Execution Stage
     logic flush_wb;         // Flush instruction in Write Back
-
-    // whether insert in fetch from dec or commit
-    jump_addr_fetch_t sel_addr_if;
-} pipeline_ctrl_t;  // Control signals of the pipeline
+} pipeline_flush_t;
 
 // Pipeline control
 typedef struct packed {

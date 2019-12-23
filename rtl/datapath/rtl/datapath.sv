@@ -41,6 +41,7 @@ module datapath(
     logic valid_if, valid_id, valid_rr, valid_exe, valid_wb;
 
     pipeline_ctrl_t control_int;
+    pipeline_flush_t flush_int;
     cu_if_t cu_if_int;
     addrPC_t pc_jump_if_int;
 
@@ -109,6 +110,7 @@ module datapath(
         .exe_cu_i(exe_cu_int),
         .csr_cu_i(resp_csr_cpu_i),
         .pipeline_ctrl_o(control_int),
+        .pipeline_flush_o(flush_int),
         .cu_if_o(cu_if_int),
         .invalidate_icache_o(invalidate_icache_int),
         .invalidate_buffer_o(invalidate_buffer_int),
@@ -146,7 +148,7 @@ module datapath(
     register #($bits(if_id_stage_t)) reg_if_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(control_int.flush_if),
+        .flush_i(flush_int.flush_if),
         .load_i(!control_int.stall_if),
         .input_i(stage_if_id_d),
         .output_o(stage_if_id_q)
@@ -166,7 +168,7 @@ module datapath(
     register #($bits(instr_entry_t)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(control_int.flush_id),
+        .flush_i(flush_int.flush_id),
         .load_i(!control_int.stall_id),
         .input_i(stage_id_rr_d),
         .output_o(stage_id_rr_q)
@@ -193,7 +195,7 @@ module datapath(
     register #($bits(stage_rr_exe_d)) reg_rr_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(control_int.flush_rr),
+        .flush_i(flush_int.flush_rr),
         .load_i(!control_int.stall_rr),
         .input_i(stage_rr_exe_d),
         .output_o(stage_rr_exe_q)
@@ -203,12 +205,10 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
-        // Not sure what they do
-        .kill_i(control_int.flush_exe),
+        .kill_i(flush_int.flush_exe),
         .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
         .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 
-        //.from_rr_i(dec_to_exe_exe),
         .from_rr_i(stage_rr_exe_q),
         .from_wb_i(wb_to_exe_exe),
 
@@ -226,7 +226,7 @@ module datapath(
     register #($bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(control_int.flush_exe),
+        .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
         .input_i(exe_to_wb_exe),
         .output_o(exe_to_wb_wb)

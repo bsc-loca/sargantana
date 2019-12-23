@@ -116,7 +116,7 @@ module if_stage(
     // Output fetch
     assign fetch_o.pc_inst = pc;
     assign fetch_o.inst    = resp_icache_cpu_i.data;
-    assign fetch_o.valid   = resp_icache_cpu_i.valid || fetch_o.ex.valid;  // valid if the response of the cache is valid or xcpt
+    assign fetch_o.valid   = resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int);  // valid if the response of the cache is valid or xcpt
 
     // TODO: add branch predictor
     assign fetch_o.bpred.decision = PRED_NOT_TAKEN;
