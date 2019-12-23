@@ -131,13 +131,13 @@ module control_unit(
 
     // when there is a fence, it could be a self modifying code
     // invalidate icache
-    assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence_i);
+    assign invalidate_icache_o = (commit_cu_i.valid && commit_cu_i.fence_i);
     // logic invalidate buffer and repeat fetch
     // when a fence, invalidate buffer and also when csr eret
     // when it is a csr it should be checked more?
-    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence_i | 
+    assign invalidate_buffer_o = (commit_cu_i.valid && (commit_cu_i.fence_i | 
                                                     exception_enable_q |
-                                                    (wb_cu_i.stall_csr_fence & !wb_cu_i.fence)));
+                                                    (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
     assign cu_id_o.do_checkpoint = (id_cu_i.is_branch & ~id_cu_i.out_of_checkpoints);
@@ -156,7 +156,7 @@ module control_unit(
         pipeline_flush_o.flush_rr  = 1'b0;
         pipeline_flush_o.flush_exe = 1'b0;
         pipeline_flush_o.flush_wb  = 1'b0;
-        flush_csr_fence           = 1'b0;
+        flush_csr_fence            = 1'b0;
         if (commit_cu_i.xcpt & commit_cu_i.valid) || exception_enable_q) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b1;
@@ -180,11 +180,11 @@ module control_unit(
             pipeline_flush_o.flush_exe = 1'b0;
             pipeline_flush_o.flush_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
-            pipeline_ctrl_o.flush_if  = 1'b0;
-            pipeline_ctrl_o.flush_id  = 1'b1;
-            pipeline_ctrl_o.flush_rr  = 1'b0;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
+            pipeline_flush_o.flush_if  = 1'b0;
+            pipeline_flush_o.flush_id  = 1'b1;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
         end
     end
 
@@ -222,7 +222,7 @@ module control_unit(
 
     // logic flush gl
     always_comb begin
-        if (csr_cu_i.xcpt) begin
+        if (commit_cu_i.xcpt) begin
             cu_wb_o.flush_gl = 1'b1;
             cu_wb_o.flush_gl_index = commit_cu_i.gl_index;
         end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin

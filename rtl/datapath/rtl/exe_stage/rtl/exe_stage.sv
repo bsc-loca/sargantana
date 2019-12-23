@@ -146,8 +146,11 @@ branch_unit branch_unit_inst (
     .reg_data_o         (reg_data_branch)
 );
 
+
+//assign from_rr_i.instr != LD,LW,LWU,LH,LHU,LB,LBU
+
 assign load_store_instruction.valid = (from_rr_i.instr.unit == UNIT_MEM);
-assign load_store_instruction.addr = (1'b1) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.result; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
+assign load_store_instruction.addr = (1'b0) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.result; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
 assign load_store_instruction.data = rs2_data_bypass;
 assign load_store_instruction.instr_type = from_rr_i.instr.instr_type;
 assign load_store_instruction.mem_size = from_rr_i.instr.mem_size;

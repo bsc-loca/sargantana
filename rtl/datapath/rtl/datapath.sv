@@ -264,7 +264,7 @@ module datapath(
     free_list free_list_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (stage_id_rr_d.instr.rd != 'h0)),
+        .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (stage_id_rr_d.instr.rd != 'h0) & (~control_int.stall_id)),
         .add_free_register_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid),
         .free_register_i(instruction_gl_commit.old_prd),
         .do_checkpoint_i(cu_id_int.do_checkpoint),
@@ -286,7 +286,7 @@ module datapath(
         .read_src1_i(stage_id_rr_d.instr.rs1),
         .read_src2_i(stage_id_rr_d.instr.rs2),
         .old_dst_i(stage_id_rr_d.instr.rd),
-        .write_dst_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid),
+        .write_dst_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (~control_int.stall_id)),
         .new_dst_i(free_register_to_rename),
         .do_checkpoint_i(cu_id_int.do_checkpoint),
         .do_recover_i(cu_id_int.do_recover),
@@ -332,8 +332,8 @@ module datapath(
     register #($bits(id_rr_stage_t)) reg_rename_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(control_int.flush_id),
-        .load_i(1'b1), // This register is always storing a one cycle old copy of reg_id_inst and the renaming.
+        .flush_i(flush_int.flush_id),
+        .load_i(src_select_id_rr_q), // This register is always storing a one cycle old copy of reg_id_inst and the renaming.
         .input_i(stage_no_stall_rr_q),
         .output_o(stage_stall_rr_q)
     );
@@ -349,7 +349,7 @@ module datapath(
     //////// GRADUATION LIST AND READ REGISTER  STAGE                                                     /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    assign instruction_decode_gl.valid                  = stage_id_rr_q.instr.valid;
+    assign instruction_decode_gl.valid                  = stage_id_rr_q.instr.valid & (~control_int.stall_rr);
     assign instruction_decode_gl.instr_type             = stage_id_rr_q.instr.instr_type;
     assign instruction_decode_gl.rd                     = stage_id_rr_q.instr.rd;
     assign instruction_decode_gl.rs1                    = stage_id_rr_q.instr.rs1;
