@@ -185,6 +185,12 @@ module control_unit(
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
             pipeline_flush_o.flush_wb  = 1'b0;
+        end else if (id_cu_i.out_of_checkpoints) begin
+            pipeline_flush_o.flush_if  = 1'b0;
+            pipeline_flush_o.flush_id  = 1'b1;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
         end
     end
 
@@ -209,6 +215,12 @@ module control_unit(
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end else if (id_cu_i.out_of_checkpoints) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b0;
