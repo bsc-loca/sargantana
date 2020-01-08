@@ -2,54 +2,50 @@
  * Project Name   : DRAC
  * File           : branch_unit.v
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Rubén Langarita
- * Email(s)       : ruben.langarita@bsc.es
+ * Author(s)      : Víctor Soria Pardos
+ * Email(s)       : victor.soria@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author   | Description
  * -----------------------------------------------
  */
-//`default_nettype none
-import drac_pkg::*;
 
+import drac_pkg::*;
+import riscv_pkg::*;
 
 module branch_unit(
-    input instr_type_t                  instr_type_i,
-
-    input addrPC_t                      pc_i,
-    input bus64_t                       data_rs1_i,
-    input bus64_t                       data_rs2_i,
-    input bus64_t                       imm_i,
-
-    output branch_pred_decision_t       taken_o,
-    output addrPC_t                     result_o,
-    output addrPC_t                     link_pc_o
+    input rr_exe_instr_t      instruction_i,       // In instruction
+    input bus64_t             data_rs1_i,          // Data operand 1
+    input bus64_t             data_rs2_i,          // Data operand 2
+    output exe_wb_instr_t     instruction_o        // Out instruction
 );
 
 logic equal;
 logic less;
 logic less_u;
 
-addrPC_t  target;
+logic   branch_taken;
+bus64_t target;
+bus64_t result;
 
 // Calculate all posible conditions
-assign equal = data_rs1_i == data_rs2_i;
+assign equal = (data_rs1_i == data_rs2_i);
 assign less = $signed(data_rs1_i) < $signed(data_rs2_i);
 assign less_u = data_rs1_i < data_rs2_i;
 
 // Calculate target
 always_comb begin
-    case (instr_type_i)
+    case (instruction_i.instr.instr_type)
         JAL: begin
-            // Jal always puts a zero in the lower bit
-            target = (pc_i + imm_i) & 64'hFFFFFFFFFFFFFFFE; 
+            // Jal always puts a zero in the lower bit. PC plus immediate
+            target = (instruction_i.instr.pc + instruction_i.instr.result) & 64'hFFFFFFFFFFFFFFFE; 
         end
         JALR: begin
             // Jalr always puts a zero in the lower bit
-            target = (data_rs1_i + imm_i) & 64'hFFFFFFFFFFFFFFFE;
+            target = (data_rs1_i + instruction_i.instr.result) & 64'hFFFFFFFFFFFFFFFE;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
-            target = pc_i + imm_i;
+            target = instruction_i.instr.pc + instruction_i.instr.result;
         end
         default: begin
             target = 0;
@@ -59,40 +55,88 @@ end
 
 // Calculate taken
 always_comb begin
-    case (instr_type_i)
+    case (instruction_i.instr.instr_type)
         JAL: begin
-            taken_o = PRED_NOT_TAKEN; // guillemlp this is done at decode stage
+            branch_taken = 0; // guillemlp this is done at decode stage
         end
         JALR: begin
-            taken_o = PRED_TAKEN;
+            branch_taken = 1;
         end
         BEQ: begin   //branch on equal
-            taken_o = (equal)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = equal;
         end
         BNE: begin //branch on not equal
-            taken_o = (~equal)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = ~equal;
         end
         BLT: begin //branch on less than
-            taken_o = (less)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = less;
         end
         BGE: begin //branch on greater than or equal
-            taken_o = (~less)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = ~less;
         end
         BLTU: begin //branch if less than unsigned
-            taken_o = (less_u)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = less_u;
         end
         BGEU: begin //branch if greater than or equal unsigned
-            taken_o = (~less_u)? PRED_TAKEN : PRED_NOT_TAKEN;
+            branch_taken = ~less_u;
         end
         default: begin
-            taken_o = PRED_NOT_TAKEN;
+            branch_taken = 0;
         end
     endcase
 end
 
-assign result_o = (taken_o == PRED_TAKEN)? target : pc_i + 4;
-assign link_pc_o = pc_i + 4;
+//------------------------------------------------------------------------------
+// METADATA TO WRITE_BACK
+//------------------------------------------------------------------------------
+
+assign instruction_o.valid         = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_BRANCH);
+assign instruction_o.pc            = instruction_i.instr.pc;
+assign instruction_o.bpred         = instruction_i.instr.bpred;
+assign instruction_o.rs1           = instruction_i.instr.rs1;
+assign instruction_o.rd            = instruction_i.instr.rd;
+assign instruction_o.change_pc_ena = instruction_i.instr.change_pc_ena;
+assign instruction_o.regfile_we    = instruction_i.instr.regfile_we;
+assign instruction_o.instr_type    = instruction_i.instr.instr_type;
+assign instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
+assign instruction_o.csr_addr      = instruction_i.instr.result[CSR_ADDR_SIZE-1:0];
+assign instruction_o.prd           = instruction_i.prd;
+assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
+assign instruction_o.chkp          = instruction_i.chkp;
+assign instruction_o.gl_index      = instruction_i.gl_index;
+assign instruction_o.branch_taken  = branch_taken;
+
+// Target 
+
+assign result = (branch_taken) ? target : instruction_i.instr.pc + 4;
+assign instruction_o.result     = instruction_i.instr.pc + 4;
+assign instruction_o.result_pc  = result;
+
+// Exceptions
+
+always_comb begin
+    instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
+    instruction_o.ex.origin = 0;
+    instruction_o.ex.valid  = 0;
+    if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
+        instruction_o.ex = instruction_i.instr.ex;
+    end else if(instruction_i.instr.valid) begin // Check exceptions in exe stage
+        if (result[1:0] != 0 && instruction_i.instr.unit == UNIT_BRANCH &&
+             (instruction_i.instr.instr_type == JALR ||
+               ((instruction_i.instr.instr_type == BLT  || 
+                 instruction_i.instr.instr_type == BLTU || 
+                 instruction_i.instr.instr_type == BGE  ||
+                 instruction_i.instr.instr_type == BGEU || 
+                 instruction_i.instr.instr_type == BEQ  || 
+                 instruction_i.instr.instr_type == BNE ) &&
+                taken_branch )) &&
+             instruction_i.instr.valid) begin // invalid address
+            instruction_o.ex.cause = INSTR_ADDR_MISALIGNED;
+            instruction_o.ex.origin = result;
+            instruction_o.ex.valid = 1;
+        end
+    end 
+end
 
 endmodule
-//`default_nettype wire
 

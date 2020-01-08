@@ -105,8 +105,8 @@ module decoder(
                 OP_JALR: begin
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.change_pc_ena = 1'b1;
-                    decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.use_pc = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
+                    decode_instr_o.use_pc = 1'b0;
                     decode_instr_o.instr_type = JALR;
                     decode_instr_o.unit = UNIT_BRANCH;
                     // ISA says that func3 should be zero
@@ -117,8 +117,8 @@ module decoder(
                 OP_BRANCH: begin
                     decode_instr_o.regfile_we = 1'b0;
                     decode_instr_o.change_pc_ena = 1'b1;
-                    decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.use_pc = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
+                    decode_instr_o.use_pc = 1'b0;
                     decode_instr_o.unit = UNIT_BRANCH;
                     case (decode_i.inst.btype.func3)
                         F3_BEQ: begin
@@ -146,7 +146,7 @@ module decoder(
                 end
                 OP_LOAD:begin
                     decode_instr_o.regfile_we = 1'b1;
-                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
                     case (decode_i.inst.itype.func3)
                         F3_LB: begin
@@ -177,7 +177,7 @@ module decoder(
                 end
                 OP_STORE: begin
                     decode_instr_o.regfile_we = 1'b0;
-                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
                     case (decode_i.inst.itype.func3)
                         F3_SB: begin
@@ -200,7 +200,6 @@ module decoder(
                 OP_ATOMICS: begin
                     // NOTE (guillemlp) what to do with aq and rl?
                     decode_instr_o.regfile_we   = 1'b1;
-                    // NOTE (guillemlp) if aq and rl are used maybe the imm is needed
                     decode_instr_o.use_imm      = 1'b0;
                     decode_instr_o.unit         = UNIT_MEM;
                     case (decode_i.inst.rtype.func3)

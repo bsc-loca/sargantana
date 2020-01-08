@@ -266,7 +266,9 @@ typedef struct packed {
 typedef struct packed {
     instr_entry_t instr;                // Instruction
     phreg_t prs1;                       // Physical register source 1
+    logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
+    logic   rdy2;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
 
@@ -284,7 +286,9 @@ typedef struct packed {
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
     phreg_t prs1;                       // Physical register source 1
+    logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
+    logic   rdy2;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
 
@@ -313,7 +317,6 @@ typedef struct packed {
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     `endif
     phreg_t prd;                        // Physical register destination
-    phreg_t old_prd;                    // Old Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -324,6 +327,7 @@ typedef struct packed {
 typedef struct packed {
     logic valid;                        // Valid instruction
     bus64_t data;                       // Result data
+    reg_t   rd;                         // Virtual register destination
     phreg_t prd;                        // Physical register destination
 } wb_exe_instr_t;   // WB Stage to Execution
 
@@ -358,6 +362,8 @@ typedef struct packed {
 
 typedef struct packed {
     logic write_enable;         // Enable write on register file
+    logic write_enable_1;         // Enable write on register file. Port 1
+    logic write_enable_2;         // Enable write on register file. Port 2
     logic write_enable_dbg;     // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -372,10 +378,12 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
-    logic valid;                // Valid Intruction
-    logic change_pc_ena;        // Enable PC write
-    logic branch_taken;         // Branch taken
-    logic write_enable;         // Write Enable to Register File
+    logic valid_1;                // Valid Intruction ALU, MUL, DIV
+    logic valid_2;                // Valid Intruction MEM
+    logic change_pc_ena;          // Enable PC write
+    logic branch_taken;           // Branch taken
+    logic write_enable_1;         // Write Enable to Register File. ALU,MUL,DIV
+    logic write_enable_2;         // Write Enable to Register File. MEM
 
     logic is_branch;            // Decode instruction is a branch
     logic checkpoint_done;      // It has a checkpoint
@@ -394,7 +402,7 @@ typedef struct packed {
     logic ecall_taken;          // Ecall 
     logic fence;                // Is fence
     logic write_enable;         // Write Enable to Register File
-    
+    logic stall_commit;         // Stop commits
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
@@ -416,6 +424,7 @@ typedef struct packed {
     logic stall_rr;         // Stop Read Register
     logic stall_exe;        // Stop Exe
     logic stall_wb;         // Stop Write Back
+    logic stall_commit;     // Stop Commit
 
     // whether insert in fetch from dec or commit
     jump_addr_fetch_t sel_addr_if;
@@ -428,6 +437,7 @@ typedef struct packed {
     logic flush_rr;         // Flush instruction in Read Register
     logic flush_exe;        // Flush instruction in Execution Stage
     logic flush_wb;         // Flush instruction in Write Back
+    logic flush_commit;     // Flush instruction in commit
 } pipeline_flush_t;
 
 // Pipeline control
@@ -502,7 +512,6 @@ typedef struct packed {
     // tval
     bus64_t     csr_tval;
 } resp_csr_cpu_t;
-
 
 typedef struct packed {
     // Triggers a halt on the pipeline 

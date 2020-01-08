@@ -3,12 +3,13 @@
 * File           : control_unit.sv
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
+*                  Victor Soria Pardos
 * Email(s)       : guillem.lopez@bsc.es
+*                  victor.soria@bsc.es
 * References     : 
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description
-*  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
 
@@ -62,7 +63,7 @@ module control_unit(
     logic exception_enable_q, exception_enable_d;
     // jump enable logic
     always_comb begin
-        jump_enable_int =   (exe_cu_i.valid && ~correct_branch_pred_i) ||   // branch at exe
+        jump_enable_int =   (exe_cu_i.valid_1 && ~correct_branch_pred_i) ||   // branch at exe
                             id_cu_i.valid_jal;                              // valid jal
     end
 
@@ -77,11 +78,11 @@ module control_unit(
         // we don't allow regular reads/writes if not halted
         if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
                        !csr_cu_i.csr_exception && commit_cu_i.write_enable) ||
-                     ( wb_cu_i.valid && wb_cu_i.write_enable)) 
+                     ( wb_cu_i.valid_1 && wb_cu_i.write_enable_1)) 
         begin
-            cu_rr_o.write_enable = 1'b1;
+            cu_rr_o.write_enable_1 = 1'b1;
         end else begin
-            cu_rr_o.write_enable = 1'b0;
+            cu_rr_o.write_enable_1 = 1'b0;
         end
     end
 
@@ -93,6 +94,16 @@ module control_unit(
             cu_rr_o.write_enable_dbg = 1'b0;
         end
     end
+    
+    always_comb begin
+        if (wb_cu_i.valid_2 && wb_cu_i.write_enable_2)
+        begin
+            cu_rr_o.write_enable_2 = 1'b1;
+        end else begin
+            cu_rr_o.write_enable_2 = 1'b0;
+        end
+    end
+
 
     // logic to select the next pc
     always_comb begin
@@ -118,7 +129,7 @@ module control_unit(
         // if exception or eret select from csr
         if (exception_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
-        end else if (exe_cu_i.valid && ~correct_branch_pred_i) begin
+        end else if (exe_cu_i.valid_1 && ~correct_branch_pred_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
         end else if (debug_change_pc_i && debug_halt_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DEBUG;
@@ -140,13 +151,13 @@ module control_unit(
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
-    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch & ~id_cu_i.out_of_checkpoints);
+    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch & ~id_cu_i.out_of_checkpoints) & ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
 
-    assign cu_id_o.do_recover = (wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid);
+    assign cu_id_o.do_recover = (wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid_1);
 
     assign cu_id_o.recover_checkpoint = wb_cu_i.chkp;
 
-    assign cu_id_o.delete_checkpoint = (~wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid);
+    assign cu_id_o.delete_checkpoint = (~wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid_1);
 
     // logic about flush the pipeline if branch
     always_comb begin
@@ -206,7 +217,7 @@ module control_unit(
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end  else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
@@ -215,29 +226,28 @@ module control_unit(
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
+            pipeline_ctrl_o.stall_if     = 1'b1;
+            pipeline_ctrl_o.stall_id     = 1'b1;
+            pipeline_ctrl_o.stall_rr     = 1'b0;
+            pipeline_ctrl_o.stall_exe    = 1'b0;
+            pipeline_ctrl_o.stall_wb     = 1'b0;
         end else if (id_cu_i.out_of_checkpoints) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
+            pipeline_ctrl_o.stall_if     = 1'b1;
+            pipeline_ctrl_o.stall_id     = 1'b1;
+            pipeline_ctrl_o.stall_rr     = 1'b0;
+            pipeline_ctrl_o.stall_exe    = 1'b0;
+            pipeline_ctrl_o.stall_wb     = 1'b0;
         end
     end
 
-    assign cu_commit_o.enable_commit = 1'b1;
+    assign cu_commit_o.enable_commit = ~(commit_cu_i.stall_commit);
+
+    assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit;
 
 
     // logic flush gl
     always_comb begin
-        if (commit_cu_i.xcpt) begin
-            cu_wb_o.flush_gl = 1'b1;
-            cu_wb_o.flush_gl_index = commit_cu_i.gl_index;
-        end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
+        if (wb_cu_i.branch_taken & wb_cu_i.valid_1) begin
             cu_wb_o.flush_gl = 1'b1;
             cu_wb_o.flush_gl_index = wb_cu_i.gl_index;
         end else begin

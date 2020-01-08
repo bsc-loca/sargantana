@@ -2,12 +2,11 @@
  * Project Name   : DRAC
  * File           : execution.v
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Rubén Langarita
- * Email(s)       : ruben.langarita@bsc.es
+ * Author(s)      : Victor Soria Pardos
+ * Email(s)       : victor.soria@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author    | Description
- *  0.1        | Victor SP | Remove dcache interface
  * -----------------------------------------------
  */
 //`default_nettype none
@@ -25,15 +24,19 @@ module exe_stage (
 
     // INPUTS
     input rr_exe_instr_t    from_rr_i,
-    input wb_exe_instr_t    from_wb_i,
     input resp_dcache_cpu_t resp_dcache_cpu_i, // Response from dcache interface
 
     // I/O base space pointer to dcache interface
     input addr_t            io_base_addr_i,
 
+    input wire              commit_store_or_amo_i, // Signal to execute stores and atomics in commit
+
     // OUTPUTS
-    output exe_wb_instr_t   to_wb_o,
+    output exe_wb_instr_t   alu_mul_div_to_wb_o,
+    output exe_wb_instr_t   mem_to_wb_o,
     output logic            stall_o,
+    output logic            mem_commit_stall_o, // Stall commit stage
+    output exception_t      exception_mem_commit_o, // Exception to commit
 
     output req_cpu_dcache_t req_cpu_dcache_o, // Request to dcache interface 
     output logic                     correct_branch_pred_o, // Decides if the branch prediction was correct  
@@ -49,21 +52,18 @@ module exe_stage (
 );
 
 // Declarations
-bus64_t rs1_data_bypass;
-bus64_t rs2_data_bypass;
 bus64_t rs1_data_def;
 bus64_t rs2_data_def;
 
-bus64_t result_alu;
-bus64_t result_mul;
-logic stall_mul;
-bus64_t result_div;
-bus64_t result_rmd;
-logic stall_div;
+exe_wb_instr_t alu_to_wb;
 
-branch_pred_decision_t taken_branch;
-addrPC_t result_branch;
-addrPC_t linked_pc;
+exe_wb_instr_t mul_to_wb;
+
+exe_wb_instr_t div_to_wb;
+
+exe_wb_instr_t branch_to_wb;
+
+exe_wb_instr_t mem_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
@@ -72,7 +72,6 @@ logic ready_interface_mem;
 bus64_t data_interface_mem;
 logic lock_interface_mem;
 
-lsq_interface_t load_store_instruction;
 logic valid_mem_interface;
 bus64_t data_rs1_mem_interface;
 bus64_t data_rs2_mem_interface;
@@ -80,6 +79,16 @@ instr_type_t instr_type_mem_interface;
 logic [2:0] mem_size_mem_interface;
 reg_t rd_mem_interface;
 bus64_t imm_mem_interface;
+
+rr_exe_instr_t instruction_to_functional_unit;
+logic ready;
+logic set_mul_64_inst;
+logic set_div_32_inst;
+logic set_div_64_inst;
+logic ready_1cycle_inst;
+logic ready_mul_64_inst;
+logic ready_div_32_inst;
+logic ready_div_64_inst; 
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -91,242 +100,133 @@ bus64_t imm_mem_interface;
     end
 `endif
 
-assign rs1_data_bypass = ((from_rr_i.prs1 != 0) & (from_rr_i.prs1 == from_wb_i.prd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs1;
-assign rs2_data_bypass = ((from_rr_i.prs2 != 0) & (from_rr_i.prs2 == from_wb_i.prd) & from_wb_i.valid) ? from_wb_i.data : from_rr_i.data_rs2;
-
 // Select rs2 from imm to avoid bypasses
-assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : rs1_data_bypass;
-assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.result : rs2_data_bypass;
+assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.result : from_rr_i.data_rs2;
+
+score_board score_board_inst(
+    .clk_i(clk_i),
+    .rstn_i(rstn_i),
+    .kill_i(kill_i),
+    .set_mul_64_i(set_mul_64_inst),               
+    .set_div_32_i(set_div_32_inst),               
+    .set_div_64_i(set_div_64_inst),       
+    .ready_1cycle_o(ready_1cycle_inst),             
+    .ready_mul_64_o(ready_mul_64_inst),             
+    .ready_div_32_o(ready_div_32_inst),             
+    .ready_div_64_o(ready_div_64_inst)
+);
+
+assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
+
+always_comb begin
+    if (~stall_o)
+        instruction_to_functional_unit = from_rr_i;
+    else
+        instruction_to_functional_unit = 'h0;
+end
 
 alu alu_inst (
     .data_rs1_i     (rs1_data_def),
     .data_rs2_i     (rs2_data_def),
-    .instr_type_i   (from_rr_i.instr.instr_type),
-    .result_o       (result_alu)
+    .instruction_i  (instruction_to_functional_unit),
+    .instruction_o  (alu_to_wb)
 );
 
 mul_unit mul_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_mul_i     (kill_i),
-    .request_i      (from_rr_i.instr.unit == UNIT_MUL),
-    .func3_i        (from_rr_i.instr.mem_size),
-    .int_32_i       (from_rr_i.instr.op_32),
-    .src1_i         (rs1_data_bypass),
-    .src2_i         (rs2_data_bypass),
-
-    .result_o       (result_mul),
-    .stall_o        (stall_mul)
+    .instruction_i  (instruction_to_functional_unit),
+    .data_src1_i    (rs1_data_def),
+    .data_src2_i    (rs2_data_def),
+    .instruction_o  (mul_to_wb)
 );
 
 div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_div_i     (kill_i),
-    .request_i      (from_rr_i.instr.unit == UNIT_DIV),
-    .int_32_i       (from_rr_i.instr.op_32),
-    .signed_op_i    (from_rr_i.instr.signed_op),
-    .dvnd_i         (rs1_data_bypass),
-    .dvsr_i         (rs2_data_def),
-
-    .quo_o          (result_div),
-    .rmd_o          (result_rmd),
-    .stall_o        (stall_div)
+    .instruction_i  (instruction_to_functional_unit),
+    .data_src1_i    (rs1_data_def),
+    .data_src2_i    (rs2_data_def),
+    .instruction_o  (div_to_wb)
 );
 
 branch_unit branch_unit_inst (
-    .instr_type_i       (from_rr_i.instr.instr_type),
-    .pc_i               (from_rr_i.instr.pc),
-    .data_rs1_i         (rs1_data_bypass),
-    .data_rs2_i         (rs2_data_bypass),
-    .imm_i              (from_rr_i.instr.result),
-
-    .taken_o            (taken_branch),
-    .result_o           (result_branch),
-    .reg_data_o         (reg_data_branch)
+    .instruction_i      (instruction_to_functional_unit),
+    .data_rs1_i         (rs1_data_def),
+    .data_rs2_i         (rs2_data_def),
+    .instruction_o      (branch_to_wb)
 );
 
-
-//assign from_rr_i.instr != LD,LW,LWU,LH,LHU,LB,LBU
-
-assign load_store_instruction.valid = (from_rr_i.instr.unit == UNIT_MEM);
-assign load_store_instruction.addr = (1'b0) ? rs1_data_bypass : rs1_data_bypass + from_rr_i.instr.result; // TODO: (from_rr_i.instr.mem_op == MEM_AMO)
-assign load_store_instruction.data = rs2_data_bypass;
-assign load_store_instruction.instr_type = from_rr_i.instr.instr_type;
-assign load_store_instruction.mem_size = from_rr_i.instr.mem_size;
-assign load_store_instruction.rd = from_rr_i.instr.rd;
-
-
 mem_unit mem_unit_inst(
-    .clk_i(clk_i),
-    .rstn_i(rstn_i),
-    .interface_i(load_store_instruction),
-    .kill_i(kill_i),
-    .flush_i(flush_i),
-    .ready_i(resp_dcache_cpu_i.ready),
-    .data_i(resp_dcache_cpu_i.data),
-    .lock_i(resp_dcache_cpu_i.lock),
-    .valid_o(valid_mem_interface),
-    .data_rs1_o(data_rs1_mem_interface),
-    .data_rs2_o(data_rs2_mem_interface),
-    .instr_type_o(instr_type_mem_interface),
-    .mem_size_o(mem_size_mem_interface),
-    .rd_o(rd_mem_interface),
-    .imm_o(imm_mem_interface),
-    .data_o(result_mem),
-    .ls_queue_entry_o(),
-    .ready_o(ready_mem),
-    .lock_o(stall_mem)
+    .clk_i                  (clk_i),
+    .rstn_i                 (rstn_i),
+    .io_base_addr_i         (io_base_addr_i),
+    .instruction_i          (instruction_to_functional_unit),
+    .data_rs1_i             (rs1_data_def),
+    .data_rs2_i             (rs2_data_def),
+    .kill_i                 (kill_i),
+    .flush_i                (flush_i),
+    .resp_dcache_cpu_i      (resp_dcache_cpu_i),
+    .commit_store_or_amo_i  (commit_store_or_amo_i),
+    .req_cpu_dcache_o       (req_cpu_dcache_o),
+    .instruction_o          (mem_to_wb),
+    .exception_mem_commit_o (exception_mem_commit_o),
+    .mem_commit_stall_o     (mem_commit_stall_o),
+    .lock_o                 (stall_mem)
 );
 
 // Request to DCACHE INTERFACE
-assign req_cpu_dcache_o.valid         = valid_mem_interface;
 assign req_cpu_dcache_o.kill          = kill_i;
-assign req_cpu_dcache_o.data_rs1      = data_rs1_mem_interface;
-assign req_cpu_dcache_o.data_rs2      = data_rs2_mem_interface;
-assign req_cpu_dcache_o.instr_type    = instr_type_mem_interface;
-assign req_cpu_dcache_o.mem_size      = mem_size_mem_interface;
-assign req_cpu_dcache_o.rd            = rd_mem_interface;
-assign req_cpu_dcache_o.imm           = imm_mem_interface;
 assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
-//------------------------------------------------------------------------------
-// DATA  TO WRITE_BACK
-//------------------------------------------------------------------------------
-
-assign to_wb_o.valid = from_rr_i.instr.valid;
-assign to_wb_o.pc = from_rr_i.instr.pc;
-assign to_wb_o.bpred = from_rr_i.instr.bpred;
-assign to_wb_o.rs1 = from_rr_i.instr.rs1;
-assign to_wb_o.rd = from_rr_i.instr.rd;
-assign to_wb_o.change_pc_ena = from_rr_i.instr.change_pc_ena;
-assign to_wb_o.regfile_we = from_rr_i.instr.regfile_we;
-assign to_wb_o.instr_type = from_rr_i.instr.instr_type;
-assign to_wb_o.stall_csr_fence = from_rr_i.instr.stall_csr_fence;
-assign to_wb_o.csr_addr = from_rr_i.instr.result[CSR_ADDR_SIZE-1:0];
-assign to_wb_o.prd = from_rr_i.prd;
-assign to_wb_o.old_prd = from_rr_i.old_prd;
-assign to_wb_o.checkpoint_done = from_rr_i.checkpoint_done;
-assign to_wb_o.chkp = from_rr_i.chkp;
-assign to_wb_o.gl_index = from_rr_i.gl_index;
-
-`ifdef VERILATOR
-assign to_wb_o.inst = from_rr_i.instr.inst;
-`endif
-
 always_comb begin
-    to_wb_o.ex.cause  = INSTR_ADDR_MISALIGNED;
-    to_wb_o.ex.origin = 0;
-    to_wb_o.ex.valid  = 0;
-    if(from_rr_i.instr.ex.valid) begin // Bypass exception from previous stages
-        to_wb_o.ex = from_rr_i.instr.ex;
-    end else if(from_rr_i.instr.valid) begin // Check exceptions in exe stage
-        //Interrupt comming from csr, if there are a memory operation is better to finish it
-        if(from_rr_i.instr.unit != UNIT_MEM && csr_interrupt_i) begin 
-            to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            to_wb_o.ex.origin = 64'b0;
-            to_wb_o.ex.valid = 1;
-        end else if(resp_dcache_cpu_i.xcpt_ma_st && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned store
-            to_wb_o.ex.cause = ST_AMO_ADDR_MISALIGNED;
-            to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-            to_wb_o.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_ma_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Misaligned load
-            to_wb_o.ex.cause = LD_ADDR_MISALIGNED;
-            to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-            to_wb_o.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_pf_st && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault store
-            to_wb_o.ex.cause = ST_AMO_PAGE_FAULT;
-            to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-            to_wb_o.ex.valid = 1;
-        end else if (resp_dcache_cpu_i.xcpt_pf_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault load
-            to_wb_o.ex.cause = LD_PAGE_FAULT;
-            to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-            to_wb_o.ex.valid = 1;
-        end else if (((|resp_dcache_cpu_i.addr[63:40] && !resp_dcache_cpu_i.addr[39]) ||
-                      ( !(&resp_dcache_cpu_i.addr[63:40]) && resp_dcache_cpu_i.addr[39] )) &&
-                     from_rr_i.instr.unit == UNIT_MEM) begin // invalid address
-            case(from_rr_i.instr.instr_type)
-                SD, SW, SH, SB, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
-                AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
-                AMO_MAXWU, AMO_MINW, AMO_MINWU, AMO_SWAPD, AMO_ADDD,
-                AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU: begin
-                    to_wb_o.ex.cause = ST_AMO_ACCESS_FAULT;
-                    to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-                    to_wb_o.ex.valid = 1;
-                end
-                LD,LW,LWU,LH,LHU,LB,LBU: begin
-                    to_wb_o.ex.cause = LD_ACCESS_FAULT;
-                    to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
-                    to_wb_o.ex.valid = 1;
-                end
-                default: begin
-                    `ifdef ASSERTIONS
-                        assert (1 == 0);
-                    `endif
-                    to_wb_o.ex.valid = 0;
-                end
-            endcase
-        end else if (result_branch[1:0] != 0 && 
-                    from_rr_i.instr.unit == UNIT_BRANCH && 
-                    (from_rr_i.instr.instr_type == JALR || 
-                    ((from_rr_i.instr.instr_type == BLT || 
-                    from_rr_i.instr.instr_type == BLTU || 
-                    from_rr_i.instr.instr_type == BGE ||
-                    from_rr_i.instr.instr_type == BGEU || 
-                    from_rr_i.instr.instr_type == BEQ || 
-                    from_rr_i.instr.instr_type == BNE ) &&
-                    taken_branch )) &&
-                    from_rr_i.instr.valid) begin // invalid address
-            to_wb_o.ex.cause = INSTR_ADDR_MISALIGNED;
-            to_wb_o.ex.origin = result_branch;
-            to_wb_o.ex.valid = 1;
-        end
-    end 
+    if (mem_to_wb.valid)
+        mem_to_wb_o  = mem_to_wb;
+    else
+        mem_to_wb_o  = 'h0;
+
+    if (alu_to_wb.valid)
+        alu_mul_div_to_wb_o = alu_to_wb;
+    else if (mul_to_wb.valid)
+        alu_mul_div_to_wb_o = mul_to_wb;
+    else if (div_to_wb.valid)
+        alu_mul_div_to_wb_o = div_to_wb;
+    else if (branch_to_wb.valid)
+        alu_mul_div_to_wb_o = branch_to_wb;
+    else
+        alu_mul_div_to_wb_o = 'h0;
 end
 
-
 always_comb begin
-    to_wb_o.branch_taken = 1'b0;
-    case(from_rr_i.instr.unit)
-        UNIT_ALU: begin
-            to_wb_o.result      = result_alu;
-        end
-        UNIT_MUL: begin
-            to_wb_o.result      = result_mul;
-        end
-        UNIT_DIV: begin
-            case(from_rr_i.instr.instr_type)
-                DIV,DIVU,DIVW,DIVUW: begin
-                    to_wb_o.result = result_div;
-                end
-                REM,REMU,REMW,REMUW: begin
-                    to_wb_o.result = result_rmd;
-                end
-                default: begin
-                    to_wb_o.result = 0;
-                end
-            endcase
-        end
-        UNIT_BRANCH: begin
-            to_wb_o.branch_taken    = taken_branch;
-            to_wb_o.result          = linked_pc;
-        end
-        UNIT_MEM: begin
-            to_wb_o.result      = result_mem;
-        end
-        UNIT_SYSTEM: begin
-            to_wb_o.result      = rs1_data_bypass;
-        end
-        default: begin
-            to_wb_o.result      = 0;
-        end
-    endcase
-end
 
-assign stall_o = (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL) ? stall_mul :
-                 (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
-                 (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :
-                 0;
+    stall_o = 1'b0;
+    set_div_32_inst = 1'b0;
+    set_div_64_inst = 1'b0;
+    set_mul_64_inst = 1'b0;
+    if (from_rr_i.instr.valid) begin
+        if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
+            stall_o = ~ready | ~ready_div_32_inst;
+            set_div_32_inst = ready & ready_div_32_inst;
+        end
+        else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
+            stall_o = ~ready | ~ready_div_64_inst;
+            set_div_64_inst = ready & ready_div_64_inst;
+        end
+        else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) 
+            stall_o = ~ready | ~ready_1cycle_inst;
+        else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
+            stall_o = ~ready | ~ready_mul_64_inst;
+            set_mul_64_inst = ready & ready_mul_64_inst;
+        end
+        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))
+            stall_o = ~ready | ~ready_1cycle_inst;
+        else if (from_rr_i.instr.unit == UNIT_MEM)
+            stall_o = stall_mem | (~ready);
+    end
+end
 
 
 //-PMU 
@@ -338,7 +238,6 @@ assign pmu_miss_prediction_o = !correct_branch_pred_o;
 assign pmu_stall_mul_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL & stall_mul;
 assign pmu_stall_div_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV & stall_div;
 assign pmu_stall_mem_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM & stall_mem; 
-
 
 endmodule
 

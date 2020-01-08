@@ -14,24 +14,31 @@
 //`default_nettype none
 import drac_pkg::*;
 
+localparam NUM_ENTRIES = 8; // Number of entries in circular buffer
+
+
 typedef logic [$clog2(NUM_ENTRIES)-1:0] ls_queue_entry;
 typedef reg [$clog2(NUM_ENTRIES)-1:0] reg_ls_queue_entry;
 
-typedef logic [14:0] control_cell;
-typedef reg [14:0] reg_control_cell;
-
-localparam NUM_ENTRIES = 8; // Number of entries in circular buffer
+/*
+typedef logic [$bits(exe_wb_instr_t):0] control_cell;
+typedef reg [$bits(exe_wb_instr_t):0] reg_control_cell;
+*/
 
 module load_store_queue(
     input wire             clk_i,            // Clock Singal
     input wire             rstn_i,           // Negated Reset Signal
 
-    input lsq_interface_t  instruction_i,  // All instruction input signals
+    input rr_exe_instr_t   instruction_i,    // All instruction input signals
+    input bus64_t          data_rs1_i,       // Data operand 1
+    input bus64_t          data_rs2_i,       // Data operand 2
      
     input wire             flush_i,          // Flush all entries to 0
     input wire             read_head_i,      // Read tail of the ciruclar buffer
 
-    output lsq_interface_t instruction_o, // All intruction output signals
+    output rr_exe_instr_t  instruction_o,    // All intruction output signals
+    output bus64_t         data_rs1_o,       // Data operand 1
+    output bus64_t         data_rs2_o,       // Data operand 2
 
     output ls_queue_entry  ls_queue_entry_o, // Assignated lsq entrie      
     output logic           full_o,           // Lsq is full
@@ -50,11 +57,11 @@ logic read_enable;
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.valid & (num < NUM_ENTRIES);
+assign write_enable = instruction_i.instr.valid & (num < NUM_ENTRIES);
 
 // User can read the tail of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
+assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
 
 
 `ifndef SRAM_MEMORIES
@@ -63,7 +70,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
 
     reg64_t data_table [0:NUM_ENTRIES-1]; 
     regPC_t addr_table [0:NUM_ENTRIES-1];
-    reg_control_cell control_table[0:NUM_ENTRIES-1];
+    rr_exe_instr_t control_table[0:NUM_ENTRIES-1];
 
     
     always_ff @(posedge clk_i)
@@ -71,33 +78,28 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.valid) ;
         // Read Head
         if (read_enable) begin
             // Special case bypass from tail to head
-            if ((num == 0) & (instruction_i.valid)) begin
-                instruction_o <= instruction_i; 
+            if ((num == 0) & (instruction_i.instr.valid)) begin
+                instruction_o <= instruction_i;
+                data_rs1_o <= data_rs1_i;
+                data_rs2_o <= data_rs2_i;
             end else begin 
-                {instruction_o.instr_type,
-                 instruction_o.mem_size,
-                 instruction_o.rd } <= control_table[head];
-                instruction_o.addr <= addr_table[head];
-                instruction_o.data <= data_table[head];
+                instruction_o <= control_table[head];
+                data_rs1_o <= addr_table[head];
+                data_rs2_o <= data_table[head];
 
             end
         end else begin // When not reading an entry
-            instruction_o.addr <= 64'h0;
-            instruction_o.data <= 64'h0;
-            {instruction_o.instr_type,
-             instruction_o.mem_size,
-             instruction_o.rd } <= 15'h0;
+            instruction_o.instr.valid <= 0;
+            data_rs1_o <= 64'h0;
+            data_rs2_o <= 64'h0;
         end
         
         // Write tail
         if (write_enable & ~(read_enable & num == 0)) begin
-            addr_table[tail] <= instruction_i.addr;
-            data_table[tail] <= instruction_i.data;
-            control_table[tail] <= {instruction_i.instr_type,
-                                    instruction_i.mem_size,
-                                    instruction_i.rd};
+            addr_table[tail] <= data_rs1_i;
+            data_table[tail] <= data_rs2_i;
+            control_table[tail] <= instruction_i;
         end
-        instruction_o.valid <= read_enable;
     end
 
 `else

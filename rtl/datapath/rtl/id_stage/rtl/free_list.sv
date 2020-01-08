@@ -116,6 +116,7 @@ assign commit_read_enable = commit_read_head_i & (~commit_roll_back_i);
             num[0]  <= 6'b100000;          // Number of free registers 32
 
             first_free_register[0] <= register_table[commit_head];
+            checkpoint_o <= 0;
         end
         else begin
             // When checkpoint is freed increment tail

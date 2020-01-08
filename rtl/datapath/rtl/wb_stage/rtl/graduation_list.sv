@@ -28,12 +28,17 @@ module graduation_list #
     input wire                            read_tail_i,      // Read newest instruction
 
     // Write Back Interface
-    input gl_index_t                      instruction_writeback_i, // Mark instruction as finished
-    input wire                            instruction_writeback_enable_i, // Write enabled for finished
-    input gl_instruction_t                instruction_writeback_data_i, // Data of the generated exception
+    input gl_index_t                      instruction_writeback_1_i, // Mark instruction as finished
+    input wire                            instruction_writeback_enable_1_i, // Write enabled for finished
+    input gl_instruction_t                instruction_writeback_data_1_i, // Data of the generated exception
+    input gl_index_t                      instruction_writeback_2_i, // Mark instruction as finished
+    input wire                            instruction_writeback_enable_2_i, // Write enabled for finished
+    input gl_instruction_t                instruction_writeback_data_2_i, // Data of the generated exception
 
     input wire                            flush_i,          // Flush instructions from the graduation list
     input gl_index_t                      flush_index_i,    // Index that selects the first correct instruction
+
+    input wire                            flush_commit_i,   // Flush all instructions
 
     // Output Signal of instruction to Read Register 
     output gl_index_t                     assigned_gl_entry_o,
@@ -60,6 +65,8 @@ logic write_enable;
 logic read_enable;
 logic read_inverse_enable;
 
+logic is_store_or_amo;
+
 // Register for valid bit
 reg valid_bit [0:NUM_ENTRIES-1];
 
@@ -69,9 +76,23 @@ assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES) & ~(flush_
 
 // User can read the head of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & (num > 0) & ~(read_tail_i) & (valid_bit[head]);
+assign read_enable = read_head_i & (num > 0) & ~(read_tail_i) & (valid_bit[head]) & ~(flush_i);
 assign read_inverse_enable = read_tail_i & (num > 0);
 
+
+assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.instr_type == SW) ||
+                         (instruction_i.instr_type == SH) || (instruction_i.instr_type == SB) ||
+                         (instruction_i.instr_type == AMO_MAXWU) || (instruction_i.instr_type == AMO_MAXDU)   ||
+                         (instruction_i.instr_type == AMO_MINWU) || (instruction_i.instr_type == AMO_MINDU)   ||
+                         (instruction_i.instr_type == AMO_MAXW)  || (instruction_i.instr_type == AMO_MAXD)    ||
+                         (instruction_i.instr_type == AMO_MINW)  || (instruction_i.instr_type == AMO_MIND)    ||
+                         (instruction_i.instr_type == AMO_ORW)   || (instruction_i.instr_type == AMO_ORD)     ||
+                         (instruction_i.instr_type == AMO_ANDW)  || (instruction_i.instr_type == AMO_ANDD)    ||
+                         (instruction_i.instr_type == AMO_XORW)  || (instruction_i.instr_type == AMO_XORD)    ||
+                         (instruction_i.instr_type == AMO_ADDW)  || (instruction_i.instr_type == AMO_ADDD)    ||
+                         (instruction_i.instr_type == AMO_SWAPW) || (instruction_i.instr_type == AMO_SWAPD)   ||
+                         (instruction_i.instr_type == AMO_SCW)   || (instruction_i.instr_type == AMO_SCD)     ||
+                         (instruction_i.instr_type == AMO_LRW)   || (instruction_i.instr_type == AMO_LRD)     ;
 
 `ifndef SRAM_MEMORIES
 
@@ -89,7 +110,7 @@ assign read_inverse_enable = read_tail_i & (num > 0);
                 if ((num == 0) & (instruction_i.valid)) begin // Imposible case
                     instruction_o <= instruction_i;
                 end else begin
-                    instruction_o <= {entries[head]};
+                    instruction_o <= entries[head];
                     commit_gl_entry_o <= head;
                 end
             end else if (read_inverse_enable) begin
@@ -105,16 +126,23 @@ assign read_inverse_enable = read_tail_i & (num > 0);
         end
 
         if (write_enable) begin
-            valid_bit[tail] <= 1'b0;
+            valid_bit[tail] <= is_store_or_amo;
             entries[tail] <= instruction_i;
         end
 
-        if (rstn_i & instruction_writeback_enable_i) begin
+        if (rstn_i & instruction_writeback_enable_1_i) begin
             // Assume this is a correct index
-            valid_bit[instruction_writeback_i] <= 1'b1;
-            entries[instruction_writeback_i].csr_addr <= instruction_writeback_data_i.csr_addr;
-            entries[instruction_writeback_i].exception <= instruction_writeback_data_i.exception;
-            entries[instruction_writeback_i].result <= instruction_writeback_data_i.result;
+            valid_bit[instruction_writeback_1_i] <= 1'b1;
+            entries[instruction_writeback_1_i].csr_addr <= instruction_writeback_data_1_i.csr_addr;
+            entries[instruction_writeback_1_i].exception <= instruction_writeback_data_1_i.exception;
+            entries[instruction_writeback_1_i].result <= instruction_writeback_data_1_i.result;
+        end
+
+        if (rstn_i & instruction_writeback_enable_2_i) begin
+            // Assume this is a correct index
+            valid_bit[instruction_writeback_2_i] <= 1'b1;
+            entries[instruction_writeback_2_i].exception <= instruction_writeback_data_2_i.exception;
+            entries[instruction_writeback_2_i].result <= instruction_writeback_data_2_i.result;
         end
     end
 `else
@@ -127,13 +155,19 @@ begin
         head <= {num_bits_index{1'b0}};
         tail <= {num_bits_index{1'b0}};
         num  <= {num_bits_index+1{1'b0}};
-    end else if (flush_i) begin
+    end else if (flush_commit_i) begin
+        head <= {num_bits_index{1'b0}};
+        tail <= {num_bits_index{1'b0}};
+        num  <= {num_bits_index+1{1'b0}};
+    end else if (flush_i & (num > 0)) begin
         tail <= flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}; 
         head <= head + {{num_bits_index-1{1'b0}}, read_enable};
-        if ( (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-1{1'b0}}, read_enable}) )    // Recompute number of entries
-            num <= ({1'b0, flush_index_i} + {{num_bits_index-1{1'b0}}, 1'b1}) - ({1'b0, head} + {{num_bits_index-1{1'b0}}, read_enable});
-        else 
-            num <= NUM_ENTRIES[num_bits_index:0] - ({1'b0, head} + {{num_bits_index-1{1'b0}}, read_enable}) +  ({1'b0, flush_index_i} + {{num_bits_index-1{1'b0}}, 1'b1});
+        if ( (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-1{1'b0}}, read_enable}) ) begin   // Recompute number of entries
+            num <= {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{num_bits_index-1{1'b0}}, read_enable} )};
+
+        end else begin
+            num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-1{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
+        end
     end else begin
         tail <= tail + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-1{1'b0}}, read_inverse_enable};
         head <= head + {{num_bits_index-1{1'b0}}, read_enable};
