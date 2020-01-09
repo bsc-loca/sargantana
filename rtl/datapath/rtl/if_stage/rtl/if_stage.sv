@@ -18,6 +18,7 @@ import riscv_pkg::*;
 module if_stage(
     input logic                 clk_i,
     input logic                 rstn_i,
+    input addr_t                reset_addr_i,
     
     input logic                 stall_i,
     input cu_if_t               cu_if_i,
@@ -64,7 +65,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= 'h00000200;
+            pc <= reset_addr_i;
         end else begin
             pc <= next_pc;
         end

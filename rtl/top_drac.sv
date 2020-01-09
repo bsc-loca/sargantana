@@ -165,6 +165,7 @@ assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
 datapath datapath_inst(
     .clk_i(CLK),
     .rstn_i(RST),
+    .reset_addr_i(RESET_ADDRESS),
 
     // INPUT DATAPATH
     .soft_rstn_i(SOFT_RST),

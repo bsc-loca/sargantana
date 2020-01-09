@@ -18,6 +18,7 @@ import riscv_pkg::*;
 module datapath(
     input logic             clk_i,
     input logic             rstn_i,
+    input addr_t            reset_addr_i,
     input logic             soft_rstn_i,
     // icache/dcache interface
     // naming could be improved
@@ -134,6 +135,7 @@ module datapath(
     if_stage if_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .reset_addr_i(reset_addr_i),
         .stall_i(control_int.stall_if),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
