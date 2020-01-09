@@ -229,6 +229,9 @@ typedef struct packed {
     logic [2:0] mem_size;               // Memory operation size (Byte, Word)
     // TODO re-think
     logic stall_csr_fence;              // CSR or fence
+    `ifdef VERILATOR
+    riscv_pkg::instruction_t inst; 
+    `endif
 } instr_entry_t;
 
 typedef struct packed {
@@ -252,6 +255,9 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
+    `ifdef VERILATOR
+    riscv_pkg::instruction_t inst;      // Bits of the instruction
+    `endif
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
 // For bypass

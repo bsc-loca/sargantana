@@ -163,6 +163,10 @@ assign to_wb_o.instr_type = from_rr_i.instr.instr_type;
 assign to_wb_o.stall_csr_fence = from_rr_i.instr.stall_csr_fence;
 assign to_wb_o.csr_addr = from_rr_i.instr.result[CSR_ADDR_SIZE-1:0];
 
+`ifdef VERILATOR
+assign to_wb_o.inst = from_rr_i.instr.inst;
+`endif
+
 always_comb begin
     to_wb_o.ex.cause  = INSTR_ADDR_MISALIGNED;
     to_wb_o.ex.origin = 0;

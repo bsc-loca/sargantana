@@ -404,4 +404,19 @@ module datapath(
     assign valid_exe = stage_rr_exe_q.instr.valid;
     assign valid_wb = exe_to_wb_wb.valid;
 
+    // Module that generates the signature of the core to compare with spike
+    `ifdef VERILATOR
+    torture_dump_behav torture_dump
+    (
+        .clk(clk_i),
+        .rst(rstn_i),
+        .commit_valid(commit_valid),
+        .reg_wr_valid(commit_reg_we && (commit_addr_reg != 5'b0)),
+        .pc(commit_pc),
+        .inst(exe_to_wb_wb.inst),
+        .reg_dst(commit_addr_reg),
+        .data(commit_data)
+    );
+    `endif
+
 endmodule

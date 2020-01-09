@@ -70,6 +70,10 @@ module decoder(
         // TODO remove
         decode_instr_o.stall_csr_fence = 1'b0;
 
+        `ifdef VERILATOR
+        decode_instr_o.inst = decode_i.inst;
+        `endif
+
 
         if (!decode_i.ex.valid && decode_i.valid ) begin
 
