@@ -48,6 +48,10 @@ module load_store_queue(
 reg_ls_queue_entry head;
 reg_ls_queue_entry tail;
 
+rr_exe_instr_t stored_instruction_q;
+bus64_t stored_rs1_q;
+bus64_t stored_rs2_q;
+
 //Num must be 1 bit bigger than head an tail
 logic [$clog2(NUM_ENTRIES):0] num;
 
@@ -73,32 +77,33 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
     rr_exe_instr_t control_table[0:NUM_ENTRIES-1];
 
     
-    always_ff @(posedge clk_i)
+    always_ff @(posedge clk_i, negedge rstn_i)
     begin
-        // Read Head
-        if (read_enable) begin
-            // Special case bypass from tail to head
-            if ((num == 0) & (instruction_i.instr.valid)) begin
-                instruction_o <= instruction_i;
-                data_rs1_o <= data_rs1_i;
-                data_rs2_o <= data_rs2_i;
-            end else begin 
-                instruction_o <= control_table[head];
-                data_rs1_o <= addr_table[head];
-                data_rs2_o <= data_table[head];
-
+        if (~rstn_i) begin
+            stored_instruction_q <= 'h0;
+            stored_rs1_q <= 'h0;
+            stored_rs2_q <= 'h0;
+        end else begin          
+            // Write tail
+            if (write_enable) begin
+                addr_table[tail] <= data_rs1_i;
+                data_table[tail] <= data_rs2_i;
+                control_table[tail] <= instruction_i;
             end
-        end else begin // When not reading an entry
-            instruction_o.instr.valid <= 0;
-            data_rs1_o <= 64'h0;
-            data_rs2_o <= 64'h0;
-        end
-        
-        // Write tail
-        if (write_enable & ~(read_enable & num == 0)) begin
-            addr_table[tail] <= data_rs1_i;
-            data_table[tail] <= data_rs2_i;
-            control_table[tail] <= instruction_i;
+
+            // Write first instruction
+            if (write_enable & ((num == 0) | (num == 1) & read_enable)) begin
+                stored_rs1_q <= data_rs1_i;
+                stored_rs2_q <= data_rs2_i;
+                stored_instruction_q <= instruction_i;
+            end
+
+            // Read head to first instruction
+            if (read_enable & (num > 1)) begin
+                stored_instruction_q <= control_table[head];
+                stored_rs1_q <= addr_table[head];
+                stored_rs2_q <= data_table[head];
+            end
         end
     end
 
@@ -109,7 +114,7 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i | flush_i) begin
-        head <= 3'b0;
+        head <= 3'h1;
         tail <= 3'b0;
         num  <= 4'b0;
         ls_queue_entry_o <= 3'b0;
@@ -122,7 +127,13 @@ begin
     end
 end
 
-assign empty_o = (num == 0);
+
+assign instruction_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? instruction_i : stored_instruction_q;
+assign data_rs1_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? data_rs1_i : stored_rs1_q;
+assign data_rs2_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? data_rs2_i : stored_rs2_q;
+
+
+assign empty_o = (num == 0) & (~write_enable);
 assign full_o  = ((num == NUM_ENTRIES) | flush_i | ~rstn_i);
 
 endmodule

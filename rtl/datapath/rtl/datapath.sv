@@ -526,14 +526,14 @@ module datapath(
         .rstn_i(rstn_i),
 
         .kill_i(flush_int.flush_exe),
-        .csr_interrupt_i(stage_rr_exe_q.csr_interrupt),
-        .csr_interrupt_cause_i(stage_rr_exe_q.csr_interrupt_cause),
+        .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
+        .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 
         .from_rr_i(reg_to_exe),
 
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .io_base_addr_i(io_base_addr),
-        .flush_i(1'b0),
+        .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
 
         .exe_if_branch_pred_o(exe_if_branch_pred_int),

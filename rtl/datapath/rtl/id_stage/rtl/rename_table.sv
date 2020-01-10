@@ -184,10 +184,10 @@ assign ready_enable_2 = ready2_i &  (~recover_commit_i);
             // Write new ready register
             if (ready_enable_1) begin
                 for(int i = 0; i<NUM_CHECKPOINTS; i++) begin
-                    if (register_table[vaddr1_i][i] == paddr1_i) 
+                    if ((register_table[vaddr1_i][i] == paddr1_i) & ~(write_enable & (vaddr1_i == old_dst_i) & (i == version_head) )) 
                        ready_table[vaddr1_i][i] <= 1'b1;
                 end
-                if(checkpoint_enable & register_table[vaddr1_i][version_head] == paddr1_i) begin
+                if((checkpoint_enable & register_table[vaddr1_i][version_head] == paddr1_i) & ~(write_enable & (vaddr1_i == old_dst_i))) begin
                     ready_table[vaddr1_i][version_head + 2'b1] <= 1'b1;
                 end
             end
@@ -195,10 +195,10 @@ assign ready_enable_2 = ready2_i &  (~recover_commit_i);
             // Write new ready register
             if (ready_enable_2) begin
                 for(int i = 0; i<NUM_CHECKPOINTS; i++) begin
-                   if (register_table[vaddr2_i][i] == paddr2_i) 
+                   if ((register_table[vaddr2_i][i] == paddr2_i) & ~(write_enable & (vaddr2_i == old_dst_i) & (i == version_head) ))
                        ready_table[vaddr2_i][i] <= 1'b1;
                 end
-                if(checkpoint_enable & register_table[vaddr2_i][version_head] == paddr2_i) begin
+                if((checkpoint_enable & register_table[vaddr2_i][version_head] == paddr2_i) & ~(write_enable & (vaddr2_i == old_dst_i))) begin
                     ready_table[vaddr2_i][version_head + 2'b1] <= 1'b1;
                 end
             end

@@ -120,7 +120,7 @@ score_board score_board_inst(
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
 
 always_comb begin
-    if (~stall_o)
+    if (~stall_o & ~flush_i)
         instruction_to_functional_unit = from_rr_i;
     else
         instruction_to_functional_unit = 'h0;
@@ -168,7 +168,7 @@ mem_unit mem_unit_inst(
     .data_rs1_i             (rs1_data_def),
     .data_rs2_i             (rs2_data_def),
     .kill_i                 (kill_i),
-    .flush_i                (flush_i),
+    .flush_i                (1'b0),
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),

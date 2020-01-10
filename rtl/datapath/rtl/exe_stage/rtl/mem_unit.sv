@@ -108,7 +108,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         stored_instr_to_dcache.instr.valid <= 1'b0;
         stored_instr_to_dcache.instr.instr_type <= ADD;
     end 
-    else if (instruction_to_dcache.instr.valid) begin
+    else if (read_head_lsq & instruction_to_dcache.instr.valid) begin
         stored_instr_to_dcache <= instruction_to_dcache;
         stored_data_rs1 <= data_rs1_to_dcache;
         stored_data_rs2 <= data_rs2_to_dcache;
@@ -128,7 +128,7 @@ always_comb begin
             req_cpu_dcache_o.mem_size = 3'h0;
             req_cpu_dcache_o.rd = 5'h0;
             next_state = ReadHead;        // Next state Read Head
-            read_head_lsq = 1'b1;          // Read head of LSQ
+            read_head_lsq = 1'b0;          // Read head of LSQ
             mem_commit_stall_o = 1'b0;
             instruction_o.valid = 0;
         end
@@ -150,8 +150,8 @@ always_comb begin
                 req_cpu_dcache_o.rd = instruction_to_dcache.instr.rd;
                 req_cpu_dcache_o.imm = instruction_to_dcache.instr.result;
                 next_state = (~instruction_to_dcache.instr.valid) ? ReadHead : (is_STORE_or_AMO) ? WaitCommit : WaitResponse; 
-                read_head_lsq = ~instruction_to_dcache.instr.valid;
-                mem_commit_stall_o = 1'b0;
+                read_head_lsq = 1'b1;
+                mem_commit_stall_o = instruction_to_dcache.instr.valid & is_STORE_or_AMO;
                 instruction_o.valid = 0;
             end
         end
@@ -165,7 +165,7 @@ always_comb begin
                 req_cpu_dcache_o.mem_size = 3'h0;
                 req_cpu_dcache_o.rd = 5'h0;
                 next_state = ReadHead;        // Next state Read Head
-                read_head_lsq = 1'b1;          // Read head of LSQ
+                read_head_lsq = 1'b0;         
                 mem_commit_stall_o = 1'b0;
                 instruction_o.valid = 0;
             end else begin
@@ -201,7 +201,7 @@ always_comb begin
                     instruction_o.result        = resp_dcache_cpu_i.data;
 
                     next_state = ReadHead;
-                    read_head_lsq = 1'b1;
+                    read_head_lsq = 1'b0;
                     mem_commit_stall_o = 1'b0;
                 end
             end
@@ -226,7 +226,7 @@ always_comb begin
                 req_cpu_dcache_o.mem_size = stored_instr_to_dcache.instr.mem_size;
                 req_cpu_dcache_o.rd = stored_instr_to_dcache.instr.rd;
                 req_cpu_dcache_o.imm = stored_instr_to_dcache.instr.result;
-                next_state = (commit_store_or_amo_i) ? WaitCommit : WaitResponse;
+                next_state = (commit_store_or_amo_i) ? WaitResponse : WaitCommit;
                 read_head_lsq = 1'b0;
                 mem_commit_stall_o = commit_store_or_amo_i;
                 instruction_o.valid = 0;
