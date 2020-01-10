@@ -53,7 +53,7 @@ module div_unit (
               LAST = 3'b010,
               DONE = 3'b011;
 
-    assign div_zero = ~(|dvsr_i);
+    assign div_zero = (~(|dvsr_i)) || (int_32_i && ~(|dvsr_i[31:0]));
     assign same_sign = int_32_i ? ~(dvsr_i[31] ^ dvnd_i[31]) : ~(dvsr_i[63] ^ dvnd_i[63]);
 
     assign dvnd_def = ((dvnd_i[63] & signed_op_i & !int_32_i) |
