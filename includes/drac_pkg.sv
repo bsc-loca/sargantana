@@ -309,7 +309,7 @@ typedef struct packed {
 typedef struct packed {
     logic valid;
     logic change_pc_ena;
-    logic branch_taken;
+    logic is_branch;
     logic stall;                // Execution unit stalled
     logic stall_csr_fence;      // CSR or fence
 } exe_cu_t;
@@ -319,7 +319,6 @@ typedef struct packed {
     addrPC_t pc;                // PC of the instruction
     logic valid;                // Valid Intruction
     logic change_pc_ena;        // Enable PC write
-    logic branch_taken;         // Branch taken
     logic csr_enable_wb;        // CSR that needs to write to register file
     logic write_enable;         // Write Enable to Register File
     logic stall_csr_fence;      // CSR or fence

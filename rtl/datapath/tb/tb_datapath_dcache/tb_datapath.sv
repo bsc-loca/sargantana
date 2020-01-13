@@ -85,6 +85,7 @@ module tb_datapath();
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .soft_rstn_i(1'b1),
+        .reset_addr_i(64'h200),
 
         .resp_icache_cpu_i(tb_icache_fetch_i),
         .resp_dcache_cpu_i(tb_resp_dcache_cpu_i),

@@ -80,6 +80,7 @@ module tb_datapath();
         .resp_icache_cpu_i(tb_icache_fetch_i),
         .req_cpu_icache_o(tb_fetch_icache_o),
         .soft_rstn_i(soft_rstn_i),
+        .reset_addr_i(64'h200),
         .resp_csr_cpu_i(resp_csr_cpu_i),
         .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),

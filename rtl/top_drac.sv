@@ -147,7 +147,7 @@ assign resp_csr_interface_datapath.csr_replay = 1'b0; // TODO FIX
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
-assign resp_csr_interface_datapath.csr_evec = CSR_EVEC;
+assign resp_csr_interface_datapath.csr_evec = {{25{CSR_EVEC[39]}},CSR_EVEC[38:0]};
 assign resp_csr_interface_datapath.csr_interrupt = CSR_INTERRUPT;
 assign resp_csr_interface_datapath.csr_interrupt_cause = CSR_INTERRUPT_CAUSE;
  

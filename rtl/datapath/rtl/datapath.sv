@@ -224,12 +224,11 @@ module datapath(
         .stall_o(exe_cu_int.stall),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
-        .exe_if_branch_pred_o   (exe_if_branch_pred_int)
+        .exe_if_branch_pred_o   (exe_if_branch_pred_int),
         .correct_branch_pred_o  (correct_branch_pred)
     );
 
     assign exe_cu_int.valid = stage_rr_exe_q.instr.valid;
-    assign exe_cu_int.branch_taken = exe_to_wb_exe.branch_taken;
     assign exe_cu_int.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
     assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;
 
@@ -381,7 +380,6 @@ module datapath(
     // Control Unit
     assign wb_cu_int.valid = exe_to_wb_wb.valid;//; & !control_int.stall_wb; // and not flush???
     assign wb_cu_int.change_pc_ena = exe_to_wb_wb.change_pc_ena;
-    assign wb_cu_int.branch_taken = exe_to_wb_wb.branch_taken;
     assign wb_cu_int.csr_enable_wb = wb_csr_ena_int;
     assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.stall_csr_fence && exe_to_wb_wb.valid;
     assign wb_cu_int.xcpt = wb_xcpt;

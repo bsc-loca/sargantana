@@ -128,6 +128,12 @@ module control_unit(
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b1;
             pipeline_flush_o.flush_wb  = 1'b0;
+        end else if (exe_cu_i.valid & ~correct_branch_pred_i) begin
+            pipeline_flush_o.flush_if  = 1'b1;
+            pipeline_flush_o.flush_id  = 1'b1;
+            pipeline_flush_o.flush_rr  = 1'b1;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
         end else if ((id_cu_i.stall_csr_fence | 
                      rr_cu_i.stall_csr_fence | 
                      exe_cu_i.stall_csr_fence )  && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
@@ -143,13 +149,7 @@ module control_unit(
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
             pipeline_flush_o.flush_wb  = 1'b0;
-        end else if (exe_cu_i.branch_taken & exe_cu_i.valid & ~correct_branch_pred_i) begin
-            pipeline_ctrl_o.flush_if  = 1'b1;
-            pipeline_ctrl_o.flush_id  = 1'b1;
-            pipeline_ctrl_o.flush_rr  = 1'b1;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end
+        end 
     end
 
 

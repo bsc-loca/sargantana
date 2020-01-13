@@ -168,7 +168,7 @@ module if_stage(
     assign fetch_o.ex.origin = pc;
    
     // Pipeline branch prediction to exe stage
-    assign fetch_o.bpred.decision = (branch_predict_taken)? PRED_TAKEN : PRED_NOT_TAKEN;
+    assign fetch_o.bpred.decision = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
     assign fetch_o.bpred.pred_addr = branch_predict_addr;
 
 endmodule
