@@ -51,10 +51,9 @@ module branch_predictor(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 
 wire            bimodal_predict_taken;
-addrPC_t          bimodal_predict_addr;
-reg             is_branch_valid_bit;
+addrPC_t        bimodal_predict_addr;
 tag_reg         is_branch_tag;
-addrPC_t          ras_addr;
+addrPC_t        ras_addr;
 wire            use_bimodal;
 wire            is_branch_prediction;
                 
@@ -76,28 +75,21 @@ bimodal_predictor bimodal_predictor_inst(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifndef SRAM_MEMORIES
-    reg is_branch_valid_bit_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
-    reg [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
+    logic [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
 
     always_ff @(negedge clk_i, negedge rstn_i) 
     begin
         if(~rstn_i) begin
-            {is_branch_valid_bit, is_branch_tag} <= 29'h0;
+            is_branch_tag <= 'h0;
         end else begin
-            is_branch_valid_bit <= is_branch_valid_bit_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-            is_branch_tag <= is_branch_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+            is_branch_tag <= is_branch_table[pc_fetch_i[11:2]];
         end
     end
- 
-    always_ff @(posedge clk_i, negedge rstn_i) 
+    
+    always_ff @(posedge clk_i) 
     begin
-        if (~rstn_i) begin
-            for (integer j = 0; j < 1024; j++) begin
-                is_branch_valid_bit_table[j] = 1'b0;
-            end
-        end else if(is_branch_EX_i) begin
-            is_branch_valid_bit_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= 1'b1;
-            is_branch_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= pc_execution_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1];
+         if(is_branch_EX_i) begin
+            is_branch_table[pc_execution_i[11:2]] <= pc_execution_i[39:12];
         end
     end
 
@@ -122,6 +114,7 @@ bimodal_predictor bimodal_predictor_inst(
 
 `endif
 
+/*
 // Instatiation of RAS.
 return_address_stack return_address_stack_inst(
     .rstn_i(rstn_i),
@@ -130,10 +123,10 @@ return_address_stack return_address_stack_inst(
     .push_i(push_return_address_i),
     .pop_i(pop_return_address_i),
     .return_address_o(ras_addr)
-);
+);*/
 
-assign use_bimodal = ~pop_return_address_i; // !pop
-assign is_branch_prediction = is_branch_valid_bit & (is_branch_tag == pc_fetch_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1]);
+assign use_bimodal = 1'b1; // !pop
+assign is_branch_prediction = (is_branch_tag == pc_fetch_i[39:12]);
 
 
 // MUX that decides wheter the predicted address comes from Bimodal or RAS

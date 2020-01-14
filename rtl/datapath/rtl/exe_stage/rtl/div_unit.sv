@@ -35,8 +35,11 @@ module div_unit (
     logic [31:0] n_d;
     logic div_zero;
     logic same_sign;
+    logic int_32_q;
     bus64_t dvnd_def;
     bus64_t dvsr_def;
+    bus64_t dvnd_def_q;
+    bus64_t dvsr_def_q;
     bus64_t quo_aux;
     bus64_t rmd_aux;
 
@@ -60,10 +63,10 @@ module div_unit (
         .divisor_o(divisor_out)
     );
 
-    parameter IDLE = 3'b000,
-              OP   = 3'b001,
-              LAST = 3'b010,
-              DONE = 3'b011;
+    parameter IDLE  = 3'b000,
+              OP    = 3'b001,
+              FIRST = 3'b010,
+              DONE  = 3'b011;
 
     assign div_zero = (~(|dvsr_i)) || (int_32_i && ~(|dvsr_i[31:0]));
     assign same_sign = int_32_i ? ~(dvsr_i[31] ^ dvnd_i[31]) : ~(dvsr_i[63] ^ dvnd_i[63]);
@@ -81,12 +84,18 @@ module div_unit (
             dividend_quotient_q <= 0;
             divisor_q           <= 0;
             n_q                 <= 0;
+            dvnd_def_q          <= 0;
+            dvsr_def_q          <= 0;
+            int_32_q            <= 0;
         end else begin
             state_q             <= state_d;
             remanent_q          <= remanent_out;
             dividend_quotient_q <= dividend_quotient_out;
             divisor_q           <= divisor_out;
             n_q                 <= n_d;
+            dvnd_def_q          <= dvnd_def;
+            dvsr_def_q          <= dvsr_def;
+            int_32_q            <= int_32_i;
         end
 
     // FSMD next-state logic
@@ -100,10 +109,16 @@ module div_unit (
             IDLE: begin            // dvsr = 64'h00000000FFFFF948; dvnd  = 64'hFFFFFF9A00000000;
                 if (request_i & ~kill_div_i) begin
                     stall_o              = 1'b1;
+                    state_d              = FIRST;
+                end
+            end
+            FIRST: begin            // dvsr = 64'h00000000FFFFF948; dvnd  = 64'hFFFFFF9A00000000;
+                if (request_i & ~kill_div_i) begin
+                    stall_o              = 1'b1;
                     remanent_in          = 0;
-                    dividend_quotient_in = int_32_i ? {dvnd_def[31:0],32'b0} : dvnd_def; // dividend with sign
-                    divisor_in           = int_32_i ? {32'b0, dvsr_def[31:0]} : dvsr_def;// divisor with sign
-                    n_d                  = int_32_i ? 8 : 16;
+                    dividend_quotient_in = int_32_q ? {dvnd_def_q[31:0],32'b0} : dvnd_def_q; // dividend with sign
+                    divisor_in           = int_32_q ? {32'b0, dvsr_def_q[31:0]} : dvsr_def_q;// divisor with sign
+                    n_d                  = int_32_q ? 8 : 16;
                     state_d              = OP;
                 end
             end

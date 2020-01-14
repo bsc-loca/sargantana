@@ -57,7 +57,6 @@ parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
 // Most significative bit from address used to index
 parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
 
-
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4 = 2'b00,
     NEXT_PC_SEL_KEEP_PC   = 2'b01,

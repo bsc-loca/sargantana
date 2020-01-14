@@ -198,7 +198,7 @@ always_comb begin
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (((|resp_dcache_cpu_i.addr[63:40] && !resp_dcache_cpu_i.addr[39]) ||
-                      ( ! &resp_dcache_cpu_i.addr[63:40] && resp_dcache_cpu_i.addr[39] )) &&
+                      ( !(&resp_dcache_cpu_i.addr[63:40]) && resp_dcache_cpu_i.addr[39] )) &&
                      from_rr_i.instr.unit == UNIT_MEM) begin // invalid address
             case(from_rr_i.instr.instr_type)
                 SD, SW, SH, SB, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
