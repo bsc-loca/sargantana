@@ -32,9 +32,11 @@ module if_stage(
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
     // Signals for branch predictor from exe stage 
-    input exe_if_branch_pred_t      exe_if_branch_pred_i,
+    input exe_if_branch_pred_t  exe_if_branch_pred_i,
+    // Retry requesto to icache
+    input logic                 retry_fetch_i,
     // Request packet going from Icache
-    output req_cpu_icache_t     req_cpu_icache_o,
+    output req_cpu_icache_t     req_cpu_icache_o,  
     // fetch data output
     output if_id_stage_t        fetch_o
 );
@@ -123,7 +125,7 @@ module if_stage(
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & !stall_i;
     assign req_cpu_icache_o.vaddr = pc[39:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
-    assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i;
+    assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
 
     
     // Output fetch
@@ -168,7 +170,8 @@ module if_stage(
     assign fetch_o.ex.origin = pc;
    
     // Pipeline branch prediction to exe stage
-    assign fetch_o.bpred.decision = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
+    assign fetch_o.bpred.is_branch = branch_predict_is_branch;
+    assign fetch_o.bpred.decision  = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
     assign fetch_o.bpred.pred_addr = branch_predict_addr;
 
 endmodule

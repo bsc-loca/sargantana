@@ -53,6 +53,7 @@ module datapath(
     if_id_stage_t stage_if_id_q; // this is the next or output of reg
     logic invalidate_icache_int;
     logic invalidate_buffer_int;
+    logic retry_fetch;
     // Decode
     instr_entry_t stage_id_rr_d;
     instr_entry_t stage_id_rr_q;
@@ -124,10 +125,12 @@ module datapath(
     // Combinational logic select the jum addr
     // from decode, wb 
     always_comb begin
+        retry_fetch = 1'b0;
         if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
             pc_jump_if_int = exe_to_wb_exe.result_pc;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = resp_csr_cpu_i.csr_evec;
+            retry_fetch = 1'b1;
         end else begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
         end
@@ -144,6 +147,7 @@ module datapath(
         .invalidate_buffer_i(invalidate_buffer_int),
         .pc_jump_i(pc_jump_if_int),
         .resp_icache_cpu_i(resp_icache_cpu_i),
+        .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_id_d),
         .exe_if_branch_pred_i(exe_if_branch_pred_int)

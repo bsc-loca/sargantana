@@ -85,7 +85,7 @@ always_comb begin
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
-            next_state_int = (icache_access_needed_int) ? ReqValid : NoReq;
+            next_state_int = (icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer)) ? ReqValid : NoReq;
             icache_req_valid_o = icache_access_needed_int;
             resp_icache_fetch_o.valid = !buffer_miss_int  | tlb_resp_xcp_if_i /*& !tlb_resp_xcp_if_i*/;
             

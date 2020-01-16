@@ -82,6 +82,7 @@ typedef enum logic {
 } branch_pred_decision_t;   // Enum Branch Prediction resolution
 
 typedef struct packed {
+    logic is_branch;                    // Was predicted to be branch
     branch_pred_decision_t decision;    // Taken or not taken
     addrPC_t pred_addr;                 // Predicted Address
 } branch_pred_t;            // Struct for Branch Prediction
