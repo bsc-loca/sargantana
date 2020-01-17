@@ -87,21 +87,23 @@ always_comb begin
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
-            next_state_int = (icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer)) ? ReqValid : NoReq;
-            icache_req_valid_o = icache_access_needed_int;
+            next_state_int = (icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer) & icache_req_ready_i & !iptw_resp_valid_i) ? ReqValid : NoReq;
+            icache_req_valid_o = icache_access_needed_int & icache_req_ready_i;
             resp_icache_fetch_o.valid = !buffer_miss_int  | tlb_resp_xcp_if_i /*& !tlb_resp_xcp_if_i*/;
             
         end
         ReqValid: begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
                 next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
-                                 (tlb_resp_miss_i) ? TLBMiss :
+                                 (iptw_resp_valid_i) ? (NoReq) :
+                                 (tlb_resp_miss_i & icache_access_needed_int) ? TLBMiss :
                                  (icache_access_needed_int) ? ReqValid :
                                  NoReq;
                 icache_req_valid_o = icache_access_needed_int;
                 resp_icache_fetch_o.valid = (!buffer_miss_int &/*!tlb_resp_xcp_if_i &*/ !tlb_resp_miss_i) | tlb_resp_xcp_if_i;
             end else begin
-                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) :
+                                 (iptw_resp_valid_i) ? (NoReq) :
                                  (tlb_resp_miss_i) ? TLBMiss :
                                  (icache_resp_valid_i & (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) ? NoReq :
                                  (~icache_req_ready_i) ? Replay :
@@ -116,7 +118,7 @@ always_comb begin
         Replay:begin
             if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
                 next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
-                                 (tlb_resp_miss_i) ? TLBMiss : 
+                                 (tlb_resp_miss_i & icache_access_needed_int) ? TLBMiss : 
                                  (icache_access_needed_int) ? ReqValid : 
                                  NoReq;
                 icache_req_valid_o = icache_access_needed_int;
