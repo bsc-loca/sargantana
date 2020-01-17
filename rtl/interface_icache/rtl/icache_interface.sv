@@ -27,6 +27,7 @@ module icache_interface(
     input addr_t             icache_resp_vaddr_i, // ICACHE_RESP_BITS_VADDR
     input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
     input logic              icache_req_ready_i, // ICACHE_REQ_READY,
+    input logic              iptw_resp_valid_i,
     input logic              ptw_invalidate_i, // PTWINVALIDATE,
     input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
     input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
@@ -78,6 +79,7 @@ always_comb begin
     case (state_int)
         TLBMiss: begin
             next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
+                             (iptw_resp_valid_i) ? (NoReq) :
                              (tlb_resp_miss_i) ? TLBMiss : 
                              NoReq;;
             icache_req_valid_o = 1'b0;
@@ -101,7 +103,7 @@ always_comb begin
             end else begin
                 next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
                                  (tlb_resp_miss_i) ? TLBMiss :
-                                 (icache_resp_valid_i) ? NoReq :
+                                 (icache_resp_valid_i & (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) ? NoReq :
                                  (~icache_req_ready_i) ? Replay :
                                  ReqValid;
                 icache_req_valid_o = 1'b0;
@@ -220,23 +222,27 @@ assign buffer_miss_int = !valid_buffer_q |
 
 // return the datablock asked
 always_comb begin
-    case(req_fetch_icache_i.vaddr[3:2])
-        2'b00: begin
-            resp_icache_fetch_o.data = icache_line_int[31:0];
-        end
-        2'b01: begin
-            resp_icache_fetch_o.data = icache_line_int[63:32]; 
-        end
-        2'b10: begin
-            resp_icache_fetch_o.data = icache_line_int[95:64]; 
-        end
-        2'b11: begin
-            resp_icache_fetch_o.data = icache_line_int[127:96]; 
-        end
-        default: begin
-            resp_icache_fetch_o.data = 32'h0;
-        end
-    endcase
+    if(tlb_resp_xcp_if_i) begin
+        resp_icache_fetch_o.data = 32'h0;
+    end else begin
+        case(req_fetch_icache_i.vaddr[3:2])
+            2'b00: begin
+                resp_icache_fetch_o.data = icache_line_int[31:0];
+            end
+            2'b01: begin
+                resp_icache_fetch_o.data = icache_line_int[63:32]; 
+            end
+            2'b10: begin
+                resp_icache_fetch_o.data = icache_line_int[95:64]; 
+            end
+            2'b11: begin
+                resp_icache_fetch_o.data = icache_line_int[127:96]; 
+            end
+            default: begin
+                resp_icache_fetch_o.data = 32'h0;
+            end
+        endcase
+    end
 end
 
 endmodule

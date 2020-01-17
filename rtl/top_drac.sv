@@ -32,6 +32,7 @@ module top_drac(
     input logic                 PTWINVALIDATE,
     input logic                 TLB_RESP_MISS,
     input logic                 TLB_RESP_XCPT_IF,
+    input logic                 iptw_resp_valid_i,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
@@ -188,6 +189,7 @@ icache_interface icache_interface_inst(
     .icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
     .icache_resp_valid_i(ICACHE_RESP_VALID),
     .icache_req_ready_i(ICACHE_REQ_READY), 
+    .iptw_resp_valid_i(iptw_resp_valid_i),
     .ptw_invalidate_i(PTWINVALIDATE),
     .tlb_resp_miss_i(TLB_RESP_MISS),
     .tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),

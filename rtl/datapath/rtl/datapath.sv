@@ -423,7 +423,7 @@ module datapath(
         .clk(clk_i),
         .rst(rstn_i),
         .commit_valid(commit_valid),
-        .reg_wr_valid(commit_reg_we && (commit_addr_reg != 5'b0)),
+        .reg_wr_valid(cu_rr_int.write_enable && (commit_addr_reg != 5'b0)),
         .pc(commit_pc),
         .inst(exe_to_wb_wb.inst),
         .reg_dst(commit_addr_reg),
