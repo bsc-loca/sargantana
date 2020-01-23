@@ -22,15 +22,15 @@ module branch_unit(
     input bus64_t                       imm_i,
 
     output branch_pred_decision_t       taken_o,
-    output addrPC_t                     target_o,
     output addrPC_t                     result_o,
-
-    output bus64_t                      reg_data_o
+    output addrPC_t			link_pc_o
 );
 
 logic equal;
 logic less;
 logic less_u;
+
+addrPC_t  target;
 
 // Calculate all posible conditions
 assign equal = data_rs1_i == data_rs2_i;
@@ -42,17 +42,17 @@ always_comb begin
     case (instr_type_i)
         JAL: begin
             // Jal always puts a zero in the lower bit
-            target_o = (pc_i + imm_i) & 64'hFFFFFFFFFFFFFFFE; 
+            target = (pc_i + imm_i) & 64'hFFFFFFFFFFFFFFFE; 
         end
         JALR: begin
             // Jalr always puts a zero in the lower bit
-            target_o = (data_rs1_i + imm_i) & 64'hFFFFFFFFFFFFFFFE;
+            target = (data_rs1_i + imm_i) & 64'hFFFFFFFFFFFFFFFE;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
-            target_o = pc_i + imm_i;
+            target = pc_i + imm_i;
         end
         default: begin
-            target_o = 0;
+            target = 0;
         end
     endcase
 end
@@ -90,8 +90,8 @@ always_comb begin
     endcase
 end
 
-assign result_o = (taken_o == PRED_TAKEN)? target_o : pc_i + 4;
-assign reg_data_o = pc_i + 4;
+assign result_o = (taken_o == PRED_TAKEN)? target : pc_i + 4;
+assign link_pc_o = pc_i + 4;
 
 endmodule
 //`default_nettype wire

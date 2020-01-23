@@ -55,9 +55,8 @@ logic stall_div;
 logic ready_div;
 
 branch_pred_decision_t taken_branch;
-addrPC_t target_branch;
 addrPC_t result_branch;
-bus64_t reg_data_branch;
+addrPC_t linked_pc;
 
 logic ready_mem;
 bus64_t result_mem;
@@ -128,9 +127,8 @@ branch_unit branch_unit_inst (
     .imm_i              (from_rr_i.instr.result),
 
     .taken_o            (taken_branch),
-    .target_o           (target_branch),
     .result_o           (result_branch),
-    .reg_data_o         (reg_data_branch)
+    .link_pc_o          (linked_pc)
 );
 
 // Request to DCACHE INTERFACE
@@ -253,8 +251,8 @@ always_comb begin
             endcase
         end
         UNIT_BRANCH: begin
-            to_wb_o.result          = reg_data_branch;
             to_wb_o.branch_taken    = taken_branch;
+            to_wb_o.result          = linked_pc;
         end
         UNIT_MEM: begin
             to_wb_o.result      = result_mem;
