@@ -84,12 +84,15 @@ assign do_request_int = icache_access_needed_int & (~req_fetch_icache_i.invalida
 always_comb begin
     case (state_int)
         TLBMiss: begin
-            next_state_int = (req_fetch_icache_i.invalidate_buffer) ? (NoReq) : 
-                             (iptw_resp_valid_i) ? (NoReq) :
+            next_state_int = (iptw_resp_valid_i) ? (NoReq) :
                              (tlb_resp_miss_i) ? TLBMiss : 
                              NoReq;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
+
+            tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+            icache_req_bits_vpn_o = old_pc_req_q[39:12];
+            icache_req_bits_idx_o = old_pc_req_q[11:0];
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
@@ -97,37 +100,64 @@ always_comb begin
             icache_req_valid_o = do_request_int;
             resp_icache_fetch_o.valid = !buffer_miss_int  | tlb_resp_xcp_if_i;
             
+            tlb_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
+            icache_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
+            icache_req_bits_idx_o = (do_request_int) ? req_fetch_icache_i.vaddr[11:0] : old_pc_req_q[11:0];
         end
         ReqValid: begin
             if(tlb_resp_miss_i) begin
                 next_state_int = TLBMiss;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end 
             else if (req_fetch_icache_i.invalidate_buffer) begin
                 next_state_int = NoReq;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (do_request_int) ? ReqValid : NoReq;
-                icache_req_valid_o = do_request_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int | (tlb_resp_xcp_if_i & do_request_int);
+                next_state_int = NoReq;
+                icache_req_valid_o = 1'b0;
+                resp_icache_fetch_o.valid = !buffer_miss_int;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end 
             else if (icache_resp_valid_i & (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) begin
                 next_state_int = NoReq;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b1;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else if (~icache_req_ready_i) begin
                 next_state_int = Replay;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else begin
                 next_state_int = ReqValid;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = tlb_resp_xcp_if_i;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
         end
         Replay:begin
@@ -135,32 +165,56 @@ always_comb begin
                 next_state_int = TLBMiss;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else if (req_fetch_icache_i.invalidate_buffer) begin
                 next_state_int = NoReq;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = (do_request_int) ? ReqValid : NoReq;
-                icache_req_valid_o = do_request_int;
-                resp_icache_fetch_o.valid = !buffer_miss_int | (tlb_resp_xcp_if_i & do_request_int);
+                next_state_int = NoReq;
+                icache_req_valid_o = 1'b0;
+                resp_icache_fetch_o.valid = !buffer_miss_int;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end 
             else if (icache_req_ready_i) begin
-                next_state_int = ReqValid;
+                next_state_int = NoReq;
                 icache_req_valid_o = 1'b0;
                 resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
             else begin
                 next_state_int = Replay;
-                icache_req_valid_o = do_request_int;
-                resp_icache_fetch_o.valid = tlb_resp_xcp_if_i & do_request_int;
+                icache_req_valid_o = 1'b0;
+                resp_icache_fetch_o.valid = 1'b0;
+
+                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_vpn_o = old_pc_req_q[39:12];
+                icache_req_bits_idx_o = old_pc_req_q[11:0];
             end
         end
         default: begin
             next_state_int =  NoReq;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
+
+            tlb_req_bits_vpn_o = old_pc_req_q[39:12];
+            icache_req_bits_vpn_o = old_pc_req_q[39:12];
+            icache_req_bits_idx_o = old_pc_req_q[11:0];
         end
     endcase;
 end
@@ -173,11 +227,6 @@ assign icache_access_needed_int =   req_fetch_icache_i.valid &
 // TODO:(guillemlp) what is invalidate?
 // when we want to send invalidation of request?
 assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
-
-// Connect vaddr to the corresponding tlb and idx
-assign tlb_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
-assign icache_req_bits_vpn_o = req_fetch_icache_i.vaddr[39:12];
-assign icache_req_bits_idx_o = req_fetch_icache_i.vaddr[11:0];
 
 // TODO (guillemlp) I am not sure when to activate this 
 // when there is a tlb miss?
