@@ -96,9 +96,9 @@ always_comb begin
         end
         NoReq: begin
             // If req from fetch valid change state_int to REQ VALID
-            next_state_int = (do_request_int) ? ReqValid : NoReq;
+            next_state_int = (do_request_int && !tlb_resp_xcp_if_i) ? ReqValid : NoReq;
             icache_req_valid_o = do_request_int;
-            resp_icache_fetch_o.valid = !buffer_miss_int  | tlb_resp_xcp_if_i;
+            resp_icache_fetch_o.valid = !buffer_miss_int  | (tlb_resp_xcp_if_i && do_request_int);
             
             tlb_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
             icache_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
@@ -153,7 +153,7 @@ always_comb begin
             else begin
                 next_state_int = ReqValid;
                 icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = tlb_resp_xcp_if_i;
+                resp_icache_fetch_o.valid = 1'b0;
 
                 tlb_req_bits_vpn_o = old_pc_req_q[39:12];
                 icache_req_bits_vpn_o = old_pc_req_q[39:12];
