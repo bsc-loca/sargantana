@@ -85,8 +85,7 @@ always_comb begin
     case (state_int)
         TLBMiss: begin
             next_state_int = (iptw_resp_valid_i) ? (NoReq) :
-                             (tlb_resp_miss_i) ? TLBMiss : 
-                             NoReq;
+                             TLBMiss;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
 
@@ -236,7 +235,7 @@ assign icache_req_kill_o = tlb_resp_miss_i | ptw_invalidate_i | tlb_resp_xcp_if_
 assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
 
 //assign resp_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
-assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i;
+assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i & buffer_miss_int;
 assign resp_icache_fetch_o.instr_page_fault = 1'b0;
 
 // sequential logic cacheline register buffer
@@ -272,7 +271,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
 end
 
 // old pc is the pc of the last cycle
-assign old_pc_req_d = req_fetch_icache_i.vaddr;
+assign old_pc_req_d = do_request_int && (state_int == NoReq) ? req_fetch_icache_i.vaddr : old_pc_req_q;
 
 // Multiplexor to select the correct cacheline
 assign icache_line_int = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
@@ -297,7 +296,7 @@ assign buffer_miss_int = !valid_buffer_q |
 
 // return the datablock asked
 always_comb begin
-    if(tlb_resp_xcp_if_i) begin
+    if(tlb_resp_xcp_if_i & buffer_miss_int) begin
         resp_icache_fetch_o.data = 32'h0;
     end else begin
         case(req_fetch_icache_i.vaddr[3:2])
