@@ -205,7 +205,7 @@ module decoder(
                         F3_ATOMICS: begin
                             case (decode_i.inst.rtype.func7[31:27])
                                 LR_W: begin
-                                    if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end else begin
                                         decode_instr_o.instr_type = AMO_LRW;
@@ -249,7 +249,7 @@ module decoder(
                         F3_ATOMICS_64: begin
                             case (decode_i.inst.rtype.func7[31:27])
                                 LR_D: begin
-                                    if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end else begin
                                         decode_instr_o.instr_type = AMO_LRW;
@@ -622,6 +622,9 @@ module decoder(
                         end
                     endcase
                 end
+                OP_LOAD_FP: ;
+                OP_STORE_FP: ;
+                OP_FP: ;
                 default: begin
                     // By default this is not a valid instruction
                     xcpt_illegal_instruction_int = 1'b1;

@@ -110,7 +110,10 @@ typedef enum logic [6:0] {
     OP_ALU_W     = 7'b0111011,
     OP_FENCE     = 7'b0001111,
     OP_SYSTEM    = 7'b1110011,
-    OP_ATOMICS   = 7'b0101111
+    OP_ATOMICS   = 7'b0101111,
+    OP_LOAD_FP   = 7'b0000111,
+    OP_STORE_FP  = 7'b0100111,
+    OP_FP	 = 7'b1010011
 } op_inst_t;
 
 typedef enum logic [2:0] {
