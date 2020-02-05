@@ -26,9 +26,13 @@ module control_unit(
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
     input resp_csr_cpu_t    csr_cu_i,
+    input logic             correct_branch_pred_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
+    output pipeline_flush_t pipeline_flush_o,
     output cu_if_t          cu_if_o,
+    output logic            invalidate_icache_o,
+    output logic            invalidate_buffer_o,
     //output cu_id_t          cu_id_o,
     output cu_rr_t          cu_rr_o
     //output cu_exe_t         cu_exe_o,
@@ -42,8 +46,8 @@ module control_unit(
     // TODO add exceptions and csr
     always_comb begin
         jump_enable_int =   (wb_cu_i.valid && wb_cu_i.xcpt) ||
-                            // branch at commit
-                            (wb_cu_i.valid && wb_cu_i.change_pc_ena && wb_cu_i.branch_taken) || 
+                            // branch at exe
+                            (exe_cu_i.valid && ~correct_branch_pred_i) || 
                             // valid jal
                             id_cu_i.valid_jal ||
                             // jump to evec when eret
@@ -67,19 +71,19 @@ module control_unit(
         end
     end
     // logic to select the next pc
-    // TODO: Branch Predictor
     always_comb begin
         // branches or valid jal
         if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        end else if (!valid_fetch | 
-                     pipeline_ctrl_o.stall_if | 
-                     id_cu_i.stall_csr | 
-                     rr_cu_i.stall_csr | 
-                     exe_cu_i.stall_csr)  begin
-            cu_if_o.next_pc = NEXT_PC_SEL_PC;
+        end else if (!valid_fetch || 
+                     pipeline_ctrl_o.stall_if || 
+                     id_cu_i.stall_csr_fence  || 
+                     rr_cu_i.stall_csr_fence  || 
+                     exe_cu_i.stall_csr_fence || 
+                     (wb_cu_i.valid && wb_cu_i.fence))  begin
+            cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin
-            cu_if_o.next_pc = NEXT_PC_SEL_PC_4;
+            cu_if_o.next_pc = NEXT_PC_SEL_BP_OR_PC_4;
         end
     end
 
@@ -89,87 +93,88 @@ module control_unit(
         if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret || csr_cu_i.csr_exception ||
                      (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
-        end else if (wb_cu_i.branch_taken & wb_cu_i.valid) begin
-            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_COMMIT;
+        end else if ( exe_cu_i.valid && ~correct_branch_pred_i) begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
         end else begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
     end
 
+    // logic invalidate icache
+    // when there is a fence, it could be a self modifying code
+    // invalidate icache
+    assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence);
+    // logic invalidate buffer and repeat fetch
+    // when a fence, invalidate buffer and also when csr eret
+    // when it is a csr it should be checked more?
+    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | //wb_cu_i.csr_enable_wb | 
+                                                    csr_cu_i.csr_eret));
+
 
     // logic about flush the pipeline if branch
     always_comb begin
         // if exception
+        pipeline_flush_o.flush_if  = 1'b0;
+        pipeline_flush_o.flush_id  = 1'b0;
+        pipeline_flush_o.flush_rr  = 1'b0;
+        pipeline_flush_o.flush_exe = 1'b0;
+        pipeline_flush_o.flush_wb  = 1'b0;
         if ((wb_cu_i.xcpt & wb_cu_i.valid) ||
-                     (wb_cu_i.branch_taken & wb_cu_i.valid) || 
                      (csr_cu_i.csr_eret) ||
                      (csr_cu_i.csr_exception) ||
                      (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
-            pipeline_ctrl_o.flush_if  = 1'b1;
-            pipeline_ctrl_o.flush_id  = 1'b1;
-            pipeline_ctrl_o.flush_rr  = 1'b1;
-            pipeline_ctrl_o.flush_exe = 1'b1;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.stall_csr | 
-                     rr_cu_i.stall_csr | 
-                     exe_cu_i.stall_csr |
-                     exe_cu_i.stall_csr ) begin
-            pipeline_ctrl_o.flush_if  = 1'b1;
-            pipeline_ctrl_o.flush_id  = 1'b0;
-            pipeline_ctrl_o.flush_rr  = 1'b0;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.valid_jal) begin
-            pipeline_ctrl_o.flush_if  = 1'b1;
-            pipeline_ctrl_o.flush_id  = 1'b0;
-            pipeline_ctrl_o.flush_rr  = 1'b0;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end else begin
-            pipeline_ctrl_o.flush_if  = 1'b0;
-            pipeline_ctrl_o.flush_id  = 1'b0;
-            pipeline_ctrl_o.flush_rr  = 1'b0;
-            pipeline_ctrl_o.flush_exe = 1'b0;
-            pipeline_ctrl_o.flush_wb  = 1'b0;
-        end
+            pipeline_flush_o.flush_if  = 1'b1;
+            pipeline_flush_o.flush_id  = 1'b1;
+            pipeline_flush_o.flush_rr  = 1'b1;
+            pipeline_flush_o.flush_exe = 1'b1;
+            pipeline_flush_o.flush_wb  = 1'b0;
+        end else if (exe_cu_i.valid & ~correct_branch_pred_i) begin
+            if (exe_cu_i.stall) begin
+                pipeline_flush_o.flush_if  = 1'b1;
+                pipeline_flush_o.flush_id  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b0;
+                pipeline_flush_o.flush_exe = 1'b0;
+                pipeline_flush_o.flush_wb  = 1'b0;
+            end else begin
+                pipeline_flush_o.flush_if  = 1'b1;
+                pipeline_flush_o.flush_id  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b1;
+                pipeline_flush_o.flush_exe = 1'b0;
+                pipeline_flush_o.flush_wb  = 1'b0;
+            end
+        end else if ((id_cu_i.stall_csr_fence | 
+                     rr_cu_i.stall_csr_fence | 
+                     exe_cu_i.stall_csr_fence )  && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+            pipeline_flush_o.flush_if  = 1'b1;
+            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
+        end else if ((id_cu_i.valid_jal ||
+                    (wb_cu_i.valid && wb_cu_i.fence)) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+            pipeline_flush_o.flush_if  = 1'b1;
+            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
+        end 
     end
 
 
-    // logic stalls
+    // logic about stall the pipeline if branch
     always_comb begin
-        // TODO: check if this works guillemlp
+        // if exception
+        pipeline_ctrl_o.stall_if  = 1'b0;
+        pipeline_ctrl_o.stall_id  = 1'b0;
+        pipeline_ctrl_o.stall_rr  = 1'b0;
+        pipeline_ctrl_o.stall_exe = 1'b0;
+        pipeline_ctrl_o.stall_wb  = 1'b0;
         if (csr_cu_i.csr_stall || exe_cu_i.stall) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end /*else if (exe_cu_i.stall_csr) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end /*else if (rr_cu_i.stall_csr) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (id_cu_i.stall_csr) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b0;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end */else begin
-            pipeline_ctrl_o.stall_if  = 1'b0;
-            pipeline_ctrl_o.stall_id  = 1'b0;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
         end
-        
     end
-
 endmodule

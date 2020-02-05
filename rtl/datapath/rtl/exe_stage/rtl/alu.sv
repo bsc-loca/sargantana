@@ -9,11 +9,6 @@ module alu (
     output bus64_t result_o
 );
 
-/*
-assign mul = $signed(data_rs1_i) * $signed(data_rs2_i);
-assign mul_u = data_rs1_i * data_rs2_i;
-assign mul_su = $signed(data_rs1_i) * data_rs2_i;
-*/
 always_comb begin
     case (instr_type_i)
         ADD: begin

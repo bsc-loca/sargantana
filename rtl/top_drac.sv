@@ -32,6 +32,7 @@ module top_drac(
     input logic                 PTWINVALIDATE,
     input logic                 TLB_RESP_MISS,
     input logic                 TLB_RESP_XCPT_IF,
+    input logic                 iptw_resp_valid_i,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
@@ -147,7 +148,7 @@ assign resp_csr_interface_datapath.csr_replay = 1'b0; // TODO FIX
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
-assign resp_csr_interface_datapath.csr_evec = CSR_EVEC;
+assign resp_csr_interface_datapath.csr_evec = {{25{CSR_EVEC[39]}},CSR_EVEC[38:0]};
 assign resp_csr_interface_datapath.csr_interrupt = CSR_INTERRUPT;
 assign resp_csr_interface_datapath.csr_interrupt_cause = CSR_INTERRUPT_CAUSE;
  
@@ -165,6 +166,7 @@ assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
 datapath datapath_inst(
     .clk_i(CLK),
     .rstn_i(RST),
+    .reset_addr_i(RESET_ADDRESS),
 
     // INPUT DATAPATH
     .soft_rstn_i(SOFT_RST),
@@ -187,6 +189,7 @@ icache_interface icache_interface_inst(
     .icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
     .icache_resp_valid_i(ICACHE_RESP_VALID),
     .icache_req_ready_i(ICACHE_REQ_READY), 
+    .iptw_resp_valid_i(iptw_resp_valid_i),
     .ptw_invalidate_i(PTWINVALIDATE),
     .tlb_resp_miss_i(TLB_RESP_MISS),
     .tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),

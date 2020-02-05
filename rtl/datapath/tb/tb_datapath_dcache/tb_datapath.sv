@@ -48,6 +48,7 @@ module tb_datapath();
     req_cpu_dcache_t tb_req_cpu_dcache_o;
     resp_dcache_cpu_t tb_resp_dcache_cpu_i;
 
+    resp_csr_cpu_t resp_csr_cpu_i;
     req_cpu_csr_t req_cpu_csr_o;
     
 
@@ -55,9 +56,26 @@ module tb_datapath();
     logic [31:0] tb_line_o;
     logic [31:0] tb_line2_o;
 
+    bus64_t tb_dmem_resp_data_i;
+    logic tb_dmem_resp_valid_i;
+
+    logic tb_dmem_req_valid_o;
+    logic [4:0] tb_dmem_req_cmd_o;
+    addr_t  tb_dmem_req_addr_o;
+    logic [3:0] tb_dmem_op_type_o;
+    bus64_t tb_dmem_req_data_o;
+
     assign tb_icache_fetch_i.data = tb_line_o;
     assign tb_addr_i = tb_fetch_icache_o.vaddr;
 
+    assign resp_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign resp_csr_cpu_i.csr_replay = 1'b0;
+    assign resp_csr_cpu_i.csr_stall = 1'b0;
+    assign resp_csr_cpu_i.csr_exception = 1'b0;
+    assign resp_csr_cpu_i.csr_eret = 1'b0;
+    assign resp_csr_cpu_i.csr_evec = 64'h0;
+    assign resp_csr_cpu_i.csr_interrupt = 1'b0;
+    assign resp_csr_cpu_i.csr_interrupt_cause = 64'b0;
 
 //-----------------------------
 // Module
@@ -67,10 +85,11 @@ module tb_datapath();
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
         .soft_rstn_i(1'b1),
+        .reset_addr_i(64'h200),
 
-        .req_icache_cpu_i(tb_icache_fetch_i),
-        .req_dcache_cpu_i(tb_req_dcache_cpu_i),
-        .req_csr_cpu_i(197'b0),
+        .resp_icache_cpu_i(tb_icache_fetch_i),
+        .resp_dcache_cpu_i(tb_resp_dcache_cpu_i),
+        .resp_csr_cpu_i(resp_csr_cpu_i),
 
         .req_cpu_icache_o(tb_fetch_icache_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
@@ -78,12 +97,29 @@ module tb_datapath();
 
     );
 
-    /*perfect_memory perfect_memory_inst (
+    dcache_interface dcache_interface_inst (
         .clk_i(tb_clk_i),
-        .rstn_i(tb_rstn_i),
-        .addr_i(tb_addr_i),
-        .line_o(tb_line2_o)
-    );*/
+        .rstn_i(tb_rstn_i), 
+        .req_cpu_dcache_i(tb_req_cpu_dcache_o),
+        .dmem_resp_replay_i(1'b0),
+        .dmem_resp_data_i(tb_dmem_resp_data_i),
+        .dmem_req_ready_i(tb_dmem_resp_valid_i),
+        .dmem_resp_valid_i(1'b1),
+        .dmem_resp_nack_i(1'b0),
+        .dmem_xcpt_ma_st_i(1'b0),
+        .dmem_xcpt_ma_ld_i(1'b0), 
+        .dmem_xcpt_pf_st_i(1'b0),
+        .dmem_xcpt_pf_ld_i(1'b0),
+        .dmem_req_valid_o(tb_dmem_req_valid_o),
+        .dmem_req_cmd_o(tb_dmem_req_cmd_o),
+        .dmem_req_addr_o(tb_dmem_req_addr_o),
+        .dmem_op_type_o(tb_dmem_op_type_o),
+        .dmem_req_data_o(tb_dmem_req_data_o),
+        .dmem_req_tag_o(), 
+        .dmem_req_invalidate_lr_o(),
+        .dmem_req_kill_o(),
+        .resp_dcache_cpu_o(tb_resp_dcache_cpu_i) 
+    );
 
     perfect_memory_hex perfect_memory_hex_inst (
         .clk_i(tb_clk_i),
@@ -97,13 +133,13 @@ module tb_datapath();
     perfect_memory_hex_write perfect_memory_hex_write_inst (
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
-        .addr_i(tb_req_cpu_dcache_o.dmem_req_addr_o),
-        .valid_i(tb_req_cpu_dcache_o.dmem_req_valid_o),
-        .wr_ena_i(tb_req_cpu_dcache_o.dmem_req_cmd_o == 5'b00001),
-        .wr_data_i(tb_req_cpu_dcache_o.dmem_req_data_o),
-        .word_size_i(tb_req_cpu_dcache_o.dmem_op_type_o),
-        .line_o(tb_req_dcache_cpu_i.dmem_resp_data_i),
-        .ready_o(tb_req_dcache_cpu_i.dmem_resp_valid_i)
+        .addr_i(tb_dmem_req_addr_o),
+        .valid_i(tb_dmem_req_valid_o),
+        .wr_ena_i(tb_dmem_req_cmd_o == 5'b00001),
+        .wr_data_i(tb_dmem_req_data_o),
+        .word_size_i(tb_dmem_op_type_o),
+        .line_o(tb_dmem_resp_data_i),
+        .ready_o(tb_dmem_resp_valid_i)
     );
 
 

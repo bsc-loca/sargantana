@@ -110,7 +110,10 @@ typedef enum logic [6:0] {
     OP_ALU_W     = 7'b0111011,
     OP_FENCE     = 7'b0001111,
     OP_SYSTEM    = 7'b1110011,
-    OP_ATOMICS   = 7'b0101111
+    OP_ATOMICS   = 7'b0101111,
+    OP_LOAD_FP   = 7'b0000111,
+    OP_STORE_FP  = 7'b0100111,
+    OP_FP	 = 7'b1010011
 } op_inst_t;
 
 typedef enum logic [2:0] {
@@ -253,16 +256,20 @@ typedef enum logic [6:0] {
     F7_64_NORMAL           = 7'b0000000
 } op_func7_alu_64_t;
 
-typedef enum logic [11:0] {
-    F12_ECALL   = 12'b000000000000,
-    F12_EBREAK  = 12'b000000000001,
-    F12_URET    = 12'b000000000010,
-    F12_SRET    = 12'b000100000010,
-    F12_MRET    = 12'b001100000010,
-    F12_WFI     = 12'b000100000011,
-    F12_ERET    = 12'b000100000000, //Old ISA
-    F12_MRTS    = 12'b001100000101 //Old ISA
-} op_func12_system_t;
+typedef enum logic [6:0] {
+    F7_ECALL_EBREAK_URET    = 7'b0000000,
+    F7_SRET_WFI_ERET_SFENCE = 7'b0001000,
+    F7_SFENCE_VM            = 7'b0001001,
+    F7_MRET_MRTS            = 7'b0011000
+} op_func7_system_t; // The first 7 bits of func7
+
+typedef enum logic [4:0] {
+    RS2_ECALL_ERET      = 5'b00000,
+    RS2_EBREAK_SFENCEVM = 5'b00001,
+    RS2_URET_SRET_MRET  = 5'b00010,
+    RS2_WFI             = 5'b00011,
+    RS2_MRTS            = 5'b00101 //Old ISA
+} op_rs2_system_t; // the next 5 bits after func7
 
 typedef enum logic [6:0] {
     F7_MUL_DIV  = 7'b0000001

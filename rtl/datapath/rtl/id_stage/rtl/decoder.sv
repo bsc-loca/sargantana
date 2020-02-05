@@ -30,6 +30,7 @@ module decoder(
         .instr_i(decode_i.inst),
         .imm_o(imm_value)
     );
+    logic [6:0] func7;
 
     always_comb begin
         xcpt_illegal_instruction_int = 1'b0;
@@ -46,7 +47,6 @@ module decoder(
         // By default all enables to zero
         decode_instr_o.change_pc_ena = 1'b0;
         decode_instr_o.regfile_we    = 1'b0;
-        decode_instr_o.regfile_w_sel = SEL_FROM_ALU;
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
@@ -55,27 +55,24 @@ module decoder(
         decode_instr_o.instr_type = ADD;
 
         
-        decode_instr_o.alu_op = ALU_ADD;
         decode_instr_o.unit   = UNIT_ALU;
-        // not sure if we should have this
-        //decode_instr_o.instr_type;
         // By default use the imm value then it will change along the process
         decode_instr_o.result = 64'b0;
 
         // TODO review
-        decode_instr_o.imm = imm_value;
-        decode_instr_o.funct3 = decode_i.inst.common.func3;
+        decode_instr_o.result = imm_value;
+        decode_instr_o.mem_size = decode_i.inst.common.func3;
         decode_instr_o.signed_op = 1'b0;
-        decode_instr_o.mem_op = MEM_NOP;
 
         jal_id_if_o.valid = 1'b0;
         jal_id_if_o.jump_addr = 64'b0;
 
-        decode_instr_o.aq = 1'b0;
-        decode_instr_o.rl = 1'b0;
-
         // TODO remove
-        decode_instr_o.stall_csr = 1'b0;
+        decode_instr_o.stall_csr_fence = 1'b0;
+
+        `ifdef VERILATOR
+        decode_instr_o.inst = decode_i.inst;
+        `endif
 
 
         if (!decode_i.ex.valid && decode_i.valid ) begin
@@ -87,14 +84,12 @@ module decoder(
                     decode_instr_o.regfile_we  = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.rs1 = '0;
-                    decode_instr_o.alu_op = ALU_OR;
                     decode_instr_o.instr_type = OR;
                 end
                 OP_AUIPC:begin
                     decode_instr_o.regfile_we  = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
-                    decode_instr_o.alu_op = ALU_ADD;
                     decode_instr_o.instr_type = ADD;          
                 end
                 OP_JAL: begin
@@ -104,7 +99,6 @@ module decoder(
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
                     decode_instr_o.instr_type = JAL;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
                     xcpt_addr_misaligned_int = |imm_value[1:0]; 
@@ -117,7 +111,6 @@ module decoder(
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
                     decode_instr_o.instr_type = JALR;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                 end
                 OP_BRANCH: begin
@@ -125,7 +118,6 @@ module decoder(
                     decode_instr_o.change_pc_ena = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.use_pc = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_BRANCH;
                     decode_instr_o.unit = UNIT_BRANCH;
                     case (decode_i.inst.btype.func3)
                         F3_BEQ: begin
@@ -154,9 +146,7 @@ module decoder(
                 OP_LOAD:begin
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit = UNIT_MEM;
-                    decode_instr_o.mem_op = MEM_LOAD;
                     case (decode_i.inst.itype.func3)
                         F3_LB: begin
                             decode_instr_o.instr_type = LB;
@@ -187,9 +177,7 @@ module decoder(
                 OP_STORE: begin
                     decode_instr_o.regfile_we = 1'b0;
                     decode_instr_o.use_imm = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit = UNIT_MEM;
-                    decode_instr_o.mem_op = MEM_STORE;
                     case (decode_i.inst.itype.func3)
                         STORE_SB: begin
                             decode_instr_o.instr_type = SB;
@@ -212,16 +200,12 @@ module decoder(
                     // TODO (guillemlp) what to do with aq and rl?
                     decode_instr_o.regfile_we   = 1'b1;
                     decode_instr_o.use_imm      = 1'b1;
-                    decode_instr_o.regfile_w_sel = SEL_FROM_MEM;
                     decode_instr_o.unit         = UNIT_MEM;
-                    decode_instr_o.mem_op       = MEM_AMO;
-                    decode_instr_o.aq           = decode_i.inst.rtype.func7[26];
-                    decode_instr_o.rl           = decode_i.inst.rtype.func7[25];
                     case (decode_i.inst.rtype.func3)
                         F3_ATOMICS: begin
                             case (decode_i.inst.rtype.func7[31:27])
                                 LR_W: begin
-                                    if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end else begin
                                         decode_instr_o.instr_type = AMO_LRW;
@@ -265,7 +249,7 @@ module decoder(
                         F3_ATOMICS_64: begin
                             case (decode_i.inst.rtype.func7[31:27])
                                 LR_D: begin
-                                    if (decode_i.inst.rtype.rs1 != 'h0) begin
+                                    if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end else begin
                                         decode_instr_o.instr_type = AMO_LRW;
@@ -519,7 +503,9 @@ module decoder(
                 end
                 OP_FENCE: begin
                     // Not sure what we should do
-                    decode_instr_o.instr_type = FENCE;
+                    decode_instr_o.instr_type = FENCE_I;
+                    // It behaves similarly as a fence
+                    decode_instr_o.stall_csr_fence = 1'b1;
                 end
                 OP_SYSTEM: begin
                     decode_instr_o.use_imm    = 1'b1;
@@ -531,35 +517,75 @@ module decoder(
                             
                             decode_instr_o.regfile_we = 1'b0;
 
-                            if (decode_i.inst.itype.rs1 != 'h0 ||
-                                decode_i.inst.itype.rd != 'h0 ) 
-                            begin
+                            if (decode_i.inst.itype.rd != 'h0 ) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
-                                case (decode_i.inst.itype.imm)
-                                    F12_ECALL: begin
-                                        decode_instr_o.instr_type = ECALL;
+                                func7=decode_i.inst.rtype.func7;
+                                case (decode_i.inst.rtype.func7)
+                                    F7_ECALL_EBREAK_URET: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_ECALL_ERET: begin
+                                                    decode_instr_o.instr_type = ECALL;
+                                                end
+                                                RS2_EBREAK_SFENCEVM: begin
+                                                    decode_instr_o.instr_type = EBREAK;
+                                                end
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = URET;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end   
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_EBREAK: begin
-                                        decode_instr_o.instr_type = EBREAK;
+                                    F7_SRET_WFI_ERET_SFENCE: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = SRET;
+                                                end
+                                                RS2_WFI: begin
+                                                    decode_instr_o.instr_type = WFI;
+                                                end
+                                                RS2_EBREAK_SFENCEVM: begin
+                                                    decode_instr_o.instr_type = FENCE;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
+                                                end
+                                                RS2_ECALL_ERET: begin
+                                                    decode_instr_o.instr_type = ERET;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end 
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_URET: begin
-                                        decode_instr_o.instr_type = URET;
+                                    F7_MRET_MRTS: begin
+                                        if (decode_i.inst.itype.rs1 != 'h0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            case (decode_i.inst.rtype.rs2)
+                                                RS2_URET_SRET_MRET: begin
+                                                    decode_instr_o.instr_type = MRET;
+                                                end
+                                                RS2_MRTS: begin
+                                                    decode_instr_o.instr_type = MRTS;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end 
+                                            endcase // decode_i.inst.rtype.rs2
+                                        end
                                     end
-                                    F12_SRET: begin
-                                        decode_instr_o.instr_type = SRET;
-                                    end
-                                    F12_MRET: begin
-                                        decode_instr_o.instr_type = MRET;
-                                    end
-                                    F12_WFI: begin
-                                        decode_instr_o.instr_type = WFI;
-                                    end
-                                    F12_ERET: begin // Old ISA
-                                        decode_instr_o.instr_type = ERET;
-                                    end
-                                    F12_MRTS: begin // Old ISA
-                                        decode_instr_o.instr_type = MRTS;
+                                    F7_SFENCE_VM:begin
+                                        decode_instr_o.instr_type = FENCE;
+                                        decode_instr_o.stall_csr_fence = 1'b1;
                                     end
                                     default: begin // check illegal instruction
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -569,33 +595,36 @@ module decoder(
                         end
                         F3_CSRRW: begin
                            decode_instr_o.instr_type = CSRRW;
-                           decode_instr_o.stall_csr = 1'b1;
+                           decode_instr_o.stall_csr_fence = 1'b1;
                         end
                         F3_CSRRS: begin
                             decode_instr_o.instr_type = CSRRS;
-                            decode_instr_o.stall_csr = 1'b1;
+                            decode_instr_o.stall_csr_fence = 1'b1;
                         end
                         F3_CSRRC: begin
                             decode_instr_o.instr_type = CSRRC;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRWI: begin
                             decode_instr_o.instr_type = CSRRWI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRSI: begin
                             decode_instr_o.instr_type = CSRRSI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         F3_CSRRCI: begin
                             decode_instr_o.instr_type = CSRRCI;
-                            decode_instr_o.stall_csr = 1'b1;             
+                            decode_instr_o.stall_csr_fence = 1'b1;             
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
                     endcase
                 end
+                OP_LOAD_FP: ;
+                OP_STORE_FP: ;
+                OP_FP: ;
                 default: begin
                     // By default this is not a valid instruction
                     xcpt_illegal_instruction_int = 1'b1;
