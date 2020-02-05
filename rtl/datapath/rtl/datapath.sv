@@ -92,6 +92,10 @@ module datapath(
     // data to write to RR from wb
     bus64_t data_wb_rr_int;
 
+    // codifies if the branch was correctly predicted 
+    // this signal goes from exe stage to fetch stage
+    logic correct_branch_pred;
+
     // TODO: Ruben
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin

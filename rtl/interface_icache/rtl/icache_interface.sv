@@ -63,6 +63,10 @@ logic buffer_miss_int;
 // FSM icache
 icache_state_t state_int, next_state_int;
 
+// this signal codifies if a new request must be done
+// to the icache
+logic do_request_int;
+
 // Sequential procedure to update state
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin

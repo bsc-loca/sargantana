@@ -79,7 +79,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= reset_addr_i;
+            pc <= {24'b0,reset_addr_i};
         end else begin
             pc <= next_pc;
         end
