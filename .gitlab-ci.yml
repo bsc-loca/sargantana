@@ -1,4 +1,4 @@
-image: localhost:5000/lagarto-develop:latest
+image: localhost:5000/lagarto_rtl 
 
 before_script:
   - apt update
