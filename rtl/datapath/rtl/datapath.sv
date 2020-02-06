@@ -421,7 +421,7 @@ module datapath(
     assign valid_wb = exe_to_wb_wb.valid;
 
     // Module that generates the signature of the core to compare with spike
-    `ifdef VERILATOR
+    `ifdef VERILATOR_TORTURE_TESTS
     torture_dump_behav torture_dump
     (
         .clk(clk_i),
