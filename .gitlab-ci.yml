@@ -1,18 +1,17 @@
-image: localhost:5000/lagarto_rtl 
-
 stages:
   - verilator
   - spyglass
 
 verilator:verilog:
+  image: localhost:5000/lagarto_rtl 
   stage: verilator
   script:
     - verilator --version
     - make lint
   allow_failure: true
 
-image: localhost:5000/epi_rtl-spyglass-lint
 spyglass:verilog:
+  image: localhost:5000/epi_rtl-spyglass-lint
   stage: spyglass
   tags:
     - spyglass
