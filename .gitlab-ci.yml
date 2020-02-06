@@ -1,9 +1,5 @@
 image: localhost:5000/lagarto_rtl 
 
-before_script:
-  - apt update
-  - apt install verilator -y
-
 stages:
   - verilator
   - spyglass
