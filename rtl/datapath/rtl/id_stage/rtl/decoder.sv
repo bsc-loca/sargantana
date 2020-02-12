@@ -622,9 +622,6 @@ module decoder(
                         end
                     endcase
                 end
-                OP_LOAD_FP: ;
-                OP_STORE_FP: ;
-                OP_FP: ;
                 default: begin
                     // By default this is not a valid instruction
                     xcpt_illegal_instruction_int = 1'b1;
