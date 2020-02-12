@@ -1,0 +1,13 @@
+\section{Design placement}
+\label{chapter2}
+
+Exe\_stage module should be instantiated on the datapath module, between Read Registers and Write Back stages. All input and output signals of exe\_stage are connected to the datapath module.
+
+ALU module is meant to be placed inside exe\_stage module. There should be only one instance per core. An all signals of the module are connected inside exe\_stage module. 
+
+BU module is meant to be placed inside exe\_stage module. There should be only one instance per core. An all signals of the module are connected inside exe\_stage module. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{schematic.png}
+\end{figure}

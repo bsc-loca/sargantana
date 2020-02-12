@@ -1,0 +1,23 @@
+\section{Special cases, corner cases}
+
+\subsection{EXE\_STAGE }
+
+\begin{itemize}
+  \item 
+  \item Instructions not supported by the core (Floating points, )
+\end{itemize}
+
+\subsection{ALU}
+
+\begin{itemize}
+  \item ADD, SUB and SLL overflows
+  \item Instructions not supported by the ALU
+\end{itemize}
+
+\subsection{Branch Unit}
+
+\begin{itemize}
+  \item When \emph{pc\_i} plus \emph{imm\_i} have the two lower bits set to 1
+  \item Instructions not supported by the Branch Unit
+  \item When \emph{data\_rs1\_i} plus \emph{imm\_i} have the two lower bits set to 1
+\end{itemize}
