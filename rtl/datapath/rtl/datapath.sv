@@ -105,8 +105,6 @@ module datapath(
 
     // Control Unit
     control_unit control_unit_inst(
-        .clk_i(clk_i),
-        .rstn_i(rstn_i),
         .valid_fetch(resp_icache_cpu_i.valid),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),

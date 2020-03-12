@@ -16,9 +16,6 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module control_unit(
-    input                   clk_i,
-    input                   rstn_i,
-
     input logic             valid_fetch,
     //input if_cu_t           if_cu_i,
     input id_cu_t           id_cu_i,
