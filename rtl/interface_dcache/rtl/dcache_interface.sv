@@ -80,7 +80,6 @@ parameter MEM_NOP   = 2'b00,
 assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dmem_xcpt_pf_ld_i;
 
 // The address is in the INPUT/OUTPUT space
-//TODO: Make next line parametric
 assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (dmem_req_addr_o <= 40'h80020053);
 
 //////////////////////////////////////////////////////////////////////
@@ -225,7 +224,6 @@ always_comb begin
 end
 
 // Address calculation
-// TODO: IS NOT REALIST TO DO ADDRESS CALCULATION HERE. IT SHOULD TAKE ONE CYCLE. FOR 50MHZ IS OK.
 assign dmem_req_addr_64 = (type_of_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
 assign dmem_req_addr_o = dmem_req_addr_64[39:0];
 

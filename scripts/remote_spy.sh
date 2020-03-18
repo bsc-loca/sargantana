@@ -41,6 +41,6 @@ echo -e "remove\n"
 exit
 EOF
 echo -e "exit"
-scp -r drac@192.168.10.38:/tmp/$N/$N ./spyglass_reports
+scp -r drac@192.168.10.38:/tmp/$N/ ./spyglass_reports
 echo -e "copy resuts"
 cat spyglass_reports/consolidated_reports/top_drac_lint_lint_rtl/moresimple.rpt | grep -i 'warning\|error' 2>&1

@@ -111,7 +111,6 @@ module tb_icache_interface();
     endtask
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
@@ -147,7 +146,6 @@ module tb_icache_interface();
         end
     endtask
 //***task automatic test_sim***
-//This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
             $display("*** test_sim");
@@ -246,8 +244,6 @@ module tb_icache_interface();
             // Since we don't have anything on datablock
             // assert there is a miss in the buffer by answering
             // with not ready
-            // TODO check if there is the databblock bits 
-            // except the last ones
             assert (tb_req_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");
             // Check exception misalignment

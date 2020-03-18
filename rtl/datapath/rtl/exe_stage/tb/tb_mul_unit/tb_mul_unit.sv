@@ -95,7 +95,6 @@ mul_unit mul_unit_inst (
     endtask
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
@@ -132,7 +131,6 @@ mul_unit mul_unit_inst (
         end
     endtask
 //***task automatic test_sim***
-//This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
             $display("*** test_sim");
