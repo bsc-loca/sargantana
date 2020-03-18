@@ -79,7 +79,7 @@ module if_stage(
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= reset_addr_i;
+            pc <= {24'h0, reset_addr_i};
         end else begin
             pc <= next_pc;
         end
@@ -142,8 +142,6 @@ module if_stage(
         .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
-        .push_return_address_i(1'b0),
-        .pop_return_address_i(1'b0),
         .branch_predict_is_branch_o(branch_predict_is_branch),
         .branch_predict_taken_o(branch_predict_taken),
         .branch_predict_addr_o(branch_predict_addr)

@@ -1,0 +1,29 @@
+\babel@toc {english}{}
+\contentsline {section}{\numberline {1}General purpose of the module}{3}{section.1}
+\contentsline {section}{\numberline {2}Design placement}{3}{section.2}
+\contentsline {section}{\numberline {3}Parameters}{4}{section.3}
+\contentsline {section}{\numberline {4}Interface}{4}{section.4}
+\contentsline {subsection}{\numberline {4.1}Execution Stage Interfaces}{5}{subsection.4.1}
+\contentsline {subsubsection}{\numberline {4.1.1}Input Interface}{5}{subsubsection.4.1.1}
+\contentsline {subsubsection}{\numberline {4.1.2}Output Interface}{6}{subsubsection.4.1.2}
+\contentsline {subsection}{\numberline {4.2}ALU Interfaces}{6}{subsection.4.2}
+\contentsline {subsubsection}{\numberline {4.2.1}Input Interface}{6}{subsubsection.4.2.1}
+\contentsline {subsubsection}{\numberline {4.2.2}Output Interface}{6}{subsubsection.4.2.2}
+\contentsline {subsection}{\numberline {4.3}Branch Unit Interfaces}{7}{subsection.4.3}
+\contentsline {subsubsection}{\numberline {4.3.1}Input Interface}{7}{subsubsection.4.3.1}
+\contentsline {subsubsection}{\numberline {4.3.2}Output Interface}{7}{subsubsection.4.3.2}
+\contentsline {section}{\numberline {5}Reset behavior}{7}{section.5}
+\contentsline {section}{\numberline {6}What could not happen}{7}{section.6}
+\contentsline {subsection}{\numberline {6.1}What could not happen in exe\_stage module}{7}{subsection.6.1}
+\contentsline {subsection}{\numberline {6.2}What could not happen in ALU module}{7}{subsection.6.2}
+\contentsline {subsection}{\numberline {6.3}What could not happen in Branch Unit module}{8}{subsection.6.3}
+\contentsline {section}{\numberline {7}Behavior}{9}{section.7}
+\contentsline {subsection}{\numberline {7.1}Description of EXE\_STAGE module}{9}{subsection.7.1}
+\contentsline {subsection}{\numberline {7.2}Description of ALU module}{10}{subsection.7.2}
+\contentsline {subsubsection}{\numberline {7.2.1}Examples}{11}{subsubsection.7.2.1}
+\contentsline {subsection}{\numberline {7.3}Description of Branch Unit module}{11}{subsection.7.3}
+\contentsline {subsubsection}{\numberline {7.3.1}Examples}{12}{subsubsection.7.3.1}
+\contentsline {section}{\numberline {8}Special cases, corner cases}{12}{section.8}
+\contentsline {subsection}{\numberline {8.1}EXE\_STAGE}{12}{subsection.8.1}
+\contentsline {subsection}{\numberline {8.2}ALU}{12}{subsection.8.2}
+\contentsline {subsection}{\numberline {8.3}Branch Unit}{13}{subsection.8.3}
