@@ -101,9 +101,9 @@ assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
 // UPDATE STATE
 always@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i)
-        state = ResetState;
+        state <= ResetState;
     else
-        state = next_state;
+        state <= next_state;
 end
 
 // MEALY OUTPUT and NEXT STATE

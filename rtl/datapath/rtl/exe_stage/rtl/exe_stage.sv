@@ -48,17 +48,14 @@ bus64_t rs2_data_def;
 bus64_t result_alu;
 bus64_t result_mul;
 logic stall_mul;
-logic ready_mul;
 bus64_t result_div;
 bus64_t result_rmd;
 logic stall_div;
-logic ready_div;
 
 branch_pred_decision_t taken_branch;
 addrPC_t result_branch;
 addrPC_t linked_pc;
 
-logic ready_mem;
 bus64_t result_mem;
 logic stall_mem;
 
@@ -99,8 +96,7 @@ mul_unit mul_unit_inst (
     .src2_i         (rs2_data_bypass),
 
     .result_o       (result_mul),
-    .stall_o        (stall_mul),
-    .done_tick_o    (ready_mul)
+    .stall_o        (stall_mul)
 );
 
 div_unit div_unit_inst (
@@ -115,8 +111,7 @@ div_unit div_unit_inst (
 
     .quo_o          (result_div),
     .rmd_o          (result_rmd),
-    .stall_o        (stall_div),
-    .done_tick_o    (ready_div)
+    .stall_o        (stall_div)
 );
 
 branch_unit branch_unit_inst (
@@ -143,7 +138,6 @@ assign req_cpu_dcache_o.imm           = from_rr_i.instr.result;
 assign req_cpu_dcache_o.io_base_addr  = io_base_addr_i;
 
 // RESPONSE FROM DCACHE INTERFACE
-assign ready_mem    = resp_dcache_cpu_i.ready;  
 assign result_mem   = resp_dcache_cpu_i.data;
 assign stall_mem    = resp_dcache_cpu_i.lock;
 
@@ -267,12 +261,14 @@ always_comb begin
 end
 
 // Branch predictor required signals
-    // Program counter at Execution Stage
+// Program counter at Execution Stage
 assign exe_if_branch_pred_o.pc_execution = from_rr_i.instr.pc; 
+
     // Correct prediction
     always_comb begin
         if (from_rr_i.instr.instr_type == JAL)begin
             correct_branch_pred_o = 1'b1;
+            to_wb_o.result_pc = 0;
         end else   
         if (from_rr_i.instr.instr_type != BLT && from_rr_i.instr.instr_type != BLTU &&
             from_rr_i.instr.instr_type != BGE && from_rr_i.instr.instr_type != BGEU &&

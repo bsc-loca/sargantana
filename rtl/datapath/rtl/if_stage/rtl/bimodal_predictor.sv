@@ -70,7 +70,7 @@ reg [1:0] past_state_pht;
 
 
     // Read pattern history table at addres pc_fetch_i
-    always@(negedge clk_i)
+    always@(negedge clk_i, negedge rstn_i)
     begin
         if(~rstn_i) begin
             readed_state_pht <= _INITIAL_STATE_BIMODAL_;
