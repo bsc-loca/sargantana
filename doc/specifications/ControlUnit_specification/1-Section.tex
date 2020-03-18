@@ -1,0 +1,16 @@
+\newpage
+\section{General purpose of the module}
+\textit{Person in Charge; Guillem López}
+
+The Control Unit module is placed in the datapath module alongside the stages of the pipeline.
+It is responsible of producing the necessary signals to control the stages and the caches.
+
+This module receives signals from the different stages and the caches, and it outputs the following signals:
+
+\begin{itemize}
+    \item Stall the stages when something blocks the pipeline.
+    \item Flush the stages when something invalidates the instructions in the pipeline.
+    \item Select the next PC to be fetched.
+    \item Invalidate the cache requests.
+    \item Write into the register bank.
+\end{itemize}
