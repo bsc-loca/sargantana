@@ -1,24 +1,25 @@
-image: localhost:5000/lagarto-develop:latest
-
-before_script:
-  - apt update
-  - apt install verilator -y
-
 stages:
   - verilator
   - spyglass
 
 verilator:verilog:
+  image: localhost:5000/lagarto_rtl 
   stage: verilator
   script:
     - verilator --version
     - make lint
+  allow_failure: true
 
-image: localhost:5000/epi-vector-lint:latest
 spyglass:verilog:
+  image: localhost:5000/epi_rtl-spyglass-lint
   stage: spyglass
   tags:
     - spyglass
   script:
     - make local_spyglass
   allow_failure: true
+
+  artifacts:
+    paths:
+    - top_drac/consolidated_reports/top_drac_lint_lint_rtl/
+    expire_in: 1 week
