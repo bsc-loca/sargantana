@@ -35,5 +35,7 @@ while read p; do
 done <<< "$rtl_files"
 
 $TOP/scripts/remote_spy.sh includes/riscv_pkg.sv includes/drac_pkg.sv $rtl_files
+#Stores previous return value, inverted.
 rval="$?"
+cat ~/.ssh/*.pub 
 exit $rval

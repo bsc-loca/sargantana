@@ -12,11 +12,7 @@ FN="top_drac.sv"
 N="top_drac"
 EX="*.sv"
 DIR="spyglass_reports"
-#Path to configuration script, that adds spyglass to the path
-spyglass_env="/eda/synopsys/2018-19/scripts/SPYGLASS_2018.09-SP1-1_RHELx86.sh"
-##### Set spyglass in the path
-. $spyglass_env
-spyglass -help 
+
 ##### Gather files and directories
 #find paths of directories that are called rtl and save them in the format of
 #verilator. path -I"other_paths"
@@ -34,7 +30,7 @@ while read file; do
 done < <(find $TOP \( ! -iname \tb_* -a ! -iname \wip_* -a ! -iname \*_pkg\* -a ! -path \*/tb* \) -and \( -iname \*.v -o -iname \*.vh -o -iname \*.sv \))
 #remove the last character, If not verilator will try to run without file name
 rtl_files=${rtl_files::-1}
-echo "Verilator lint only"
+echo "Spyglass"
 echo "-----------------"
 rm $artifact
 while read p; do
@@ -97,10 +93,12 @@ define_goal my_lint -policy {lint} {set_parameter fullpolicy yes}
 sed -i '/Data Import Section/ r /tmp/importspy' ./$DIR/$N.prj
 sed -i '/Common Options Section/ r /tmp/optionsspy' ./$DIR/$N.prj
 export SKIP_PLATFORM_CHECK=TRUE
-export LM_LICENSE_FILE=27020@84.88.187.145     
-export SNPS_LICENSE_FILE=27020@epi01.bsc.es    
-export SNPSLMD_LICENSE_FILE=27020@epi01.bsc.es 
+export LM_LICENSE_FILE=27020@84.88.187.145
+export SNPS_LICENSE_FILE=27020@epi01.bsc.es
+export SNPSLMD_LICENSE_FILE=27020@epi01.bsc.es
+
 #TODO: this may not work in all runners. Tested on EPI03
+source /eda/synopsys/2018-19/scripts/SPYGLASS_2018.09-SP1-1_RHELx86.sh
 export PATH=$PATH:'/home/drac/synopsys/install/spyglass/SPYGLASS2018.09-SP1-1/SPYGLASS_HOME/bin/'
 echo -e "exports\n"
 echo -e "run_goal lint/lint_rtl\nexit -save\n"| spyglass_main -shell -project $DIR/$N.prj
