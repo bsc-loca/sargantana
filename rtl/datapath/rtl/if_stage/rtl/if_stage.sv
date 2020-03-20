@@ -136,7 +136,6 @@ module if_stage(
     // Branch predictor and RAS
     branch_predictor brach_predictor_inst (
         .clk_i(clk_i),
-        .rstn_i(rstn_i),
         .pc_fetch_i(pc),
         .pc_execution_i(exe_if_branch_pred_i.pc_execution),
         .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),

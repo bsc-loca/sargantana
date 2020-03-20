@@ -31,7 +31,6 @@ typedef reg   [27:0] tag_reg;
  * Addres Stack.
  */
 module branch_predictor(
-    input wire           rstn_i,                        // Negative reset input signal
     input wire           clk_i,                         // Clock input signal
     input addrPC_t       pc_fetch_i,                    // Program counter value at Fetch Stage
     input addrPC_t       pc_execution_i,                // Program counter at Execution Stage
@@ -55,7 +54,6 @@ wire            is_branch_prediction;
                 
 // Instatiation of bimodal predictor
 bimodal_predictor bimodal_predictor_inst(
-    .rstn_i (rstn_i),
     .clk_i (clk_i),
     .pc_fetch_i (pc_fetch_i),
     .pc_execution_i (pc_execution_i),
@@ -73,13 +71,9 @@ bimodal_predictor bimodal_predictor_inst(
 `ifndef SRAM_MEMORIES
     logic [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
 
-    always_ff @(negedge clk_i, negedge rstn_i) 
+    always_ff @(negedge clk_i) 
     begin
-        if(~rstn_i) begin
-            is_branch_tag <= 'h0;
-        end else begin
-            is_branch_tag <= is_branch_table[pc_fetch_i[11:2]];
-        end
+        is_branch_tag <= is_branch_table[pc_fetch_i[11:2]];
     end
     
     always_ff @(posedge clk_i) 
