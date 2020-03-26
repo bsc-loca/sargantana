@@ -1,0 +1,61 @@
+\section{What could not happen}
+
+\subsection{What could not happen in exe\_stage module}
+
+In case that \textbf{from\_rr\_i.instr.ex.valid} is equal to one, the following conditions are always true:
+\begin{itemize}
+  \item to\_wb\_o.ex.valid == 1
+  \item to\_wb\_o.ex.origin == from\_rr\_i.instr.ex.origin
+  \item to\_wb\_o.ex.cause == from\_rr\_i.instr.ex.cause
+\end{itemize}
+
+
+
+\subsection{What could not happen in ALU module}
+
+In case that instr\_type is one of:
+\begin{itemize}
+  \item ADD
+  \item ADDW
+  \item SUB
+  \item SUBW
+  \item SLL
+  \item SLLW
+  \item SLT
+  \item SLTU
+  \item XOR
+  \item SRL
+  \item SRLW
+  \item SRA
+  \item SRAW
+  \item OR
+  \item AND
+\end{itemize}
+
+Signals data\_rs1\_i and data\_rs2\_i must have known values. This means that signals must be either 0 or 1, but not meta-stable values.
+And in case instr\_type is none of the above result\_o should always be 0.
+
+\subsection{What could not happen in Branch Unit module}
+
+In case that \textbf{instr\_type\_i} is one of:
+\begin{itemize}
+  \item JAL
+  \item JALR
+  \item BEQ
+  \item BNE
+  \item BLT
+  \item BGE
+  \item BLTU
+  \item BGEU
+\end{itemize}
+
+Signals pc\_i, imm\_i, data\_rs1\_i and data\_rs2\_i must have known values. This means that signals must be either 0 or 1, but not meta-stable values. And in case \textbf{instr\_type} is none of the above \textbf{taken\_o} should always be \emph{PRED\_NOT\_TAKEN}.
+
+In case that \textbf{instr\_type\_i} is JAL, \textbf{taken\_o} is always \emph{PRED\_NOT\_TAKEN}, because the jump was done at decode stage.
+
+In case that \textbf{instr\_type\_i} is JALR, \textbf{taken\_o} is always \emph{PRED\_TAKEN}.
+
+In case that \textbf{taken\_o} is \emph{PRED\_NOT\_TAKEN}, \textbf{result\_o} is always \textbf{pc\_i} plus \emph{0x4}.
+
+The two lower bits of \textbf{result\_o} and \textbf{link\_pc\_o} must be always 0. 
+    
