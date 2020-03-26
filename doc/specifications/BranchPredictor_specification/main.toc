@@ -1,0 +1,15 @@
+\babel@toc {english}{}
+\contentsline {section}{\numberline {1}General purpose of the module}{3}{section.1}
+\contentsline {section}{\numberline {2}Design placement}{3}{section.2}
+\contentsline {section}{\numberline {3}Parameters}{3}{section.3}
+\contentsline {section}{\numberline {4}Interface}{3}{section.4}
+\contentsline {subsection}{\numberline {4.1}Bimodal Predictor Interfaces}{4}{subsection.4.1}
+\contentsline {subsubsection}{\numberline {4.1.1}Input Interface}{4}{subsubsection.4.1.1}
+\contentsline {subsubsection}{\numberline {4.1.2}Output Interface}{4}{subsubsection.4.1.2}
+\contentsline {subsection}{\numberline {4.2}Branch Predictor Interfaces}{5}{subsection.4.2}
+\contentsline {subsubsection}{\numberline {4.2.1}Input Interface}{5}{subsubsection.4.2.1}
+\contentsline {subsubsection}{\numberline {4.2.2}Output Interface}{5}{subsubsection.4.2.2}
+\contentsline {section}{\numberline {5}Reset behavior}{5}{section.5}
+\contentsline {section}{\numberline {6}What could not happen}{5}{section.6}
+\contentsline {section}{\numberline {7}Behavior}{6}{section.7}
+\contentsline {section}{\numberline {8}Special cases, corner cases}{7}{section.8}

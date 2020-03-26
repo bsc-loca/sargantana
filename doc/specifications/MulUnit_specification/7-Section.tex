@@ -1,0 +1,42 @@
+\section{Behaviour}
+
+\subsection{Description}
+
+In this section we describe the behaviour of the Multiplication Unit module for each possible input.
+The meaning of the different symbols used in the next table are the following:
+
+\begin{itemize}
+    \item x: Input without relevance or output undefined.
+    \item -: Same input as previous line. The operation needs a second cycle to be completed.
+    \item $A^{sig}$: Interprets the variable A as signed.
+    \item $A^{uns}$: Interprets the variable A as unsigned.
+    \item $A_{[31:0]}$: Selects the bits 31 to 0 from the variable A.
+    \item $sign\_ext(A)$: Sign extend A. The most significant bit of A will be appended to the most significant side of the number until the 64 bits are full. \\
+    $sign\_ext(A[31:0]) = A[31],A[31],A[31]...A[31],A[30:0]$.
+\end{itemize}
+
+\begin{table}[H]
+\makebox[\textwidth]{
+\begin{tabular}{@{}cccccc|ccc@{}}
+\textbf{kill\_mul\_i} &
+  \textbf{request\_i} &
+  \textbf{func3\_i} &
+  \textbf{int\_32\_i} &
+  \textbf{src1\_i} &
+  \textbf{src2\_i} &
+  \textbf{result\_o} &
+  \textbf{stall\_o} &
+  \textbf{done\_tick\_o} \\ \hline
+1 & x & xxx & x & x & x & 0 & 0 & 0 \\
+0 & 1 & xxx & 1 & $A$ & $B$ & $sign\_ext((A_{[31:0]}^{sig} \times B_{[31:0]}^{sig})_{[31:0]})$ & 0 & 1 \\
+0 & 1 & 000 & 0 & $A$ & $B$ & x & 1 & 0 \\
+- & - & - & - & - & - & $(A^{sig} \times B^{sig})_{[63:0]}$ & 0 & 1 \\
+0 & 1 & 001 & 0 & $A$ & $B$ & x & 1 & 0 \\
+- & - & - & - & - & - & $(A^{sig} \times B^{sig})_{[127:64]}$ & 0 & 1 \\
+0 & 1 & 010 & 0 & $A$ & $B$ & x & 1 & 0 \\
+- & - & - & - & - & - & $(A^{sig} \times B^{uns})_{[127:64]}$ & 0 & 1 \\
+0 & 1 & 011 & 0 & $A$ & $B$ & x & 1 & 0 \\
+- & - & - & - & - & - & $(A^{uns} \times B^{uns})_{[127:64]}$ & 0 & 1 \\
+\end{tabular}
+}
+\end{table}

@@ -1,0 +1,10 @@
+\newpage
+\section{General purpose of the module}
+\textit{Person in Charge; Rub\'en Langarita}
+
+The Multiplication Unit module is placed in the execution stage and it is in charge of executing the multiplication operations.
+This module receives two data operands of 64 bits and some control signals.
+It outputs the product of both operands.
+The module can operate with the lowest 32 bits of the operands, in which case, it will return a 64-bit result in one cycle.
+When operating with operands of 64 bits, it will return the result in two cycles.
+When operating with 64 bits, the result is of size 128 bits, and some control bits select which part should be returned and if the operands should be interpreted as signed or unsigned.

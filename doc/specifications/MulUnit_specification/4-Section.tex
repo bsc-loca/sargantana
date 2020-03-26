@@ -1,0 +1,25 @@
+\section{Interface}
+\label{chapter 4}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+\hline
+clk\_i & 1 & in & Clock \\
+rstn\_i & 1 & in & Reset \\
+kill\_mul\_i & 1 & in & Kill the current operation \\
+request\_i & 1 & in & Valid request, start computation \\
+func3\_i & 3 & in & Control signal \\
+ &  &  & 000 $\rightarrow$ signed operands, low part \\
+ &  &  & 001 $\rightarrow$ signed operands, high part \\
+ &  &  & 010 $\rightarrow$ signed $\times$ unsigned, high part \\
+ &  &  & 011 $\rightarrow$ unsigned operands, high part \\
+int\_32\_i & 1 & in & 32-bit operation \\
+src1\_i & 64 & in & Operand 1 \\
+src2\_i & 64 & in & Operand 2 \\
+result\_o & 64 & out & Product \\
+stall\_o & 1 & out & Unit stalled \\
+done\_tick\_o & 1 & out & Result ready \\
+\end{tabular}
+\end{table}
