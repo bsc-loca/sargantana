@@ -23,7 +23,6 @@
 `default_nettype none
 
 `include "colors.vh"
-`include "../definitions.v"
 
 module tb_mul_unit();
 
@@ -48,9 +47,9 @@ logic tb_wb_exception_i;
 logic tb_valid_mul;
 logic [2:0] tb_funct3_field;
 logic tb_int_32;
-logic `DATA tb_source_1;
-logic `DATA tb_source_2;
-reg `DATA tb_mul_result;
+logic [63:0] tb_source_1;
+logic [63:0] tb_source_2;
+reg [63:0] tb_mul_result;
 reg tb_lock_mul;
 reg tb_ready_mul;
 
@@ -68,8 +67,7 @@ mul_unit mul_unit_inst (
     .src1_i(tb_source_1),
     .src2_i(tb_source_2),
     .result_o(tb_mul_result),
-    .stall_o(tb_lock_mul),
-    .done_tick_o(tb_ready_mul)
+    .stall_o(tb_lock_mul)
 );
 
 //-----------------------------
@@ -130,22 +128,6 @@ mul_unit mul_unit_inst (
             #CLK_PERIOD;
         end
     endtask
-//***task automatic test_sim***
-    task automatic test_sim;
-        begin
-            $display("*** test_sim");
-            int tmp = test_sim_1();
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
-                `END_COLOR_PRINT
-            end
-        end
-    endtask
 
 //ReadCheck: assert (data === correct_data)
 //               else $error("memory read error");
@@ -183,7 +165,25 @@ mul_unit mul_unit_inst (
                     `END_COLOR_PRINT
                 end
             end
-            return tmp;
+        end
+    endtask
+    
+
+//***task automatic test_sim***
+    task automatic test_sim;
+        begin
+	    int tmp;
+            $display("*** test_sim");
+            test_sim_1(tmp);
+            if (tmp == 1) begin
+                `START_RED_PRINT
+                        $display("TEST 1 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 1 PASSED.");
+                `END_COLOR_PRINT
+            end
         end
     endtask
 
