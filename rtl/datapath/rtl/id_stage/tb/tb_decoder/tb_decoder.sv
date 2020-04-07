@@ -25,6 +25,7 @@
 
 `include "colors.vh"
 
+import riscv_pkg::*;
 import drac_pkg::*;
 
 module tb_decoder();

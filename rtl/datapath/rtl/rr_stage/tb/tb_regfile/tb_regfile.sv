@@ -112,31 +112,46 @@ module tb_regfile();
         end
     endtask
 
-//    2000:   fff02013                slt     x0,x0,-1
-//    2004:   00003013                sltiu   x0,x0,0
-//    2008:   00500013                addi    x0,x0,5
-//    200C:   00804013                xori    x0,x0,8
 
-    task automatic test_sim1();
+    task automatic test_sim1;
+        output int tmp;
         begin
             //$display("*** tick");
-            #CLK_PERIOD;
+            tmp = 0;
+	    #CLK_PERIOD;
             tb_write_enable_i = 1'b1;
             tb_write_addr_i = 5'b00001;
             tb_write_data_i = 64'h01;
             tb_read_addr1_i = 5'b00000;
             tb_read_addr2_i = 5'b00000;
             #CLK_PERIOD;
-
+            tb_write_enable_i = 1'b0;
+	    tb_write_addr_i = 5'b00000;
+	    assert(tb_read_data1_o == 0) else begin tmp++; assert(1 == 0); end
+            assert(tb_read_data2_o == 0) else begin tmp++; assert(1 == 0); end
+	    tb_read_addr1_i = 5'b00001;
+	    tb_read_addr2_i = 5'b00001;
+	    #CLK_PERIOD;
+            assert(tb_read_data1_o == 64'h01) else begin tmp++; assert(1 == 0); end
+            assert(tb_read_data2_o == 64'h01) else begin tmp++; assert(1 == 0); end
         end
     endtask
 
 //***task automatic test_sim***
     task automatic test_sim;
         begin
+            int tmp;
             $display("*** test_sim");
-            // check req valid 0
-            test_sim1();
+            test_sim1(tmp);
+	    if(tmp == 0) begin
+                `START_GREEN_PRINT
+                $display("PASS");
+                `END_COLOR_PRINT
+	    end else begin
+                `START_RED_PRINT
+                $error("FAIL");
+                `END_COLOR_PRINT
+            end
         end
     endtask
 
@@ -146,18 +161,7 @@ module tb_regfile();
     initial begin
         init_sim();
         init_dump();
-        reset_dut();
         test_sim();
-        `START_GREEN_PRINT                       
-                $display("PASS, add one of this for each test."); 
-        `END_COLOR_PRINT 
-        if(VERBOSE)
-                $display("Define a parameter (parameter VERBOSE=0;) and guard\n\
-                messages that are not needed. Most of the times with PASS/FAIL name of the \n\
-                tests is enough"); 
-        `START_RED_PRINT
-                $error("FAIL, add one of this for each test");
-        `END_COLOR_PRINT
     end
 
 
