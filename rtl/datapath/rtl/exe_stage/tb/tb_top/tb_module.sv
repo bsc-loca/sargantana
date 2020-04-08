@@ -77,7 +77,7 @@ exe_wb_instr_t      tb_to_wb_o;
 // Module
 //-----------------------------
 
-exe_top module_inst (
+exe_stage module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .kill_i(tb_kill_i),
