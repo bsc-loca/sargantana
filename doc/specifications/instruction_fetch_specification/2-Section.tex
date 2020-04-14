@@ -1,0 +1,7 @@
+\section{Design placement}
+\label{chapter2}
+
+The module if\_stage contains the fetch, hence being only one per core. It has been decided to be decoupled from a direct communication to Icache with an Interface. The exact place is in the datapath module (datapath.sv).  It is connected to the Icache interface and to the register between the if\_stage and the id\_stage.
+
+
+

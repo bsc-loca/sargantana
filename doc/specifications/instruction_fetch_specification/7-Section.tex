@@ -1,0 +1,57 @@
+\section{Behavior}
+
+\subsection{Description}
+
+\subsubsection{General case}
+The general case is that in a given cycle we request a new instruction, wait for the response and output the instruction to the datapath to be passed to the decoder. Then, at the same time, it is saved in the pc register: pc+4.
+
+\subsubsection{Regular case with exceptions}
+It is exactly the same case as the later one but in the output will have in the struct the exception that has occurred and the valid to one. There is an order of exceptions and also the valid of the struct is set to one.
+
+\subsubsection{The selection of the next pc}
+Control unit can change the regular behaviour of saving pc+4 to the pc when there is a jump, exception, branch or stall. In this case, the signal \textit{cu\_if\_i.next\_pc} will be the according one. Then the pc will save or the same pc, or the addr of the jump or the next pc.
+
+\newpage
+\subsection{Examples}
+
+\subsubsection{Reset}
+In the following example we can see the expected behaviour in the case of a reset. After the reset, the pc is changed to the reset\_addr.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{Figure/reset.png}
+\end{figure}
+
+
+\subsubsection{Normal flow}
+In the following example we can see the expected behaviour in the general case of updating the pc. If there is no stall or exception, the pc is getting updated by itself plus 4.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{Figure/normal.png}
+\end{figure}
+
+\subsubsection{Complete flow}
+In the following example we can see the expected behaviour in the complete flow: new pc, access to cache, stall of the cache, response, new pc.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{Figure/complete_flow.png}
+\end{figure}
+
+\subsubsection{Misaligned case}
+In the following example we can see the expected behaviour when there is an misaligned exception.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{Figure/misaligned.png}
+\end{figure}
+
+\subsubsection{Stall case}
+In the following example we can see the expected behaviour when there is a stall from outsite. No update of pc neither the request to icache is valid.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{Figure/stall.png}
+\end{figure}
+

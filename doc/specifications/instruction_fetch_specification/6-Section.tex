@@ -1,0 +1,10 @@
+\section{What can not happen}
+It cannot happen that the request to the icache\_interface is valid if the ex\_if\_int is true. This means that if the pc has a misaligned exception, then the request to the icache is false. It is also true this condition in the case of a stall, if there is a stall the request to the icache should not be valid.
+
+next\_pc enumeration should be: NEXT\_PC\_SEL\_KEEP\_PC, NEXT\_PC\_SEL\_BP\_OR\_PC\_4 or NEXT\_PC\_SEL\_JUMP. If occurs, an error is displayed. The expecte dbehaviour is to do pc + 4 in the case of this event.
+
+The output of the if\_stage should be true in the case of an exception.
+
+There is an order of exceptions that can not be violated.
+
+    
