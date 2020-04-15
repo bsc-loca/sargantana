@@ -16,7 +16,7 @@ vmake lib_module/ > Makefile
 
 if [ -z "$1" ]
 then
-      vsim work.tb_module -do "view wave -new" -do "do wave.do" # -do "run $CYCLES"
+      vsim work.tb_module -do "view wave -new" -do "do wave.do"  -do "run $CYCLES"
 #else
 #      vsim work.tb_module $1 -do "run $CYCLES"
 fi

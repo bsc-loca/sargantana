@@ -38,8 +38,6 @@ module tb_module();
     addr_t tb_branch_addr_result_exec_i;
     reg tb_branch_taken_result_exec_i;
     reg tb_is_branch_EX_i;
-    logic tb_push_return_address_i;
-    logic tb_pop_return_address_i;
 
     // Output
     reg tb_branch_predict_is_branch_o;
@@ -103,8 +101,6 @@ module tb_module();
             tb_branch_addr_result_exec_i <= '{default:0};
             tb_branch_taken_result_exec_i <= '{default:0};
             tb_is_branch_EX_i <= '{default:0};
-            tb_push_return_address_i <= '{default:0};
-            tb_pop_return_address_i <= '{default:0};
             $display("Done");
          end
     endtask
@@ -143,19 +139,19 @@ module tb_module();
         end
     endtask
 
+    // New design: Not valid bit and no reset signal. test_sim_1 is deprecated
     // Test that all entries are not valid and set to zero
     // Output should be nothing
     task automatic test_sim_1;
         begin
             tick();
             // Assert Loop
-            for (int j = 0; j < 1024; j++) begin
-                tb_pc_fetch_i <= { 6'b0, j, 2'b00};
-                assert (module_inst.is_branch_valid_bit == 0);                          // Entrie is not valid
-                assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);  // State machine is set to default '10' or "soft taken"
-                assert (tb_branch_predict_is_branch_o == 0);                            // BP says pc is not a branch
-                tick();
-            end
+            //for (int j = 0; j < 1024; j++) begin
+            //    tb_pc_fetch_i <= { 6'b0, j, 2'b00};
+            //    assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);  // State machine is set to default '10' or "soft taken"
+            //    assert (tb_branch_predict_is_branch_o == 0);                            // BP says pc is not a branch
+            //    tick();
+            //end
 
             $display("Test 1 END");
         end
@@ -195,7 +191,6 @@ module tb_module();
                 tb_pc_fetch_i <= { 6'b0, (j + j*1024), 2'b00};
 
                 // Asserts are done half cycle after the read because of delta cycles
-                assert (module_inst.is_branch_valid_bit == 1'b1);                      // Entry in branch predictor is valid
                 assert (tb_branch_predict_is_branch_o == 1'b1);                        // Is a branch
                 assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11); // Machine is updated to '11' or "hard taken"
                 assert (tb_branch_predict_addr_o == {6'b0, j, 2'b00});                 // Check Target prediction
@@ -204,7 +199,6 @@ module tb_module();
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             // Asserts are done half cycle after the read because of delta cycles
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h400, 2'b00});
@@ -222,7 +216,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -241,7 +234,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -260,7 +252,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b01);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -279,8 +270,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
-            assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b00);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b0);
@@ -298,7 +287,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b00);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -317,7 +305,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b01);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -336,7 +323,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -355,7 +341,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
@@ -374,7 +359,6 @@ module tb_module();
             tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
-            assert (module_inst.is_branch_valid_bit == 1'b1);
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
             assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
