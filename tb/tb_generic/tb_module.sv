@@ -4,10 +4,10 @@
 
 /* -----------------------------------------------
 * Project Name   : DRAC
-* File           : tb_mul_unit.v
+* File           : .v
 * Organization   : Barcelona Supercomputing Center
-* Author(s)      : Rubén Langarita
-* Email(s)       : ruben.langarita@bsc.es
+* Author(s)      : 
+* Email(s)       : @bsc.es
 * References     : 
 * -----------------------------------------------
 * Revision History
@@ -20,12 +20,12 @@
 //-----------------------------
 
 `timescale 1 ns / 1 ns
-//`default_nettype none
+`default_nettype none
 
 `include "colors.vh"
 import drac_pkg::*;
 
-module tb_div_unit();
+module tb_module();
 
 //-----------------------------
 // Local parameters
@@ -44,38 +44,25 @@ module tb_div_unit();
 //-----------------------------
 reg tb_clk_i;
 reg tb_rstn_i;
-logic tb_kill_div_i;
-logic tb_request_i;
-logic tb_int_32_i;
-logic tb_signed_op_i;
-bus64_t tb_src1_i;
-bus64_t tb_src2_i;
-bus64_t tb_quo_o;
-bus64_t tb_rmd_o;
-reg tb_stall_o;
+reg tb_load_i;
+logic bus32_t tb_inst;
+logic bus32_t tb_inst_o;
 
 //-----------------------------
 // Module
 //-----------------------------
 
-div_unit module_inst (
+mod module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
-    .kill_div_i(tb_kill_div_i),
-    .request_i(tb_request_i),
-    .int_32_i(tb_int_32_i),
-    .signed_op_i(tb_signed_op_i),
-    .dvnd_i(tb_src1_i),
-    .dvsr_i(tb_src2_i),
-    .quo_o(tb_quo_o),
-    .rmd_o(tb_rmd_o),
-    .stall_o(tb_stall_o)
+    .load_i(tb_load_i),
+    .input_i(tb_inst),
+    .output_o(tb_inst_o),
 );
 
 //-----------------------------
 // DUT
 //-----------------------------
-
 
 //***clk_gen***
 // A single clock source is used in this design.
@@ -86,7 +73,7 @@ div_unit module_inst (
     task automatic reset_dut;
         begin
             $display("*** Toggle reset.");
-            tb_rstn_i <= 1'b0; 
+            tb_rstn_i <= 1'b0;
             #CLK_PERIOD;
             tb_rstn_i <= 1'b1;
             #CLK_PERIOD;
@@ -100,12 +87,9 @@ div_unit module_inst (
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_kill_div_i<='{default:0};
-            tb_request_i<='{default:0};
-            tb_int_32_i<='{default:0};
-            tb_signed_op_i<='{default:0};
-            tb_src1_i<='{default:0};
-            tb_src2_i<='{default:0};
+            tb_load_i<='{default:0};
+            tb_inst<='{default:0};
+            tb_inst_o<='{default:0};
             $display("Done");
         end
     endtask
@@ -148,10 +132,8 @@ div_unit module_inst (
         input int unsigned src1;
         input int unsigned src2;
         begin
-            $display("*** set_srcs: %d * %d",src1,src2);
             tb_src1_i  <= src1;
             tb_src2_i  <= src2;
-            tb_request_i <= 1;
         end
     endtask
 
@@ -162,20 +144,18 @@ div_unit module_inst (
         begin
             tmp = 0;
             $random(10);
-            for(int i = 0; i < 500; i++) begin
+            for(int i = 0; i < 1000; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();
                 set_srcs(src1,src2);
-                #CLK_PERIOD;
-                while(tb_stall_o == 1) begin
-                    #CLK_PERIOD;
-                end
-                if (tb_quo_o != (src1/src2)) begin
+                #CLK_HALF_PERIOD;
+                if (tb_div_o != (src1/src2) | tb_rem_o != (src1%src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_quo_o);
+                    $error("Result incorrect %h / %h = %h mod %h out: %h mod %h",src1,src2,(src1/src2),(src1%src2),tb_div_o,tb_rem_o);
                     `END_COLOR_PRINT
                 end
+                #CLK_HALF_PERIOD;
             end
         end
     endtask
@@ -192,4 +172,5 @@ div_unit module_inst (
 
 
 endmodule
-//`default_nettype wire
+`default_nettype wire
+
