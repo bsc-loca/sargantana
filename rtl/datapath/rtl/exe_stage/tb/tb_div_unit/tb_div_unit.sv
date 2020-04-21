@@ -23,7 +23,7 @@
 //`default_nettype none
 
 `include "colors.vh"
-//`include "../definitions.v"
+import drac_pkg::*;
 
 module tb_div_unit();
 
@@ -53,7 +53,6 @@ bus64_t tb_src2_i;
 bus64_t tb_quo_o;
 bus64_t tb_rmd_o;
 reg tb_stall_o;
-reg tb_done_o;
 
 //-----------------------------
 // Module
@@ -70,8 +69,7 @@ div_unit module_inst (
     .dvsr_i(tb_src2_i),
     .quo_o(tb_quo_o),
     .rmd_o(tb_rmd_o),
-    .stall_o(tb_stall_o),
-    .done_tick_o (tb_done_o)
+    .stall_o(tb_stall_o)
 );
 
 //-----------------------------
@@ -97,7 +95,6 @@ div_unit module_inst (
     endtask
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
@@ -125,7 +122,6 @@ div_unit module_inst (
     endtask
 
 //***task automatic test_sim***
-//This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
             int tmp;
@@ -166,7 +162,7 @@ div_unit module_inst (
         begin
             tmp = 0;
             $random(10);
-            for(int i = 0; i < 1000; i++) begin
+            for(int i = 0; i < 500; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();
                 set_srcs(src1,src2);

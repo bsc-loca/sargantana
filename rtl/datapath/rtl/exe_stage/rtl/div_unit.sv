@@ -24,11 +24,12 @@ module div_unit (
 
     output bus64_t        quo_o,
     output bus64_t        rmd_o,
-    output logic          stall_o,        // operation in flight
-    output logic          done_tick_o     // operation finished
+    output logic          stall_o        // operation in flight
 );
 
     // Declarations
+    logic done_tick;
+
     logic [2:0] state_q;
     logic [2:0] state_d;
     logic [31:0] n_q;
@@ -77,7 +78,7 @@ module div_unit (
                 (dvsr_i[31] & signed_op_i & int_32_i)) ? ~dvsr_i + 64'b1 : dvsr_i;
 
     // FSMD state & DATA registers
-    always_ff @(posedge clk_i, negedge rstn_i)
+    always_ff @(posedge clk_i, negedge rstn_i) begin
         if (~rstn_i) begin
             state_q             <= IDLE;
             remanent_q          <= 0;
@@ -97,14 +98,17 @@ module div_unit (
             dvsr_def_q          <= dvsr_def;
             int_32_q            <= int_32_i;
         end
+    end
 
     // FSMD next-state logic
     always_comb begin
-        state_d     = state_q;
-        stall_o     = 1'b0;
-        done_tick_o = 1'b0;
-        divisor_in  = divisor_q;
-        n_d         = n_q;
+        remanent_in             = 0;
+        dividend_quotient_in    = 0;
+        state_d                 = state_q;
+        stall_o                 = 1'b0;
+        done_tick               = 1'b0;
+        divisor_in              = divisor_q;
+        n_d                     = n_q;
         case (state_q)
             IDLE: begin            // dvsr = 64'h00000000FFFFF948; dvnd  = 64'hFFFFFF9A00000000;
                 if (request_i & ~kill_div_i) begin
@@ -120,6 +124,12 @@ module div_unit (
                     divisor_in           = int_32_q ? {32'b0, dvsr_def_q[31:0]} : dvsr_def_q;// divisor with sign
                     n_d                  = int_32_q ? 7 : 15;
                     state_d              = OP;
+                end else begin
+                    state_d     = state_q;
+                    stall_o     = 1'b0;
+                    done_tick = 1'b0;
+                    divisor_in  = divisor_q;
+                    n_d         = n_q;
                 end
             end
             OP: begin
@@ -138,15 +148,15 @@ module div_unit (
                 end
             end
             DONE: begin
-                remanent_in = 64'h0;
-                dividend_quotient_in = 64'h0;
-                divisor_in = 64'h0;
+                remanent_in = 0;
+                dividend_quotient_in = 0;
+                divisor_in = 0;
                 if (kill_div_i) begin
                     state_d = IDLE;
                     stall_o = 1'b0;
                 end else begin
                     stall_o     = 1'b0;
-                    done_tick_o = 1'b1;
+                    done_tick = 1'b1;
                     state_d     = IDLE;
                 end
             end
@@ -155,10 +165,10 @@ module div_unit (
     end
 
     // output
-    assign quo_aux = done_tick_o ? (div_zero ? 64'hFFFFFFFFFFFFFFFF :
+    assign quo_aux = done_tick ? (div_zero ? 64'hFFFFFFFFFFFFFFFF :
                 (signed_op_i ? (same_sign ? dividend_quotient_q : ~dividend_quotient_q + 64'b1) : dividend_quotient_q)) : 64'b0;
     assign quo_o = int_32_i ? {{32{quo_aux[31]}},quo_aux[31:0]} : quo_aux;
-    assign rmd_aux = done_tick_o ? (div_zero ? dvnd_i : (signed_op_i ?
+    assign rmd_aux = done_tick ? (div_zero ? dvnd_i : (signed_op_i ?
                 (((dvnd_i[63] &  !int_32_i) | (dvnd_i[31] & int_32_i)) ?
                 ~remanent_q + 64'b1 : remanent_q) : remanent_q)) : 64'b0;
     assign rmd_o = int_32_i ? {{32{rmd_aux[31]}},rmd_aux[31:0]} : rmd_aux;

@@ -45,19 +45,19 @@ module tb_module();
 reg tb_clk_i;
 reg tb_rstn_i;
 reg tb_load_i;
-bus32_t tb_inst;
-bus32_t tb_inst_o;
+logic bus32_t tb_inst;
+logic bus32_t tb_inst_o;
 
 //-----------------------------
 // Module
 //-----------------------------
 
-register #(32) module_inst (
+mod module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .load_i(tb_load_i),
     .input_i(tb_inst),
-    .output_o(tb_inst_o)
+    .output_o(tb_inst_o),
 );
 
 //-----------------------------
@@ -82,7 +82,6 @@ register #(32) module_inst (
     endtask
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
@@ -107,118 +106,60 @@ register #(32) module_inst (
     endtask
 
 //***task automatic test_sim***
-//This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
+            int tmp;
             $display("*** test_sim");
-            test_sim_1();
-            reset_dut();
-            test_sim_2();
-            reset_dut();
-            test_sim_3();
-            reset_dut();
+            test_sim_1(tmp);
+            if (tmp == 1) begin
+                `START_RED_PRINT
+                        $display("TEST 1 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 1 PASSED.");
+                `END_COLOR_PRINT
+            end
         end
     endtask
 
-// Test load register
+//ReadCheck: assert (data === correct_data)
+//               else $error("memory read error");
+//  Igt10: assert (I > 10)
+//           else $warning("I is less than or equal to 10");
+
+    task automatic set_srcs;
+        input int unsigned src1;
+        input int unsigned src2;
+        begin
+            tb_src1_i  <= src1;
+            tb_src2_i  <= src2;
+        end
+    endtask
+
+// Test getting a petition that is not valid
+// Output should be nothing 
     task automatic test_sim_1;
+        output int tmp;
         begin
-            int unsigned tmp = 0;
-            tb_load_i <= 1;
+            tmp = 0;
             $random(10);
-            @(negedge tb_clk_i);
-            for(int i = 0; i < 10; i++) begin
-                tb_inst <= $urandom();
-                //wait(tb_clk_i == 0);
-                //wait(tb_clk_i == 1);
-                //#CLK_PERIOD;
-                @(posedge tb_clk_i);
-                @(negedge tb_clk_i);
-                if (tb_inst_o != tb_inst) begin
+            for(int i = 0; i < 1000; i++) begin
+                int unsigned src1 = $urandom();
+                int unsigned src2 = $urandom();
+                set_srcs(src1,src2);
+                #CLK_HALF_PERIOD;
+                if (tb_div_o != (src1/src2) | tb_rem_o != (src1%src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect out: %d != correct: %d",tb_inst_o,tb_inst);
-                    $error("clk %d",tb_clk_i);
+                    $error("Result incorrect %h / %h = %h mod %h out: %h mod %h",src1,src2,(src1/src2),(src1%src2),tb_div_o,tb_rem_o);
                     `END_COLOR_PRINT
                 end
-            end
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                    $display("TEST LOAD FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                    $display("TEST LOAD PASSED.");
-                `END_COLOR_PRINT
+                #CLK_HALF_PERIOD;
             end
         end
     endtask
 
-// Test no load register
-    task automatic test_sim_2;
-        begin
-            int unsigned tmp = 0;
-            int unsigned aux = 0;
-            $random(10);
-            // Load first value
-            tb_load_i <= 1;
-            aux = $urandom();
-            tb_inst <= aux;
-            #CLK_PERIOD;
-            // Turn off load
-            tb_load_i <= 0;
-            for(int i = 0; i < 10; i++) begin
-                tb_inst <= $urandom();
-                #CLK_PERIOD;
-                if (tb_inst_o != aux) begin
-                    tmp = 1;
-                    `START_RED_PRINT
-                    $error("Result incorrect out: %d != correct: %d",tb_inst_o,aux);
-                    `END_COLOR_PRINT
-                end
-            end
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST NO LOAD FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST NO LOAD PASSED.");
-                `END_COLOR_PRINT
-            end
-        end
-    endtask
-
-// Test reset register
-    task automatic test_sim_3;
-        begin
-            int unsigned tmp = 0;
-            $random(10);
-            tb_load_i <= 1;
-            tb_inst <= $urandom();
-            #CLK_PERIOD;
-            tb_rstn_i <= 0;
-            for(int i = 0; i < 10; i++) begin
-                tb_inst <= $urandom();
-                #CLK_PERIOD;
-                if (tb_inst_o != 0) begin
-                    tmp = 1;
-                    `START_RED_PRINT
-                    $error("Result incorrect out: %d",tb_inst_o);
-                    `END_COLOR_PRINT
-                end
-            end
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST RESET FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST RESET PASSED.");
-                `END_COLOR_PRINT
-            end
-        end
-    endtask
 
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.

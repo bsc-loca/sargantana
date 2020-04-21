@@ -1,0 +1,8 @@
+\newpage
+\section{General purpose of the module}
+
+Branch predictor is composed by two modules, the top view called branch\_predictor, and the bimodal\_predictor.
+
+The purpose of this modules is to predict if a given program counter is a branch, and if so predict if the branch is going to be taken and where is going to jump. Then the prediction is used to fetch the following instructions.
+
+Each time Drac fetches an instruction, it verifies at execution stage if the fetched instruction is a branch. Moreover Drac also computes at execution stage what should have been the next program counter after it. This information is forwarded to the branch prediction to improve the prediction of future program counters, and in case of missprediction correct the program counter at fetch stage.

@@ -61,8 +61,7 @@ module top_drac(
     input logic [4:0]           IO_REG_ADDR,  // Address used for both read and write operations    
     input logic                 IO_REG_WRITE,
     input logic [63:0]          IO_REG_WRITE_DATA,
-
-    input logic                 istall_test,    //TODO: Check if necessary
+    input logic                 istall_test, 
 
 //--------------------------------------------------------------------------------------------------------------------------
 // CSR OUTPUT INTERFACE

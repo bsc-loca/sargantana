@@ -109,8 +109,6 @@ module datapath(
 
     // Control Unit
     control_unit control_unit_inst(
-        .clk_i(clk_i),
-        .rstn_i(rstn_i),
         .valid_fetch(resp_icache_cpu_i.valid),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
@@ -285,64 +283,47 @@ module datapath(
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 CSRRCI: begin
-                    // TODO (guillemlp) do we extend sign?
                     wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};  
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 ECALL: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 EBREAK: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 URET: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 SRET: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 MRET: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 ERET: begin // Old ISA
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 FENCE: begin
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
                 MRTS: begin // Old ISA
-                    // what happens if interrup and ecall?????
                     wb_csr_cmd_int = CSR_CMD_SYS;
-                    // TODO (guillemlp) check correctness
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
@@ -392,7 +373,6 @@ module datapath(
     assign wb_cu_int.stall_csr_fence = exe_to_wb_wb.stall_csr_fence && exe_to_wb_wb.valid;
     assign wb_cu_int.xcpt = wb_xcpt;
     assign wb_cu_int.write_enable = exe_to_wb_wb.regfile_we;
-    // TODO: the MRTH is a old isa instruction, remove in a future
     assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr_type == ECALL ||
                                     exe_to_wb_wb.instr_type == MRTS  ||
                                     exe_to_wb_wb.instr_type == EBREAK );

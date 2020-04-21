@@ -1,11 +1,11 @@
 $1
 CYCLES=80
-
+INCLUDE="../../../../../../includes"
 mv lib_mul_unit /tmp
 
 vlib lib_mul_unit
 vmap work $PWD/lib_mul_unit
-vlog +acc=rn +incdir+ ../definitions.v ../mul_unit.v tb_mul_unit.sv colors.vh
+vlog +acc=rn +incdir+  ${INCLUDE}/riscv_pkg.sv ${INCLUDE}/drac_pkg.sv ../../rtl/mul_unit.sv tb_mul_unit.sv colors.vh
 vmake lib_mul_unit/ > Makefile
 
 #vsim work.tb_icache_interface -do  "view wave -new" -do "do wave.do" -do "run 20"

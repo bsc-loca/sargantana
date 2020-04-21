@@ -22,8 +22,7 @@ module mul_unit (
     input  bus64_t       src1_i,         // rs1
     input  bus64_t       src2_i,         // rs2
     output bus64_t       result_o,
-    output logic         stall_o,        // operation in flight
-    output logic         done_tick_o     // operation finished
+    output logic         stall_o        // operation in flight
 );
 
 // Declarations
@@ -41,6 +40,8 @@ bus128_t result_128_def;
 bus64_t result_32_aux;
 bus64_t result_32;
 bus64_t result_64;
+
+logic done_tick;
 
 parameter IDLE = 1'b0,
           DONE = 1'b1;
@@ -105,19 +106,19 @@ always @(*) begin
         IDLE: begin
             if (request_i & ~kill_mul_i) begin
                 stall_o      = int_32_i ? 1'b0 : 1'b1;
-                done_tick_o  = int_32_i ? 1'b1 : 1'b0;
+                done_tick  = int_32_i ? 1'b1 : 1'b0;
             end else begin
                 stall_o      = 1'b0;
-                done_tick_o  = 1'b0;
+                done_tick  = 1'b0;
             end
         end
         DONE: begin
             if (kill_mul_i) begin
                 stall_o      = 1'b0;
-                done_tick_o  = 1'b0;
+                done_tick  = 1'b0;
             end else begin
                 stall_o      = 1'b0;
-                done_tick_o  = 1'b1;
+                done_tick  = 1'b1;
             end
         end
     endcase // state_q
@@ -153,7 +154,7 @@ end
 
 // output
 always@(*) begin
-    result_o = done_tick_o ? (int_32_i ? result_32 : result_64) : 64'b0;
+    result_o = done_tick ? (int_32_i ? result_32 : result_64) : 64'b0;
 end
 
 endmodule

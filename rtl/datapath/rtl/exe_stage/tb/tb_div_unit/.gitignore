@@ -1,0 +1,4 @@
+lib_div_unit/*
+*.ini
+*.wlf
+*.vcd
