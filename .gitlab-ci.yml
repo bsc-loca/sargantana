@@ -1,10 +1,11 @@
 stages:
-  - verilator
-  - spyglass
+  - linting
+  - simulation
+
 
 verilator:verilog:
   image: localhost:5000/lagarto_rtl 
-  stage: verilator
+  stage: linting
   script:
     - verilator --version
     - make lint
@@ -12,7 +13,7 @@ verilator:verilog:
 
 spyglass:verilog:
   image: localhost:5000/epi_rtl-spyglass-lint
-  stage: spyglass
+  stage: linting
   tags:
     - spyglass
   script:
@@ -23,3 +24,18 @@ spyglass:verilog:
     paths:
     - top_drac/consolidated_reports/top_drac_lint_lint_rtl/
     expire_in: 1 week
+
+questa:verilog:
+  image: localhost:5000/epi_rtl-vsim
+  stage: simulation
+  tags:
+    - questasim
+  script:
+    - make questa
+  allow_failure: true
+
+  artifacts:
+    paths:
+    - artifact_questa.log
+    expire_in: 1 week
+

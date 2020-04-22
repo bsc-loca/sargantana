@@ -1,4 +1,4 @@
-$1
+##$1
 CYCLES=80
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
@@ -8,7 +8,7 @@ RR_STAGE="${BASE_DIR}/rtl/datapath/rtl/rr_stage/rtl"
 DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
-mv lib_module /tmp
+rm -rf lib_module
 
 vlib lib_module
 vmap work $PWD/lib_module

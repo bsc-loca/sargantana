@@ -1,7 +1,7 @@
-$1
-CYCLES=80
+#$1
+CYCLES=8000
 INCLUDE="../../../../../../includes"
-mv lib_mul_unit /tmp
+rm -rf lib_mul_unit
 
 vlib lib_mul_unit
 vmap work $PWD/lib_mul_unit

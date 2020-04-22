@@ -3,8 +3,7 @@ CYCLES=3000
 
 TOP_DIR="../../../.."
 
-mv lib_module /tmp
-
+rm -rf lib_module 
 vlib lib_module
 vmap work $PWD/lib_module
 vlog +acc=rn +incdir+ ${TOP_DIR}/includes/riscv_pkg.sv ${TOP_DIR}/includes/drac_pkg.sv ${TOP_DIR}/rtl/interface_dcache/rtl/interface_dcache.sv tb_module.sv colors.vh

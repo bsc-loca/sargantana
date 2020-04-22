@@ -1,5 +1,5 @@
 #$1
-TEST=$1
+TEST=$2
 CYCLES=2000
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
@@ -12,7 +12,7 @@ DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
 DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
-mv lib_module /tmp
+rm -rf lib_module 
 
 vlib lib_module
 vmap work $PWD/lib_module
@@ -22,16 +22,13 @@ vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_
  $EXE_STAGE/branch_unit.sv $DCACHE/dcache_interface.sv $CONTROL/control_unit.sv \
  $DATAPATH/datapath.sv tb_datapath.sv perfect_memory.sv perfect_memory_hex.sv colors.vh 
 
-#vlog +acc=rn +incdir+ $INCLUDES/*.sv $DRAC_FOLDER_RTL/*.sv \
-# $IF_STAGE/*.sv $ID_STAGE/*.sv $RR_STAGE/*.sv $EXE_STAGE/* $DCACHE/*.sv \
-# $CONTROL/*.sv $DATAPATH/*.sv tb_datapath.sv perfect_memory.sv wip_perfect_memory_hex.sv colors.vh 
-
 vmake lib_module/ > Makefile_test
 
-#if [ -z "$1" ]
-#then #// -new
-cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
-vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
-#else
-#      vsim work.tb_datapath $1 -do "run $CYCLES"
-#fi
+if [ -z "$1" ]
+then #// -new
+      cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
+      vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
+else
+      cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
+      vsim work.tb_datapath $1 -do "run $CYCLES"
+fi

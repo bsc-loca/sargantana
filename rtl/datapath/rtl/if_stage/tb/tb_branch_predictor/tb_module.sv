@@ -472,6 +472,7 @@ module tb_module();
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 

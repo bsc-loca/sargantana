@@ -195,6 +195,7 @@ mul_unit mul_unit_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 

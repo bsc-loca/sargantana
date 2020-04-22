@@ -225,6 +225,7 @@ register #(32) module_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 

@@ -233,6 +233,7 @@ module tb_datapath();
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
 //assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));

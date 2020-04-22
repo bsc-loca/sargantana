@@ -1,7 +1,7 @@
-$1
+#$1
 CYCLES=14000
 
-mv lib_module /tmp
+rm -rf lib_module
 
 BASE_DIR="../../../../../.."
 
@@ -12,11 +12,9 @@ vlog +acc=rn +incdir+ ${BASE_DIR}/includes/riscv_pkg.sv ${BASE_DIR}/includes/dra
       tb_module.sv colors.vh
 vmake lib_module/ > Makefile
 
-#vsim work.tb_module -do  "view wave -new" -do "do wave.do" -do "run 20"
-
 if [ -z "$1" ]
 then
       vsim work.tb_module -do "view wave -new" -do "do wave.do"  -do "run $CYCLES"
-#else
-#      vsim work.tb_module $1 -do "run $CYCLES"
+else
+      vsim work.tb_module $1 -do "run $CYCLES"
 fi

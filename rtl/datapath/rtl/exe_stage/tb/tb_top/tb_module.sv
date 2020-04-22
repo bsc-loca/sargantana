@@ -451,6 +451,7 @@ exe_stage module_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 

@@ -228,6 +228,7 @@ register #($bits(instr_entry_t)+$bits(instr_entry_t)) module_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 

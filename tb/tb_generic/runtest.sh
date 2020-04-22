@@ -3,8 +3,7 @@ CYCLES=3000
 
 TOP_DIR=$(git rev-parse --show-cdup)
 
-mv lib_module /tmp
-
+rm -rf lib_module
 vlib lib_module
 vmap work $PWD/lib_module
 vlog +acc=rn +incdir+ ${TOP_DIR}hdl/riscv_pkg.sv ${TOP_DIR}hdl/drac_pkg.sv ${TOP_DIR}hdl/datapath/exe_stage/hdl/mem_unit.sv tb_module.sv colors.vh

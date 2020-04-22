@@ -1,9 +1,9 @@
-$1
+#$1
 CYCLES=20000
 RTL="../../rtl/"
 ROOT=$(git rev-parse --show-cdup)
 
-mv lib_div_unit /tmp
+rm -rf lib_div_unit
 
 vlib lib_div_unit
 vmap work $PWD/lib_div_unit
@@ -15,6 +15,6 @@ vmake lib_div_unit/ > Makefile
 if [ -z "$1" ]
 then
       vsim work.tb_div_unit -do "view wave -new" -do "do wave.do" -do "run $CYCLES"
-#else
-#      vsim work.tb_div_unit $1 -do "run $CYCLES"
+else
+      vsim work.tb_div_unit $1 -do "run $CYCLES"
 fi

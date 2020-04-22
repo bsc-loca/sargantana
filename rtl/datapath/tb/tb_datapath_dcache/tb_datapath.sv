@@ -289,6 +289,7 @@ module tb_datapath();
             $fwrite(f,"%c[0m",27);
             $fwrite(f,"\n");
         end
+        $finish;
     end
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
 //assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
