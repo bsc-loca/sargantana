@@ -447,6 +447,7 @@ module tb_if_stage();
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
         //`START_GREEN_PRINT                       
         //        $display("PASS, add one of this for each test."); 
         //`END_COLOR_PRINT 
