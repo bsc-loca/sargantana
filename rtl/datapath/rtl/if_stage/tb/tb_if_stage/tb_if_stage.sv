@@ -40,6 +40,8 @@ module tb_if_stage();
 // Signals
 //-----------------------------
 
+    reg [64*8:0] tb_test_name;
+
     logic                 tb_clk_i;
     logic                 tb_rstn_i;
     addr_t                tb_reset_addr_i;
@@ -112,6 +114,7 @@ module tb_if_stage();
     task automatic init_sim;
         begin
             $display("*** init_sim");
+            tb_test_name = "init_sim";
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
             tb_reset_addr_i<='{default:0};
@@ -182,6 +185,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display(" %0tns:   *** test sim 1 ***",$time);
+            tb_test_name = "test_sim_1";
             // this tests resets and checks
             // that the output to icache 
             // is the reset addr 
@@ -207,6 +211,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 2 ***",$time);
+            tb_test_name = "test_sim_2";
             tmp=0;
             //reset_dut();
             // reset addr is 0x8000_0000
@@ -231,6 +236,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 3 ***",$time);
+            tb_test_name = "test_sim_3";
             tmp=0;
             reset_dut();
             // reset addr is 0x8000_0004
@@ -299,6 +305,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 4 ***",$time);
+            tb_test_name = "test_sim_4";
             tmp=0;
             reset_dut();
             half_tick(); // 0x8000_0004 (+4)
@@ -337,6 +344,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 5 ***",$time);
+            tb_test_name = "test_sim_5";
             tmp=0;
             reset_dut();
             tick(); // 0x8000_0004 (+4)
@@ -364,6 +372,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 6 ***",$time);
+            tb_test_name = "test_sim_6";
             tmp=0;
             reset_dut();
             tick(); // 0x8000_0004 (+4)
@@ -392,6 +401,7 @@ module tb_if_stage();
         output int tmp;
         begin
             $display("%0tns:   *** test sim 7 ***",$time);
+            tb_test_name = "test_sim_7";
             tmp=0;
             reset_dut();
             tb_cu_if_i.next_pc <= NEXT_PC_SEL_JUMP;

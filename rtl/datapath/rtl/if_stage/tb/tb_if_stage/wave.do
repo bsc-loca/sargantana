@@ -1,6 +1,7 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_if_stage/tb_clk_i
+add wave -noupdate -expand -group tb -radix ascii /tb_if_stage/tb_test_name
 add wave -noupdate -expand -group tb /tb_if_stage/tb_rstn_i
 add wave -noupdate -expand -group tb /tb_if_stage/tb_reset_addr_i
 add wave -noupdate -expand -group tb /tb_if_stage/tb_stall_i
@@ -12,7 +13,7 @@ add wave -noupdate -expand -group tb /tb_if_stage/tb_resp_icache_cpu_i
 add wave -noupdate -expand -group tb /tb_if_stage/tb_exe_if_branch_pred_i
 add wave -noupdate -expand -group tb /tb_if_stage/tb_retry_fetch_i
 add wave -noupdate -expand -group tb /tb_if_stage/tb_req_cpu_icache_o
-add wave -noupdate -expand -group tb /tb_if_stage/tb_fetch_o
+add wave -noupdate -expand -group tb -expand /tb_if_stage/tb_fetch_o
 add wave -noupdate -group if_stage /tb_if_stage/if_stage_inst/clk_i
 add wave -noupdate -group if_stage /tb_if_stage/if_stage_inst/rstn_i
 add wave -noupdate -group if_stage /tb_if_stage/if_stage_inst/reset_addr_i
@@ -51,4 +52,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ns} {30 ns}
+WaveRestoreZoom {50 ns} {80 ns}
