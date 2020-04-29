@@ -1,5 +1,5 @@
-$1
-CYCLES=3000
+#$1
+CYCLES=-all
 
 TOP_DIR="../../../.."
 

@@ -1,6 +1,6 @@
 #$1
 TEST=$2
-CYCLES=2000
+CYCLES=-all
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
 IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"
