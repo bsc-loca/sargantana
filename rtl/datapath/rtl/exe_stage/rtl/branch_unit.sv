@@ -23,7 +23,7 @@ module branch_unit(
 
     output branch_pred_decision_t       taken_o,
     output addrPC_t                     result_o,
-    output addrPC_t			link_pc_o
+    output addrPC_t                     link_pc_o
 );
 
 logic equal;
