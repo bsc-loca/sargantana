@@ -45,6 +45,7 @@ module tb_module();
 reg tb_clk_i;
 reg tb_rstn_i;
 reg tb_load_i;
+reg tb_flush_i;
 bus32_t tb_inst;
 bus32_t tb_inst_o;
 
@@ -55,6 +56,7 @@ bus32_t tb_inst_o;
 register #(32) module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
+    .flush_i(tb_flush_i),
     .load_i(tb_load_i),
     .input_i(tb_inst),
     .output_o(tb_inst_o)
@@ -87,6 +89,7 @@ register #(32) module_inst (
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
+	    tb_flush_i<='{default:0};
             tb_load_i<='{default:0};
             tb_inst<='{default:0};
             tb_inst_o<='{default:0};
@@ -115,6 +118,8 @@ register #(32) module_inst (
             reset_dut();
             test_sim_3();
             reset_dut();
+	    test_sim_4();
+	    reset_dut();
         end
     endtask
 
@@ -217,6 +222,38 @@ register #(32) module_inst (
             end
         end
     endtask
+
+// Test flush register
+    task automatic test_sim_4;
+        begin
+            int unsigned tmp = 0;
+            $random(10);
+            tb_load_i <= 1;
+            tb_inst <= $urandom();
+            #CLK_PERIOD;
+            tb_flush_i <= 1;
+            for(int i = 0; i < 10; i++) begin
+                tb_inst <= $urandom();
+                #CLK_PERIOD;
+                if (tb_inst_o != 0) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect out: %d",tb_inst_o);
+                    `END_COLOR_PRINT
+                end
+            end
+            if (tmp == 1) begin
+                `START_RED_PRINT
+                        $display("TEST FLUSH FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST FLUSH PASSED.");
+                `END_COLOR_PRINT
+            end
+        end
+    endtask
+
 
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.

@@ -33,16 +33,16 @@ module tb_module();
 
     // Input
     reg tb_clk_i;
-    addr_t tb_pc_fetch_i;
-    addr_t tb_pc_execution_i;
-    addr_t tb_branch_addr_result_exec_i;
+    addrPC_t tb_pc_fetch_i;
+    addrPC_t tb_pc_execution_i;
+    addrPC_t tb_branch_addr_result_exec_i;
     reg tb_branch_taken_result_exec_i;
     reg tb_is_branch_EX_i;
 
     // Output
     reg tb_branch_predict_is_branch_o;
     reg tb_branch_predict_taken_o;
-    addr_t tb_branch_predict_addr_o;
+    addrPC_t tb_branch_predict_addr_o;
 
 
     ////////////////////////////////////////
@@ -171,7 +171,7 @@ module tb_module();
             // Branch predictor stores actualization on rise edge
             #CLK_HALF_PERIOD;
             // First half of the cycle fetch PC arrives to branch predictor
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};                                    // Reads the updated branch. The prediction is available two half cycles after the read
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};                                    // Reads the updated branch. The prediction is available two half cycles after the read
                                                                                        // In theory the prediction should be ready in half cycle. But assertions are broken in verilog
                                                                                        // An insant in verilog can be divided in delta cycles. They are use to implement signal propagation
                                                                                        // An assert is alway executed in the cycle 0
@@ -181,19 +181,19 @@ module tb_module();
             for (int j = 1; j < 1024; j++) begin
                 // Read pc_fetch
                 #CLK_HALF_PERIOD;
-                tb_pc_execution_i <= { 6'b0, (j + j*1024), 2'b00};
+                tb_pc_execution_i <= { 30'b0, (j + j*1024), 2'b00};
                 tb_is_branch_EX_i <= 1'b1;
                 tb_branch_taken_result_exec_i <= 1'b1;
-                tb_branch_addr_result_exec_i <= {6'b0, j + 1, 2'b00};
+                tb_branch_addr_result_exec_i <= {30'b0, j + 1, 2'b00};
 
                 // Write update branch
                 #CLK_HALF_PERIOD;
-                tb_pc_fetch_i <= { 6'b0, (j + j*1024), 2'b00};
+                tb_pc_fetch_i <= { 30'b0, (j + j*1024), 2'b00};
 
                 // Asserts are done half cycle after the read because of delta cycles
                 assert (tb_branch_predict_is_branch_o == 1'b1);                        // Is a branch
                 assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11); // Machine is updated to '11' or "hard taken"
-                assert (tb_branch_predict_addr_o == {6'b0, j, 2'b00});                 // Check Target prediction
+                assert (tb_branch_predict_addr_o == {30'b0, j, 2'b00});                 // Check Target prediction
                 assert (tb_branch_predict_taken_o == 1'b1);                            // Is predict taken
             end
             #CLK_HALF_PERIOD;
@@ -201,7 +201,7 @@ module tb_module();
             // Asserts are done half cycle after the read because of delta cycles
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h400, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h400, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             $display("Test 2 END");
@@ -213,155 +213,155 @@ module tb_module();
     task automatic test_sim_3;
         begin
             // CHECK THAT ADDRESS 0 state machine is equal to 11
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 10
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b0;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 10
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 10
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b0;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 01
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b01);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b0);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 00
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b0;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 00
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b00);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b0);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 00
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b0;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 00
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b00);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b0);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 01
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b1;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 01
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b01);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b0);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 10
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b1;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 10
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b10);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 11
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b1;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= { 30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 11
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             #CLK_HALF_PERIOD;
             // UPDATE ADDRESS 0 state machine to 11
-            tb_pc_execution_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_execution_i <= { 30'b0, 32'h0, 2'b00};
             tb_is_branch_EX_i <= 1'b1;
             tb_branch_taken_result_exec_i <= 1'b1;
-            tb_branch_addr_result_exec_i <= {6'b0, 32'h1, 2'b00};
+            tb_branch_addr_result_exec_i <= {30'b0, 32'h1, 2'b00};
 
             // CHECK THAT ADDRESS 0 state machine is equal to 11 SATURATION WORKS
             #CLK_HALF_PERIOD;
             tb_is_branch_EX_i <= 1'b0;
-            tb_pc_fetch_i <= { 6'b0, 32'h0, 2'b00};
+            tb_pc_fetch_i <= { 30'b0, 32'h0, 2'b00};
             #CLK_HALF_PERIOD;
             #CLK_HALF_PERIOD;
             assert (tb_branch_predict_is_branch_o == 1'b1);
             assert (module_inst.bimodal_predictor_inst.readed_state_pht == 2'b11);
-            assert (tb_branch_predict_addr_o == {6'b0, 32'h1, 2'b00});
+            assert (tb_branch_predict_addr_o == {30'b0, 32'h1, 2'b00});
             assert (tb_branch_predict_taken_o == 1'b1);
 
             $display("Test 3 END");
