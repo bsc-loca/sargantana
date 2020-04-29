@@ -48,7 +48,6 @@ reg tb_clk_i;
 reg tb_rstn_i;
 reg tb_flush_i;
 reg tb_load_i;
-reg tb_flush_i;
 bus32_t tb_inst;
 bus32_t tb_inst_o;
 //store name of test for easier debug of waveform
