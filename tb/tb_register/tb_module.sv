@@ -60,7 +60,6 @@ reg[64*8:0] tb_test_name;
 register #(32) module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
-    .flush_i(tb_flush_i),
     .load_i(tb_load_i),
     .input_i(tb_inst),
     .output_o(tb_inst_o),
