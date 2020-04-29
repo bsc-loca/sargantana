@@ -10,7 +10,7 @@ TOP=$PWD
 #register.sv
 echo "*** results of file: register.sv"
 cd $TOP/tb/tb_register
-#(./runtest.sh -c ) 2>&1 | tee -a $artifact
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
 # bimodal_predict.sv branch_predictor.sv
