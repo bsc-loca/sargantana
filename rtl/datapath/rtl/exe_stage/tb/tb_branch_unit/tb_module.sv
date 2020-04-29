@@ -39,20 +39,28 @@ parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
 // Signals
 //-----------------------------
 
-bus64_t      tb_data_rs1_i;
-bus64_t      tb_data_rs2_i;
-instr_type_t tb_instr_type_i;
-bus64_t      tb_result_o;
+instr_type_t           tb_instr_type_i;
+addrPC_t               tb_pc_i;
+bus64_t                tb_data_rs1_i;
+bus64_t                tb_data_rs2_i;
+bus64_t                tb_imm_i;
+branch_pred_decision_t tb_taken_o;
+addrPC_t               tb_result_o;
+addrPC_t               tb_link_pc_o;
 
 //-----------------------------
 // Module
 //-----------------------------
 
-alu module_inst (
+branch_unit module_inst (
+    .instr_type_i(tb_instr_type_i),
+    .pc_i(tb_pc_i),
     .data_rs1_i(tb_data_rs1_i),
     .data_rs2_i(tb_data_rs2_i),
-    .instr_type_i(tb_instr_type_i),
-    .result_o(tb_result_o)
+    .imm_i(tb_imm_i),
+    .taken_o(tb_taken_o),
+    .result_o(tb_result_o),
+    .link_pc_o(tb_link_pc_o)
 );
 
 //-----------------------------
@@ -63,9 +71,11 @@ alu module_inst (
     task automatic init_sim;
         begin
             $display("*** init_sim");
+            tb_instr_type_i<='{default:0};
+            tb_pc_i<='{default:0};
             tb_data_rs1_i<='{default:0};
             tb_data_rs2_i<='{default:0};
-            tb_instr_type_i<='{default:0};
+            tb_imm_i<='{default:0};
             $display("Done");
         end
     endtask
@@ -110,167 +120,151 @@ alu module_inst (
             check_out(3,tmp);
             test_sim_4(tmp);
             check_out(4,tmp);
-            test_sim_5(tmp);
-            check_out(5,tmp);
-            test_sim_6(tmp);
-            check_out(6,tmp);
         end
     endtask
 
-// Testing add
+// Testing JAL
     task automatic test_sim_1;
         output int tmp;
         begin
-            longint src1,src2,correct_result;
+            longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
             tmp = 0;
-            tb_instr_type_i <= ADD;
+            tb_instr_type_i <= JAL;
             $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
                 src2[63:32] = $urandom();
+                pc = $urandom();
+                pc[63:32] = $urandom();
+                imm = $urandom();
+                imm[63:32] = $urandom();
+
                 tb_data_rs1_i <= src1;
                 tb_data_rs2_i <= src2;
+                tb_pc_i <= pc;
+                tb_imm_i <= imm;
+
                 #CLK_PERIOD;
-                correct_result = src1+src2;
-                if (tb_result_o != correct_result) begin
+                correct_taken = PRED_NOT_TAKEN;
+                correct_link = pc+4;
+                correct_result = pc+4;
+                if (tb_result_o != correct_result || tb_taken_o != correct_taken || tb_link_pc_o != correct_link) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect (output:correct) taken: %h:%h, link: %h:%h, result: %h:%h",tb_taken_o,correct_taken,tb_link_pc_o,correct_link,tb_result_o,correct_result);
                     `END_COLOR_PRINT
                 end
             end
         end
     endtask
 
-// Testing sub
+// Testing JALR
     task automatic test_sim_2;
         output int tmp;
         begin
-            longint src1,src2,correct_result;
+            longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
             tmp = 0;
-            tb_instr_type_i <= SUB;
+            tb_instr_type_i <= JALR;
             $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
                 src2[63:32] = $urandom();
+                pc = $urandom();
+                pc[63:32] = $urandom();
+                imm = $urandom();
+                imm[63:32] = $urandom();
+
                 tb_data_rs1_i <= src1;
                 tb_data_rs2_i <= src2;
+                tb_pc_i <= pc;
+                tb_imm_i <= imm;
+
                 #CLK_PERIOD;
-                correct_result = src1-src2;
-                if (tb_result_o != correct_result) begin
+                correct_taken = PRED_TAKEN;
+                correct_link = pc+4;
+                correct_result = (src1 + imm) & 64'hFFFFFFFFFFFFFFFE;
+                if (tb_result_o != correct_result || tb_taken_o != correct_taken || tb_link_pc_o != correct_link) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect (output:correct) taken: %h:%h, link: %h:%h, result: %h:%h",tb_taken_o,correct_taken,tb_link_pc_o,correct_link,tb_result_o,correct_result);
                     `END_COLOR_PRINT
                 end
             end
         end
     endtask
 
-// Testing Shift Left Logical
+// Testing BEQ
     task automatic test_sim_3;
         output int tmp;
         begin
-            longint src1,src2,correct_result;
+            longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
             tmp = 0;
-            tb_instr_type_i <= SLL;
+            tb_instr_type_i <= BEQ;
             $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
-                src2[5:0] = $urandom();
-                src2[63:6] = 0;
+                src2 = $urandom();
+                src2[63:32] = $urandom();
+                pc = $urandom();
+                pc[63:32] = $urandom();
+                imm = $urandom();
+                imm[63:32] = $urandom();
+
                 tb_data_rs1_i <= src1;
                 tb_data_rs2_i <= src2;
+                tb_pc_i <= pc;
+                tb_imm_i <= imm;
+
                 #CLK_PERIOD;
-                correct_result = src1<<src2;
-                if (tb_result_o != correct_result) begin
+                correct_taken = (src1 == src2) ? PRED_TAKEN : PRED_NOT_TAKEN;
+                correct_link = pc+4;
+                correct_result = (correct_taken == PRED_TAKEN) ? pc + imm : pc + 4;
+                if (tb_result_o != correct_result || tb_taken_o != correct_taken || tb_link_pc_o != correct_link) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h << %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect (output:correct) taken: %h:%h, link: %h:%h, result: %h:%h",tb_taken_o,correct_taken,tb_link_pc_o,correct_link,tb_result_o,correct_result);
                     `END_COLOR_PRINT
                 end
             end
         end
     endtask
 
-// Testing Shift Right Logical
+// Testing BGE
     task automatic test_sim_4;
         output int tmp;
         begin
-            longint src1,src2,correct_result;
+            longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
             tmp = 0;
-            tb_instr_type_i <= SRL;
+            tb_instr_type_i <= BGE;
             $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
-                src2[5:0] = $urandom();
-                src2[63:6] = 0;
-                tb_data_rs1_i <= src1;
-                tb_data_rs2_i <= src2;
-                #CLK_PERIOD;
-                correct_result = src1>>src2;
-                if (tb_result_o != correct_result) begin
-                    tmp = 1;
-                    `START_RED_PRINT
-                    $error("Result incorrect %h >> %h = %h out: %h",src1,src2,correct_result,tb_result_o);
-                    `END_COLOR_PRINT
-                end
-            end
-        end
-    endtask
-
-// Testing add word
-    task automatic test_sim_5;
-        output int tmp;
-        begin
-            longint src1,src2,correct_result;
-            tmp = 0;
-            tb_instr_type_i <= ADDW;
-            $random(10);
-            for(int i = 0; i < 100; i++) begin
-                src1 = $urandom();
                 src2 = $urandom();
-                tb_data_rs1_i <= src1;
-                tb_data_rs2_i <= src2;
-                #CLK_PERIOD;
-                correct_result[31:0] = src1+src2;
-                correct_result[63:32] = {32{correct_result[31]}};
-                if (tb_result_o != correct_result) begin
-                    tmp = 1;
-                    `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
-                    `END_COLOR_PRINT
-                end
-            end
-        end
-    endtask
+                src2[63:32] = $urandom();
+                pc = $urandom();
+                pc[63:32] = $urandom();
+                imm = $urandom();
+                imm[63:32] = $urandom();
 
-// Testing sub word
-    task automatic test_sim_6;
-        output int tmp;
-        begin
-            longint src1,src2,correct_result;
-            tmp = 0;
-            tb_instr_type_i <= SUBW;
-            $random(10);
-            for(int i = 0; i < 100; i++) begin
-                src1 = $urandom();
-                src2 = $urandom();
                 tb_data_rs1_i <= src1;
                 tb_data_rs2_i <= src2;
+                tb_pc_i <= pc;
+                tb_imm_i <= imm;
+
                 #CLK_PERIOD;
-                correct_result[31:0] = src1-src2;
-                correct_result[63:32] = {32{correct_result[31]}};
-                if (tb_result_o != correct_result) begin
+                correct_taken = ($signed(src1) >= $signed(src2)) ? PRED_TAKEN : PRED_NOT_TAKEN;
+                correct_link = pc+4;
+                correct_result = (correct_taken == PRED_TAKEN) ? pc + imm : pc + 4;
+                if (tb_result_o != correct_result || tb_taken_o != correct_taken || tb_link_pc_o != correct_link) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect (output:correct) taken: %h:%h, link: %h:%h, result: %h:%h",tb_taken_o,correct_taken,tb_link_pc_o,correct_link,tb_result_o,correct_result);
                     `END_COLOR_PRINT
                 end
             end
