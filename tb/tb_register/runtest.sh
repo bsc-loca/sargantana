@@ -1,6 +1,6 @@
 #!/bin/bash
 # $1 flags for questasim
-CYCLES=200
+CYCLES=-all
 
 rm -rf lib_module
 vlib lib_module

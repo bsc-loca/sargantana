@@ -10,7 +10,7 @@ TOP=$PWD
 #register.sv
 echo "*** results of file: register.sv"
 cd $TOP/tb/tb_register
-#(./runtest.sh -c ) 2>&1 | tee -a $artifact
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
 # bimodal_predict.sv branch_predictor.sv
@@ -50,8 +50,14 @@ echo "*** results of file: datapath_with cache interface"
 cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
 # ** Never reach end 
 #(./runtest.sh -c ) 2>&1 | tee -a $artifact
-#(./runtest.sh -c | grep -i 'error\|warning\|fail'  | grep -v -e 'Errors: 0, Warnings: 0') 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
+
+#if_stage.sv
+echo "*** results of file: if_stage.sv"
+cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********"
+
 
 #if this is not empty CI yellow tick
 warnings=$(cat $artifact | grep -i warnings | grep -v "Warning: 0")
