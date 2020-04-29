@@ -1,4 +1,5 @@
 ##$1
+VLOG_FLAGS=-svinputport=compat 
 CYCLES=-all
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
@@ -12,8 +13,8 @@ rm -rf lib_module
 
 vlib lib_module
 vmap work $PWD/lib_module
-vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $ICACHE_INTERF/icache_interface.sv \
- tb_icache_interface.sv colors.vh
+vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $ICACHE_INTERF/icache_interface.sv \
+tb_icache_interface.sv colors.vh
 vmake lib_module/ > Makefile
 
 #vsim work.tb_icache_interface -do  "view wave -new" -do "do wave.do" -do "run 20"
@@ -22,5 +23,5 @@ if [ -z "$1" ]
 then
       vsim work.tb_icache_interface -do "view wave -new" -do "do wave.do" -do "run $CYCLES"
 else
-      vsim work.tb_icache_interface $1 -do "run $CYCLES"
+      vsim work.tb_icache_interface $1 -do "run $CYCLES" 
 fi
