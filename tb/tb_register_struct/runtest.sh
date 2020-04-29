@@ -1,5 +1,5 @@
 #$1
-CYCLES=100
+CYCLES=-all
 
 rm -rf lib_module
 

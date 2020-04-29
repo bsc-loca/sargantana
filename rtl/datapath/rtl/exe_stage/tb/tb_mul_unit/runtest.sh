@@ -1,5 +1,5 @@
 #$1
-CYCLES=8000
+CYCLES=-all
 INCLUDE="../../../../../../includes"
 rm -rf lib_mul_unit
 

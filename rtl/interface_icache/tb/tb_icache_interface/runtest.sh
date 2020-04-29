@@ -1,5 +1,5 @@
 ##$1
-CYCLES=80
+CYCLES=-all
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
 ICACHE_INTERF="${BASE_DIR}/rtl/interface_icache/rtl"

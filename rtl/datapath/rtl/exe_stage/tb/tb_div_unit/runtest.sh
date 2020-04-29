@@ -1,5 +1,5 @@
 #$1
-CYCLES=20000
+CYCLES=-all
 RTL="../../rtl/"
 ROOT=$(git rev-parse --show-cdup)
 
