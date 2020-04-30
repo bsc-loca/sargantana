@@ -48,6 +48,8 @@ branch_pred_decision_t tb_taken_o;
 addrPC_t               tb_result_o;
 addrPC_t               tb_link_pc_o;
 
+reg[64*8:0] tb_test_name;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -128,6 +130,7 @@ branch_unit module_inst (
         output int tmp;
         begin
             longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
+            tb_test_name = "test_sim_1";
             tmp = 0;
             tb_instr_type_i <= JAL;
             $random(10);
@@ -165,6 +168,7 @@ branch_unit module_inst (
         output int tmp;
         begin
             longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
+            tb_test_name = "test_sim_2";
             tmp = 0;
             tb_instr_type_i <= JALR;
             $random(10);
@@ -202,6 +206,7 @@ branch_unit module_inst (
         output int tmp;
         begin
             longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
+            tb_test_name = "test_sim_3";
             tmp = 0;
             tb_instr_type_i <= BEQ;
             $random(10);
@@ -239,6 +244,7 @@ branch_unit module_inst (
         output int tmp;
         begin
             longint pc,src1,src2,imm,correct_result,correct_link,correct_taken;
+            tb_test_name = "test_sim_4";
             tmp = 0;
             tb_instr_type_i <= BGE;
             $random(10);

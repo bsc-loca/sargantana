@@ -44,6 +44,8 @@ bus64_t      tb_data_rs2_i;
 instr_type_t tb_instr_type_i;
 bus64_t      tb_result_o;
 
+reg[64*8:0] tb_test_name;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -122,6 +124,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_1";
             tmp = 0;
             tb_instr_type_i <= ADD;
             $random(10);
@@ -149,6 +152,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_2";
             tmp = 0;
             tb_instr_type_i <= SUB;
             $random(10);
@@ -176,6 +180,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_3";
             tmp = 0;
             tb_instr_type_i <= SLL;
             $random(10);
@@ -203,6 +208,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_4";
             tmp = 0;
             tb_instr_type_i <= SRL;
             $random(10);
@@ -230,6 +236,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_5";
             tmp = 0;
             tb_instr_type_i <= ADDW;
             $random(10);
@@ -256,6 +263,7 @@ alu module_inst (
         output int tmp;
         begin
             longint src1,src2,correct_result;
+            tb_test_name = "test_sim_6";
             tmp = 0;
             tb_instr_type_i <= SUBW;
             $random(10);

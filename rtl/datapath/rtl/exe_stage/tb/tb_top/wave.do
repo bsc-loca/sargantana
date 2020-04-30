@@ -9,6 +9,7 @@ add wave -noupdate /tb_module/tb_stall_o
 add wave -noupdate -expand -group output /tb_module/tb_to_wb_o.result
 add wave -noupdate -expand -group output /tb_module/tb_to_wb_o.result_pc
 add wave -noupdate -expand -group output /tb_module/tb_stall_o
+add wave -noupdate -radix ascii /tb_module/tb_test_name
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {4271 ns} 0}
 quietly wave cursor active 1
@@ -26,4 +27,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {29982 ns} {29986 ns}
+WaveRestoreZoom {5201 ns} {5205 ns}

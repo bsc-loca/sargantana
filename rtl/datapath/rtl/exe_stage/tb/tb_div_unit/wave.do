@@ -8,8 +8,8 @@ add wave -noupdate /tb_div_unit/tb_src2_i
 add wave -noupdate /tb_div_unit/tb_quo_o
 add wave -noupdate /tb_div_unit/tb_rmd_o
 add wave -noupdate /tb_div_unit/tb_stall_o
-add wave -noupdate /tb_div_unit/tb_done_o
 add wave -noupdate /tb_div_unit/module_inst/state_d
+add wave -noupdate -radix ascii /tb_div_unit/tb_test_name
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {21 ns} 0}
 quietly wave cursor active 1
@@ -27,4 +27,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {9966 ns} {10002 ns}
+WaveRestoreZoom {17970 ns} {18006 ns}

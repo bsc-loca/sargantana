@@ -79,6 +79,8 @@ exe_wb_instr_t      tb_to_wb_o;
 resp_dcache_cpu_t tb_dmem_resp_i;
 req_cpu_dcache_t  tb_cpu_req_o;
 
+reg[64*8:0] tb_test_name;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -209,6 +211,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2;
+            tb_test_name = "test_sim_1";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_ALU;
             tb_from_rr_i.instr.instr_type <= ADD;
@@ -238,6 +241,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2;
+            tb_test_name = "test_sim_2";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_ALU;
             tb_from_rr_i.instr.instr_type <= SUB;
@@ -267,6 +271,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2;
+            tb_test_name = "test_sim_3";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_MUL;
             tb_from_rr_i.instr.instr_type <= MUL;
@@ -300,6 +305,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2;
+            tb_test_name = "test_sim_4";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_DIV;
             tb_from_rr_i.instr.instr_type <= DIV;
@@ -333,6 +339,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2,pc,imm;
+            tb_test_name = "test_sim_5";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_BRANCH;
             tb_from_rr_i.instr.instr_type <= JAL;
@@ -369,6 +376,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2,pc,imm;
+            tb_test_name = "test_sim_6";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_BRANCH;
             tb_from_rr_i.instr.instr_type <= JALR;
@@ -405,6 +413,7 @@ exe_stage module_inst (
         output int tmp;
         begin
             longint src1,src2,pc,imm;
+            tb_test_name = "test_sim_7";
             tmp = 0;
             tb_from_rr_i.instr.unit <= UNIT_ALU;
             tb_from_rr_i.instr.instr_type <= ADD;
