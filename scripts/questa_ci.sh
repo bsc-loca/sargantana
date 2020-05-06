@@ -42,15 +42,14 @@ echo "******** questasim test has finish for this file **********"
 # datapath.sv
 echo "*** results of file: datapath.sv"
 cd $TOP/rtl/datapath/tb/tb_datapath/
-#(./runtest.sh -c ) 2>&1 | tee -a $artifact
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
 # datapath_with cache interface
-echo "*** results of file: datapath_with cache interface"
-cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
-# ** Never reach end 
+#echo "*** results of file: datapath_with cache interface"
+#cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
 #(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+#echo "******** questasim test has finish for this file **********"
 
 #if_stage.sv
 echo "*** results of file: if_stage.sv"
@@ -58,6 +57,17 @@ cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
+#alu.sv
+echo "*** results of file: alu.sv"
+cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_alu/
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********"
+
+#branch_unit.sv
+echo "*** results of file: branch_unit.sv"
+cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_branch_unit/
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********"
 
 #if this is not empty CI yellow tick
 warnings=$(cat $artifact | grep -i warnings | grep -v "Warning: 0")
