@@ -133,7 +133,6 @@ branch_unit module_inst (
             tb_test_name = "test_sim_1";
             tmp = 0;
             tb_instr_type_i <= JAL;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -171,7 +170,6 @@ branch_unit module_inst (
             tb_test_name = "test_sim_2";
             tmp = 0;
             tb_instr_type_i <= JALR;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -209,7 +207,6 @@ branch_unit module_inst (
             tb_test_name = "test_sim_3";
             tmp = 0;
             tb_instr_type_i <= BEQ;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -247,7 +244,6 @@ branch_unit module_inst (
             tb_test_name = "test_sim_4";
             tmp = 0;
             tb_instr_type_i <= BGE;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();

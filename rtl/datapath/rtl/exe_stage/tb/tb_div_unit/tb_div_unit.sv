@@ -54,6 +54,8 @@ bus64_t tb_quo_o;
 bus64_t tb_rmd_o;
 reg tb_stall_o;
 
+reg[64*8:0] tb_test_name;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -148,7 +150,6 @@ div_unit module_inst (
         input int unsigned src1;
         input int unsigned src2;
         begin
-            $display("*** set_srcs: %d * %d",src1,src2);
             tb_src1_i  <= src1;
             tb_src2_i  <= src2;
             tb_request_i <= 1;
@@ -160,8 +161,8 @@ div_unit module_inst (
     task automatic test_sim_1;
         output int tmp;
         begin
+            tb_test_name = "test_sim_1";
             tmp = 0;
-            $random(10);
             for(int i = 0; i < 500; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();

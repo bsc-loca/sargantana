@@ -217,7 +217,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.instr_type <= ADD;
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.result <= 0;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -247,7 +246,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.instr_type <= SUB;
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.result <= 0;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -278,7 +276,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.result <= 0;
             tb_from_rr_i.instr.valid <= 1;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -312,7 +309,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.result <= 0;
             tb_from_rr_i.instr.valid <= 1;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -345,7 +341,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.instr_type <= JAL;
             tb_from_rr_i.instr.use_imm <= 1;
             tb_from_rr_i.instr.valid <= 1;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 pc = $urandom();
                 imm = $urandom();
@@ -382,7 +377,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.instr_type <= JALR;
             tb_from_rr_i.instr.use_imm <= 1;
             tb_from_rr_i.instr.valid <= 1;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 pc = $urandom();
                 imm = $urandom();
@@ -419,7 +413,6 @@ exe_stage module_inst (
             tb_from_rr_i.instr.instr_type <= ADD;
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.valid <= 1;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 pc = $urandom();
                 imm = $urandom();

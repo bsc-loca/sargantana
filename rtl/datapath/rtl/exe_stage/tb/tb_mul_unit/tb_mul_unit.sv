@@ -53,6 +53,8 @@ reg [63:0] tb_mul_result;
 reg tb_lock_mul;
 reg tb_ready_mul;
 
+reg[64*8:0] tb_test_name;
+
 //-----------------------------
 // Module
 //-----------------------------
@@ -138,7 +140,6 @@ mul_unit mul_unit_inst (
         input int unsigned src1;
         input int unsigned src2;
         begin
-            $display("*** set_srcs: %d * %d",src1,src2);
             tb_source_1  <= src1;
             tb_source_2  <= src2;
             tb_valid_mul <= 1;
@@ -151,7 +152,7 @@ mul_unit mul_unit_inst (
         output int tmp;
         begin
             int tmp = 0;
-            $random(10);
+            tb_test_name = "test_sim_1";
             for(int i = 0; i < 1000; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();
@@ -167,7 +168,7 @@ mul_unit mul_unit_inst (
             end
         end
     endtask
-    
+
 
 //***task automatic test_sim***
     task automatic test_sim;

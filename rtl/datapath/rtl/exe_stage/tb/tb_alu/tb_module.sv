@@ -127,7 +127,6 @@ alu module_inst (
             tb_test_name = "test_sim_1";
             tmp = 0;
             tb_instr_type_i <= ADD;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -155,7 +154,6 @@ alu module_inst (
             tb_test_name = "test_sim_2";
             tmp = 0;
             tb_instr_type_i <= SUB;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -183,7 +181,6 @@ alu module_inst (
             tb_test_name = "test_sim_3";
             tmp = 0;
             tb_instr_type_i <= SLL;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -211,7 +208,6 @@ alu module_inst (
             tb_test_name = "test_sim_4";
             tmp = 0;
             tb_instr_type_i <= SRL;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -239,7 +235,6 @@ alu module_inst (
             tb_test_name = "test_sim_5";
             tmp = 0;
             tb_instr_type_i <= ADDW;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src2 = $urandom();
@@ -266,7 +261,6 @@ alu module_inst (
             tb_test_name = "test_sim_6";
             tmp = 0;
             tb_instr_type_i <= SUBW;
-            $random(10);
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src2 = $urandom();
