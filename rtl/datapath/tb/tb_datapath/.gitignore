@@ -3,3 +3,4 @@ lib_module/*
 *.hex
 *.wlf
 *.vcd
+*.*.hex

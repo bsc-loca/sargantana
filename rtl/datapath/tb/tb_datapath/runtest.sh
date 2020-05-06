@@ -1,6 +1,6 @@
 #$1
-VLOG_FLAGS=-svinputport=compat 
-TEST=$2
+VLOG_FLAGS=+define+SIMULATION -svinputport=compat 
+TEST=$1
 CYCLES=-all
 BASE_DIR="../../../.."
 DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
@@ -25,7 +25,7 @@ vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $
 
 vmake lib_module/ > Makefile_test
 
-if [ -z "$1" ]
+if [ -z "$2" ]
 then #// -new
       cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
       vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"

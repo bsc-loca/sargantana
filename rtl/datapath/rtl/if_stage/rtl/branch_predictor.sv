@@ -71,12 +71,22 @@ bimodal_predictor bimodal_predictor_inst(
 `ifndef SRAM_MEMORIES
     logic [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
 
+
+`ifdef SIMULATION     
+	initial begin
+        for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
+             is_branch_table[i] = $urandom_range(268435455);
+        end
+	end
+`endif
+
+
     always_ff @(negedge clk_i) 
     begin
         is_branch_tag <= is_branch_table[pc_fetch_i[11:2]];
     end
     
-    always_ff @(posedge clk_i) 
+    always @(posedge clk_i) 
     begin
          if(is_branch_EX_i) begin
             is_branch_table[pc_execution_i[11:2]] <= pc_execution_i[39:12];
