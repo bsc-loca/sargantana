@@ -72,7 +72,7 @@ bimodal_predictor bimodal_predictor_inst(
     logic [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
 
 
-`ifdef SIMULATION     
+`ifdef QUESTASIM     
 	initial begin
         for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
              is_branch_table[i] = $urandom_range(268435455);
@@ -80,6 +80,14 @@ bimodal_predictor bimodal_predictor_inst(
 	end
 `endif
 
+
+`ifdef VERILATOR     
+	initial begin
+        for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
+             is_branch_table[i] = 28'hFFFFFFF;
+        end
+	end
+`endif
 
     always_ff @(negedge clk_i) 
     begin
