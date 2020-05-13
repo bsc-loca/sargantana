@@ -8,74 +8,74 @@ GREEN='\033[0;32m'
 NC='\033[0m' # No Color  
 TOP=$PWD
 #register.sv
-echo "*** results of file: register.sv"
+echo "*** results of file: register.sv" 2>&1 | tee -a $artifact
 cd $TOP/tb/tb_register
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # bimodal_predict.sv branch_predictor.sv
-echo "*** results of file: bimodal_predict.sv branch_predictor.sv "
+echo "*** results of file: bimodal_predict.sv branch_predictor.sv " 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_branch_predictor
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # exe_stage.sv
-echo "*** results of file: exe_stage.sv"
+echo "*** results of file: exe_stage.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_top/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # mul_unit.sv
 # ** multidriven and does not reach end of test
-echo "*** results of file: mul_unit.sv"
+echo "*** results of file: mul_unit.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_mul_unit/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # div_unit.sv div_4bits.sv
-echo "*** results of file: div_unit.sv div_4bits.sv "
+echo "*** results of file: div_unit.sv div_4bits.sv " 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_div_unit/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # datapath.sv
-echo "*** results of file: datapath.sv"
+echo "*** results of file: datapath.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/tb/tb_datapath/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # datapath_with cache interface
-echo "*** results of file: datapath_with cache interface"
+echo "*** results of file: datapath_with cache interface" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 #if_stage.sv
-echo "*** results of file: if_stage.sv"
+echo "*** results of file: if_stage.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 #alu.sv
-echo "*** results of file: alu.sv"
+echo "*** results of file: alu.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_alu/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 #branch_unit.sv
-echo "*** results of file: branch_unit.sv"
+echo "*** results of file: branch_unit.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_branch_unit/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 #interface_dcache.sv
-echo "*** results of file: interface_dcache"
+echo "*** results of file: interface_dcache" 2>&1 | tee -a $artifact
 cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/runtest.sh
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********"
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 #if this is not empty CI yellow tick
-warnings=$(cat $artifact | grep -i "warnings\|*** results of file:" | grep -v "Warning: 0")
+warnings=$(cat $artifact | grep -i "warnings" | grep -v "Warning: 0")
 #if this is not empty CI fail
 errors=$(cat $artifact | grep -i error | grep -v "Errors: 0")
 #if this is not empty CI fail

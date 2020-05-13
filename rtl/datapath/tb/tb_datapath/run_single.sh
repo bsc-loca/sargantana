@@ -33,9 +33,9 @@ vmake lib_module/ > Makefile_test
 
 if [ -z "$2" ]
 then #// -new
-      cp ${TEST}.hex test.riscv.hex
+      cp ./${TEST} test.riscv.hex
       vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
 else
-      cp ${TEST}.hex test.riscv.hex
+      cp ./${TEST} test.riscv.hex
       vsim work.tb_datapath $2 -do "run $CYCLES"
 fi
