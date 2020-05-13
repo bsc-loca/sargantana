@@ -10,6 +10,8 @@ isa_tests=""
 while read file; do
     isa_tests=$isa_tests$file$'\n'
 done < <(find tests -iname \*.hex )
+#remove empty character at the end
+isa_tests=${isa_tests::-1}
 
 
 #iterate over all the listed isa_tests

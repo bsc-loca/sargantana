@@ -37,5 +37,5 @@ then #// -new
       vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
 else
       cp ./${TEST} test.riscv.hex
-      vsim work.tb_datapath $2 -do "run $CYCLES"
+      vsim $2 work.tb_datapath -do "run $CYCLES"
 fi

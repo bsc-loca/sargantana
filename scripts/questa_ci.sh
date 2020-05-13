@@ -37,19 +37,19 @@ echo "*** results of file: div_unit.sv div_4bits.sv " 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_div_unit/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
-
 # datapath.sv
 echo "*** results of file: datapath.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/tb/tb_datapath/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
-# datapath_with cache interface
+: ' #replaced by tb_top
+ datapath_with cache interface is replaced by tb_top
 echo "*** results of file: datapath_with cache interface" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
-
+'
 #if_stage.sv
 echo "*** results of file: if_stage.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
@@ -73,7 +73,6 @@ echo "*** results of file: interface_dcache" 2>&1 | tee -a $artifact
 cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/runtest.sh
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
-
 #if this is not empty CI yellow tick
 warnings=$(cat $artifact | grep -i "warnings" | grep -v "Warning: 0")
 #if this is not empty CI fail
@@ -85,6 +84,13 @@ path_error=$(cat $artifact | grep -i "No such file")
 #some pass messages shall be present otherwise nothing has run
 pass_messages=$(cat $artifact | grep -i "pass\|passed")
 
+# Variables to provide more clear reports, where file names precede the message
+name_warnings=$(cat $artifact | grep -i "warnings\|*** results of file:" | grep -v "Warning: 0")
+name_errors=$(cat $artifact | grep -i "error\|*** results of file:" | grep -v "Errors: 0")
+name_fails=$(cat $artifact | grep -i "fail\|*** results of file:" | grep -v "Warning: setting ADDR_NO_RANDOMIZE failed - Operation not permitted.")
+name_path_error=$(cat $artifact | grep -i "No such file\|*** results of file:")
+name_pass_messages=$(cat $artifact | grep -i "pass\|passed\|*** results of file:")
+
 #Return value for the error
 ret_val=0
 
@@ -93,7 +99,7 @@ echo "errors"
 rval=$?
 if [ $rval -ne 0 ]; then
     echo -e "$RED"
-    echo "$errors"
+    echo "$name_errors"
     echo -e "$NC"
 	ret_val+=1
 fi
@@ -103,7 +109,7 @@ echo "warnings"
 rval=$?
 if [ $rval -ne 0 ]; then
   	echo -e "$RED"
-    echo "$warnings"
+    echo "$name_warnings"
     echo -e "$NC"
 	ret_val+=2
 fi
@@ -113,7 +119,7 @@ echo "fails"
 rval=$?
 if [ $rval -ne 0 ]; then
   	echo -e "$RED"
-    echo "$fails"
+    echo "$name_fails"
     echo -e "$NC"
 	ret_val+=3
 fi
@@ -123,7 +129,7 @@ echo "path_error"
 rval=$?
 if [ $rval -ne 0 ]; then
   	echo -e "$RED"
-    echo "$path_error"
+    echo "$name_path_error"
     echo -e "$NC"
 	ret_val+=4
 fi
@@ -133,7 +139,7 @@ echo "pass_messages"
 rval=$?
 if [ $rval -ne 0 ]; then
   	echo -e "$RED"
-  	echo -e "$pass_messages"
+  	echo -e "$name_pass_messages"
     echo "No pass messages detected"
     echo -e "$NC"
 	ret_val+=5
