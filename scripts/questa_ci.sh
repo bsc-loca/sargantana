@@ -68,6 +68,12 @@ cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_branch_unit/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
+#interface_dcache.sv
+echo "*** results of file: interface_dcache"
+cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/runtest.sh
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********"
+
 #if this is not empty CI yellow tick
 warnings=$(cat $artifact | grep -i "warnings\|*** results of file:" | grep -v "Warning: 0")
 #if this is not empty CI fail

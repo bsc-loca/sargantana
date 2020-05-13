@@ -2,10 +2,10 @@
 # To use it pass as the first argument the complete name of the test, as a
 # second argument you can pass a flag for vsim such as -c to run in batch mode.
 
-#$1: Test to be run in hex format
+#$1: Path to the test (.hex) to be run
 #$2: Flags for Vsim
 
-VLOG_FLAGS=+define+SIMULATION -svinputport=compat 
+VLOG_FLAGS="-svinputport=compat +define+SIMULATION"
 TEST=$1
 CYCLES=-all
 BASE_DIR="../../../.."
@@ -33,9 +33,9 @@ vmake lib_module/ > Makefile_test
 
 if [ -z "$2" ]
 then #// -new
-      cp tests/${TEST}.hex test.riscv.hex
+      cp ${TEST}.hex test.riscv.hex
       vsim work.tb_datapath -do "view wave " -do "do wave.do" -do "run $CYCLES"
 else
-      cp tests/${TEST}.hex test.riscv.hex
+      cp ${TEST}.hex test.riscv.hex
       vsim work.tb_datapath $2 -do "run $CYCLES"
 fi
