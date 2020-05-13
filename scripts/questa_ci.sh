@@ -16,7 +16,6 @@ echo "******** questasim test has finish for this file **********"
 # bimodal_predict.sv branch_predictor.sv
 echo "*** results of file: bimodal_predict.sv branch_predictor.sv "
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_branch_predictor
-# ** Does not have pass message and bitwidth missmatch. 
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********"
 
@@ -46,10 +45,10 @@ cd $TOP/rtl/datapath/tb/tb_datapath/
 echo "******** questasim test has finish for this file **********"
 
 # datapath_with cache interface
-#echo "*** results of file: datapath_with cache interface"
-#cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
-#(./runtest.sh -c ) 2>&1 | tee -a $artifact
-#echo "******** questasim test has finish for this file **********"
+echo "*** results of file: datapath_with cache interface"
+cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********"
 
 #if_stage.sv
 echo "*** results of file: if_stage.sv"
@@ -70,7 +69,7 @@ cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_branch_unit/
 echo "******** questasim test has finish for this file **********"
 
 #if this is not empty CI yellow tick
-warnings=$(cat $artifact | grep -i warnings | grep -v "Warning: 0")
+warnings=$(cat $artifact | grep -i "warnings\|*** results of file:" | grep -v "Warning: 0")
 #if this is not empty CI fail
 errors=$(cat $artifact | grep -i error | grep -v "Errors: 0")
 #if this is not empty CI fail
