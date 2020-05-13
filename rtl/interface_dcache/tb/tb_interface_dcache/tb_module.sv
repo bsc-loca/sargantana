@@ -72,7 +72,6 @@ dcache_interface module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
 
-
     .req_cpu_dcache_i(tb_req_cpu_dcache_i), 
 
     .dmem_resp_replay_i(tb_dmem_resp_replay_i),
@@ -130,7 +129,7 @@ dcache_interface module_inst (
             tb_req_cpu_dcache_i.kill<='{default:0};
             tb_req_cpu_dcache_i.data_rs1<='{default:0};
             tb_req_cpu_dcache_i.data_rs2<='{default:0};
-            tb_req_cpu_dcache_i.instr_type<='{default:LD};
+            tb_req_cpu_dcache_i.instr_type<='{default:0};
             tb_req_cpu_dcache_i.mem_size<='{default:0};
             tb_req_cpu_dcache_i.rd<='{default:0};
             tb_req_cpu_dcache_i.imm<='{default:0};
@@ -958,6 +957,7 @@ dcache_interface module_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 
