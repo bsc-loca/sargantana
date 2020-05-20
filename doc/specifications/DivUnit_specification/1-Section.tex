@@ -1,0 +1,31 @@
+\section{General purpose of the module}
+\label{chapter1}
+
+The div\_unit module is in charge of executing divisions inside Drac. For this purpose div\_unit uses div\_4bits unit to execute steps of division process. Therefore div\_4bits is instantiated inside div\_unit. Div\_unit receives:
+
+\begin{itemize}
+  \item Dividend and divisor operands of 64 bits.
+  \item Kill signal to stop the current division
+  \item Signals to differentiate from 32 and 64 bit operations. Also to differentiate from signed and unsigned operations
+\end{itemize}
+
+The division module uses the long division algorithm \cite{longDivision}. This algorithm reduces the division to an iterative process in which each step or iteration consists on small operations such as subtraction, shift, and comparison. The div\_4bits units is in charge of executing 4 consecutive steps of the division algorithm in one cycle (four iterations of the "for" loop)
+
+N corresponds to dividend, D to divisor, Q to quotient, R to remaient.
+
+\begin{lstlisting}[label=division, caption=Long division algorithm]
+Q := 0                  -- Initialize quotient and remainder to zero
+R := 0                     
+for i := n - 1 .. 0 do  -- Where n is number of bits in N
+  R := R << 1           -- Left-shift R by 1 bit
+  R(0) := N(i)          -- Set the least-significant bit of R equal 
+                        --     to bit i of the numerator
+  if R >= D then
+    R := R - D
+    Q(i) := 1
+  end
+end
+\end{lstlisting}
+
+With this architecture div\_units is able to output one 32 bit division every 10 cycles, and a 64 bit division every 18 cycles. One cycle is spent to store the incoming operands, and another cycle is spent setting the output.
+

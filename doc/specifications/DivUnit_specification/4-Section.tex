@@ -1,0 +1,100 @@
+6\section{Interface}
+\label{chapter 4}
+
+In this section we describe the interface signals of each module for the different components connected to it.
+
+\subsection{Division Unit Interfaces}
+
+\subsubsection{Input Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|p{3cm}|l|p{4cm}}
+\hline
+\hline
+Signal name & Width or Struct & Input & Description \\
+\hline
+\hline
+clk\_i & 1 & div\_unit <- exe\_stage & Clock for the module \\
+\hline
+rstn\_i & 1 & div\_unit <- exe\_stage & Reset for the module. Asynchronous, active low reset \\
+\hline
+kill\_div\_i & 1 & div\_unit <- exe\_stage & Kill signal, to abort current division execution \\
+\hline
+request\_i & 1 & div\_unit <- exe\_stage & New division incoming from exe\_stage \\
+\hline
+int\_32\_i & 1 & div\_unit <- exe\_stage & Incoming division is 32 bit operands and result \\
+\hline
+signed\_op\_i & 1 & div\_unit <- exe\_stage & Incoming division uses signed operands \\
+\hline
+dvnd\_i & 64 & div\_unit <- exe\_stage & Dividend operand \\
+\hline
+dvsr\_i & 64 & div\_unit <- exe\_stage & Divisor operand \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Output Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|p{3cm}|l|p{4cm}}
+\hline
+\hline
+Signal name & Width or Struct & Output & Description \\
+\hline
+\hline
+quo\_o & 64 & div\_unit -> exe\_stage & Output quotient of the division \\
+\hline
+rmd\_o & 64 & div\_unit -> exe\_stage & Output remanent of the division \\
+\hline
+stall\_o & 1 & div\_unit -> exe\_stage & Division unit is busy, no other division should be issued \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+%--------------------------------------------------------------------------------------------
+
+\subsection{ Div\_4bits Interfaces}
+
+\subsubsection{Input Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{8cm}}
+\hline
+\hline
+Signal name & Width & Input & Description \\
+\hline
+\hline
+remanent\_i & 64 & div\_4bits <- div\_unit & Remanent of the previous division step \\
+\hline
+dividend\_quotient\_i & 64 & div\_4bits <- div\_unit & Dividend and quotient of the previous division step. Both datums are codified in 64 bits. \\
+\hline
+divisor\_i & 64 & div\_4bits <- div\_unit & Divisor operand \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Output Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{8cm}}
+\hline
+\hline
+Signal name & Width & Output & Description \\
+\hline
+\hline
+remanent\_o & 64 & div\_4bits -> div\_unit & Remanent output of the current division step \\
+\hline
+dividend\_quotient\_o & 64 & div\_4bits <- div\_unit & Dividend and quotient output of the current division step. Both datums are codified in 64 bits. \\
+\hline
+divisor\_o & 64 & div\_4bits <- div\_unit & Divisor of the operation. \\
+\hline
+\end{tabular}
+\end{table}
