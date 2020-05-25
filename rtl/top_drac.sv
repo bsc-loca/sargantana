@@ -1,5 +1,17 @@
-//TODO: add DRAC header
-//TODO: replace definitions with package drac
+/* -----------------------------------------------
+* Project Name   : DRAC
+* File           : datapath.sv
+* Organization   : Barcelona Supercomputing Center
+* Author(s)      : Guillem Cabo Pitarch 
+* Email(s)       : guillem.cabo@bsc.es
+* References     : 
+* -----------------------------------------------
+* Revision History
+*  Revision   | Author     | Commit | Description
+*  0.1        | Guillem.CP | 
+* -----------------------------------------------
+*/
+
 import drac_pkg::*;
 
 module top_drac(

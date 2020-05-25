@@ -110,7 +110,6 @@ module tb_if_stage();
 
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
