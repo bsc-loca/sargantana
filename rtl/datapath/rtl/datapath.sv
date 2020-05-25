@@ -67,7 +67,9 @@ module datapath(
 
     // Exe
     logic stall_exe_out;
+    /* verilator lint_off UNOPTFLAT */
     exe_cu_t exe_cu_int;
+    /* verilator lint_on UNOPTFLAT */
     exe_wb_instr_t exe_to_wb_exe;
     exe_wb_instr_t exe_to_wb_wb;
 
