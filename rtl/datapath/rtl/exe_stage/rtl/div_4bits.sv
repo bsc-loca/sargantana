@@ -23,7 +23,9 @@ module div_4bits (
 );
 
     // Declarations
+    /* verilator lint_off UNOPTFLAT */
     bus64_t tmp_remanent[3:0];
+    /* verilator lint_on UNOPTFLAT */
     bus64_t tmp_remanent_sub[3:0];
     bus64_t tmp_dividend_quotient[3:0];
     logic   quotient_bit[3:0];
