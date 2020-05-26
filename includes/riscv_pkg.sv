@@ -21,7 +21,7 @@ parameter INST_SIZE = 32;
 
 // Common for RISCV types
 typedef struct packed {
-    logic [31:25] void2;
+    logic [31:25] func7;
     logic [24:20] rs2;
     logic [19:15] rs1;
     logic [14:12] func3;
@@ -113,7 +113,7 @@ typedef enum logic [6:0] {
     OP_ATOMICS   = 7'b0101111,
     OP_LOAD_FP   = 7'b0000111,
     OP_STORE_FP  = 7'b0100111,
-    OP_FP	 = 7'b1010011
+    OP_FP        = 7'b1010011
 } op_inst_t;
 
 typedef enum logic [2:0] {
@@ -136,10 +136,10 @@ typedef enum logic [2:0] {
 } op_func3_load_t;
 
 typedef enum logic [2:0] {
-    STORE_SB   = 3'b000,
-    STORE_SH   = 3'b001,
-    STORE_SW   = 3'b010,
-    STORE_SD   = 3'b011
+    F3_SB   = 3'b000,
+    F3_SH   = 3'b001,
+    F3_SW   = 3'b010,
+    F3_SD   = 3'b011
 } op_func3_store_t;
 
 
@@ -191,6 +191,11 @@ typedef enum logic [2:0] {
     F3_64_SLLW      = 3'b001,
     F3_64_SRLW_SRAW = 3'b101
 } op_func3_alu_64_t;
+
+typedef enum logic [2:0] {
+    F3_FENCE   = 3'b000,
+    F3_FENCE_I = 3'b001
+} op_func3_fence_t;
 
 typedef enum logic [2:0] {
     F3_MUL    = 3'b000,
@@ -260,7 +265,8 @@ typedef enum logic [6:0] {
     F7_ECALL_EBREAK_URET    = 7'b0000000,
     F7_SRET_WFI_ERET_SFENCE = 7'b0001000,
     F7_SFENCE_VM            = 7'b0001001,
-    F7_MRET_MRTS            = 7'b0011000
+    F7_MRET_MRTS_MRTH       = 7'b0011000,
+    F7_HRTS                 = 7'b0010000
 } op_func7_system_t; // The first 7 bits of func7
 
 typedef enum logic [4:0] {
@@ -268,7 +274,8 @@ typedef enum logic [4:0] {
     RS2_EBREAK_SFENCEVM = 5'b00001,
     RS2_URET_SRET_MRET  = 5'b00010,
     RS2_WFI             = 5'b00011,
-    RS2_MRTS            = 5'b00101 //Old ISA
+    RS2_MRTS_HRTS       = 5'b00101, //Old ISA
+    RS2_MRTH            = 5'b00110 //Old ISA
 } op_rs2_system_t; // the next 5 bits after func7
 
 typedef enum logic [6:0] {

@@ -158,7 +158,7 @@ typedef enum logic [6:0] {
    // CSR functions
    MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA,
    // Old ISA CSR functions
-   ERET, MRTS,
+   ERET, MRTS, MRTH, HRTS,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions
@@ -185,6 +185,7 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_N1      = 3'b110,
     CSR_CMD_N2      = 3'b111
 } csr_cmd_t;                // Comands to lowrisc CSR
+
 
 // Response coming from Dcache
 typedef struct packed {
