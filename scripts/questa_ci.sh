@@ -73,6 +73,13 @@ echo "*** results of file: interface_dcache" 2>&1 | tee -a $artifact
 cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/runtest.sh
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+
+# decoder.sv
+echo "*** results of file: decoder" 2>&1 | tee -a $artifact
+cd $TOP/rtl/datapath/tb/tb_decoder/runtest.sh
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+
 #if this is not empty CI yellow tick
 warnings=$(cat $artifact | grep -i "warnings" | grep -v "Warning: 0")
 #if this is not empty CI fail
