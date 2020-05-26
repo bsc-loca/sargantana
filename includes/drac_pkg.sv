@@ -243,7 +243,6 @@ typedef struct packed {
     bus64_t result;                     // Result or Immediate
     logic signed_op;                    // Signed Operation
     logic [2:0] mem_size;               // Memory operation size (Byte, Word)
-    // TODO re-think
     logic stall_csr_fence;              // CSR or fence
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst; 
