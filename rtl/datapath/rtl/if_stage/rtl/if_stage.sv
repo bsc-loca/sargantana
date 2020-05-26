@@ -87,10 +87,6 @@ module if_stage(
 
     // check addr fault fetch
     always_comb begin
-        // or of the high part of the addr
-        /*if (|pc[63:40]) begin
-            ex_if_addr_fault_int = 1'b1;
-        end else*/ 
         if (resp_icache_cpu_i.valid && 
             resp_icache_cpu_i.instr_access_fault) begin
             ex_if_addr_fault_int = 1'b1;
@@ -102,12 +98,7 @@ module if_stage(
     always_comb begin
         if (|pc[1:0]) begin
             ex_addr_misaligned_int = 1'b1;
-        end /*else  
-        if (resp_icache_cpu_i.valid && 
-            resp_icache_cpu_i.instr_addr_misaligned) begin
-            ex_addr_misaligned_int = 1'b1;
-        end */
-        else begin
+        end else begin
             ex_addr_misaligned_int = 1'b0;
         end
     end

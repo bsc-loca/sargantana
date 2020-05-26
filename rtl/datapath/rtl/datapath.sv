@@ -98,7 +98,6 @@ module datapath(
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
 
-    // TODO: Ruben
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             io_base_addr <=  40'h0040000000;
@@ -251,8 +250,7 @@ module datapath(
 
     // WB
     // CSR
-
-    // TODO (guillemlp): add a module thatn handles this
+    // This could be placed in an outsite module
     always_comb begin
         wb_csr_cmd_int = CSR_CMD_NOPE;
         wb_csr_rw_data_int = 64'b0;

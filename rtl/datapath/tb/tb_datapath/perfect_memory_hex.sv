@@ -13,8 +13,6 @@
 */
 import drac_pkg::*;
 
-// TODO: use interfaces
-// TODO: create a write
 // this is a specific module to read hexdumps of riscv tests 
 module perfect_memory_hex #(
     parameter SIZE = 32*1024 * 8,

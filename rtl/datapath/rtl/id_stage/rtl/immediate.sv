@@ -4,7 +4,7 @@
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
 * Email(s)       : guillem.lopez@bsc.es
-* References     : TODO add link to ISA chapter etc..
+* References     : RISCV ISA
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description

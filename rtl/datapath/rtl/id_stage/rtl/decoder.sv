@@ -4,7 +4,7 @@
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
 * Email(s)       : guillem.lopez@bsc.es
-* References     : 
+* References     : RISCV ISA
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description
@@ -348,7 +348,6 @@ module decoder(
                 end
                 OP_ALU: begin
                     decode_instr_o.regfile_we = 1'b1;
-                    // we don't need a default cause all cases are there
                     unique case ({decode_i.inst.rtype.func7,decode_i.inst.rtype.func3})
                         {F7_NORMAL,F3_ADD_SUB}: begin
                             decode_instr_o.instr_type = ADD;

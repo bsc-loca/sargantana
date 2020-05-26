@@ -14,8 +14,6 @@
 //`include "drac_pkg.sv"
 import drac_pkg::*;
 
-// TODO: use interfaces
-// TODO: create a write
 // this is a specific module to read hexdumps of riscv tests 
 module perfect_memory_hex_write #(
     parameter SIZE = 32*1024 * 8,
@@ -277,7 +275,6 @@ module perfect_memory_hex_write #(
         if(~rstn_i) begin
             $readmemh("test.riscv.hex", memory, HEX_LOAD_ADDR);
         end else if (wr_ena_i) begin
-            // TODO enable half and byte
             /*for (integer i = 0; i < LINE_SIZE/8; i++) begin
                 memory[addr + i] 
             end*/

@@ -227,15 +227,11 @@ end
 assign icache_access_needed_int =   req_fetch_icache_i.valid & 
                                     buffer_miss_int;
 // Icache output connections
-// TODO:(guillemlp) what is invalidate?
-// when we want to send invalidation of request?
+// when we want to send invalidation of request
 assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 
-// TODO (guillemlp) I am not sure when to activate this 
-// when there is a tlb miss?
 assign icache_req_kill_o = tlb_resp_miss_i | ptw_invalidate_i | tlb_resp_xcp_if_i;
 
-// TODO (guillemlp) I actually don't know what is this tlb valid
 assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
 
 //assign resp_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
@@ -243,7 +239,6 @@ assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i & buffer_miss_
 assign resp_icache_fetch_o.instr_page_fault = 1'b0;
 
 // sequential logic cacheline register buffer
-// TODO (guillemlp) manage invalidations etc...
 always_ff @(posedge clk_i, negedge rstn_i) begin //, posedge icache_resp_valid_i
     if(!rstn_i) begin
         icache_line_reg_q <= 128'b0;
