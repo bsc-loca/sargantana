@@ -70,13 +70,13 @@ echo "******** questasim test has finish for this file **********" 2>&1 | tee -a
 
 #interface_dcache.sv
 echo "*** results of file: interface_dcache" 2>&1 | tee -a $artifact
-cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/runtest.sh
+cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
 # decoder.sv
 echo "*** results of file: decoder" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/tb/tb_decoder/runtest.sh
+cd $TOP/rtl/datapath/rtl/id_stage/tb/tb_decoder/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
