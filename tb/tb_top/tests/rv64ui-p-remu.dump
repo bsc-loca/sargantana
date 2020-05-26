@@ -1,0 +1,196 @@
+
+rv64ui-p-remu:     file format elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000100 <tvec_user>:
+ 100:	00000f17          	auipc	t5,0x0
+ 104:	25cf0f13          	addi	t5,t5,604 # 35c <ecall>
+ 108:	34102ff3          	csrr	t6,mepc
+ 10c:	07ff0c63          	beq	t5,t6,184 <write_tohost>
+ 110:	00000f17          	auipc	t5,0x0
+ 114:	ef0f0f13          	addi	t5,t5,-272 # 0 <tvec_user-0x100>
+ 118:	020f1863          	bnez	t5,148 <mrts_routine>
+ 11c:	00000f17          	auipc	t5,0x0
+ 120:	ee4f0f13          	addi	t5,t5,-284 # 0 <tvec_user-0x100>
+ 124:	000f0463          	beqz	t5,12c <tvec_user+0x2c>
+ 128:	ed9ff06f          	j	0 <tvec_user-0x100>
+ 12c:	0540006f          	j	180 <other_exception>
+ 130:	00000013          	nop
+ 134:	00000013          	nop
+ 138:	00000013          	nop
+ 13c:	00000013          	nop
+
+0000000000000140 <tvec_supervisor>:
+ 140:	34202f73          	csrr	t5,mcause
+ 144:	fa0f5ee3          	bgez	t5,100 <tvec_user>
+
+0000000000000148 <mrts_routine>:
+ 148:	30500073          	mrts
+ 14c:	00000013          	nop
+ 150:	00000013          	nop
+ 154:	00000013          	nop
+ 158:	00000013          	nop
+ 15c:	00000013          	nop
+ 160:	00000013          	nop
+ 164:	00000013          	nop
+ 168:	00000013          	nop
+ 16c:	00000013          	nop
+ 170:	00000013          	nop
+ 174:	00000013          	nop
+ 178:	00000013          	nop
+ 17c:	00000013          	nop
+
+0000000000000180 <other_exception>:
+ 180:	539e6e13          	ori	t3,t3,1337
+
+0000000000000184 <write_tohost>:
+ 184:	780e1073          	csrw	mtohost,t3
+ 188:	ffdff06f          	j	184 <write_tohost>
+ 18c:	00000013          	nop
+ 190:	00000013          	nop
+ 194:	00000013          	nop
+ 198:	00000013          	nop
+ 19c:	00000013          	nop
+ 1a0:	00000013          	nop
+ 1a4:	00000013          	nop
+ 1a8:	00000013          	nop
+ 1ac:	00000013          	nop
+ 1b0:	00000013          	nop
+ 1b4:	00000013          	nop
+ 1b8:	00000013          	nop
+ 1bc:	00000013          	nop
+
+00000000000001c0 <tvec_machine>:
+ 1c0:	00000f17          	auipc	t5,0x0
+ 1c4:	19cf0f13          	addi	t5,t5,412 # 35c <ecall>
+ 1c8:	34102ff3          	csrr	t6,mepc
+ 1cc:	fbff0ce3          	beq	t5,t6,184 <write_tohost>
+ 1d0:	00000f17          	auipc	t5,0x0
+ 1d4:	e30f0f13          	addi	t5,t5,-464 # 0 <tvec_user-0x100>
+ 1d8:	000f0463          	beqz	t5,1e0 <tvec_machine+0x20>
+ 1dc:	e25ff06f          	j	0 <tvec_user-0x100>
+ 1e0:	fa1ff06f          	j	180 <other_exception>
+ 1e4:	00000013          	nop
+ 1e8:	00000013          	nop
+ 1ec:	00000013          	nop
+ 1f0:	00000013          	nop
+ 1f4:	00000013          	nop
+ 1f8:	00000013          	nop
+ 1fc:	00000013          	nop
+
+0000000000000200 <_start>:
+ 200:	f1002573          	csrr	a0,mhartid
+ 204:	00051063          	bnez	a0,204 <_start+0x4>
+ 208:	f0002573          	csrr	a0,mcpuid
+ 20c:	00054863          	bltz	a0,21c <_start+0x1c>
+ 210:	0ff0000f          	fence
+ 214:	00100e13          	li	t3,1
+ 218:	1440006f          	j	35c <ecall>
+ 21c:	00000e13          	li	t3,0
+ 220:	00000297          	auipc	t0,0x0
+ 224:	de028293          	addi	t0,t0,-544 # 0 <tvec_user-0x100>
+ 228:	00028463          	beqz	t0,230 <_start+0x30>
+ 22c:	10129073          	csrw	stvec,t0
+ 230:	1f800293          	li	t0,504
+ 234:	3002b073          	csrc	mstatus,t0
+ 238:	00000297          	auipc	t0,0x0
+ 23c:	01428293          	addi	t0,t0,20 # 24c <test_2>
+ 240:	34129073          	csrw	mepc,t0
+ 244:	f1002573          	csrr	a0,mhartid
+ 248:	10000073          	eret
+
+000000000000024c <test_2>:
+ 24c:	01400093          	li	ra,20
+ 250:	00600113          	li	sp,6
+ 254:	0220f1b3          	remu	gp,ra,sp
+ 258:	00200e93          	li	t4,2
+ 25c:	00200e13          	li	t3,2
+ 260:	0dd19e63          	bne	gp,t4,33c <fail>
+
+0000000000000264 <test_3>:
+ 264:	fec00093          	li	ra,-20
+ 268:	00600113          	li	sp,6
+ 26c:	0220f1b3          	remu	gp,ra,sp
+ 270:	00200e93          	li	t4,2
+ 274:	00300e13          	li	t3,3
+ 278:	0dd19263          	bne	gp,t4,33c <fail>
+
+000000000000027c <test_4>:
+ 27c:	01400093          	li	ra,20
+ 280:	ffa00113          	li	sp,-6
+ 284:	0220f1b3          	remu	gp,ra,sp
+ 288:	01400e93          	li	t4,20
+ 28c:	00400e13          	li	t3,4
+ 290:	0bd19663          	bne	gp,t4,33c <fail>
+
+0000000000000294 <test_5>:
+ 294:	fec00093          	li	ra,-20
+ 298:	ffa00113          	li	sp,-6
+ 29c:	0220f1b3          	remu	gp,ra,sp
+ 2a0:	fec00e93          	li	t4,-20
+ 2a4:	00500e13          	li	t3,5
+ 2a8:	09d19a63          	bne	gp,t4,33c <fail>
+
+00000000000002ac <test_6>:
+ 2ac:	fff0009b          	addiw	ra,zero,-1
+ 2b0:	03f09093          	slli	ra,ra,0x3f
+ 2b4:	00100113          	li	sp,1
+ 2b8:	0220f1b3          	remu	gp,ra,sp
+ 2bc:	00000e93          	li	t4,0
+ 2c0:	00600e13          	li	t3,6
+ 2c4:	07d19c63          	bne	gp,t4,33c <fail>
+
+00000000000002c8 <test_7>:
+ 2c8:	fff0009b          	addiw	ra,zero,-1
+ 2cc:	03f09093          	slli	ra,ra,0x3f
+ 2d0:	fff00113          	li	sp,-1
+ 2d4:	0220f1b3          	remu	gp,ra,sp
+ 2d8:	fff00e9b          	addiw	t4,zero,-1
+ 2dc:	03fe9e93          	slli	t4,t4,0x3f
+ 2e0:	00700e13          	li	t3,7
+ 2e4:	05d19c63          	bne	gp,t4,33c <fail>
+
+00000000000002e8 <test_8>:
+ 2e8:	fff0009b          	addiw	ra,zero,-1
+ 2ec:	03f09093          	slli	ra,ra,0x3f
+ 2f0:	00000113          	li	sp,0
+ 2f4:	0220f1b3          	remu	gp,ra,sp
+ 2f8:	fff00e9b          	addiw	t4,zero,-1
+ 2fc:	03fe9e93          	slli	t4,t4,0x3f
+ 300:	00800e13          	li	t3,8
+ 304:	03d19c63          	bne	gp,t4,33c <fail>
+
+0000000000000308 <test_9>:
+ 308:	00100093          	li	ra,1
+ 30c:	00000113          	li	sp,0
+ 310:	0220f1b3          	remu	gp,ra,sp
+ 314:	00100e93          	li	t4,1
+ 318:	00900e13          	li	t3,9
+ 31c:	03d19063          	bne	gp,t4,33c <fail>
+
+0000000000000320 <test_10>:
+ 320:	00000093          	li	ra,0
+ 324:	00000113          	li	sp,0
+ 328:	0220f1b3          	remu	gp,ra,sp
+ 32c:	00000e93          	li	t4,0
+ 330:	00a00e13          	li	t3,10
+ 334:	01d19463          	bne	gp,t4,33c <fail>
+ 338:	01c01c63          	bne	zero,t3,350 <pass>
+
+000000000000033c <fail>:
+ 33c:	0ff0000f          	fence
+ 340:	000e0063          	beqz	t3,340 <fail+0x4>
+ 344:	001e1e13          	slli	t3,t3,0x1
+ 348:	001e6e13          	ori	t3,t3,1
+ 34c:	0100006f          	j	35c <ecall>
+
+0000000000000350 <pass>:
+ 350:	0ff0000f          	fence
+ 354:	00100e13          	li	t3,1
+ 358:	0040006f          	j	35c <ecall>
+
+000000000000035c <ecall>:
+ 35c:	00000073          	ecall
+ 360:	ffdff06f          	j	35c <ecall>
