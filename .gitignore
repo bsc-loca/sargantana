@@ -1,10 +1,14 @@
 spyglass_reports/
 *.swp
 *.tmp
-dump_file.vcd
 lib_module/
 modelsim.ini
 transcript
 vsim.wlf
 Makefile_test
-
+doc/specifications/*/*.aux
+doc/specifications/*/*.log
+doc/specifications/*/*.toc
+doc/specifications/*/*.out
+doc/specifications/*/*synctex.gz
+*.vcd
