@@ -1,0 +1,28 @@
+\section{Interface}
+\label{chapter 4}
+
+In this section we describe the interface signals of the module. The structs are not explained and a definition of each parameter can be found in the include package drac\_pkg.sv and riscv\_pkg.sv. In the case of the struct decode\_instr\_o, which represents the main output, some comments will be given in the next chapters.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline \hline
+Signal name & Width (bits) or struct & Input & Description \\
+\hline \hline
+decode\_i & if\_id\_stage\_t & datapath and Icache Interface & Fetch data \\ 
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline \hline
+Signal name & Width & Output & Description \\
+\hline \hline
+decode\_instr\_o & instr\_entry\_t struct & id\_stage -> rr\_stage & Instruction decoded \\
+\hline
+jal\_id\_if\_o & jal\_id\_if\_t struct & id\_stage -> if\_stage & Jump addr from jal \\
+\hline
+\end{tabular}
+\end{table}
