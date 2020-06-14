@@ -45,6 +45,8 @@ module tb_top();
     icache_line_t tb_icache_rdata_i;
     addr_t        tb_icache_rvaddr_i;
     logic         tb_icache_valid_i;
+    logic 	  tb_icache_done_i;
+    icache_vpn_t  tb_icache_vpn_i;
 
     logic         tb_icache_valid_o;
     icache_idx_t  tb_icache_idx_o;
@@ -81,9 +83,9 @@ module tb_top();
     bus64_t tb_dmem_req_data_o;
 
     assign tb_icache_rdata_i = tb_line_o;
-    assign tb_icache_rvaddr_i = {tb_icache_vpn_o,tb_icache_idx_o};
+    assign tb_icache_rvaddr_i = {tb_icache_vpn_i,tb_icache_idx_o};
 
-    assign tb_csr_rw_rdata = (tb_csr_rw_cmd == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign tb_csr_rw_rdata = (tb_csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
     assign tb_csr_replay = 1'b0;
     assign tb_csr_stall = 1'b0;
     assign tb_csr_exception_i = 1'b0;
@@ -110,10 +112,10 @@ module tb_top();
         .CSR_INTERRUPT(tb_csr_interrupt),
         .CSR_INTERRUPT_CAUSE(tb_csr_interrupt_cause),
 
-	.ICACHE_RESP_BITS_DATABLOCK(tb_icache_rdata_i),
+	    .ICACHE_RESP_BITS_DATABLOCK(tb_icache_rdata_i),
         .ICACHE_RESP_BITS_VADDR(tb_icache_rvaddr_i),
-        .ICACHE_RESP_VALID(tb_icache_valid_i),
-        .ICACHE_REQ_READY(1'b1),
+        .ICACHE_RESP_VALID(tb_icache_done_i),
+        .ICACHE_REQ_READY(tb_dmem_resp_valid_i),
         .PTWINVALIDATE(1'b0),
         .TLB_RESP_MISS(1'b0),
         .TLB_RESP_XCPT_IF(1'b0),
@@ -187,7 +189,9 @@ module tb_top();
         .addr_i({tb_icache_vpn_o,tb_icache_idx_o}),
         .valid_i(tb_icache_valid_o),
         .line_o(tb_line_o),
-        .ready_o(tb_icache_valid_i)
+        .ready_o(tb_icache_valid_i),
+	    .done_o(tb_icache_done_i),
+	    .vpaddr_o(tb_icache_vpn_i)
     );
 
     perfect_memory_hex_write perfect_memory_hex_write_inst (
