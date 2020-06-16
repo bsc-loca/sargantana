@@ -200,9 +200,9 @@ module decoder(
                     endcase
                 end
                 OP_ATOMICS: begin
-                    // TODO (guillemlp) what to do with aq and rl?
+                    // NOTE (guillemlp) what to do with aq and rl?
                     decode_instr_o.regfile_we   = 1'b1;
-                    // TODO: (guillemlp) we don't need this immediate here
+                    // NOTE (guillemlp) if aq and rl are used maybe the imm is needed
                     decode_instr_o.use_imm      = 1'b0;
                     decode_instr_o.unit         = UNIT_MEM;
                     case (decode_i.inst.rtype.func3)

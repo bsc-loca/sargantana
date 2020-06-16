@@ -28,7 +28,6 @@ module immediate(
     bus64_t imm_shamt, imm_shamt_big;
     bus32_t sign_extended;
 
-    // TODO immediate of CSR
     assign imm_shamt_big = {{57{instr_i[26]}}, instr_i[26:20]};
     assign imm_shamt = {{58{instr_i[25]}}, instr_i[25:20]};
 
