@@ -9,7 +9,7 @@ rm -rf lib_div_unit
 vlib lib_div_unit
 vmap work $PWD/lib_div_unit
 vlog $VLOG_FLAGS +acc=rn +incdir+ ${ROOT}includes/riscv_pkg.sv ${ROOT}includes/drac_pkg.sv ${RTL}div_4bits.sv ${RTL}div_unit.sv tb_div_unit.sv colors.vh
-vmake lib_div_unit/ > Makefile
+vmake lib_div_unit/ > Makefile_test
 
 #vsim work.tb_icache_interface -do  "view wave -new" -do "do wave.do" -do "run 20"
 

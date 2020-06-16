@@ -7,7 +7,7 @@ rm -rf lib_mul_unit
 vlib lib_mul_unit
 vmap work $PWD/lib_mul_unit
 vlog $VLOG_FLAGS +acc=rn +incdir+  ${INCLUDE}/riscv_pkg.sv ${INCLUDE}/drac_pkg.sv ../../rtl/mul_unit.sv tb_mul_unit.sv colors.vh
-vmake lib_mul_unit/ > Makefile
+vmake lib_mul_unit/ > Makefile_test
 
 #vsim work.tb_icache_interface -do  "view wave -new" -do "do wave.do" -do "run 20"
 

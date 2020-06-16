@@ -1,0 +1,23 @@
+\section{Behavior}
+\label{behavior}
+
+For each output signal, the behavior should be the following:
+
+\begin{itemize}
+    \item \textbf{resp\_dcache\_cpu\_o:} this structure is used to send signals to the datapath and it has 8 signals:
+    \begin{itemize}
+        \item \textbf{lock}: the data cache is busy, and the datapath should be locked until the data cache finishes.
+        \item \textbf{ready}: the data cache is ready to send the response.
+        \item \textbf{data}: data to serve the load requests.
+        \item \textbf{xcpt\_\{ma,pf\}\_\{st,ld\}}: 4 signals to indicate exceptions. \textit{ma} is misaligned, \textit{pf} is DTLB miss, \textit{st} is store, and \textit{ld} is load.
+        \item \textbf{addr}: address of the exception.
+    \end{itemize}
+    \item \textbf{dmem\_req\_valid\_o:} sending a valid request to data cache.
+    \item \textbf{dmem\_req\_cmd\_o:} type of the memory access: load, store, load-link, store-conditional, and atomic memory operations.
+    \item \textbf{dmem\_req\_addr\_o:} address of the request.
+    \item \textbf{dmem\_op\_type\_o:} granularity of the memory access: byte, halfword, and word.
+    \item \textbf{dmem\_req\_data\_o:} data to store.
+    \item \textbf{dmem\_req\_tag\_o:} tag of the memory access, only for multi-processor.
+    \item \textbf{dmem\_req\_invalidate\_lr\_o:} reset load-link/store-conditional transaction.
+    \item \textbf{dmem\_req\_kill\_o:} kill actual memory access.
+\end{itemize}

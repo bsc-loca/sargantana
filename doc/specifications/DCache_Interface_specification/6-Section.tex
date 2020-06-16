@@ -1,0 +1,7 @@
+\section{What could not happen}
+
+There are some invalid combinations of signals.
+If the datapath is sending a valid request (\textit{req\_cpu\_dcache\_i.valid}), the remaining signals are correct: \textit{instr\_type}, \textit{data\_rs1}, \textit{imm}...
+
+The state machine has 4 states: \textit{ResetState}, \textit{Idle}, \textit{MakeRequest}, and \textit{WaitResponse}.
+It can not move outside these states.
