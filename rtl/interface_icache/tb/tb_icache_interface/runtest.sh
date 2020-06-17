@@ -15,7 +15,7 @@ vlib lib_module
 vmap work $PWD/lib_module
 vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $ICACHE_INTERF/icache_interface.sv \
 tb_icache_interface.sv colors.vh
-vmake lib_module/ > Makefile
+vmake lib_module/ > Makefile_test
 
 #vsim work.tb_icache_interface -do  "view wave -new" -do "do wave.do" -do "run 20"
 

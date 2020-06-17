@@ -63,7 +63,7 @@ module tb_icache_interface();
     reg            tb_tlb_req_valid_o; // TLB_REQ_VALID
     
     // Fetch stage interface - Request packet icache to fetch
-    req_icache_cpu_t tb_req_icache_fetch_o;
+    resp_icache_cpu_t tb_resp_icache_fetch_o;
 
 //-----------------------------
 // Module
@@ -85,7 +85,7 @@ module tb_icache_interface();
         .icache_resp_ready_o(tb_icache_resp_ready_o), // ICACHE_RESP_READY,
         .tlb_req_bits_vpn_o(tb_tlb_req_bits_vpn_o), // TLB_REQ_BITS_VPN,
         .tlb_req_valid_o(tb_tlb_req_valid_o), // TLB_REQ_VALID
-        .req_icache_fetch_o(tb_req_icache_fetch_o)
+        .resp_icache_fetch_o(tb_resp_icache_fetch_o)
     );
 
 //-----------------------------
@@ -216,7 +216,7 @@ module tb_icache_interface();
                 else $error("Icache Req not valid ");
             assert (tb_tlb_req_valid_o == 0)
                 else $error("TLB Req not valid ");
-            assert (tb_req_icache_fetch_o.valid == 0)
+            assert (tb_resp_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");
             tick();
             //ReadCheck: assert (data === correct_data)
@@ -244,14 +244,7 @@ module tb_icache_interface();
             // Since we don't have anything on datablock
             // assert there is a miss in the buffer by answering
             // with not ready
-            assert (tb_req_icache_fetch_o.valid == 0)
-                else $error("req_icache_fetch_o.valid is 1");
-            // Check exception misalignment
-            assert (tb_req_icache_fetch_o.ex.valid == 1)
-                else $error("req_icache_fetch_o.valid is 1");
-            assert (tb_req_icache_fetch_o.ex.origin == 8193)
-                else $error("req_icache_fetch_o.valid is 1");
-            assert (tb_req_icache_fetch_o.ex.cause == INSTR_ADDR_MISALIGNED)
+            assert (tb_resp_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");
             tick();
             
@@ -269,7 +262,7 @@ module tb_icache_interface();
             assert (tb_tlb_req_valid_o == 0)
                 else $error("TLB Req valid ");
             // we don't have a datablock
-            assert (tb_req_icache_fetch_o.valid == 0)
+            assert (tb_resp_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");     
         end
     endtask 
@@ -281,11 +274,9 @@ module tb_icache_interface();
         begin
             if(VERBOSE)
                 $display("*** Checking Assert valid output data: %h %d %d",data,valid,ex_valid);
-            assert (tb_req_icache_fetch_o.valid == valid)
+            assert (tb_resp_icache_fetch_o.valid == valid)
                 else $error("req_icache_fetch_o.valid should be 1");
-            assert (tb_req_icache_fetch_o.ex.valid == ex_valid)
-                else $error("req_icache_fetch_o.ex.valid should be 0");
-            assert (tb_req_icache_fetch_o.data == data)
+            assert (tb_resp_icache_fetch_o.data == data)
                 else $error("req_icache_fetch_o.data wrong data value");
         end
     endtask
@@ -313,7 +304,7 @@ module tb_icache_interface();
             // Since we don't have anything on datablock
             // assert there is a miss in the buffer by answering
             // with not ready
-            assertValidOut: assert (tb_req_icache_fetch_o.valid == 0)
+            assertValidOut: assert (tb_resp_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");
             tick();
             // It's a hit
@@ -362,7 +353,7 @@ module tb_icache_interface();
             // Since we don't have anything on datablock
             // assert there is a miss in the buffer by answering
             // with not ready
-            assertValidOut: assert (tb_req_icache_fetch_o.valid == 0)
+            assertValidOut: assert (tb_resp_icache_fetch_o.valid == 0)
                 else $error("req_icache_fetch_o.valid is 1");
             tick();
             // It's a hit
@@ -401,7 +392,7 @@ module tb_icache_interface();
             // Since we don't have anything on datablock
             // assert there is a miss in the buffer by answering
             // with not ready
-            assertValidOut: assert (tb_req_icache_fetch_o.valid == valid_out)
+            assertValidOut: assert (tb_resp_icache_fetch_o.valid == valid_out)
                 else $error("req_icache_fetch_o.valid is 1");
         end
     endtask
