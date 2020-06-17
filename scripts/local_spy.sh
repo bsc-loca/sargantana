@@ -83,6 +83,7 @@ set_option enableSV09 yes
 set_option active_methodology $SPYGLASS_HOME/GuideWare/latest/block/rtl_handoff
 set_option incdir { ./}
 set_option handlememory
+set_parameter handle_large_bus yes
 
 ##Goal Setup Section
 define_goal my_lint -policy {lint} {set_parameter fullpolicy yes} 

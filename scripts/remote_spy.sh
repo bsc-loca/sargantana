@@ -29,6 +29,7 @@ do
 done
 #set the top for spyglass. must be the first argument of the script.
 echo "set_option top $TOP" >> /tmp/optionsspy 
+echo "set_parameter handle_large_bus yes" >> /tmp/optionsspy 
 scp -o PasswordAuthentication=no -o ConnectTimeout=4 -o BatchMode=yes /tmp/importspy drac@192.168.10.38:/tmp
 scp -o PasswordAuthentication=no -o ConnectTimeout=4 -o BatchMode=yes /tmp/optionsspy drac@192.168.10.38:/tmp
 ssh drac@192.168.10.38 << EOF

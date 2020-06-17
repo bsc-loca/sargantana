@@ -30,7 +30,7 @@ module top_drac(
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
     input logic                 CSR_ERET,
-    input bus64_t               CSR_EVEC,
+    input addr_t               CSR_EVEC,
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
 
@@ -49,7 +49,6 @@ module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
-    input logic                 DMEM_ORDERED,
     input logic                 DMEM_REQ_READY,
     input bus64_t               DMEM_RESP_BITS_DATA_SUBW,
     input logic                 DMEM_RESP_BITS_NACK,
@@ -59,21 +58,6 @@ module top_drac(
     input logic                 DMEM_XCPT_MA_LD,
     input logic                 DMEM_XCPT_PF_ST,
     input logic                 DMEM_XCPT_PF_LD,
-
-//--------------------------------------------------------------------------------------------------------------------------
-// FETCH  INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
-    input addr_t                IO_FETCH_PC_VALUE,
-    input logic                 IO_FETCH_PC_UPDATE,
-
-//--------------------------------------------------------------------------------------------------------------------------
-// DEBUGGING MODULE SIGNALS
-//--------------------------------------------------------------------------------------------------------------------------
-    input logic                 IO_REG_READ,
-    input logic [4:0]           IO_REG_ADDR,  // Address used for both read and write operations    
-    input logic                 IO_REG_WRITE,
-    input logic [63:0]          IO_REG_WRITE_DATA,
-    input logic                 istall_test, 
 
 //--------------------------------------------------------------------------------------------------------------------------
 // CSR OUTPUT INTERFACE

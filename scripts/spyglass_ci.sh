@@ -23,7 +23,7 @@ while read file; do
 done < <(find $TOP \( ! -iname \tb_* -a ! -iname \wip_* -a ! -iname \*_pkg\* -a ! -path \*/tb* \) -and \( -iname \*.v -o -iname \*.vh -o -iname \*.sv \))
 #remove the last character, If not verilator will try to run without file name
 rtl_files=${rtl_files::-1}
-echo "Verilator lint only"
+echo "Spyglass lint only"
 echo "-----------------"
 rm $artifact
 while read p; do

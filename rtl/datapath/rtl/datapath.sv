@@ -32,12 +32,14 @@ module datapath(
 );
 // RISCV TESTS
 
-
+`ifdef VERILATOR
     // Stages: if -- id -- rr -- ex -- wb
     bus64_t commit_pc, commit_data;
     logic commit_valid, commit_reg_we;
     logic [4:0] commit_addr_reg;
     logic commit_branch_taken;
+`endif
+
     bus64_t pc_if, pc_id, pc_rr, pc_exe, pc_wb;
     logic valid_if, valid_id, valid_rr, valid_exe, valid_wb;
 
@@ -380,6 +382,7 @@ module datapath(
     assign wb_cu_int.fence = (exe_to_wb_wb.instr_type == FENCE_I || 
                               exe_to_wb_wb.instr_type == FENCE);
 
+`ifdef VERILATOR
     // Debug signals
     assign commit_valid     = exe_to_wb_wb.valid;
     assign commit_pc        = (exe_to_wb_wb.valid) ? exe_to_wb_wb.pc : 64'b0;
@@ -387,6 +390,8 @@ module datapath(
     assign commit_addr_reg  = exe_to_wb_wb.rd;
     assign commit_reg_we    = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
     assign commit_branch_taken = exe_to_wb_wb.branch_taken;
+`endif
+
     // PC
     assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
     assign pc_id = (valid_id) ? stage_id_rr_d.pc : 64'b0;
