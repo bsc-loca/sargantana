@@ -5,7 +5,7 @@ artifact="/tmp/artifact_lint.log"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
-#TODO: this script only works if used from the top directory
+#NOTE: this script only works if used from the top directory
 TOP="./"
 #variables spyglass
 FN="top_drac.sv"

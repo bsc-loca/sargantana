@@ -155,7 +155,11 @@ req_cpu_dcache_t req_datapath_dcache_interface;
 resp_csr_cpu_t resp_csr_interface_datapath;
 
 assign resp_csr_interface_datapath.csr_rw_rdata = CSR_RW_RDATA;
-assign resp_csr_interface_datapath.csr_replay = 1'b0; // TODO FIX
+// NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
+// that the CSR are not blocked. In the implementation, since we only have one 
+// inorder core any access to the CSR/PCR will be available. In multicore
+// scenarios or higher performance cores you may need csr_replay.
+assign resp_csr_interface_datapath.csr_replay = 1'b0; 
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
