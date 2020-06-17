@@ -98,7 +98,6 @@ export LM_LICENSE_FILE=27020@84.88.187.145
 export SNPS_LICENSE_FILE=27020@epi01.bsc.es
 export SNPSLMD_LICENSE_FILE=27020@epi01.bsc.es
 
-#TODO: this may not work in all runners. Tested on EPI03
 source /eda/synopsys/2018-19/scripts/SPYGLASS_2018.09-SP1-1_RHELx86.sh
 export PATH=$PATH:'/home/drac/synopsys/install/spyglass/SPYGLASS2018.09-SP1-1/SPYGLASS_HOME/bin/'
 echo -e "exports\n"
