@@ -5,7 +5,7 @@ artifact="/tmp/artifact_lint.log"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
-#TODO: this script only works if used from the top directory
+#NOTE: this script only works if used from the top directory
 TOP="./"
 #variables spyglass
 FN="top_drac.sv"
@@ -83,6 +83,7 @@ set_option enableSV09 yes
 set_option active_methodology $SPYGLASS_HOME/GuideWare/latest/block/rtl_handoff
 set_option incdir { ./}
 set_option handlememory
+set_parameter handle_large_bus yes
 
 ##Goal Setup Section
 define_goal my_lint -policy {lint} {set_parameter fullpolicy yes} 

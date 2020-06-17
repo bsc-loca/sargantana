@@ -30,7 +30,7 @@ module top_drac(
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
     input logic                 CSR_ERET,
-    input bus64_t               CSR_EVEC,
+    input addr_t               CSR_EVEC,
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
 
@@ -49,7 +49,6 @@ module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
-    input logic                 DMEM_ORDERED,
     input logic                 DMEM_REQ_READY,
     input bus64_t               DMEM_RESP_BITS_DATA_SUBW,
     input logic                 DMEM_RESP_BITS_NACK,
@@ -59,21 +58,6 @@ module top_drac(
     input logic                 DMEM_XCPT_MA_LD,
     input logic                 DMEM_XCPT_PF_ST,
     input logic                 DMEM_XCPT_PF_LD,
-
-//--------------------------------------------------------------------------------------------------------------------------
-// FETCH  INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
-    input addr_t                IO_FETCH_PC_VALUE,
-    input logic                 IO_FETCH_PC_UPDATE,
-
-//--------------------------------------------------------------------------------------------------------------------------
-// DEBUGGING MODULE SIGNALS
-//--------------------------------------------------------------------------------------------------------------------------
-    input logic                 IO_REG_READ,
-    input logic [4:0]           IO_REG_ADDR,  // Address used for both read and write operations    
-    input logic                 IO_REG_WRITE,
-    input logic [63:0]          IO_REG_WRITE_DATA,
-    input logic                 istall_test, 
 
 //--------------------------------------------------------------------------------------------------------------------------
 // CSR OUTPUT INTERFACE
@@ -155,7 +139,11 @@ req_cpu_dcache_t req_datapath_dcache_interface;
 resp_csr_cpu_t resp_csr_interface_datapath;
 
 assign resp_csr_interface_datapath.csr_rw_rdata = CSR_RW_RDATA;
-assign resp_csr_interface_datapath.csr_replay = 1'b0; // TODO FIX
+// NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
+// that the CSR are not blocked. In the implementation, since we only have one 
+// inorder core any access to the CSR/PCR will be available. In multicore
+// scenarios or higher performance cores you may need csr_replay.
+assign resp_csr_interface_datapath.csr_replay = 1'b0; 
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;

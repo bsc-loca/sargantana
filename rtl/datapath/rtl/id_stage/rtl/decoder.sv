@@ -30,7 +30,6 @@ module decoder(
         .instr_i(decode_i.inst),
         .imm_o(imm_value)
     );
-    logic [6:0] func7;
 
     always_comb begin
         xcpt_illegal_instruction_int = 1'b0;
@@ -56,9 +55,8 @@ module decoder(
 
         
         decode_instr_o.unit   = UNIT_ALU;
-        // By default use the imm value then it will change along the process
-        decode_instr_o.result = 64'b0;
 
+        // Assign by default the immediate in the result
         decode_instr_o.result = imm_value;
         // This is lowrisc related
         decode_instr_o.mem_size = decode_i.inst.common.func3;
@@ -71,7 +69,7 @@ module decoder(
         decode_instr_o.stall_csr_fence = 1'b0;
 
         `ifdef VERILATOR
-        decode_instr_o.inst = decode_i.inst;
+            decode_instr_o.inst = decode_i.inst;
         `endif
 
 
@@ -200,9 +198,9 @@ module decoder(
                     endcase
                 end
                 OP_ATOMICS: begin
-                    // TODO (guillemlp) what to do with aq and rl?
+                    // NOTE (guillemlp) what to do with aq and rl?
                     decode_instr_o.regfile_we   = 1'b1;
-                    // TODO: (guillemlp) we don't need this immediate here
+                    // NOTE (guillemlp) if aq and rl are used maybe the imm is needed
                     decode_instr_o.use_imm      = 1'b0;
                     decode_instr_o.unit         = UNIT_MEM;
                     case (decode_i.inst.rtype.func3)
@@ -539,7 +537,6 @@ module decoder(
                             if (decode_i.inst.itype.rd != 'h0 ) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
-                                func7=decode_i.inst.rtype.func7;
                                 case (decode_i.inst.rtype.func7)
                                     F7_ECALL_EBREAK_URET: begin
                                         if (decode_i.inst.itype.rs1 != 'h0) begin
