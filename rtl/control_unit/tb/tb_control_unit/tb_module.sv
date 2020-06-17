@@ -131,12 +131,12 @@ control_unit module_inst (
             $display("*** test_sim");
             test_sim_1(tmp);
             check_out(1,tmp);
-            //test_sim_2(tmp);
-            //check_out(2,tmp);
-            //test_sim_3(tmp);
-            //check_out(3,tmp);
-            //test_sim_4(tmp);
-            //check_out(4,tmp);
+            test_sim_2(tmp);
+            check_out(2,tmp);
+            test_sim_3(tmp);
+            check_out(3,tmp);
+            test_sim_4(tmp);
+            check_out(4,tmp);
             //test_sim_5(tmp);
             //check_out(5,tmp);
             //test_sim_6(tmp);
@@ -144,7 +144,7 @@ control_unit module_inst (
         end
     endtask
 
-// Testing add
+// Testing 
     task automatic test_sim_1;
         output int tmp;
         begin
@@ -152,23 +152,324 @@ control_unit module_inst (
             tb_test_name = "test_sim_1";
             tmp = 0;
 
-//pipeline_ctrl_t  pipeline_ctrl_o,
-//pipeline_flush_t pipeline_flush_o,
-//cu_if_t          cu_if_o,
-//logic            invalidate_icache_o,
-//logic            invalidate_buffer_o,
-//cu_rr_t          cu_rr_o
-            for(int i = 0; i < 100; i++) begin
+            for(int i = 0; i < 1; i++) begin
                 valid_fetch<=0;
-                id_cu_i<=0;
-                rr_cu_i<=0;
-                exe_cu_i<=0;
-                wb_cu_i<=0;
-                csr_cu_i<=0;
+
+                id_cu_i.valid_jal<=0;
+                id_cu_i.stall_csr_fence<=0;
+
+                rr_cu_i.stall_csr_fence<=0;
+
+                exe_cu_i.valid<=0;
+                exe_cu_i.change_pc_ena<=0;
+                exe_cu_i.is_branch<=0;
+                exe_cu_i.stall<=0;
+                exe_cu_i.stall_csr_fence<=0;
+
+                wb_cu_i.pc<=64'h0;
+                wb_cu_i.valid<=0;
+                wb_cu_i.change_pc_ena<=0;
+                wb_cu_i.csr_enable_wb<=0;
+                wb_cu_i.write_enable<=0;
+                wb_cu_i.stall_csr_fence<=0;
+                wb_cu_i.xcpt<=0;
+                wb_cu_i.ecall_taken<=0;
+                wb_cu_i.fence<=0;
+
+                csr_cu_i.csr_rw_rdata<=0;
+                csr_cu_i.csr_replay<=0;
+                csr_cu_i.csr_stall<=0;
+                csr_cu_i.csr_exception<=0;
+                csr_cu_i.csr_eret<=0;
+                csr_cu_i.csr_evec<=0;
+                csr_cu_i.csr_interrupt<=0;
+                csr_cu_i.csr_interrupt_cause<=0;
+
                 correct_branch_pred_i<=0;
+
                 #CLK_PERIOD;
                 incorrect_result = 0;
+
+                // --- pipeline_ctrl_o ---
                 incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_DECODE);
+                incorrect_result += (pipeline_ctrl_o.stall_if!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_id!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_rr!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_exe!=0);
+                //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+                // --- pipeline_flush_o ---
+                incorrect_result += (pipeline_flush_o.flush_if!=0);
+                incorrect_result += (pipeline_flush_o.flush_id!=0);
+                incorrect_result += (pipeline_flush_o.flush_rr!=0);
+                incorrect_result += (pipeline_flush_o.flush_exe!=0);
+                //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+                // --- cu_if_o ---
+                incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_KEEP_PC);
+                //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+                // --- invalidate_icache_o ---
+                incorrect_result += (invalidate_icache_o!=0);
+
+                // --- invalidate_buffer_o ---
+                incorrect_result += (invalidate_buffer_o!=0);
+
+                // --- cu_rr_o ---
+                incorrect_result += (cu_rr_o.write_enable!=0);
+
+                if (incorrect_result) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect");
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+// Testing fetch valid, go to next pc
+    task automatic test_sim_2;
+        output int tmp;
+        begin
+            int incorrect_result;
+            tb_test_name = "test_sim_2";
+            tmp = 0;
+
+            for(int i = 0; i < 1; i++) begin
+                valid_fetch<=1;
+
+                id_cu_i.valid_jal<=0;
+                id_cu_i.stall_csr_fence<=0;
+
+                rr_cu_i.stall_csr_fence<=0;
+
+                exe_cu_i.valid<=0;
+                exe_cu_i.change_pc_ena<=0;
+                exe_cu_i.is_branch<=0;
+                exe_cu_i.stall<=0;
+                exe_cu_i.stall_csr_fence<=0;
+
+                wb_cu_i.pc<=64'h0;
+                wb_cu_i.valid<=0;
+                wb_cu_i.change_pc_ena<=0;
+                wb_cu_i.csr_enable_wb<=0;
+                wb_cu_i.write_enable<=0;
+                wb_cu_i.stall_csr_fence<=0;
+                wb_cu_i.xcpt<=0;
+                wb_cu_i.ecall_taken<=0;
+                wb_cu_i.fence<=0;
+
+                csr_cu_i.csr_rw_rdata<=0;
+                csr_cu_i.csr_replay<=0;
+                csr_cu_i.csr_stall<=0;
+                csr_cu_i.csr_exception<=0;
+                csr_cu_i.csr_eret<=0;
+                csr_cu_i.csr_evec<=0;
+                csr_cu_i.csr_interrupt<=0;
+                csr_cu_i.csr_interrupt_cause<=0;
+
+                correct_branch_pred_i<=0;
+
+                #CLK_PERIOD;
+                incorrect_result = 0;
+
+                // --- pipeline_ctrl_o ---
+                incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_DECODE);
+                incorrect_result += (pipeline_ctrl_o.stall_if!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_id!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_rr!=0);
+                incorrect_result += (pipeline_ctrl_o.stall_exe!=0);
+                //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+                // --- pipeline_flush_o ---
+                incorrect_result += (pipeline_flush_o.flush_if!=0);
+                incorrect_result += (pipeline_flush_o.flush_id!=0);
+                incorrect_result += (pipeline_flush_o.flush_rr!=0);
+                incorrect_result += (pipeline_flush_o.flush_exe!=0);
+                //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+                // --- cu_if_o ---
+                incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_4);
+                //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+                // --- invalidate_icache_o ---
+                incorrect_result += (invalidate_icache_o!=0);
+
+                // --- invalidate_buffer_o ---
+                incorrect_result += (invalidate_buffer_o!=0);
+
+                // --- cu_rr_o ---
+                incorrect_result += (cu_rr_o.write_enable!=0);
+
+                if (incorrect_result) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect");
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+// Testing execution stall and valid fetch
+    task automatic test_sim_3;
+        output int tmp;
+        begin
+            int incorrect_result;
+            tb_test_name = "test_sim_3";
+            tmp = 0;
+
+            for(int i = 0; i < 1; i++) begin
+                valid_fetch<=1;
+
+                id_cu_i.valid_jal<=0;
+                id_cu_i.stall_csr_fence<=0;
+
+                rr_cu_i.stall_csr_fence<=0;
+
+                exe_cu_i.valid<=1;
+                exe_cu_i.change_pc_ena<=0;
+                exe_cu_i.is_branch<=0;
+                exe_cu_i.stall<=1;
+                exe_cu_i.stall_csr_fence<=0;
+
+                wb_cu_i.pc<=64'h0;
+                wb_cu_i.valid<=0;
+                wb_cu_i.change_pc_ena<=0;
+                wb_cu_i.csr_enable_wb<=0;
+                wb_cu_i.write_enable<=0;
+                wb_cu_i.stall_csr_fence<=0;
+                wb_cu_i.xcpt<=0;
+                wb_cu_i.ecall_taken<=0;
+                wb_cu_i.fence<=0;
+
+                csr_cu_i.csr_rw_rdata<=0;
+                csr_cu_i.csr_replay<=0;
+                csr_cu_i.csr_stall<=0;
+                csr_cu_i.csr_exception<=0;
+                csr_cu_i.csr_eret<=0;
+                csr_cu_i.csr_evec<=0;
+                csr_cu_i.csr_interrupt<=0;
+                csr_cu_i.csr_interrupt_cause<=0;
+
+                correct_branch_pred_i<=1;
+
+                #CLK_PERIOD;
+                incorrect_result = 0;
+
+                // --- pipeline_ctrl_o ---
+                incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_DECODE);
+                incorrect_result += (pipeline_ctrl_o.stall_if!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_id!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_rr!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_exe!=1);
+                //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+                // --- pipeline_flush_o ---
+                incorrect_result += (pipeline_flush_o.flush_if!=0);
+                incorrect_result += (pipeline_flush_o.flush_id!=0);
+                incorrect_result += (pipeline_flush_o.flush_rr!=0);
+                incorrect_result += (pipeline_flush_o.flush_exe!=0);
+                //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+                // --- cu_if_o ---
+                incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_KEEP_PC);
+                //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+                // --- invalidate_icache_o ---
+                incorrect_result += (invalidate_icache_o!=0);
+
+                // --- invalidate_buffer_o ---
+                incorrect_result += (invalidate_buffer_o!=0);
+
+                // --- cu_rr_o ---
+                incorrect_result += (cu_rr_o.write_enable!=0);
+
+                if (incorrect_result) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect");
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+// Testing 
+    task automatic test_sim_4;
+        output int tmp;
+        begin
+            int incorrect_result;
+            tb_test_name = "test_sim_4";
+            tmp = 0;
+
+            for(int i = 0; i < 1; i++) begin
+                valid_fetch<=1;
+
+                id_cu_i.valid_jal<=0;
+                id_cu_i.stall_csr_fence<=0;
+
+                rr_cu_i.stall_csr_fence<=0;
+
+                exe_cu_i.valid<=1;
+                exe_cu_i.change_pc_ena<=0;
+                exe_cu_i.is_branch<=0;
+                exe_cu_i.stall<=1;
+                exe_cu_i.stall_csr_fence<=0;
+
+                wb_cu_i.pc<=64'h0;
+                wb_cu_i.valid<=1;
+                wb_cu_i.change_pc_ena<=0;
+                wb_cu_i.csr_enable_wb<=0;
+                wb_cu_i.write_enable<=0;
+                wb_cu_i.stall_csr_fence<=0;
+                wb_cu_i.xcpt<=1;
+                wb_cu_i.ecall_taken<=0;
+                wb_cu_i.fence<=0;
+
+                csr_cu_i.csr_rw_rdata<=0;
+                csr_cu_i.csr_replay<=0;
+                csr_cu_i.csr_stall<=0;
+                csr_cu_i.csr_exception<=0;
+                csr_cu_i.csr_eret<=0;
+                csr_cu_i.csr_evec<=0;
+                csr_cu_i.csr_interrupt<=0;
+                csr_cu_i.csr_interrupt_cause<=0;
+
+                correct_branch_pred_i<=0;
+
+                #CLK_PERIOD;
+                incorrect_result = 0;
+
+                // --- pipeline_ctrl_o ---
+                incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_CSR);
+                incorrect_result += (pipeline_ctrl_o.stall_if!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_id!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_rr!=1);
+                incorrect_result += (pipeline_ctrl_o.stall_exe!=1);
+                //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+                // --- pipeline_flush_o ---
+                incorrect_result += (pipeline_flush_o.flush_if!=1);
+                incorrect_result += (pipeline_flush_o.flush_id!=1);
+                incorrect_result += (pipeline_flush_o.flush_rr!=1);
+                incorrect_result += (pipeline_flush_o.flush_exe!=1);
+                //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+                // --- cu_if_o ---
+                incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_JUMP);
+                //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+                // --- invalidate_icache_o ---
+                incorrect_result += (invalidate_icache_o!=0);
+
+                // --- invalidate_buffer_o ---
+                incorrect_result += (invalidate_buffer_o!=0);
+
+                // --- cu_rr_o ---
+                incorrect_result += (cu_rr_o.write_enable!=0);
+
                 if (incorrect_result) begin
                     tmp = 1;
                     `START_RED_PRINT
