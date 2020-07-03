@@ -1,6 +1,5 @@
 #$1
-VLOG_FLAGS=
-#-svinputport=compat 
+VLOG_FLAGS=-svinputport=compat 
 TEST=$1
 CYCLES=-all
 BASE_DIR="../.."

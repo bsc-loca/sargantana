@@ -53,7 +53,8 @@ bus64_t tb_src2_i;
 bus64_t tb_quo_o;
 bus64_t tb_rmd_o;
 reg tb_stall_o;
-
+reg[63:0] result_q;
+reg[63:0] result_r;
 reg[64*8:0] tb_test_name;
 
 //-----------------------------
@@ -118,7 +119,7 @@ div_unit module_inst (
     task automatic init_dump;
         begin
             $display("*** init_dump");
-            $dumpfile("dum_file.vcd");
+            $dumpfile("dump_file.vcd");
             $dumpvars(0,module_inst);
         end
     endtask
@@ -136,6 +137,16 @@ div_unit module_inst (
             end else begin
                 `START_GREEN_PRINT
                         $display("TEST 1 PASSED.");
+                `END_COLOR_PRINT
+            end
+            test_sim_2(tmp);
+            if (tmp == 1) begin
+                `START_RED_PRINT
+                        $display("TEST 2 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 2 PASSED.");
                 `END_COLOR_PRINT
             end
         end
@@ -156,31 +167,82 @@ div_unit module_inst (
         end
     endtask
 
-// Test getting a petition that is not valid
-// Output should be nothing 
+// Test performs division and remanent on unsigned 32 bit operands
     task automatic test_sim_1;
         output int tmp;
         begin
             tb_test_name = "test_sim_1";
             tmp = 0;
+            tb_int_32_i <= 1'b1;
             for(int i = 0; i < 500; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();
+                tb_signed_op_i <= 1'b0;
                 set_srcs(src1,src2);
                 #CLK_PERIOD;
+                result_q[31:0] = (src1/src2);
+                result_q[63:32] = {32{result_q[31]}}; 
+                result_r[31:0] = (src1%src2);
+                result_r[63:32] = {32{result_r[31]}};
                 while(tb_stall_o == 1) begin
                     #CLK_PERIOD;
                 end
-                if (tb_quo_o != (src1/src2)) begin
+                if (tb_quo_o != result_q) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_quo_o);
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,tb_quo_o);
+                    `END_COLOR_PRINT
+                end
+                if (tb_rmd_o != result_r) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,tb_rmd_o);
                     `END_COLOR_PRINT
                 end
             end
         end
     endtask
 
+
+// Test performs division and remanent on unsigned 64 bit operands 
+    task automatic test_sim_2;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_2";
+            tmp = 0;
+            for(int i = 0; i < 500; i++) begin
+                longint unsigned src1;
+                longint unsigned src2;
+                tb_src1_i[31:0]  = $urandom();
+                tb_src1_i[63:32] = $urandom();
+                src1 = tb_src1_i;
+                tb_src2_i[31:0]  = $urandom();
+                tb_src2_i[63:32] = $urandom();
+                src2 = tb_src2_i;
+                tb_request_i <= 1'b1;
+                tb_signed_op_i <= 1'b0;
+                tb_int_32_i <= 1'b0;
+                #CLK_PERIOD;
+                result_q = (src1/src2);
+                result_r = (src1%src2);
+                while(tb_stall_o == 1) begin
+                    #CLK_PERIOD;
+                end
+                if (tb_quo_o != result_q) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,tb_quo_o);
+                    `END_COLOR_PRINT
+                end
+                if (tb_rmd_o != result_r) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,tb_rmd_o);
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
 
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.

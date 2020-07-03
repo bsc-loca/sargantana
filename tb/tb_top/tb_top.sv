@@ -121,7 +121,6 @@ module tb_top();
         .TLB_RESP_XCPT_IF(1'b0),
         .iptw_resp_valid_i(1'b0),
 
-        .DMEM_ORDERED(1'b0),
         .DMEM_REQ_READY(tb_dmem_resp_valid_i),
         .DMEM_RESP_BITS_DATA_SUBW(tb_dmem_resp_data_i),
         .DMEM_RESP_BITS_NACK(1'b0),
@@ -131,14 +130,6 @@ module tb_top();
         .DMEM_XCPT_MA_LD(1'b0),
         .DMEM_XCPT_PF_ST(1'b0),
         .DMEM_XCPT_PF_LD(1'b0),
-
-        .IO_FETCH_PC_VALUE(),
-        .IO_FETCH_PC_UPDATE(),
-        .IO_REG_READ(),
-        .IO_REG_ADDR(),
-        .IO_REG_WRITE(),
-        .IO_REG_WRITE_DATA(),
-        .istall_test(1'b0),
 
         .CSR_RW_ADDR(tb_csr_rw_addr),
         .CSR_RW_CMD(tb_csr_rw_cmd),
