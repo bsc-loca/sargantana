@@ -58,7 +58,7 @@ module tb_top();
     logic       tb_csr_stall;
     logic       tb_csr_exception_i;
     logic       tb_csr_eret;
-    bus64_t     tb_csr_evec;
+    addr_t      tb_csr_evec;
     logic       tb_csr_interrupt;
     bus64_t     tb_csr_interrupt_cause;
     
@@ -90,7 +90,7 @@ module tb_top();
     assign tb_csr_stall = 1'b0;
     assign tb_csr_exception_i = 1'b0;
     assign tb_csr_eret = 1'b0;
-    assign tb_csr_evec = 64'h0;
+    assign tb_csr_evec = 40'h0;
     assign tb_csr_interrupt = 1'b0;
     assign tb_csr_interrupt_cause = 64'b0;
 
@@ -293,14 +293,15 @@ module tb_top();
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
     initial begin
-        string testname;
-        string filename;
-        integer f;
         init_sim();
         init_dump();
         reset_dut();
         test_sim();
-        #2000;
+        $finish;
+    end
+
+/*
+       #2000;
         if (top_drac_inst.datapath_inst.rr_stage_inst.registers[28] == 1) begin
             $fwrite(f,"%c[1;34m",27);
             $fwrite(f,"%s TEST PASSED.",testname);
@@ -312,8 +313,8 @@ module tb_top();
             $fwrite(f,"%c[0m",27);
             $fwrite(f,"\n");
         end
-        $finish;
-    end
+*/
+
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
 //assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
 

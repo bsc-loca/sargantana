@@ -1,38 +1,34 @@
-#$1
-VLOG_FLAGS=-svinputport=compat 
-TEST=$1
-CYCLES=-all
-BASE_DIR="../.."
-DRAC_FOLDER_RTL="${BASE_DIR}/rtl"
-TOP="${BASE_DIR}/rtl"
-IF_STAGE="${BASE_DIR}/rtl/datapath/rtl/if_stage/rtl"
-ID_STAGE="${BASE_DIR}/rtl/datapath/rtl/id_stage/rtl"
-RR_STAGE="${BASE_DIR}/rtl/datapath/rtl/rr_stage/rtl"
-CONTROL="${BASE_DIR}/rtl/control_unit/rtl"
-EXE_STAGE="${BASE_DIR}/rtl/datapath/rtl/exe_stage/rtl"
-DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
-DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
-ICACHE="${BASE_DIR}/rtl/interface_icache/rtl"
-INCLUDES="${BASE_DIR}/includes"
+#!/bin/bash
+# This run tests uses run_single.sh since multiple instances of the 
+# ISA tests need to be run. If required run_single.sh could be replaced by 
+# a script more optimized for the task that does not recompile the libraries 
+# before each test.
 
-rm -rf lib_module
+#Store all the .hex names from the tests folder
 
-vlib lib_module
-vmap work $PWD/lib_module
-vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_RTL/register.sv\
- $IF_STAGE/if_stage.sv $IF_STAGE/bimodal_predictor.sv $IF_STAGE/branch_predictor.sv $ID_STAGE/decoder.sv $ID_STAGE/immediate.sv $RR_STAGE/regfile.sv \
- $EXE_STAGE/exe_stage.sv $EXE_STAGE/alu.sv  $EXE_STAGE/mul_unit.sv $EXE_STAGE/div_unit.sv $EXE_STAGE/div_4bits.sv\
- $EXE_STAGE/branch_unit.sv $DCACHE/dcache_interface.sv $CONTROL/control_unit.sv \
- $ICACHE/icache_interface.sv $DATAPATH/datapath.sv $TOP/top_drac.sv \
- tb_top.sv perfect_memory_hex.sv perfect_memory_hex_write.sv colors.vh 
+isa_tests=""
+while read file; do
+    isa_tests=$isa_tests$file$'\n'
+done < <(find tests -iname \*.hex )
+#remove empty character at the end
+isa_tests=${isa_tests::-1}
 
-vmake lib_module/ > Makefile_test
+echo "${isa_tests}"
 
-if [ -z "$2" ]
-then #// -new
-      cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
-      vsim work.tb_top -do "view wave " -do "do wave.do" -do "run $CYCLES"
-else
-      cp tests/rv64ui-p-${TEST}.hex test.riscv.hex
-      vsim work.tb_top $1 -do "run $CYCLES"
-fi
+#iterate over all the listed isa_tests
+echo "*** Start ISA tests form: tb_top "
+while read p; do
+    if [ -z "$1" ]
+    then #// -new
+        ./run_single.sh "$p"
+    else
+        ./run_single.sh "$p" "$1"
+    fi
+done <<< "$isa_tests"
+
+echo "*** Finish ISA tests form: tb_top"
+
+#This script does not perform selfchecking of results
+#It will be handled by CI when filtering artifacts
+
+exit 0
