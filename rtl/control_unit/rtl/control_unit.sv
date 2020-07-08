@@ -40,7 +40,6 @@ module control_unit(
 );
     logic jump_enable_int;
     // jump enable logic
-    // TODO add exceptions and csr
     always_comb begin
         jump_enable_int =   (wb_cu_i.valid && wb_cu_i.xcpt) ||
                             // branch at exe
