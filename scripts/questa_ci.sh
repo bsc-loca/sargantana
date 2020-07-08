@@ -13,6 +13,12 @@ cd $TOP/tb/tb_register
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
+#top.sv
+echo "*** results of file: top.sv" 2>&1 | tee -a $artifact
+cd $TOP/tb/tb_top
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+
 # bimodal_predict.sv branch_predictor.sv
 echo "*** results of file: bimodal_predict.sv branch_predictor.sv " 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_branch_predictor
@@ -43,13 +49,6 @@ cd $TOP/rtl/datapath/tb/tb_datapath/
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
-: ' #replaced by tb_top
- datapath_with cache interface is replaced by tb_top
-echo "*** results of file: datapath_with cache interface" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/tb/tb_datapath_dcache/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
-'
 #if_stage.sv
 echo "*** results of file: if_stage.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
