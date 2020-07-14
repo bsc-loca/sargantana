@@ -1,0 +1,11 @@
+\newpage
+\section{General purpose of the module}
+\textit{Person in Charge; Guillem Lopez Paradis}
+
+The datapath module connects all the stages of the pipeline through registers.
+\begin{itemize}
+	\item It connects the output signals of each stage to a register to save the state at every cycle.
+	\item It connects the output of the registers to the next stages: e.g. IF - register - ID
+	\item It has the instances of every stage in the pipeline and connect their output to the top.
+	\item It has some logic for the CSR. This can be placed in a specific module.
+\end{itemize} 
