@@ -20,12 +20,11 @@ module datapath(
     input logic             rstn_i,
     input addr_t            reset_addr_i,
     input logic             soft_rstn_i,
-    // icache/dcache interface
-    // naming could be improved
+    // icache/dcache/CSR interface input
     input resp_icache_cpu_t  resp_icache_cpu_i,
     input resp_dcache_cpu_t  resp_dcache_cpu_i,
     input resp_csr_cpu_t     resp_csr_cpu_i,
-
+    // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o
@@ -100,6 +99,7 @@ module datapath(
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
 
+    // This addresses are fixed from lowrisc
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             io_base_addr <=  40'h0040000000;
@@ -127,8 +127,8 @@ module datapath(
         .correct_branch_pred_i(correct_branch_pred)
     );
 
-    // Combinational logic select the jum addr
-    // from decode, wb 
+    // Combinational logic select the jump addr
+    // from decode or wb 
     always_comb begin
         retry_fetch = 1'b0;
         if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
@@ -174,6 +174,7 @@ module datapath(
         .decode_instr_o(stage_id_rr_d),
         .jal_id_if_o(jal_id_if_int)
     );
+
     // valid jal in decode
     assign id_cu_int.valid_jal = jal_id_if_int.valid;
     assign id_cu_int.stall_csr_fence = stage_id_rr_d.stall_csr_fence && stage_id_rr_d.valid;
@@ -233,8 +234,8 @@ module datapath(
         .stall_o(exe_cu_int.stall),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
-        .exe_if_branch_pred_o   (exe_if_branch_pred_int),
-        .correct_branch_pred_o  (correct_branch_pred)
+        .exe_if_branch_pred_o(exe_if_branch_pred_int),
+        .correct_branch_pred_o(correct_branch_pred)
     );
 
     assign exe_cu_int.valid = stage_rr_exe_q.instr.valid;
@@ -289,42 +290,14 @@ module datapath(
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};  
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
                 end
-                ECALL: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                EBREAK: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                URET: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                SRET: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                MRET: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                ERET: begin // Old ISA
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                FENCE: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
-                end
-                MRTS: begin // Old ISA
+                ECALL,
+                EBREAK,
+                URET,
+                SRET,
+                MRET,
+                ERET,
+                FENCE,
+                MRTS: begin
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     wb_csr_rw_data_int = 64'b0;
                     wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
@@ -407,17 +380,17 @@ module datapath(
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS
-    torture_dump_behav torture_dump
-    (
-        .clk(clk_i),
-        .rst(rstn_i),
-        .commit_valid(commit_valid),
-        .reg_wr_valid(cu_rr_int.write_enable && (commit_addr_reg != 5'b0)),
-        .pc(commit_pc),
-        .inst(exe_to_wb_wb.inst),
-        .reg_dst(commit_addr_reg),
-        .data(commit_data)
-    );
+        torture_dump_behav torture_dump
+        (
+            .clk(clk_i),
+            .rst(rstn_i),
+            .commit_valid(commit_valid),
+            .reg_wr_valid(cu_rr_int.write_enable && (commit_addr_reg != 5'b0)),
+            .pc(commit_pc),
+            .inst(exe_to_wb_wb.inst),
+            .reg_dst(commit_addr_reg),
+            .data(commit_data)
+        );
     `endif
 
 endmodule

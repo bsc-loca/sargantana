@@ -45,7 +45,8 @@ module if_stage(
     regPC_t pc;
 
     // Exceptions
-    // mislaigned is checked here while the others on icache
+    // misalgined is checked here while the others 
+    // on icache interface or icache itself
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
     logic ex_if_page_fault_int;
@@ -69,7 +70,7 @@ module if_stage(
                 next_pc = pc_jump_i;
             default: begin
                 `ifdef VERIFICATION
-                $error("next pc not defined error in if stage");
+                    $error("next pc not defined error in if stage");
                 `endif
                 next_pc = pc + 64'h04;
             end

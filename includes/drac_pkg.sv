@@ -102,18 +102,18 @@ typedef struct packed {
 
 // Response coming from ICache
 typedef struct packed {
-    logic  valid;               // Response valid
-    inst_t data;                // Word of 32 bits from Icache
-    logic instr_access_fault;   // Upper 24 bits of PC are used. We have 40 bits of PC
-    logic instr_page_fault;     // Page Fault from TLB
+    logic   valid;               // Response valid
+    inst_t  data;                // Word of 32 bits from Icache
+    logic   instr_access_fault;  // Upper 24 bits of PC are used. We have 40 bits of PC
+    logic   instr_page_fault;    // Page Fault from TLB
 } resp_icache_cpu_t;
 
 // Request send to ICache
 typedef struct packed {
-    logic  valid;               // Request valid
-    addr_t vaddr;               // Virtual Addr requested
-    logic  invalidate_icache;   // Petition to invalidate cache content
-    logic  invalidate_buffer;   // Petition to invalidate buffer, which also serves as repeat the req
+    logic   valid;               // Request valid
+    addr_t  vaddr;               // Virtual Addr requested
+    logic   invalidate_icache;   // Petition to invalidate cache content
+    logic   invalidate_buffer;   // Petition to invalidate buffer, which also serves as repeat the req
 } req_cpu_icache_t;
 
 typedef enum logic [2:0] {
