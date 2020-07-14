@@ -35,6 +35,7 @@ module tb_top();
     parameter VERBOSE         = 1;
     parameter CLK_PERIOD      = 2;
     parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
+    parameter N2000_CLK_PERIOD = CLK_PERIOD*2000;
 
 //-----------------------------
 // Signals
@@ -267,28 +268,31 @@ module tb_top();
             test_sim1(tmp);
             if (tmp == 1) begin
                 `START_RED_PRINT
-                        //$display("TEST 1 FAILED.");
+                        $display("TEST 1 FAILED.");
                 `END_COLOR_PRINT
             end else begin
                 `START_GREEN_PRINT
-                        //$display("TEST 1 PASSED.");
+                        $display("TEST 1 PASSED.");
                 `END_COLOR_PRINT
             end
         end
     endtask
-
 
     task automatic test_sim1;
         output int tmp;
         begin
             tmp = 0;
             //$display("*** test_sim1");
-            tick();
-            
-
+            #N2000_CLK_PERIOD;
+            if (top_drac_inst.datapath_inst.rr_stage_inst.registers[28] == 1) begin
+                //FAIL
+                tmp = 0;
+            end else begin
+                //PASS
+                tmp = 1;
+            end
         end
     endtask
-
 
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
@@ -300,20 +304,6 @@ module tb_top();
         $finish;
     end
 
-/*
-       #2000;
-        if (top_drac_inst.datapath_inst.rr_stage_inst.registers[28] == 1) begin
-            $fwrite(f,"%c[1;34m",27);
-            $fwrite(f,"%s TEST PASSED.",testname);
-            $fwrite(f,"%c[0m",27);
-            $fwrite(f,"\n");
-        end else begin
-            $fwrite(f,"%c[1;31m",27);
-            $fwrite(f,"%s TEST FAILED.",testname);
-            $fwrite(f,"%c[0m",27);
-            $fwrite(f,"\n");
-        end
-*/
 
 //assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
 //assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
