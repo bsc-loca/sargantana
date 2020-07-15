@@ -21,3 +21,16 @@ For each output signal, the behavior should be the following:
     \item \textbf{dmem\_req\_invalidate\_lr\_o:} reset load-link/store-conditional transaction.
     \item \textbf{dmem\_req\_kill\_o:} kill actual memory access.
 \end{itemize}
+
+The module has a state machine to manage the requests.
+The state machine has 4 states:
+
+\begin{itemize}
+    \item \textbf{ResetState:} we reach this state when a reset signal arrives, i.e. when \textit{rstn\_i} becomes 0. It reset the state machine, going to \textit{Idle} state, and it cancels the requests to the Data Cache.
+    \item \textbf{Idle:} we will stay in this state as long as there are no request from the datapath. If a request arrives from the datapath, we will move to \textit{MakeRequest}.
+    \item \textbf{MakeRequest:} if a request arrives when we are in \textit{Idle}, we will move to this state. In this state, we make a request to the Data Cache, and we move immediately to \textit{WaitResponse}.
+    \item \textbf{WaitResponse:} we will remain in this state until the Data Cache responds, and then, we will go to \textit{Idle} to wait a new request.
+\end{itemize}
+
+If during a request, a signal arrives killing the operation, the state machine will go to \textit{Idle}, and it will cancel the request in flight.
+
