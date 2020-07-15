@@ -35,6 +35,7 @@ module tb_datapath();
     parameter VERBOSE         = 1;
     parameter CLK_PERIOD      = 2;
     parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
+    parameter N2000_CLK_PERIOD = CLK_PERIOD*2000;
 
 //-----------------------------
 // Signals
@@ -219,9 +220,14 @@ module tb_datapath();
         begin
             tmp = 0;
             $display("*** test_sim1");
-            tick();
-            
-
+            #N2000_CLK_PERIOD;
+            if (datapath_inst.rr_stage_inst.registers[28] == 1) begin
+                //FAIL
+                tmp = 0;
+            end else begin
+                //PASS
+                tmp = 1;
+            end
         end
     endtask
 
