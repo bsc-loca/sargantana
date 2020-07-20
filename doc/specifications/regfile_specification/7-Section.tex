@@ -1,0 +1,28 @@
+\section{Behavior}
+
+As stated in the introduction the register file for a RISC-V RV64 core has 32 entries. each one 64 bites wide.
+Register 0 must remain 0 by definition of the ISA. The remaining registers can be written and read by each instruction.
+
+Since RISC-V instructions can take up to 2 operators and a destination register our register file provides two read ports and one
+write port.
+
+Reads to the register file shall provide the most updated values for a given register. Therefore writes shall be able to be bypass to the read ports. 
+
+Writes can only take effect if write\_enable\_i is high.
+
+\subsection{Description}
+
+This module uses several types and parameters from drac\_pkg.sv, such as REGFILE\_WIDTH, bus64\_t and reg64\_t. 
+
+Signals that make use of drac\_pkg.sv are
+\begin{itemize}
+	\item Write address. \emph{write\_addr\_i}. 
+	\item Write data. \emph{write\_data\_i}.
+	\item Read address port 1. \emph{read\_addr1\_i}.
+	\item Read address port 2. \emph{read\_addr2\_i}.
+	\item Read data port 1. \emph{read\_data1\_o}.
+	\item Read data port 2. \emph{read\_data2\_o}.
+	\item Register array. \emph{registers}.
+\end{itemize}
+
+

@@ -1,0 +1,8 @@
+\section{What could not happen}
+
+All signals must match in width with other interfaces. Unused signals shall be removed.\\
+
+Writes to register 0 are not forbidden but they shall not take any effect. Therefore register 0 shall remain 0 through all execution.\\
+
+When reading a value, the most updated value of the register shall be forwarded to the output. therefore when a write is ongoing,
+and a read to the same register is issued, write data shall be bypassed to the corresponding read port instead of taking the previous value from the register. 

@@ -1,0 +1,30 @@
+\section{Interface}
+\label{chapter 4}
+
+Interface signals of the module are listed in the table below. Detailed information of signals with examples of usage are specified on datapath, instruction cache interface and data cache interface reports.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllll}
+		\hline
+		Port\_Name                      & Direction & Width & Index      & Description \\
+		\hline
+		clk\_i                          & INPUT     & 1     & -          & Main clock, up to 200MHz      \\
+		write\_enable\_i                & INPUT     & 1     & -          & Write enable\\
+		write\_addr\_i                  & INPUT     & 5     & \{[\}4:0\{]\} & Write address\\
+		write\_data\_i                  & INPUT     & 64     & \{[\}63:0\{]\} & Write data \\
+	    read\_addr1\_i                  & INPUT     & 5     & \{[\}4:0\{]\} & Address of read port 1 \\
+	    read\_addr2\_i                  & INPUT     & 5     & \{[\}4:0\{]\} & Address of read port 2 \\
+	\end{tabular}
+\end{table}
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{lllll}
+				\hline
+				Port\_Name                      & Direction & Width & Index      & Description \\
+				\hline
+		read\_data1\_o                   & OUTPUT    & 64    & \{[\}63:0\{]\} & Read data port 1\\
+		read\_data2\_o                   & OUTPUT    & 64    & \{[\}63:0\{]\} & Read data port 2\\
+
+	\end{tabular}
+\end{table}
