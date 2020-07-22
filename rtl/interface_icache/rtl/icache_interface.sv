@@ -82,7 +82,7 @@ end
 assign icache_resp_ready_o = 1'b1;
 
 // Icache_interface can do request to icache/tlb
-assign do_request_int = icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer) & icache_req_ready_i & !iptw_resp_valid_i ;
+assign do_request_int = icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer) & icache_req_ready_i & !iptw_resp_valid_i;
 
 
 always_comb begin

@@ -162,23 +162,20 @@ module tb_icache_interface();
         begin
             int tmp;
             // check req valid 0
-            tb_test_name = "test_sim_1";
             test_sim_1(tmp);
             check_out(1,tmp);
             // check req valid
-            tb_test_name = "test_sim_2";
             test_sim_2(tmp);
             check_out(2,tmp);
-            // check read a stream
-            //test_sim_3();
-            //// check read a block from next datablock create a miss
-            //test_sim_4();
-            //// test getting a block with if_exception
-            //test_sim_5();
-            //// test getting a stream of 2020 2030 2040 2050
-            //test_sim_6();
-            //// test getting a stream of 200 until 20C then no reting next
-            //test_sim_7();
+            // TLB miss
+            test_sim_3(tmp);
+            check_out(3,tmp);
+            // PTW invalidate
+            test_sim_4(tmp);
+            check_out(4,tmp);
+            // TLB exception
+            test_sim_5(tmp);
+            check_out(5,tmp);
         end
     endtask
 
@@ -224,299 +221,107 @@ module tb_icache_interface();
         end
     endtask
 
-// Test getting a petition that is not valid
-// Output should be nothing 
+    // Output should be nothing
     task automatic test_sim_1;
         output int tmp;
         begin
+            tb_test_name = "test_sim_1";
             set_req_to_icache(8192,0);
             #CLK_HALF_PERIOD;
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
             tmp = 0;
             tmp += tb_icache_req_valid_o != 0;
             tmp += tb_tlb_req_valid_o != 0;
             tmp += tb_resp_icache_fetch_o.valid != 0;
             #CLK_HALF_PERIOD;
-            tick();
-            //ReadCheck: assert (data === correct_data)
-            //   else $error("memory read error");
-            //Igt10: assert (I > 10)
-            //    else $warning("I is less than or equal to 10");
         end
     endtask
 
-    // Output should be nothing 
+    // Normal request
     task automatic test_sim_2;
         output int tmp;
         begin
-            int unsigned core_i;
-            int unsigned value_o;
+            tb_test_name = "test_sim_2";
             set_req_to_icache(8192,1);
             set_req_from_icache(128'h0,40'h0,0,1,0,0,0);
             #CLK_HALF_PERIOD;
-            set_req_from_icache(128'h008040130050001300003013fff02013,8192,1,0,0,0,0);
-            set_req_to_icache(8192,0);
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
             tmp = 0;
             tmp += tb_icache_req_valid_o != 1;
             tmp += tb_tlb_req_valid_o != 1;
             tmp += tb_resp_icache_fetch_o.valid != 0;
             #CLK_HALF_PERIOD;
-            tick();
-            
         end
     endtask
 
-    task automatic checkWaitingReady;
-        begin
-            if(VERBOSE)
-                $display("*** Checking req valid output not");
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
-            assert (tb_icache_req_valid_o == 0)
-                else $error("Icache Req valid ");
-            assert (tb_tlb_req_valid_o == 0)
-                else $error("TLB Req valid ");
-            // we don't have a datablock
-            assert (tb_resp_icache_fetch_o.valid == 0)
-                else $error("req_icache_fetch_o.valid is 1");     
-        end
-    endtask 
-
-    task automatic checkAssertOutput;
-        input int unsigned valid;
-        input int unsigned ex_valid;
-        input int unsigned data;
-        begin
-            if(VERBOSE)
-                $display("*** Checking Assert valid output data: %h %d %d",data,valid,ex_valid);
-            assert (tb_resp_icache_fetch_o.valid == valid)
-                else $error("req_icache_fetch_o.valid should be 1");
-            assert (tb_resp_icache_fetch_o.data == data)
-                else $error("req_icache_fetch_o.data wrong data value");
-        end
-    endtask
-// Test getting a petition that is normal
-// Output should be the requested data
-// we define addr 8192 (0x2000) 
-//    2000:   fff02013                slt     x0,x0,-1
-//    2004:   00003013                sltiu   x0,x0,0
-//    2008:   00500013                addi    x0,x0,5
-//    200C:   00804013                xori    x0,x0,8
-// datablock: 008040130050001300003013fff02013 
+    // TLB miss
     task automatic test_sim_3;
         output int tmp;
         begin
-            int unsigned core_i;
-            int unsigned value_o;
+            tb_test_name = "test_sim_3";
+            // Normal request
             set_req_to_icache(8192,1);
+            set_req_from_icache(128'h0,40'h0,0,1,0,0,0);
             tick();
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
-            assertIcache: assert (tb_icache_req_valid_o == 1)
-                else $error("Icache Req not valid ");
-            assertTLB: assert (tb_tlb_req_valid_o == 1)
-                else $error("TLB Req not valid ");
-            // Since we don't have anything on datablock
-            // assert there is a miss in the buffer by answering
-            // with not ready
-            assertValidOut: assert (tb_resp_icache_fetch_o.valid == 0)
-                else $error("req_icache_fetch_o.valid is 1");
+
+            // TLB miss
+            set_req_from_icache(128'h008040130050001300003013fff02013,8192,0,0,0,1,0);
             tick();
-            // It's a hit
-            checkWaitingReady();
-            tick();
-            set_req_from_icache(128'h008040130050001300003013fff02013,40'h200,1,0,0,0,0);
-            tick();
-            checkAssertOutput(1,0,32'hfff02013);
-            set_req_to_icache(8196,1);
-            tick();
-            checkAssertOutput(1,0,32'h00003013);
-            set_req_to_icache(8200,1);
-            tick();
-            checkAssertOutput(1,0,32'h00500013);
-            set_req_to_icache(8204,1);
-            tick();
-            checkAssertOutput(1,0,32'h00804013);
-            tick();
-            tick();
-            // okay now data is back
+
+            // Check output
+            #CLK_HALF_PERIOD;
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 0;
+            #CLK_HALF_PERIOD;
         end
     endtask
 
-// Test getting a petition that is normal
-// Output should be the requested data
-// we define addr 8192 (0x2000) 
-//    2010:   87654321                
-//    2014:   87654321                
-//    2018:   87654321                
-//    201C:   87654321                
-// datablock: 87654321123456788765432112345678 
     task automatic test_sim_4;
         output int tmp;
         begin
-            int unsigned core_i;
-            int unsigned value_o;
-            set_req_to_icache(40'h002010,1);
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
+            tb_test_name = "test_sim_4";
+            // Normal request
+            set_req_to_icache(8192,1);
+            set_req_from_icache(128'h0,40'h0,0,1,0,0,0);
             tick();
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
-            assertIcache: assert (tb_icache_req_valid_o == 1)
-                else $error("Icache Req not valid ");
-            assertTLB: assert (tb_tlb_req_valid_o == 1)
-                else $error("TLB Req not valid ");
-            // Since we don't have anything on datablock
-            // assert there is a miss in the buffer by answering
-            // with not ready
-            assertValidOut: assert (tb_resp_icache_fetch_o.valid == 0)
-                else $error("req_icache_fetch_o.valid is 1");
+
+            // PTW invalidate
+            set_req_from_icache(128'h008040130050001300003013fff02013,8192,0,0,1,0,0);
             tick();
-            // It's a hit
-            checkWaitingReady();
-            tick();
-            set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,0);
-            tick();
-            checkAssertOutput(1,0,32'h12345678);
-            set_req_to_icache(40'h002014,1);
-            tick();
-            checkAssertOutput(1,0,32'h87654321);
-            set_req_to_icache(40'h002018,1);
-            tick();
-            checkAssertOutput(1,0,32'h12345678);
-            set_req_to_icache(40'h00201C,1);
-            tick();
-            checkAssertOutput(1,0,32'h87654321);
-            tick();
-            // okay now data is back
+
+            // Check output
+            #CLK_HALF_PERIOD;
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 0;
+            #CLK_HALF_PERIOD;
         end
     endtask
 
-    task automatic checkAssertAfterNewPetition;
-        input int unsigned valid;
-        input int unsigned valid_tlb;
-        input int unsigned valid_out;
-        begin
-            if (VERBOSE)
-                $display("*** Checking icache tlb and out req valid: %h %d %d",valid,valid_tlb,valid_out);
-            // Assert to check whether if we req a valid addr
-            // the valid req to the cache is valid and the tlb
-            assertIcache: assert (tb_icache_req_valid_o == valid)
-                else $error("Icache Req not valid ");
-            assertTLB: assert (tb_tlb_req_valid_o == valid_tlb)
-                else $error("TLB Req not valid ");
-            // Since we don't have anything on datablock
-            // assert there is a miss in the buffer by answering
-            // with not ready
-            assertValidOut: assert (tb_resp_icache_fetch_o.valid == valid_out)
-                else $error("req_icache_fetch_o.valid is 1");
-        end
-    endtask
-
-// Test getting a stream of petitions
-// 2030
-// 2040
-// 2050
     task automatic test_sim_5;
         output int tmp;
         begin
-            int unsigned core_i;
-            int unsigned value_o;
-            set_req_to_icache(40'h002030,1);
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
+            tb_test_name = "test_sim_5";
+            // Normal request
+            set_req_to_icache(8192,1);
+            set_req_from_icache(128'h0,40'h0,0,1,0,0,0);
             tick();
-            checkAssertAfterNewPetition(1,1,0);
-            tick();
-            // It's a hit
-            checkWaitingReady();
-            tick();
-            set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,0);
-            tick();
-            checkAssertOutput(1,0,32'h12345678);
-            set_req_to_icache(40'h002040,1);
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
-            tick();
-            checkAssertAfterNewPetition(1,1,0);
-            set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,0);
-            tick();
-            checkAssertOutput(1,0,32'h12345678);
-            set_req_to_icache(40'h002050,1);
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
-            tick();
-            checkAssertAfterNewPetition(1,1,0);
-            set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,0);
-            tick();
-        end
-    endtask
 
-// Test getting a petition that is normal
-// Output should be the requested data
-// we define addr 8192 (0x2000) 
-//    2060:   has an exception                              
-// datablock: 87654321123456788765432112345678 
-    task automatic test_sim_6;
-        output int tmp;
-        begin
-            int unsigned core_i;
-            int unsigned value_o;
-            set_req_to_icache(40'h002060,1);
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
+            // TLB exception
+            set_req_from_icache(128'h008040130050001300003013fff02013,8192,0,0,0,0,1);
             tick();
-            checkAssertAfterNewPetition(1,1,0);
-            tick();
-            set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,1);
-            tick();
-            // okay now data is back
-        end
-    endtask
 
-    // check 8 petitions in sequence
-    // h00200 204 208 20C
-    // h00210 214 218 21C
-    // output is   11111111222222223333333344444444
-    // output 2 is 55555555666666667777777788888888
-    task automatic test_sim_7;
-        output int tmp;
-        begin
-            int unsigned core_i;
-            int unsigned value_o;
-            // make a reset
-            //reset_dut();
-            tick();
-            set_req_from_icache(128'h0,40'h200,0,0,0,0,0);
-            tick();
-            tick(); // Sim a miss 
-            tick();
-            set_req_to_icache(40'h00200,1);
-            tick();
-            tick();
-            tick();
-            set_req_from_icache(128'h11111111222222223333333344444444,40'h200,1,0,0,0,0);
-            
-            tick();
-            checkAssertOutput(1,0,32'h44444444);
-            set_req_to_icache(40'h00204,1);
-            
-            tick();
-            checkAssertOutput(1,0,32'h33333333);
-            set_req_to_icache(40'h00208,1);
-            
-            tick();
-            checkAssertOutput(1,0,32'h22222222);
-            set_req_to_icache(40'h0020C,1);
-            
-            tick();
-            checkAssertOutput(1,0,32'h11111111);
-            set_req_to_icache(40'h00210,1); // No rest
-            //checkAssertAfterNewPetition(1,1,0);
-            //tick();
-            //set_req_from_icache(128'h87654321123456788765432112345678,40'h200,1,0,0,0,1);
-            tick();
-            checkAssertOutput(0,0,32'hxxxxxxxx);
-            tick();
-            // okay now data is back
+            // Check output
+            #CLK_HALF_PERIOD;
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 0;
+            #CLK_HALF_PERIOD;
         end
     endtask
 
@@ -524,7 +329,7 @@ module tb_icache_interface();
         input int test;
         input int status;
         begin
-            if (status == 1) begin
+            if (status) begin
                 `START_RED_PRINT
                         $display("TEST %d FAILED.",test);
                 `END_COLOR_PRINT

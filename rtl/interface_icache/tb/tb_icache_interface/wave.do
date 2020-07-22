@@ -16,6 +16,7 @@ add wave -noupdate -expand -group {Icache Input} -radix hexadecimal /tb_icache_i
 add wave -noupdate -expand -group {Icache Input} -radix hexadecimal /tb_icache_interface/tb_icache_req_kill_o
 add wave -noupdate -expand -group {Icache Input} -radix hexadecimal /tb_icache_interface/tb_icache_resp_ready_o
 add wave -noupdate -radix hexadecimal -childformat {{/tb_icache_interface/tb_req_fetch_icache_i.valid -radix hexadecimal} {/tb_icache_interface/tb_req_fetch_icache_i.vaddr -radix hexadecimal} {/tb_icache_interface/tb_req_fetch_icache_i.invalidate_icache -radix hexadecimal} {/tb_icache_interface/tb_req_fetch_icache_i.invalidate_buffer -radix hexadecimal}} -expand -subitemconfig {/tb_icache_interface/tb_req_fetch_icache_i.valid {-height 17 -radix hexadecimal} /tb_icache_interface/tb_req_fetch_icache_i.vaddr {-height 17 -radix hexadecimal} /tb_icache_interface/tb_req_fetch_icache_i.invalidate_icache {-height 17 -radix hexadecimal} /tb_icache_interface/tb_req_fetch_icache_i.invalidate_buffer {-height 17 -radix hexadecimal}} /tb_icache_interface/tb_req_fetch_icache_i
+add wave -noupdate -expand /tb_icache_interface/tb_resp_icache_fetch_o
 add wave -noupdate -expand -group IcacheInterfaceInst -radix hexadecimal /tb_icache_interface/icache_interface_inst/clk_i
 add wave -noupdate -expand -group IcacheInterfaceInst -radix hexadecimal /tb_icache_interface/icache_interface_inst/rstn_i
 add wave -noupdate -expand -group IcacheInterfaceInst -radix hexadecimal /tb_icache_interface/icache_interface_inst/icache_resp_datablock_i
@@ -63,4 +64,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ns} {2 ns}
+WaveRestoreZoom {9 ns} {10 ns}
