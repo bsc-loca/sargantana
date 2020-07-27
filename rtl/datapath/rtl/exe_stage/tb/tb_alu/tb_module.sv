@@ -87,7 +87,7 @@ alu module_inst (
         input int test;
         input int status;
         begin
-            if (status == 1) begin
+            if (status) begin
                 `START_RED_PRINT
                         $display("TEST %d FAILED.",test);
                 `END_COLOR_PRINT
