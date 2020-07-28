@@ -18,6 +18,7 @@ echo "${isa_tests}"
 #iterate over all the listed isa_tests
 echo "*** Start ISA tests form: tb_top "
 while read p; do
+    echo "Test $p"
     if [ -z "$1" ]
     then #// -new
         ./run_single.sh "$p"
