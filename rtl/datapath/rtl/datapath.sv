@@ -129,7 +129,12 @@ module datapath(
     logic snoop_rs2_exe_mem;
     rr_exe_instr_t reg_to_exe;
 
+    // This addresses are fixed from lowrisc
     reg_addr_t io_base_addr;
+
+    // codifies if the branch was correctly predicted 
+    // this signal goes from exe stage to fetch stage
+    logic correct_branch_pred;
 
     // WB->Commit
     wb_cu_t wb_cu_int;
@@ -537,7 +542,7 @@ module datapath(
         .commit_store_or_amo_i(commit_store_or_amo_int),
 
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
-        .correct_branch_pred_o(correct_branch_pred),
+        .correct_branch_pred_i(correct_branch_pred),
 
         .alu_mul_div_to_wb_o(alu_mul_div_to_wb),
         .mem_to_wb_o(mem_to_wb),
