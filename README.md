@@ -22,7 +22,7 @@ It has been decided to have a granularity of stages, so that we have
 
 ## Drac Top Level Diagram
 
-![drac top level diagram](https://repo.hca.bsc.es/gitlab/lagarto/drac-inorder/-/blob/develop/rtl/datapath/doc/Drac-top-level-diagram.png?raw=true)
+![drac top level diagram](/rtl/datapath/doc/Drac-top-level-diagram.png)
 
 ## Verification
 
