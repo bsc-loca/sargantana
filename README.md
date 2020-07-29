@@ -20,6 +20,10 @@ It has been decided to have a granularity of stages, so that we have
 * interface_dcache --> access to the dcache decoupled from the mem_stage WIP
 * interface_icache --> access to the icache decoupled from the fetch
 
+## Drac Top Level Diagram
+
+![drac top level diagram](https://repo.hca.bsc.es/gitlab/lagarto/drac-inorder/-/blob/develop/rtl/datapath/doc/Drac-top-level-diagram.png?raw=true)
+
 ## Verification
 
 ### Tools
