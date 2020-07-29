@@ -106,8 +106,6 @@ mul_unit mul_unit_inst (
             tb_int_32<='{default:0};
             tb_source_1<='{default:0};
             tb_source_2<='{default:0};
-            tb_mul_result<='{default:0};
-            tb_lock_mul<='{default:0};
             tb_ready_mul<='{default:0};
             $display("Done");
         end
@@ -137,8 +135,8 @@ mul_unit mul_unit_inst (
 //           else $warning("I is less than or equal to 10");
 
     task automatic set_srcs;
-        input int unsigned src1;
-        input int unsigned src2;
+        input longint src1;
+        input longint src2;
         begin
             tb_source_1  <= src1;
             tb_source_2  <= src2;
@@ -146,45 +144,109 @@ mul_unit mul_unit_inst (
         end
     endtask
 
-// Test getting a petition that is not valid
-// Output should be nothing 
+// Test 1000 random multiplications
     task automatic test_sim_1;
         output int tmp;
         begin
-            int tmp = 0;
             tb_test_name = "test_sim_1";
+            tmp = 0;
             for(int i = 0; i < 1000; i++) begin
-                int unsigned src1 = $urandom();
-                int unsigned src2 = $urandom();
+                longint result;
+                longint src1 = {$urandom(),$urandom()};
+                longint src2 = {$urandom(),$urandom()};
                 set_srcs(src1,src2);
                 tick();
                 tick();
-                if (tb_mul_result != (src1*src2)) begin
+                result = src1*src2;
+                if (tb_mul_result != result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %d * %d = %d",src1,src2,(src1*src2));
+                    $error("Result incorrect %h * %h = %h, output: %h",src1,src2,result,tb_mul_result);
                     `END_COLOR_PRINT
                 end
             end
         end
     endtask
 
+// Test 1000 random 32-bit multiplications
+    task automatic test_sim_2;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_2";
+            tmp = 0;
+            tb_int_32 = 1;
+            for(int i = 0; i < 1000; i++) begin
+                longint result;
+                longint src1 = {$urandom(),$urandom()};
+                longint src2 = {$urandom(),$urandom()};
+                set_srcs(src1,src2);
+                tick();
+                tick();
+                result = src1*src2;
+                result = {{32{result[31]}},result[31:0]};
+                if (tb_mul_result != result) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h * %h = %h, output: %h",src1,src2,result,tb_mul_result);
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+// Test 1000 random high part unsigned sources multiplications
+    task automatic test_sim_3;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_3";
+            tmp = 0;
+            tb_int_32 = 0;
+            tb_funct3_field = 3'b011;
+            for(int i = 0; i < 1000; i++) begin
+                logic [127:0] result;
+                longint unsigned src1 = {$urandom(),$urandom()};
+                longint unsigned src2 = {$urandom(),$urandom()};
+                set_srcs(src1,src2);
+                tick();
+                tick();
+                result = src1*src2;
+                result = {64'b0,result[127:64]};
+                if (tb_mul_result != result) begin
+                    tmp = 1;
+                    `START_RED_PRINT
+                    $error("Result incorrect %h * %h = %h, output: %h",src1,src2,result,tb_mul_result);
+                    `END_COLOR_PRINT
+                end
+            end
+        end
+    endtask
+
+task automatic check_test;
+    input int test;
+    input int status;
+    begin
+        if (status) begin
+            `START_RED_PRINT
+                    $display("TEST %d FAILED.",test);
+            `END_COLOR_PRINT
+        end else begin
+            `START_GREEN_PRINT
+                    $display("TEST %d PASSED.",test);
+            `END_COLOR_PRINT
+        end
+    end
+endtask
 
 //***task automatic test_sim***
     task automatic test_sim;
         begin
 	    int tmp;
-            $display("*** test_sim");
             test_sim_1(tmp);
-            if (tmp == 1) begin
-                `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
-                `END_COLOR_PRINT
-            end else begin
-                `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
-                `END_COLOR_PRINT
-            end
+            check_test(1,tmp);
+            test_sim_2(tmp);
+            check_test(2,tmp);
+            test_sim_3(tmp);
+            check_test(3,tmp);
         end
     endtask
 
