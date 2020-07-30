@@ -17,7 +17,6 @@ import riscv_pkg::*;
 
 module control_unit(
     input logic             valid_fetch,
-    //input if_cu_t           if_cu_i,
     input id_cu_t           id_cu_i,
     input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
@@ -30,13 +29,7 @@ module control_unit(
     output cu_if_t          cu_if_o,
     output logic            invalidate_icache_o,
     output logic            invalidate_buffer_o,
-    //output cu_id_t          cu_id_o,
     output cu_rr_t          cu_rr_o
-    //output cu_exe_t         cu_exe_o,
-    //output cu_wb_t          cu_wb_o,
-
-    //output cu_datapath_t    cu_datapath_t
-
 );
     logic jump_enable_int;
     // jump enable logic
@@ -103,7 +96,7 @@ module control_unit(
     // logic invalidate buffer and repeat fetch
     // when a fence, invalidate buffer and also when csr eret
     // when it is a csr it should be checked more?
-    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | //wb_cu_i.csr_enable_wb | 
+    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | 
                                                     csr_cu_i.csr_eret));
 
 
