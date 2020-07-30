@@ -12,7 +12,9 @@
 * -----------------------------------------------
 * Revision History
 *  Revision   | Author     | Commit | Description
-*  0.1        | Guillem.LP | 
+*  0.1        | Guillem LP |        | Intial 3 tests
+*  0.2        | Ruben L.   |        | Improved and added new tests
+*  0.3        | Guillem LP |        | Added 3 new tests
 * -----------------------------------------------
 */
 
@@ -157,6 +159,15 @@ module tb_icache_interface();
             #CLK_PERIOD;
         end
     endtask
+
+    task automatic half_tick();
+        begin
+            //$display("*** tick");
+            #CLK_HALF_PERIOD;
+        end
+    endtask
+
+
 //***task automatic test_sim***
     task automatic test_sim;
         begin
@@ -176,6 +187,18 @@ module tb_icache_interface();
             // TLB exception
             test_sim_5(tmp);
             check_out(5,tmp);
+            // Regular case obtain 
+            // data from icache and 
+            // send the data
+            test_sim_6(tmp);
+            check_out(6,tmp);
+            // Check the buffer
+            test_sim_7(tmp);
+            check_out(7,tmp);
+            // Check the buffer when changing addr of req
+            // and coming back to the one in the buffer
+            test_sim_8(tmp);
+            check_out(8,tmp);
         end
     endtask
 
@@ -325,6 +348,124 @@ module tb_icache_interface();
         end
     endtask
 
+    task automatic test_sim_6;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_6";
+            reset_dut();
+            // Normal request
+            set_req_to_icache(8192,1);
+            set_req_from_icache(128'h0,40'h0,0,1,0,0,0);
+            tick();
+
+            // Normal case
+            set_req_from_icache(128'h008040130050001300003013fff02013,8192,1,1,0,0,0);
+            tick();
+
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+
+        end
+    endtask
+
+    // We have a valid buffer
+    // we make a request for 
+    // the next 3 addresses until the 4th
+    // makes a new request 
+    task automatic test_sim_7;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_7";
+            // Normal request
+            set_req_to_icache(8192,1);
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+            
+            // Normal request
+            set_req_to_icache(8196,1);
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+            
+            // Normal request
+            set_req_to_icache(8200,1);
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+            
+            // Normal request
+            set_req_to_icache(8204,1);
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+
+            // Normal request
+            // now it creates a miss
+            set_req_to_icache(8208,1);
+            // Check output
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 1;
+            //tmp += tb_icache_req_kill_o != 1;
+            tmp += tb_tlb_req_valid_o != 1;
+            tmp += tb_resp_icache_fetch_o.valid != 0;
+            half_tick();
+            
+        end
+    endtask
+
+    // We are making a request and
+    // the req addr changes
+    task automatic test_sim_8;
+        output int tmp;
+        begin
+            tb_test_name = "test_sim_8";
+            
+            // Normal request from before
+            set_req_to_icache(8208,1);
+            tick();
+            // change of @
+            set_req_to_icache(8204,1);
+            // Check output @
+            // now should be hit from the buffer
+            half_tick();
+            tmp = 0;
+            tmp += tb_icache_req_valid_o != 0;
+            tmp += tb_icache_req_kill_o != 0;
+            tmp += tb_tlb_req_valid_o != 0;
+            tmp += tb_resp_icache_fetch_o.valid != 1;
+            half_tick();
+            
+        end
+    endtask
+
     task automatic check_out;
         input int test;
         input int status;
@@ -349,11 +490,7 @@ module tb_icache_interface();
         init_dump();
         reset_dut();
         test_sim();
-        if(VERBOSE) begin
-                $display("Define a parameter (parameter VERBOSE=0;) and guard\n\
-                messages that are not needed. Most of the times with PASS/FAIL name of the \n\
-                tests is enough"); 
-        end
+        $finish;
     end
 
 
