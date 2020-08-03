@@ -4,14 +4,15 @@
 
 /* -----------------------------------------------
 * Project Name   : DRAC
-* File           : .v
+* File           : tb_module.sv
 * Organization   : Barcelona Supercomputing Center
-* Author(s)      : 
-* Email(s)       : @bsc.es
+* Author(s)      : Ruben Langarita
+* Email(s)       : ruben.langarita@bsc.es
 * References     : 
 * -----------------------------------------------
 * Revision History
-*  Revision   | Author     | Commit | Description
+*  Revision   | Author          | Commit | Description
+*  0.1        | Ruben Langarita |        | Initial test
 * -----------------------------------------------
 */
 
@@ -129,18 +130,27 @@ control_unit module_inst (
         begin
             int tmp;
             $display("*** test_sim");
+            // Nothing happen
             test_sim_1(tmp);
             check_out(1,tmp);
+            // Testing fetch valid, go to next pc
             test_sim_2(tmp);
             check_out(2,tmp);
+            // Testing execution stall and valid fetch
             test_sim_3(tmp);
             check_out(3,tmp);
+            // Stall in execution and write back simultaneously
             test_sim_4(tmp);
             check_out(4,tmp);
+            // CSR exception
             test_sim_5(tmp);
             check_out(5,tmp);
-            //test_sim_6(tmp);
-            //check_out(6,tmp);
+            // Correct instruction
+            test_sim_6(tmp);
+            check_out(6,tmp);
+            // Fence
+            test_sim_7(tmp);
+            check_out(7,tmp);
         end
     endtask
 
@@ -436,6 +446,7 @@ control_unit module_inst (
         end
     endtask
 
+    // CSR exception
     task automatic test_sim_5;
         output int incorrect_result;
         begin
@@ -502,6 +513,152 @@ control_unit module_inst (
 
             // --- invalidate_buffer_o ---
             incorrect_result += (invalidate_buffer_o!=0);
+
+            // --- cu_rr_o ---
+            incorrect_result += (cu_rr_o.write_enable!=0);
+        end
+    endtask
+
+    // Correct instruction
+    task automatic test_sim_6;
+        output int incorrect_result;
+        begin
+            tb_test_name = "test_sim_6";
+
+            valid_fetch<=1;
+
+            id_cu_i.valid_jal<=0;
+            id_cu_i.stall_csr_fence<=0;
+
+            rr_cu_i.stall_csr_fence<=0;
+
+            exe_cu_i.valid<=0;
+            exe_cu_i.change_pc_ena<=0;
+            exe_cu_i.is_branch<=0;
+            exe_cu_i.stall<=0;
+            exe_cu_i.stall_csr_fence<=0;
+
+            wb_cu_i.pc<=64'h0;
+            wb_cu_i.valid<=1;
+            wb_cu_i.change_pc_ena<=0;
+            wb_cu_i.csr_enable_wb<=0;
+            wb_cu_i.write_enable<=1;
+            wb_cu_i.stall_csr_fence<=0;
+            wb_cu_i.xcpt<=0;
+            wb_cu_i.ecall_taken<=0;
+            wb_cu_i.fence<=0;
+
+            csr_cu_i.csr_rw_rdata<=0;
+            csr_cu_i.csr_replay<=0;
+            csr_cu_i.csr_stall<=0;
+            csr_cu_i.csr_exception<=0;
+            csr_cu_i.csr_eret<=0;
+            csr_cu_i.csr_evec<=0;
+            csr_cu_i.csr_interrupt<=0;
+            csr_cu_i.csr_interrupt_cause<=0;
+
+            correct_branch_pred_i<=0;
+
+            #CLK_PERIOD;
+            incorrect_result = 0;
+
+            // --- pipeline_ctrl_o ---
+            incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_DECODE);
+            incorrect_result += (pipeline_ctrl_o.stall_if!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_id!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_rr!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_exe!=0);
+            //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+            // --- pipeline_flush_o ---
+            incorrect_result += (pipeline_flush_o.flush_if!=0);
+            incorrect_result += (pipeline_flush_o.flush_id!=0);
+            incorrect_result += (pipeline_flush_o.flush_rr!=0);
+            incorrect_result += (pipeline_flush_o.flush_exe!=0);
+            //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+            // --- cu_if_o ---
+            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_4);
+            //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+            // --- invalidate_icache_o ---
+            incorrect_result += (invalidate_icache_o!=0);
+
+            // --- invalidate_buffer_o ---
+            incorrect_result += (invalidate_buffer_o!=0);
+
+            // --- cu_rr_o ---
+            incorrect_result += (cu_rr_o.write_enable!=1);
+        end
+    endtask
+
+    // Fence
+    task automatic test_sim_7;
+        output int incorrect_result;
+        begin
+            tb_test_name = "test_sim_7";
+
+            valid_fetch<=1;
+
+            id_cu_i.valid_jal<=0;
+            id_cu_i.stall_csr_fence<=0;
+
+            rr_cu_i.stall_csr_fence<=0;
+
+            exe_cu_i.valid<=0;
+            exe_cu_i.change_pc_ena<=0;
+            exe_cu_i.is_branch<=0;
+            exe_cu_i.stall<=0;
+            exe_cu_i.stall_csr_fence<=0;
+
+            wb_cu_i.pc<=64'h0;
+            wb_cu_i.valid<=1;
+            wb_cu_i.change_pc_ena<=0;
+            wb_cu_i.csr_enable_wb<=0;
+            wb_cu_i.write_enable<=0;
+            wb_cu_i.stall_csr_fence<=0;
+            wb_cu_i.xcpt<=0;
+            wb_cu_i.ecall_taken<=0;
+            wb_cu_i.fence<=1;
+
+            csr_cu_i.csr_rw_rdata<=0;
+            csr_cu_i.csr_replay<=0;
+            csr_cu_i.csr_stall<=0;
+            csr_cu_i.csr_exception<=0;
+            csr_cu_i.csr_eret<=0;
+            csr_cu_i.csr_evec<=0;
+            csr_cu_i.csr_interrupt<=0;
+            csr_cu_i.csr_interrupt_cause<=0;
+
+            correct_branch_pred_i<=0;
+
+            #CLK_PERIOD;
+            incorrect_result = 0;
+
+            // --- pipeline_ctrl_o ---
+            incorrect_result += (pipeline_ctrl_o.sel_addr_if!=SEL_JUMP_DECODE);
+            incorrect_result += (pipeline_ctrl_o.stall_if!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_id!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_rr!=0);
+            incorrect_result += (pipeline_ctrl_o.stall_exe!=0);
+            //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
+            // --- pipeline_flush_o ---
+            incorrect_result += (pipeline_flush_o.flush_if!=1);
+            incorrect_result += (pipeline_flush_o.flush_id!=0);
+            incorrect_result += (pipeline_flush_o.flush_rr!=0);
+            incorrect_result += (pipeline_flush_o.flush_exe!=0);
+            //incorrect_result += (pipeline_flush_o.flush_wb!=0);
+
+            // --- cu_if_o ---
+            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_KEEP_PC);
+            //incorrect_result += (cu_if_o.invalidate_icache!=0);
+
+            // --- invalidate_icache_o ---
+            incorrect_result += (invalidate_icache_o!=1);
+
+            // --- invalidate_buffer_o ---
+            incorrect_result += (invalidate_buffer_o!=1);
 
             // --- cu_rr_o ---
             incorrect_result += (cu_rr_o.write_enable!=0);
