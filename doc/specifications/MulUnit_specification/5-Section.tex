@@ -1,4 +1,6 @@
-\section{Reset behaviour}
+\section{Reset and Kill behaviour}
 
 The reset signal \textit{rstn\_i} works on a negative edge.
-The outputs will be 0 and if some operation is being executed, it will be stopped.
+All the outputs will be 0 and if some operation is being executed, it will be stopped.
+
+Similarly kill signal (\textit{kill\_mul\_i}) is used when the control unit needs to flush an operation inside the \textit{mul\_unit} module.  Signal \textit{stall\_o} and \textit{result\_o} will be set to 0 immediately.

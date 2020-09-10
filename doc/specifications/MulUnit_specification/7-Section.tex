@@ -2,7 +2,9 @@
 
 \subsection{Description}
 
-In this section we describe the behaviour of the Multiplication Unit module for each possible input.
+In this section we describe the behaviour of the Multiplication Unit module. Since some operations are two cycle long, the module has a \textit{request\_i} signal that initiates a new operation. This signal is single cycle, which means that is asserted to one only on the first cycle of the new operation.
+
+In the next table we explain the behaviour for each possible input.
 The meaning of the different symbols used in the next table are the following:
 
 \begin{itemize}
@@ -40,3 +42,4 @@ The meaning of the different symbols used in the next table are the following:
 \end{tabular}
 }
 \end{table}
+
