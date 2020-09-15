@@ -48,6 +48,7 @@ module top_drac(
     input addr_t                CSR_EVEC,
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
+    input logic                 io_csr_csr_replay,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE

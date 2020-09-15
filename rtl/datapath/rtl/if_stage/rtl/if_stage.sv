@@ -95,8 +95,7 @@ module if_stage(
 
     // check addr fault fetch
     always_comb begin
-        if (resp_icache_cpu_i.valid && 
-            resp_icache_cpu_i.instr_access_fault) begin
+        if (pc[38] ? !(&pc[63:39]) : |pc[63:39] ) begin
             ex_if_addr_fault_int = 1'b1;
         end else begin
             ex_if_addr_fault_int = 1'b0;

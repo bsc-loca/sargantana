@@ -265,17 +265,15 @@ typedef enum logic [6:0] {
     F7_ECALL_EBREAK_URET    = 7'b0000000,
     F7_SRET_WFI_ERET_SFENCE = 7'b0001000,
     F7_SFENCE_VM            = 7'b0001001,
-    F7_MRET_MRTS_MRTH       = 7'b0011000,
-    F7_HRTS                 = 7'b0010000
+    F7_MRET_MRTS            = 7'b0011000
 } op_func7_system_t; // The first 7 bits of func7
 
 typedef enum logic [4:0] {
     RS2_ECALL_ERET      = 5'b00000,
     RS2_EBREAK_SFENCEVM = 5'b00001,
     RS2_URET_SRET_MRET  = 5'b00010,
-    RS2_WFI             = 5'b00011,
-    RS2_MRTS_HRTS       = 5'b00101, //Old ISA
-    RS2_MRTH            = 5'b00110 //Old ISA
+    RS2_WFI             = 5'b00101
+    //RS2_MRTS            = 5'b00101 //Old ISA
 } op_rs2_system_t; // the next 5 bits after func7
 
 typedef enum logic [6:0] {

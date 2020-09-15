@@ -182,11 +182,11 @@ always_comb begin
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_st && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault store
-            to_wb_o.ex.cause = ST_AMO_ACCESS_FAULT;//ST_AMO_PAGE_FAULT;
+            to_wb_o.ex.cause = ST_AMO_PAGE_FAULT;
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_ld && from_rr_i.instr.unit == UNIT_MEM) begin // Page fault load
-            to_wb_o.ex.cause = LD_ACCESS_FAULT;//LD_PAGE_FAULT;
+            to_wb_o.ex.cause = LD_PAGE_FAULT;
             to_wb_o.ex.origin = resp_dcache_cpu_i.addr;
             to_wb_o.ex.valid = 1;
         end else if (((|resp_dcache_cpu_i.addr[63:40] && !resp_dcache_cpu_i.addr[39]) ||
@@ -213,7 +213,17 @@ always_comb begin
                     to_wb_o.ex.valid = 0;
                 end
             endcase
-        end else if (result_branch[1:0] != 0 && from_rr_i.instr.unit == UNIT_BRANCH && from_rr_i.instr.instr_type == JALR && from_rr_i.instr.valid) begin // invalid address
+        end else if (result_branch[1:0] != 0 && 
+                    from_rr_i.instr.unit == UNIT_BRANCH && 
+                    (from_rr_i.instr.instr_type == JALR || 
+                    ((from_rr_i.instr.instr_type == BLT || 
+                    from_rr_i.instr.instr_type == BLTU || 
+                    from_rr_i.instr.instr_type == BGE ||
+                    from_rr_i.instr.instr_type == BGEU || 
+                    from_rr_i.instr.instr_type == BEQ || 
+                    from_rr_i.instr.instr_type == BNE ) &&
+                    taken_branch )) &&
+                    from_rr_i.instr.valid) begin // invalid address
             to_wb_o.ex.cause = INSTR_ADDR_MISALIGNED;
             to_wb_o.ex.origin = result_branch;
             to_wb_o.ex.valid = 1;

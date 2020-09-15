@@ -583,7 +583,7 @@ module decoder(
                                             endcase // decode_i.inst.rtype.rs2
                                         end
                                     end
-                                    F7_MRET_MRTS_MRTH: begin
+                                    F7_MRET_MRTS: begin
                                         if (decode_i.inst.itype.rs1 != 'h0) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
@@ -591,19 +591,19 @@ module decoder(
                                                 RS2_URET_SRET_MRET: begin
                                                     decode_instr_o.instr_type = MRET;
                                                 end
-                                                RS2_MRTS_HRTS: begin
+                                                /*RS2_MRTS_HRTS: begin
                                                     decode_instr_o.instr_type = MRTS;
                                                 end
                                                 RS2_MRTH: begin
                                                     decode_instr_o.instr_type = MRTH;
-                                                end
+                                                end*/
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end 
                                             endcase // decode_i.inst.rtype.rs2
                                         end
                                     end
-                                    F7_HRTS: begin
+                                    /*F7_HRTS: begin
                                         if (decode_i.inst.itype.rs1 != 'h0) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
@@ -616,7 +616,7 @@ module decoder(
                                                 end 
                                             endcase // decode_i.inst.rtype.rs2
                                         end
-                                    end
+                                    end*/
                                     F7_SFENCE_VM:begin
                                         decode_instr_o.instr_type = FENCE;
                                         decode_instr_o.stall_csr_fence = 1'b1;

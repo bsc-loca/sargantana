@@ -224,8 +224,7 @@ end
 // We need and access when:
 //    - there is a new request that is valid and
 //      there is a miss buffer
-assign icache_access_needed_int =   req_fetch_icache_i.valid & 
-                                    buffer_miss_int;
+assign icache_access_needed_int =   req_fetch_icache_i.valid & buffer_miss_int;
 // Icache output connections
 // when we want to send invalidation of request
 assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
@@ -235,8 +234,8 @@ assign icache_req_kill_o = tlb_resp_miss_i | ptw_invalidate_i | tlb_resp_xcp_if_
 assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
 
 //assign resp_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
-assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i & buffer_miss_int;
-assign resp_icache_fetch_o.instr_page_fault = 1'b0;
+//assign resp_icache_fetch_o.instr_access_fault = |;
+assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i & buffer_miss_int;
 
 // sequential logic cacheline register buffer
 always_ff @(posedge clk_i, negedge rstn_i) begin //, posedge icache_resp_valid_i
