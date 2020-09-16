@@ -74,6 +74,7 @@ module top_drac(
     input logic                 DMEM_XCPT_MA_LD,
     input logic                 DMEM_XCPT_PF_ST,
     input logic                 DMEM_XCPT_PF_LD,
+    input logic                 DMEM_ORDERED, // TODO: remove if we dont used
 
 //--------------------------------------------------------------------------------------------------------------------------
 // CSR OUTPUT INTERFACE
@@ -128,6 +129,21 @@ module top_drac(
     output bus64_t              IO_WB_BITS_ADDR,
 
     output bus64_t              IO_REG_READ_DATA,
+
+//--------------------------------------------------------------------------------------------------------------------------
+// DEBUGGING MODULE SIGNALS
+//--------------------------------------------------------------------------------------------------------------------------
+    input logic                 IO_REG_READ,
+    input logic [4:0]           IO_REG_ADDR,  // Address used for both read and write operations    
+    input logic                 IO_REG_WRITE,
+    input logic [63:0]          IO_REG_WRITE_DATA,
+    input logic                 istall_test, 
+
+//--------------------------------------------------------------------------------------------------------------------------
+// FETCH  INTERFACE
+//--------------------------------------------------------------------------------------------------------------------------
+    input addr_t                IO_FETCH_PC_VALUE,
+    input logic                 IO_FETCH_PC_UPDATE,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // PMU INTERFACE
