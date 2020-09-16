@@ -41,7 +41,7 @@ module tb_decoder();
 // Signals
 //-----------------------------
     reg tb_clk_i;
-    // test name to be shown at evrey stage
+    // test name to be shown at every stage
     reg [64*8:0] tb_test_name;
 
     if_id_stage_t tb_decode_i;

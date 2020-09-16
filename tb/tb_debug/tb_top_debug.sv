@@ -4,7 +4,7 @@
 
 /* -----------------------------------------------
 * Project Name   : DRAC
-* File           : tb_datapath.sv
+* File           : tb_debug_ring.sv
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
 * Email(s)       : guillem.lopez@bsc.es
@@ -40,6 +40,10 @@ module tb_top();
 //-----------------------------
 // Signals
 //-----------------------------
+
+    // test name to be shown at every stage
+    reg [64*8:0] tb_test_name;
+
     reg     tb_clk_i;
     reg     tb_rstn_i;
 
@@ -299,36 +303,152 @@ module tb_top();
         end
     endtask
 
-//***task automatic test_sim***
-    task automatic test_sim;
+    task automatic check_out;
+        input int test;
+        input int status;
         begin
-            int tmp;
-            //$display("*** test_sim");
-            // check req valid 0
-            test_sim1(tmp);
-            test_sim2(tmp);
-            if (tmp >= 1) begin
+            if (status >= 1) begin
                 `START_RED_PRINT
-                        $display("TEST 1 FAILED.");
+                        $display("TEST %d FAILED.",test);
                 `END_COLOR_PRINT
             end else begin
                 `START_GREEN_PRINT
-                        $display("TEST 1 PASSED.");
+                        $display("TEST %d PASSED.",test);
                 `END_COLOR_PRINT
             end
         end
     endtask
 
+//***task automatic test_sim***
+    task automatic test_sim;
+        begin
+            int tmp;
+            tb_test_name = "test_0_advance_100_cycles";
+            // Advance simulation 100 cycles
+            for (int i = 0; i < 100; i++) begin
+                tick();
+            end
+            // Check PC's no stall
+            test_sim1(tmp);
+            check_out(1,tmp);
+            // Check WB no stall 
+            test_sim2(tmp);
+            check_out(2,tmp);
+            // Make a stall and Read-write register
+            test_sim3(tmp);
+            check_out(3,tmp);
+            // Change PC
+            test_sim4(tmp);
+            check_out(4,tmp);
+        end
+    endtask
+
+    //Check PC
     task automatic test_sim1;
         output int tmp;
         begin
             tmp = 0;
             $display("*** test_sim1");
-            //#N2000_CLK_PERIOD;
-            for (int i = 0; i < 100; i++) begin
-                tick();
+            tb_test_name = "test_1_check_PC";
+            half_tick();
+            if (debug_out.pc_fetch != 40'h0310) begin
+                `START_RED_PRINT
+                    $error("EXPECTING DIFFERENT FETCH PC, expecting %d, got %d", 
+                    40'h0310,
+                    debug_out.pc_fetch);
+                `END_COLOR_PRINT
+                tmp+=1;
             end
-            $display("*** After 100 cycles");
+            if (debug_out.pc_dec != 40'h0) begin
+                `START_RED_PRINT
+                    $error("EXPECTING DIFFERENT DEC PC, expecting %d, got %d", 
+                    0,
+                    debug_out.pc_dec);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            if (debug_out.pc_rr != 40'h030C) begin
+                `START_RED_PRINT
+                    $error("EXPECTING DIFFERENT RR PC, expecting %d, got %d", 
+                    40'h030C,
+                    debug_out.pc_rr);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            if (debug_out.pc_exe != 40'h0308) begin
+                `START_RED_PRINT
+                    $error("EXPECTING DIFFERENT EXE PC, expecting %d, got %d", 
+                    40'h0308,
+                    debug_out.pc_exe);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            if (debug_out.pc_wb != 40'h0304) begin
+                `START_RED_PRINT
+                    $error("EXPECTING ADD WB not valid, expecting %d, got %d", 
+                    40'h0304,
+                    debug_out.pc_wb);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            half_tick();
+            tick();
+        end
+    endtask
+
+    //Check WB
+    task automatic test_sim2;
+        output int tmp;
+        begin
+            tmp = 0;
+            $display("*** test_sim2");
+            tb_test_name = "test_2_check_WB";
+            tick();
+            if (debug_out.wb_valid != 1) begin
+                `START_RED_PRINT
+                    $error("WB not Valid, expecting %d, got %d", 
+                    1,
+                    debug_out.wb_valid);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+
+            if (debug_out.wb_reg_addr != 2) begin
+                `START_RED_PRINT
+                    $error("WB Writing register not valid, expecting %d, got %d", 
+                    2,
+                    debug_out.wb_reg_addr);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+
+
+            if (debug_out.wb_reg_we != 1) begin
+                `START_RED_PRINT
+                    $error("WB Write enable not valid, expecting %d, got %d", 
+                    1,
+                    debug_out.wb_reg_we);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            if (dcache_addr != 0'h0) begin
+                `START_RED_PRINT
+                    $error("WB dcache addr not valid, expecting %d, got %d", 
+                    0'h0,
+                    dcache_addr);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            tick();
+        end
+    endtask
+
+    task automatic test_sim3;
+        output int tmp;
+        begin
+            tmp = 0;
+            $display("*** test_sim3");
+            tb_test_name = "test_3_register_file";
             // Insert stall
             debug_in.halt_valid=1'b1;
             // Waiting for the halt
@@ -360,12 +480,12 @@ module tb_top();
         end
     endtask
 
-    task automatic test_sim2;
+    task automatic test_sim4;
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim2");
-            
+            $display("*** test_sim4");
+            tb_test_name = "test_4_change_PC";
             tick();
             // Change PC
             debug_in.change_pc_valid=1'b1;
