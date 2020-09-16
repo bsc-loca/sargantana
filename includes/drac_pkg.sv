@@ -58,15 +58,17 @@ parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
 parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
 
 typedef enum logic [1:0] {
-    NEXT_PC_SEL_BP_OR_PC_4 = 2'b00,
-    NEXT_PC_SEL_KEEP_PC   = 2'b01,
-    NEXT_PC_SEL_JUMP = 2'b10
+    NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
+    NEXT_PC_SEL_KEEP_PC     = 2'b01,
+    NEXT_PC_SEL_JUMP        = 2'b10,
+    NEXT_PC_SEL_DEBUG       = 2'b11
 } next_pc_sel_t;    // Enum PC Selection
 
 typedef enum logic [1:0] {
     SEL_JUMP_EXECUTION = 2'b00,
     SEL_JUMP_CSR       = 2'b01,
-    SEL_JUMP_DECODE    = 2'b10
+    SEL_JUMP_DECODE    = 2'b10,
+    SEL_JUMP_DEBUG     = 2'b11
 } jump_addr_fetch_t;
 
 typedef enum logic [1:0]{
@@ -412,7 +414,43 @@ typedef struct packed {
     bus64_t     csr_interrupt_cause;
 } resp_csr_cpu_t;
 
+typedef struct packed {
+    // Triggers a halt on the pipeline 
+    logic           halt_valid;
+    // New PC addr
+    addrPC_t          change_pc_addr;
+    // change new pc valid
+    logic           change_pc_valid;
+    // Read from register file valid
+    logic           reg_read_valid;
+    // Read/Write addr from register file addr
+    logic  [4:0]    reg_read_write_addr;
+    // Write to register file valid
+    logic           reg_write_valid;
+    // Write to register file data
+    bus64_t         reg_write_data;
+} debug_in_t;
 
+typedef struct packed {
+    // current pc in fetch stage
+    addr_t          pc_fetch;
+    // current pc in decode stage
+    addr_t          pc_dec;
+    // current pc in read register stage
+    addr_t          pc_rr;
+    // current pc in execution stage
+    addr_t          pc_exe;
+    // current pc in write-back stage
+    addr_t          pc_wb;
+    // valid write-back
+    logic           wb_valid;
+    // write-back register file addr
+    logic  [4:0]    wb_reg_addr;
+    // write-back register file we
+    logic           wb_reg_we;
+    // write-back register file read data
+    bus64_t         reg_read_data;
+} debug_out_t;
 
 endpackage
 

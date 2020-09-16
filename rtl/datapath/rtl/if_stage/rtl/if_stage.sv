@@ -20,14 +20,18 @@ module if_stage(
     input logic                 clk_i,
     input logic                 rstn_i,
     input addr_t                reset_addr_i,
+
+    // Signals from debug
+    //input addr_t                deb_change_pc_addr_i,
     
+    // Signals from Control Unit
     input logic                 stall_i,
     input cu_if_t               cu_if_i,
     // Signals to invalidate buffer/icache
     // from control unit
     input logic                 invalidate_icache_i,
     input logic                 invalidate_buffer_i,
-    // PC comming from commit/decode/ecall
+    // PC comming from commit/decode/ecall/debug
     input addrPC_t              pc_jump_i,
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
@@ -58,16 +62,19 @@ module if_stage(
 
     always_comb begin
         priority case (cu_if_i.next_pc)
-            NEXT_PC_SEL_KEEP_PC:
+            NEXT_PC_SEL_KEEP_PC: begin
                 next_pc = pc;
+            end
             NEXT_PC_SEL_BP_OR_PC_4: begin 
                 if (branch_predict_is_branch && branch_predict_taken) 
                     next_pc = branch_predict_addr;
                 else
                     next_pc = pc + 64'h04;
             end
-            NEXT_PC_SEL_JUMP:
+            NEXT_PC_SEL_JUMP,
+            NEXT_PC_SEL_DEBUG: begin
                 next_pc = pc_jump_i;
+            end
             default: begin
                 `ifdef VERIFICATION
                     $error("next pc not defined error in if stage");

@@ -24,13 +24,28 @@ module top_drac(
     input addr_t                RESET_ADDRESS,
 
 //--------------------------------------------------------------------------------------------------------------------------
+// DEBUG RING SIGNALS INPUT
+// debug_halt_i is istall_test 
+//--------------------------------------------------------------------------------------------------------------------------    
+    input                       debug_halt_i,
+
+    input addr_t                IO_FETCH_PC_VALUE,
+    input                       IO_FETCH_PC_UPDATE,
+    
+    input                       IO_REG_READ,
+    input  [4:0]                IO_REG_ADDR,
+    input                       IO_REG_WRITE,
+    input bus64_t               IO_REG_WRITE_DATA,
+
+
+//--------------------------------------------------------------------------------------------------------------------------
 // CSR INPUT INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
     input bus64_t               CSR_RW_RDATA,
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
     input logic                 CSR_ERET,
-    input addr_t               CSR_EVEC,
+    input addr_t                CSR_EVEC,
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
 
@@ -71,7 +86,7 @@ module top_drac(
     output addr_t               CSR_PC,
 
 //--------------------------------------------------------------------------------------------------------------------------
-// I-CANCHE OUTPUT INTERFACE
+// I-CACHE OUTPUT INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
     output logic                ICACHE_INVALIDATE,
     output logic [11:0]         ICACHE_REQ_BITS_IDX,
@@ -81,6 +96,7 @@ module top_drac(
     output logic [27:0]         ICACHE_REQ_BITS_VPN,
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
+    output logic                DMEM_ORDERED,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  OUTPUT INTERFACE
@@ -104,7 +120,7 @@ module top_drac(
     output addr_t               IO_RR_PC,
     output addr_t               IO_EXE_PC,
     output addr_t               IO_WB_PC,
-
+// WB
     output logic                IO_WB_PC_VALID,
     output logic  [4:0]         IO_WB_ADDR,
     output logic                IO_WB_WE,
@@ -138,6 +154,42 @@ req_cpu_dcache_t req_datapath_dcache_interface;
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
 
+addr_t dcache_addr;
+
+// struct debug input/output
+debug_in_t debug_in;
+debug_out_t debug_out;
+
+assign debug_in.halt_valid=debug_halt_i;
+assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
+assign debug_in.change_pc_valid=IO_FETCH_PC_UPDATE;
+assign debug_in.reg_read_valid=IO_REG_READ;
+assign debug_in.reg_read_write_addr=IO_REG_ADDR;
+assign debug_in.reg_write_valid=IO_REG_WRITE;
+assign debug_in.reg_write_data=IO_REG_WRITE_DATA;
+
+    
+assign IO_FETCH_PC=debug_out.pc_fetch;
+assign IO_DEC_PC=debug_out.pc_dec;
+assign IO_RR_PC=debug_out.pc_rr;
+assign IO_EXE_PC=debug_out.pc_exe;
+assign IO_WB_PC=debug_out.pc_wb;
+assign IO_WB_PC_VALID=debug_out.wb_valid;
+assign IO_WB_ADDR=debug_out.wb_reg_addr;
+assign IO_WB_WE=debug_out.wb_reg_we;
+assign IO_REG_READ_DATA=debug_out.reg_read_data;
+
+
+// Register to save the last access to memory 
+always @(posedge CLK, negedge RST) begin
+    if(~RST)
+        dcache_addr <= 0;
+    else
+        dcache_addr <= DMEM_REQ_BITS_ADDR;
+end
+
+assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
+
 assign resp_csr_interface_datapath.csr_rw_rdata = CSR_RW_RDATA;
 // NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
 // that the CSR are not blocked. In the implementation, since we only have one 
@@ -166,17 +218,17 @@ datapath datapath_inst(
     .clk_i(CLK),
     .rstn_i(RST),
     .reset_addr_i(RESET_ADDRESS),
-
-    // INPUT DATAPATH
+    // Input datapath
     .soft_rstn_i(SOFT_RST),
     .resp_icache_cpu_i(resp_icache_interface_datapath), 
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
-
-    // OUTPUT DATAPATH
+    .debug_i(debug_in),
+    // Output datapath
     .req_cpu_dcache_o(req_datapath_dcache_interface),
     .req_cpu_icache_o(req_datapath_icache_interface),
-    .req_cpu_csr_o(req_datapath_csr_interface)
+    .req_cpu_csr_o(req_datapath_csr_interface),
+    .debug_o(debug_out)
 );
 
 icache_interface icache_interface_inst(

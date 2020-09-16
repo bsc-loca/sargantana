@@ -21,13 +21,15 @@ module datapath(
     input addr_t            reset_addr_i,
     input logic             soft_rstn_i,
     // icache/dcache/CSR interface input
-    input resp_icache_cpu_t  resp_icache_cpu_i,
-    input resp_dcache_cpu_t  resp_dcache_cpu_i,
-    input resp_csr_cpu_t     resp_csr_cpu_i,
+    input resp_icache_cpu_t resp_icache_cpu_i,
+    input resp_dcache_cpu_t resp_dcache_cpu_i,
+    input resp_csr_cpu_t    resp_csr_cpu_i,
+    input debug_in_t        debug_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
-    output req_cpu_csr_t    req_cpu_csr_o
+    output req_cpu_csr_t    req_cpu_csr_o,
+    output debug_out_t      debug_o
 );
 // RISCV TESTS
 
@@ -99,6 +101,12 @@ module datapath(
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
 
+    // Debug signals
+    bus64_t  reg_wr_data;
+    //logic    reg_wr_enable;
+    logic [REGFILE_WIDTH-1:0] reg_wr_addr;
+    logic [REGFILE_WIDTH-1:0] reg_rd1_addr;
+
     // This addresses are fixed from lowrisc
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
@@ -124,14 +132,20 @@ module datapath(
         .invalidate_icache_o(invalidate_icache_int),
         .invalidate_buffer_o(invalidate_buffer_int),
         .id_cu_i(id_cu_int),
-        .correct_branch_pred_i(correct_branch_pred)
+        .correct_branch_pred_i(correct_branch_pred),
+        .debug_halt_i(debug_i.halt_valid),
+        .debug_change_pc_i(debug_i.change_pc_valid),
+        .debug_rd_valid_i(debug_i.reg_write_valid)
     );
 
     // Combinational logic select the jump addr
     // from decode or wb 
     always_comb begin
         retry_fetch = 1'b0;
-        if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
+        // TODO (guillemlp) highest priority?
+        if (control_int.sel_addr_if == SEL_JUMP_DEBUG) begin
+            pc_jump_if_int = debug_i.change_pc_addr;
+        end else if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
             pc_jump_if_int = exe_to_wb_exe.result_pc;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = resp_csr_cpu_i.csr_evec;
@@ -189,14 +203,20 @@ module datapath(
         .output_o(stage_id_rr_q)
     );
 
+    assign reg_wr_data   = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_rr_int;
+    // assign reg_wr_enable = ;
+    assign reg_wr_addr   = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : exe_to_wb_wb.rd;
+    assign reg_rd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_id_rr_q.rs1;
+
     // RR Stage
     regfile rr_stage_inst(
         .clk_i(clk_i),
 
         .write_enable_i(cu_rr_int.write_enable),
-        .write_addr_i(exe_to_wb_wb.rd),
-        .write_data_i(data_wb_rr_int),
-        .read_addr1_i(stage_id_rr_q.rs1),
+        .write_addr_i(reg_wr_addr),
+        .write_data_i(reg_wr_data),
+        
+        .read_addr1_i(reg_rd1_addr),
         .read_addr2_i(stage_id_rr_q.rs2),
         .read_data1_o(stage_rr_exe_d.data_rs1),
         .read_data2_o(stage_rr_exe_d.data_rs2)
@@ -371,6 +391,7 @@ module datapath(
     assign pc_rr = (valid_rr) ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? exe_to_wb_wb.pc : 64'b0;
+    
     // Valid
     assign valid_if = stage_if_id_d.valid;
     assign valid_id = stage_id_rr_d.valid;
@@ -392,5 +413,19 @@ module datapath(
             .data(commit_data)
         );
     `endif
+
+    // Debug Ring signals Output
+    // PC
+    assign debug_o.pc_fetch = pc_if[39:0];
+    assign debug_o.pc_dec   = pc_id[39:0];
+    assign debug_o.pc_rr    = pc_rr[39:0];
+    assign debug_o.pc_exe   = pc_exe[39:0];
+    assign debug_o.pc_wb    = pc_wb[39:0];
+    // Write-back signals
+    assign debug_o.wb_valid = exe_to_wb_wb.valid;
+    assign debug_o.wb_reg_addr = exe_to_wb_wb.rd;
+    assign debug_o.wb_reg_we = cu_rr_int.write_enable;
+    // Register File read 
+    assign debug_o.reg_read_data = stage_rr_exe_d.data_rs1;
 
 endmodule
