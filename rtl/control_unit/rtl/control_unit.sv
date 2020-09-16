@@ -23,6 +23,9 @@ module control_unit(
     input wb_cu_t           wb_cu_i,
     input resp_csr_cpu_t    csr_cu_i,
     input logic             correct_branch_pred_i,
+    input logic             debug_halt_i,
+    input logic             debug_change_pc_i,
+    input logic             debug_rd_valid_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output pipeline_flush_t pipeline_flush_o,
@@ -45,11 +48,15 @@ module control_unit(
                             csr_cu_i.csr_exception ||
                             // jump to evec when ecall
                             (wb_cu_i.valid && wb_cu_i.ecall_taken);
+                            // we can add here the debug jump also
     end
 
     // logic enable write register file at commit
     always_comb begin
-        if (wb_cu_i.valid &&
+        // we don't allow regular reads/writes if not halted
+        if (debug_rd_valid_i && debug_halt_i) begin
+            cu_rr_o.write_enable = 1'b1;
+        end else if (wb_cu_i.valid &&
            !wb_cu_i.xcpt &&
            !csr_cu_i.csr_exception &&
             wb_cu_i.write_enable) 
@@ -62,7 +69,9 @@ module control_unit(
     // logic to select the next pc
     always_comb begin
         // branches or valid jal
-        if (jump_enable_int) begin
+        if (debug_change_pc_i && debug_halt_i) begin
+            cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
+        end else if (jump_enable_int) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (!valid_fetch || 
                      pipeline_ctrl_o.stall_if || 
@@ -82,8 +91,10 @@ module control_unit(
         if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret || csr_cu_i.csr_exception ||
                      (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
-        end else if ( exe_cu_i.valid && ~correct_branch_pred_i) begin
+        end else if (exe_cu_i.valid && ~correct_branch_pred_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
+        end else if (debug_change_pc_i && debug_halt_i) begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DEBUG;
         end else begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
@@ -163,6 +174,13 @@ module control_unit(
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end
+        else if (debug_halt_i) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end
     end
