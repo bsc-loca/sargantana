@@ -106,6 +106,8 @@ module datapath(
     //logic    reg_wr_enable;
     logic [REGFILE_WIDTH-1:0] reg_wr_addr;
     logic [REGFILE_WIDTH-1:0] reg_rd1_addr;
+    // stall IF
+    logic stall_if;
 
     // This addresses are fixed from lowrisc
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -135,7 +137,7 @@ module datapath(
         .correct_branch_pred_i(correct_branch_pred),
         .debug_halt_i(debug_i.halt_valid),
         .debug_change_pc_i(debug_i.change_pc_valid),
-        .debug_rd_valid_i(debug_i.reg_write_valid)
+        .debug_wr_valid_i(debug_i.reg_write_valid)
     );
 
     // Combinational logic select the jump addr
@@ -155,12 +157,13 @@ module datapath(
         end
     end
 
+    assign stall_if = control_int.stall_if || debug_i.halt_valid;
     // IF Stage
     if_stage if_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
-        .stall_i(control_int.stall_if),
+        .stall_i(stall_if),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
         .invalidate_buffer_i(invalidate_buffer_int),
@@ -386,18 +389,19 @@ module datapath(
 `endif
 
     // PC
-    assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
-    assign pc_id = (valid_id) ? stage_id_rr_d.pc : 64'b0;
-    assign pc_rr = (valid_rr) ? stage_rr_exe_d.instr.pc : 64'b0;
+    //assign pc_if = (valid_if) ? stage_if_id_d.pc_inst : 64'b0;
+    assign pc_if  = stage_if_id_d.pc_inst;
+    assign pc_id  = (valid_id)  ? stage_id_rr_d.pc : 64'b0;
+    assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
-    assign pc_wb = (valid_wb) ? exe_to_wb_wb.pc : 64'b0;
+    assign pc_wb  = (valid_wb)  ? exe_to_wb_wb.pc : 64'b0;
     
     // Valid
-    assign valid_if = stage_if_id_d.valid;
-    assign valid_id = stage_id_rr_d.valid;
-    assign valid_rr = stage_rr_exe_d.instr.valid;
+    assign valid_if  = stage_if_id_d.valid;
+    assign valid_id  = stage_id_rr_d.valid;
+    assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
-    assign valid_wb = exe_to_wb_wb.valid;
+    assign valid_wb  = exe_to_wb_wb.valid;
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS

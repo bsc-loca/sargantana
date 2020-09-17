@@ -340,6 +340,13 @@ module tb_top();
             // Change PC
             test_sim4(tmp);
             check_out(4,tmp);
+            // Change PC not stalling
+            test_sim5(tmp);
+            check_out(5,tmp);
+            // Change RF not stalling
+            test_sim6(tmp);
+            check_out(6,tmp);
+
         end
     endtask
 
@@ -348,7 +355,7 @@ module tb_top();
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim1");
+            $display("*** test_sim 1");
             tb_test_name = "test_1_check_PC";
             half_tick();
             if (debug_out.pc_fetch != 40'h0310) begin
@@ -401,7 +408,7 @@ module tb_top();
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim2");
+            $display("*** test_sim 2");
             tb_test_name = "test_2_check_WB";
             tick();
             if (debug_out.wb_valid != 1) begin
@@ -447,7 +454,7 @@ module tb_top();
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim3");
+            $display("*** test_sim 3");
             tb_test_name = "test_3_register_file";
             // Insert stall
             debug_in.halt_valid=1'b1;
@@ -484,7 +491,7 @@ module tb_top();
         output int tmp;
         begin
             tmp = 0;
-            $display("*** test_sim4");
+            $display("*** test_sim 4");
             tb_test_name = "test_4_change_PC";
             tick();
             // Change PC
@@ -502,6 +509,64 @@ module tb_top();
             end 
             debug_in.change_pc_valid=1'b0;
             half_tick();
+        end
+    endtask
+
+    task automatic test_sim5;
+        output int tmp;
+        begin
+            tmp = 0;
+            $display("*** test_sim 5");
+            tb_test_name = "test_5_change_PC_not_stalling";
+            tick();
+            debug_in.halt_valid=1'b0;
+            // Change PC
+            debug_in.change_pc_valid=1'b1;
+            debug_in.change_pc_addr=200;
+            tick();
+            half_tick();
+            if (debug_out.pc_fetch == 200) begin
+                `START_RED_PRINT
+                    $error("ILLEGAL PC CHANGE WHEN NOT HALTED, expecting %d, got %d", 
+                    1234,
+                    debug_out.pc_fetch);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end 
+            debug_in.change_pc_valid=1'b0;
+            half_tick();
+        end
+    endtask
+
+    task automatic test_sim6;
+        output int tmp;
+        begin
+            tmp = 0;
+            $display("*** test_sim 6");
+            tb_test_name = "test_6_change_RF_when_halt";
+            tick();
+            debug_in.halt_valid=1'b0;
+            // Write 1 to register 1 
+            debug_in.reg_write_valid=1'b1;
+            debug_in.reg_read_write_addr=10;
+            debug_in.reg_write_data=10;
+            tick();
+            half_tick(); // to see the write it is required to wait for half a cycle more..
+            debug_in.reg_write_valid=1'b0;
+            half_tick();
+            // Check old Write has been succesfull         
+            debug_in.reg_read_valid=1'b1;
+            tick();
+            debug_in.reg_read_valid=1'b0;
+            if (debug_out.reg_read_data == 10) begin
+                `START_RED_PRINT
+                    $error("Incorrect Read data  expecting %d, got %d", 
+                    0,
+                    debug_out.reg_read_data);
+                `END_COLOR_PRINT
+                tmp+=1;
+            end
+            tick();
         end
     endtask
 

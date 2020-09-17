@@ -25,7 +25,7 @@ module control_unit(
     input logic             correct_branch_pred_i,
     input logic             debug_halt_i,
     input logic             debug_change_pc_i,
-    input logic             debug_rd_valid_i,
+    input logic             debug_wr_valid_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output pipeline_flush_t pipeline_flush_o,
@@ -54,7 +54,7 @@ module control_unit(
     // logic enable write register file at commit
     always_comb begin
         // we don't allow regular reads/writes if not halted
-        if (debug_rd_valid_i && debug_halt_i) begin
+        if (debug_wr_valid_i && debug_halt_i) begin
             cu_rr_o.write_enable = 1'b1;
         end else if (wb_cu_i.valid &&
            !wb_cu_i.xcpt &&
@@ -176,12 +176,12 @@ module control_unit(
             pipeline_ctrl_o.stall_exe = 1'b1;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end
-        else if (debug_halt_i) begin
+        /*else if (debug_halt_i) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end
+        end*/
     end
 endmodule

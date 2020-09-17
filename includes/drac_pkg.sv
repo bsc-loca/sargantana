@@ -418,7 +418,7 @@ typedef struct packed {
     // Triggers a halt on the pipeline 
     logic           halt_valid;
     // New PC addr
-    addrPC_t          change_pc_addr;
+    addrPC_t        change_pc_addr;
     // change new pc valid
     logic           change_pc_valid;
     // Read from register file valid
