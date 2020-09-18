@@ -66,6 +66,7 @@ module control_unit(
             cu_rr_o.write_enable = 1'b0;
         end
     end
+
     // logic to select the next pc
     always_comb begin
         // branches or valid jal
@@ -85,7 +86,7 @@ module control_unit(
         end
     end
 
-    // logic select which pc to use in fetch
+    // logic to select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
         if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret || csr_cu_i.csr_exception ||
