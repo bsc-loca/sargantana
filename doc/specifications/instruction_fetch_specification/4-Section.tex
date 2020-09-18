@@ -19,15 +19,15 @@ stall\_i & 1 & control unit & Stalls the fetch (CU) \\
 \hline
 cu\_if\_i & struct cu\_if\_t & control unit & selects next pc (CU) \\
 \hline
-invalidate\_icache\_i  & 1 & control unit & Signal to Icache interface \\
+invalidate\_icache\_i  & 1 & control unit & Signal to Icache interface to invalidate the icache (e.g. fence) \\
 \hline
-invalidate\_buffer\_i  & 1 & control unit & Signal to Icache interface \\
+invalidate\_buffer\_i  & 1 & control unit & Signal to Icache interface to invalidate the instruction buffer (e.g. fence) \\
 \hline
 pc\_jump\_i  & 64  & datapath & next pc addr coming from commit, ecall, decode \\
 \hline
 resp\_icache\_cpu\_i  &  resp\_icache\_cpu\_t & icache\_interface & Response from icache interface (instruction) \\ 
 \hline
-exe\_if\_branch\_pred\_i & exe\_stage & exe\_if\_branch\_pred\_t & Signal from branch predictor in exe stage \\
+exe\_if\_branch\_pred\_i & exe\_stage & exe\_if\_branch\_pred\_t & Signal for branch predictor coming from exe stage (correct info of the branch) \\
 \hline
 retry\_fetch\_i & 1 & datapath & Retry fetch when there is an evec \\
 \hline
