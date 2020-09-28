@@ -80,7 +80,7 @@ parameter MEM_NOP   = 2'b00,
 assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dmem_xcpt_pf_ld_i;
 
 // The address is in the INPUT/OUTPUT space
-assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (dmem_req_addr_o <= 40'h80020053);
+assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (dmem_req_addr_o < 40'h80000000);
 
 //////////////////////////////////////////////////////////////////////
 // For clarity we have two kill signals. There are two possible cases
