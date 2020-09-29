@@ -98,7 +98,6 @@ module top_drac(
     output logic [27:0]         ICACHE_REQ_BITS_VPN,
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
-    output logic                DMEM_ORDERED,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  OUTPUT INTERFACE
@@ -130,20 +129,6 @@ module top_drac(
 
     output bus64_t              IO_REG_READ_DATA,
 
-//--------------------------------------------------------------------------------------------------------------------------
-// DEBUGGING MODULE SIGNALS
-//--------------------------------------------------------------------------------------------------------------------------
-    input logic                 IO_REG_READ,
-    input logic [4:0]           IO_REG_ADDR,  // Address used for both read and write operations    
-    input logic                 IO_REG_WRITE,
-    input logic [63:0]          IO_REG_WRITE_DATA,
-    input logic                 istall_test, 
-
-//--------------------------------------------------------------------------------------------------------------------------
-// FETCH  INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
-    input addr_t                IO_FETCH_PC_VALUE,
-    input logic                 IO_FETCH_PC_UPDATE,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // PMU INTERFACE
