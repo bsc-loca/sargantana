@@ -568,15 +568,16 @@ module decoder(
                                                 end
                                                 RS2_WFI: begin
                                                     decode_instr_o.instr_type = WFI;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 RS2_EBREAK_SFENCEVM: begin
                                                     // SFENCE here is old ISA
                                                     decode_instr_o.instr_type = FENCE;
                                                     decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
-                                                RS2_ECALL_ERET: begin
+                                                /*RS2_ECALL_ERET: begin
                                                     decode_instr_o.instr_type = ERET;
-                                                end
+                                                end*/
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end 

@@ -318,7 +318,7 @@ module datapath(
                 URET,
                 SRET,
                 MRET,
-                ERET,
+                WFI,
                 FENCE,
                 MRTS: begin
                     wb_csr_cmd_int = CSR_CMD_SYS;
