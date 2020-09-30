@@ -16,10 +16,10 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 // Length of the bimodal index register
-localparam _LENGTH_BIMODAL_INDEX_  = 10;
+localparam _LENGTH_BIMODAL_INDEX_  = 6;
 
 // Number of entries of the bimodal predictor, must be 2^(_LENGTH_BIMODAL_INDEX_)
-localparam _NUM_BIMODAL_ENTRIES_ = 1024;
+localparam _NUM_BIMODAL_ENTRIES_ = 2**_LENGTH_BIMODAL_INDEX_;
 
 // Number of bits used for encoding the state of predictor state machine
 localparam _BITS_BIMODAL_STATE_MACHINE_ = 2;
@@ -47,8 +47,6 @@ reg [_BITS_BIMODAL_STATE_MACHINE_-1:0] new_state_to_pht;
 reg [_BITS_BIMODAL_STATE_MACHINE_-1:0] readed_state_pht;
 reg [1:0] past_state_pht;
 
-`ifndef SRAM_MEMORIES
-
     // Creates an array of _NUM_BIMODAL_ENTRIES_ registers of _BITS_BIMODAL_STATE_MACHINE_ length
     // This array stores 1024 states machines for predicting the branches
 
@@ -69,7 +67,7 @@ reg [1:0] past_state_pht;
 
 
     // Read pattern history table at addres pc_fetch_i
-    always@(negedge clk_i)
+    always@(posedge clk_i)
     begin
         readed_state_pht <= pattern_history_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
         past_state_pht <= pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
@@ -99,32 +97,5 @@ reg [1:0] past_state_pht;
     // If state is 00 or 01 predict not taken, if 10 or 11 predict taken
     assign bimodal_predict_taken_o = readed_state_pht[1];
  
-
-
-    
-`else // If SRAM memories are used
-
-    // Creates a SRAM table with 1024 entries of 2 bits. It is NOT parametrical.
-    // The table has 2 read/write ports
-    // This table stores the states machines for predicting the branches
-
-    // Port A: Write; Port B: Read
-    TSDN65LPA1024X2M4S pattern_history_table (
-        .AA  (pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]) ,     // Address port A
-        .DA  (new_state_to_pht) ,    // Data write port A
-        .BWEBA  (2'b0) ,             //
-        .WEBA  (!write) ,            //
-        .CEBA  (1'b0) ,              // 
-        .CLKA  (clk_i) ,               // Clock port B
-        .AB  (aux_read_address) ,    // Address port B
-        .DB  (2'b0) ,                // Data port B
-        .BWEBB  (2'b11) ,            //
-        .WEBB  (1'b1) ,              //
-        .CEBB  (Stall) ,             //
-        .CLKB  (clk_i) ,             // Clock port B
-        .QB  (aux_read_data)         // Read port B
-    ); // QA output left unconnected
-
-`endif
 
 endmodule

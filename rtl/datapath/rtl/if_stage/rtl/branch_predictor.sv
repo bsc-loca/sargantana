@@ -17,7 +17,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
  
  // Number of entries of the is branch predictor.
-localparam NUM_IS_BRANCH_ENTRIES = 1024; 
+localparam NUM_IS_BRANCH_ENTRIES = 64; 
 
 // Tags stored in is_branch_table
 typedef logic [27:0] tag;
@@ -68,8 +68,7 @@ bimodal_predictor bimodal_predictor_inst(
 /////////// Instantiation of is branch predictor                                                   /////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-`ifndef SRAM_MEMORIES
-    logic [27 : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
+    logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
 
 
 `ifdef QUESTASIM     
@@ -84,45 +83,25 @@ bimodal_predictor bimodal_predictor_inst(
 `ifdef VERILATOR     
 	initial begin
         for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
-             is_branch_table[i] = 28'hFFFFFFF;
+             is_branch_table[i] = 32'hFFFFFFFF;
         end
 	end
 `endif
 
-    always_ff @(negedge clk_i) 
+    always_ff @(posedge clk_i) 
     begin
-        is_branch_tag <= is_branch_table[pc_fetch_i[11:2]];
+        is_branch_tag <= is_branch_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
     end
     
     always @(posedge clk_i) 
     begin
          if(is_branch_EX_i) begin
-            is_branch_table[pc_execution_i[11:2]] <= pc_execution_i[39:12];
+            is_branch_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= pc_execution_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1];
         end
     end
 
 
-`else  // If SRAM memories are used
-
-    TSDN65LPA1024X28M4S BIPCArray (
-        .AA  (write_address) ,
-        .DA  (aux_write_data) ,
-        .BWEBA  (28'b0) ,
-        .WEBA  (!write) ,
-        .CEBA  (1'b0) ,
-        .CLKA  (clk) ,
-        .AB  (aux_read_address) ,
-        .DB  (28'b0) ,
-        .BWEBB  ({28{1'b1}}) ,
-        .WEBB  (1'b1) ,
-        .CEBB  (Stall) ,
-        .CLKB  (clk) ,
-        .QB  (aux_read_data)
-    ); // QA output left unconnected
-
-`endif
-
-assign is_branch_prediction = (is_branch_tag == pc_fetch_i[39:12]);
+assign is_branch_prediction = (is_branch_tag == pc_fetch_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1]);
 
 
 // MUX that decides wheter the predicted address comes from Bimodal

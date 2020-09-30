@@ -55,7 +55,7 @@ typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
 
 // Most significative bit from address used to index
-parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
+parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 7;
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
