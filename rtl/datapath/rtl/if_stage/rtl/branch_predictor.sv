@@ -21,8 +21,8 @@ import riscv_pkg::*;
 localparam NUM_IS_BRANCH_ENTRIES = 64; 
 
 // Tags stored in is_branch_table
-typedef logic [27:0] tag;
-typedef reg   [27:0] tag_reg;
+typedef logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
+typedef reg   [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
 
  
 /* Top view of the branch predictor module
