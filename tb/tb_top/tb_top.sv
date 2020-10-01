@@ -35,7 +35,7 @@ module tb_top();
     parameter VERBOSE         = 1;
     parameter CLK_PERIOD      = 2;
     parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
-    parameter N2000_CLK_PERIOD = CLK_PERIOD*2000;
+    parameter N4000_CLK_PERIOD = CLK_PERIOD*4000;
 
 //-----------------------------
 // Signals
@@ -86,12 +86,12 @@ module tb_top();
     assign tb_icache_rdata_i = tb_line_o;
     assign tb_icache_rvaddr_i = {tb_icache_vpn_i,tb_icache_idx_o};
 
-    assign tb_csr_rw_rdata = (tb_csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign tb_csr_rw_rdata = (tb_csr_rw_addr == 12'h342) ? 64'h0B : 64'h0;
     assign tb_csr_replay = 1'b0;
     assign tb_csr_stall = 1'b0;
     assign tb_csr_exception_i = 1'b0;
     assign tb_csr_eret = 1'b0;
-    assign tb_csr_evec = 40'h0;
+    assign tb_csr_evec = 40'h04;
     assign tb_csr_interrupt = 1'b0;
     assign tb_csr_interrupt_cause = 64'b0;
 
@@ -103,7 +103,8 @@ module tb_top();
         .CLK(tb_clk_i),
         .RST(tb_rstn_i),
         .SOFT_RST(1'b1),
-        .RESET_ADDRESS(40'h200),
+        .RESET_ADDRESS(40'h000),
+        .debug_halt_i(1'b0),
 
         .CSR_RW_RDATA(tb_csr_rw_rdata),
         .CSR_CSR_STALL(tb_csr_stall),
@@ -157,6 +158,13 @@ module tb_top();
         .DMEM_REQ_BITS_TAG(),
         .DMEM_REQ_INVALIDATE_LR(),
         .DMEM_REQ_BITS_KILL(),
+        .IO_FETCH_PC_VALUE(),
+        .IO_FETCH_PC_UPDATE(),
+        .IO_REG_READ(),
+        .IO_REG_ADDR(),
+        .IO_REG_WRITE(),
+        .IO_REG_WRITE_DATA(),
+        .IO_REG_READ_DATA(),
         .IO_FETCH_PC(),
         .IO_DEC_PC(),
         .IO_RR_PC(),
@@ -166,7 +174,6 @@ module tb_top();
         .IO_WB_ADDR(),
         .IO_WB_WE(),
         .IO_WB_BITS_ADDR(),
-        .IO_REG_READ_DATA(),
         .io_core_pmu_branch_miss(),
         .io_core_pmu_EXE_STORE(),
         .io_core_pmu_EXE_LOAD(),
@@ -214,6 +221,7 @@ module tb_top();
         begin
             //$display("*** Toggle reset.");
             tb_rstn_i <= 1'b0; 
+            #CLK_PERIOD;
             #CLK_PERIOD;
             tb_rstn_i <= 1'b1;
             #CLK_PERIOD;
@@ -283,8 +291,8 @@ module tb_top();
         begin
             tmp = 0;
             //$display("*** test_sim1");
-            #N2000_CLK_PERIOD;
-            if (top_drac_inst.datapath_inst.rr_stage_inst.registers[28] == 1) begin
+            #N4000_CLK_PERIOD;
+            if (top_drac_inst.datapath_inst.rr_stage_inst.registers[3] == 1) begin
                 //FAIL
                 tmp = 0;
             end else begin
