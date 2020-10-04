@@ -13,6 +13,7 @@
 */
 
 import drac_pkg::*;
+import drac_icache_pkg::*;
 
 module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
@@ -53,14 +54,27 @@ module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
-    input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
-    input addr_t                ICACHE_RESP_BITS_VADDR,
-    input logic                 ICACHE_RESP_VALID,
-    input logic                 ICACHE_REQ_READY,
-    input logic                 PTWINVALIDATE,
-    input logic                 TLB_RESP_MISS,
-    input logic                 TLB_RESP_XCPT_IF,
-    input logic                 iptw_resp_valid_i,
+    //input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
+    //input addr_t                ICACHE_RESP_BITS_VADDR,
+    //input logic                 ICACHE_RESP_VALID,
+    //input logic                 ICACHE_REQ_READY,
+    //input logic                 PTWINVALIDATE,
+    //input logic                 TLB_RESP_MISS,
+    //input logic                 TLB_RESP_XCPT_IF,
+    //input logic                 iptw_resp_valid_i,
+
+    input logic                 PTWINVALIDATE     ,
+    input logic                 TLB_RESP_MISS     ,
+    input logic                 TLB_RESP_XCPT_IF  ,
+    input logic  [19:0]         itlb_resp_ppn_i   ,   
+    input logic                 iptw_resp_valid_i ,
+    //==============================================================
+    
+    //- From L2
+    input  logic         io_mem_grant_valid                 ,
+    input  logic [127:0] io_mem_grant_bits_data             ,
+    input  logic   [1:0] io_mem_grant_bits_addr_beat        ,
+    
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
@@ -90,14 +104,25 @@ module top_drac(
 //--------------------------------------------------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
 //--------------------------------------------------------------------------------------------------------------------------
-    output logic                ICACHE_INVALIDATE,
-    output logic [11:0]         ICACHE_REQ_BITS_IDX,
-    output logic                ICACHE_REQ_BITS_KILL,
-    output logic                ICACHE_REQ_VALID,
-    output logic                ICACHE_RESP_READY,
-    output logic [27:0]         ICACHE_REQ_BITS_VPN,
+    //output logic                ICACHE_INVALIDATE,
+    //output logic [11:0]         ICACHE_REQ_BITS_IDX,
+    //output logic                ICACHE_REQ_BITS_KILL,
+    //output logic                ICACHE_REQ_VALID,
+    //output logic                ICACHE_RESP_READY,
+    //output logic [27:0]         ICACHE_REQ_BITS_VPN,
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
+
+    //- To L2
+    output logic         io_mem_acquire_valid               ,
+    output logic  [25:0] io_mem_acquire_bits_addr_block     ,
+    output logic         io_mem_acquire_bits_client_xact_id ,
+    output logic   [1:0] io_mem_acquire_bits_addr_beat      ,
+    output logic [127:0] io_mem_acquire_bits_data           ,
+    output logic         io_mem_acquire_bits_is_builtin_type,
+    output logic   [2:0] io_mem_acquire_bits_a_type         ,
+    output logic  [16:0] io_mem_acquire_bits_union          ,
+    output logic         io_mem_grant_ready                 ,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // D-CACHE  OUTPUT INTERFACE
@@ -162,6 +187,15 @@ addr_t dcache_addr;
 debug_in_t debug_in;
 debug_out_t debug_out;
 
+//iCache
+iresp_o_t      icache_resp  ;
+ireq_i_t       lagarto_ireq ;
+tresp_i_t      itlb_tresp   ;
+treq_o_t       itlb_treq    ;
+ifill_resp_i_t ifill_resp   ;
+ifill_req_o_t  ifill_req    ;
+logic          iflush       ;
+
 assign debug_in.halt_valid=debug_halt_i;
 assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
 assign debug_in.change_pc_valid=IO_FETCH_PC_UPDATE;
@@ -216,6 +250,36 @@ assign CSR_RETIRE       = req_datapath_csr_interface.csr_retire;
 assign CSR_CAUSE        = req_datapath_csr_interface.csr_xcpt_cause;
 assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
 
+
+//L2 Network conection - response
+assign ifill_resp.data  = io_mem_grant_bits_data             ;  
+assign ifill_resp.valid = io_mem_grant_valid                 ;
+assign ifill_resp.beat  = io_mem_grant_bits_addr_beat        ;
+assign ifill_resp.valid = io_mem_grant_valid                 ;
+assign ifill_resp.ack   = io_mem_grant_bits_addr_beat[0] &
+                          io_mem_grant_bits_addr_beat[1] ;
+
+//L2 Network conection - request
+assign io_mem_acquire_valid                = ifill_req.valid        ;
+assign io_mem_acquire_bits_addr_block      = ifill_req.paddr        ;
+assign io_mem_acquire_bits_client_xact_id  =   1'b0                 ;
+assign io_mem_acquire_bits_addr_beat       =   2'b0                 ;
+assign io_mem_acquire_bits_data            = 127'b0                 ;
+assign io_mem_acquire_bits_is_builtin_type =   1'b1                 ;
+assign io_mem_acquire_bits_a_type          =   3'b001               ;
+assign io_mem_acquire_bits_union           =  17'b00000000111000001 ;
+assign io_mem_grant_ready                  =   1'b1                 ;
+
+//TLB conection
+assign itlb_tresp.miss   = TLB_RESP_MISS     ;
+assign itlb_tresp.ptw_v  = iptw_resp_valid_i ;
+assign itlb_tresp.ppn    = itlb_resp_ppn_i   ;
+assign itlb_tresp.xcpt   = TLB_RESP_XCPT_IF  ;
+assign TLB_REQ_BITS_VPN  = itlb_treq.vpn     ;
+assign TLB_REQ_VALID     = itlb_treq.valid   ;
+
+
+
 datapath datapath_inst(
     .clk_i(CLK),
     .rstn_i(RST),
@@ -237,31 +301,53 @@ icache_interface icache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
 
-    // Inputs ICache
-    .icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK),
-    .icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
-    .icache_resp_valid_i(ICACHE_RESP_VALID),
-    .icache_req_ready_i(ICACHE_REQ_READY), 
-    .iptw_resp_valid_i(iptw_resp_valid_i),
-    .ptw_invalidate_i(PTWINVALIDATE),
-    .tlb_resp_miss_i(TLB_RESP_MISS),
-    .tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),
+    //// Inputs ICache
+    //.icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK),
+    //.icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
+    //.icache_resp_valid_i(ICACHE_RESP_VALID),
+    //.icache_req_ready_i(ICACHE_REQ_READY), 
+    //.iptw_resp_valid_i(iptw_resp_valid_i),
+    //.ptw_invalidate_i(PTWINVALIDATE),
+    //.tlb_resp_miss_i(TLB_RESP_MISS),
+    //.tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),
+    //            
+    //// Fetch stage interface - Request packet from fetch_stage
+    //.req_fetch_icache_i(req_datapath_icache_interface),
+    //                    
+    //// Outputs ICache
+    //.icache_invalidate_o(ICACHE_INVALIDATE), 
+    //.icache_req_bits_idx_o(ICACHE_REQ_BITS_IDX), 
+    //.icache_req_kill_o(ICACHE_REQ_BITS_KILL), 
+    //.icache_req_valid_o(ICACHE_REQ_VALID),
+    //.icache_resp_ready_o(ICACHE_RESP_READY),
+    //.icache_req_bits_vpn_o(ICACHE_REQ_BITS_VPN), 
+    //.tlb_req_bits_vpn_o(TLB_REQ_BITS_VPN), 
+    //.tlb_req_valid_o(TLB_REQ_VALID),
+    //                    
+    //// Fetch stage interface - Response packet icache to fetch
+    //.resp_icache_fetch_o(resp_icache_interface_datapath)
 
+    // Inputs ICache
+    .icache_resp_datablock_i    ( icache_resp.data  ),
+    .icache_resp_vaddr_i        ( icache_resp.vaddr ), 
+    .icache_resp_valid_i        ( icache_resp.valid ),
+    .icache_req_ready_i         ( icache_resp.ready ), 
+    .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ), 
+    
     // Fetch stage interface - Request packet from fetch_stage
     .req_fetch_icache_i(req_datapath_icache_interface),
 
     // Outputs ICache
-    .icache_invalidate_o(ICACHE_INVALIDATE), 
-    .icache_req_bits_idx_o(ICACHE_REQ_BITS_IDX), 
-    .icache_req_kill_o(ICACHE_REQ_BITS_KILL), 
-    .icache_req_valid_o(ICACHE_REQ_VALID),
-    .icache_resp_ready_o(ICACHE_RESP_READY),
-    .icache_req_bits_vpn_o(ICACHE_REQ_BITS_VPN), 
-    .tlb_req_bits_vpn_o(TLB_REQ_BITS_VPN), 
-    .tlb_req_valid_o(TLB_REQ_VALID),
-
+    .icache_invalidate_o    ( iflush             ), 
+    .icache_req_bits_idx_o  ( lagarto_ireq.idx   ), 
+    .icache_req_kill_o      ( lagarto_ireq.kill  ), 
+    .icache_req_valid_o     ( lagarto_ireq.valid ),
+    .icache_req_bits_vpn_o  ( lagarto_ireq.vpn   ), 
+    
     // Fetch stage interface - Response packet icache to fetch
     .resp_icache_fetch_o(resp_icache_interface_datapath)
+    //PMU
+    //.buffer_miss_o (buffer_miss )
 );
 
 dcache_interface dcache_interface_inst(
@@ -294,5 +380,23 @@ dcache_interface dcache_interface_inst(
     // DCACHE Answer to cpu
     .resp_dcache_cpu_o(resp_dcache_interface_datapath) 
 );
+
+top_icache icache (
+    .clk_i              ( CLK           ) ,
+    .rstn_i             ( RST           ) ,
+    .flush_i            ( iflush        ) , 
+    .lagarto_ireq_i     ( lagarto_ireq  ) , //- From Lagarto.
+    .icache_resp_o      ( icache_resp   ) , //- To Lagarto.
+    .mmu_tresp_i        ( itlb_tresp    ) , //- From MMU.
+    .icache_treq_o      ( itlb_treq     ) , //- To MMU.
+    .ifill_resp_i       ( ifill_resp    ) , //- From upper levels.
+    .icache_ifill_req_o ( ifill_req     )   //- To upper levels. 
+);
+
+
+
+
+
+
 
 endmodule

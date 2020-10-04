@@ -23,26 +23,22 @@ module icache_interface(
     input req_cpu_icache_t   req_fetch_icache_i,
 
     // Request input signals from ICache
-    input icache_line_t      icache_resp_datablock_i, // ICACHE_RESP_BITS_DATABLOCK
-    input addr_t             icache_resp_vaddr_i, // ICACHE_RESP_BITS_VADDR
-    input logic              icache_resp_valid_i, // ICACHE_RESP_VALID,
-    input logic              icache_req_ready_i, // ICACHE_REQ_READY,
-    input logic              iptw_resp_valid_i,
-    input logic              ptw_invalidate_i, // PTWINVALIDATE,
-    input logic              tlb_resp_miss_i, // TLB_RESP_MISS,
-    input logic              tlb_resp_xcp_if_i, // TLB_RESP_XCPT_IF,
-    // Request output signals to Icache
-    output logic             icache_invalidate_o, // ICACHE_INVALIDATE
-    output icache_idx_t      icache_req_bits_idx_o, // ICACHE_REQ_BITS_IDX,
-    output logic             icache_req_kill_o, // ICACHE_REQ_BITS_KILL,
-    output reg               icache_req_valid_o, // ICACHE_REQ_VALID,
-    output reg               icache_resp_ready_o, // ICACHE_RESP_READY,
-    output icache_vpn_t      icache_req_bits_vpn_o, // ICACHE_REQ_BITS_VPN,
-    output icache_vpn_t      tlb_req_bits_vpn_o, // TLB_REQ_BITS_VPN,
-    output logic             tlb_req_valid_o, // TLB_REQ_VALID
+    input icache_line_t      icache_resp_datablock_i , // ICACHE_RESP_BITS_DATABLOCK
+    input addr_t             icache_resp_vaddr_i     , // ICACHE_RESP_BITS_VADDR
+    input logic              icache_resp_valid_i     , // ICACHE_RESP_VALID,
+    input logic              icache_req_ready_i      , // ICACHE_REQ_READY,
+    input logic              tlb_resp_xcp_if_i       , // TLB_RESP_XCPT_IF,
+    // Request output signals to Icache                      
+    output logic             icache_invalidate_o     , // ICACHE_INVALIDATE
+    output icache_idx_t      icache_req_bits_idx_o   , // ICACHE_REQ_BITS_IDX,
+    output logic             icache_req_kill_o       , // ICACHE_REQ_BITS_KILL,
+    output reg               icache_req_valid_o      , // ICACHE_REQ_VALID,
+    output icache_vpn_t      icache_req_bits_vpn_o   , // ICACHE_REQ_BITS_VPN,
     
     // Fetch stage interface - Request packet icache to fetch
     output resp_icache_cpu_t  resp_icache_fetch_o
+
+    
 );
 
 icache_line_reg_t icache_line_reg_q, icache_line_reg_d;
@@ -56,7 +52,6 @@ logic buffer_diff_int;
 // wire that says if we need to access icache
 logic icache_access_needed_int;
 
-
 //Internal wire to say if there is a buffer miss
 logic buffer_miss_int;
 
@@ -67,6 +62,12 @@ icache_state_t state_int, next_state_int;
 // to the icache
 logic do_request_int;
 
+logic new_addr_req ; //
+logic is_same_addr ; //
+logic a_valid_resp ; //
+logic to_NoReqi    ; //
+logic kill         ;
+
 // Sequential procedure to update state
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
@@ -76,185 +77,89 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end
 end
 
-// Combinational logic to update next_state_int
 
-// Always accept responses from icache
-assign icache_resp_ready_o = 1'b1;
+// Icache_interface can do request to icache
+assign do_request_int = icache_access_needed_int                & 
+                        ~req_fetch_icache_i.invalidate_buffer   & 
+                        icache_req_ready_i                      ;
 
-// Icache_interface can do request to icache/tlb
-assign do_request_int = icache_access_needed_int & (~req_fetch_icache_i.invalidate_buffer) & icache_req_ready_i & !iptw_resp_valid_i;
+assign new_addr_req = ( old_pc_req_q[ADDR_SIZE-1:4] != 
+                            req_fetch_icache_i.vaddr[ADDR_SIZE-1:4] );
+
+assign is_same_addr = (icache_resp_vaddr_i[ADDR_SIZE-1:4] == 
+                              req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
+                                          
+assign a_valid_resp = icache_resp_valid_i & is_same_addr ;
+
+
+assign to_NoReq = new_addr_req | 
+                  a_valid_resp | 
+                  req_fetch_icache_i.inval_fetch |
+                  req_fetch_icache_i.invalidate_icache ;
+
+assign icache_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : 
+                                                  old_pc_req_q[39:12]             ;
+assign icache_req_bits_idx_o = (do_request_int) ? req_fetch_icache_i.vaddr[11:0]  :
+                                                  old_pc_req_q[11:0]              ;
+
+
+assign icache_req_kill_o = req_fetch_icache_i.inval_fetch | kill ;
 
 
 always_comb begin
     case (state_int)
-        TLBMiss: begin
-            next_state_int = (iptw_resp_valid_i) ? (NoReq) :
-                             TLBMiss;
-            icache_req_valid_o = 1'b0;
-            resp_icache_fetch_o.valid = 1'b0;
-
-            tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-            icache_req_bits_vpn_o = old_pc_req_q[39:12];
-            icache_req_bits_idx_o = old_pc_req_q[11:0];
-        end
-        NoReq: begin
+        NoReq: begin //01
             // If req from fetch valid change state_int to REQ VALID
-            next_state_int = (do_request_int && !tlb_resp_xcp_if_i) ? ReqValid : NoReq;
+            next_state_int     = (do_request_int && !tlb_resp_xcp_if_i) ? ReqValid : 
+                                                                          NoReq    ;
             icache_req_valid_o = do_request_int;
-            resp_icache_fetch_o.valid = !buffer_miss_int  | (tlb_resp_xcp_if_i && do_request_int);
-            
-            tlb_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
-            icache_req_bits_vpn_o = (do_request_int) ? req_fetch_icache_i.vaddr[39:12] : old_pc_req_q[39:12];
-            icache_req_bits_idx_o = (do_request_int) ? req_fetch_icache_i.vaddr[11:0] : old_pc_req_q[11:0];
+            resp_icache_fetch_o.valid =  ~buffer_miss_int  | 
+                                        (tlb_resp_xcp_if_i & do_request_int);
+            kill = 1'b0;
         end
-        ReqValid: begin
-            if(tlb_resp_miss_i) begin
-                next_state_int = TLBMiss;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end 
-            else if (req_fetch_icache_i.invalidate_buffer) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = !buffer_miss_int;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end 
-            else if (icache_resp_valid_i & (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b1;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else if (~icache_req_ready_i) begin
-                next_state_int = Replay;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else begin
-                next_state_int = ReqValid;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-        end
-        Replay:begin
-            if (tlb_resp_miss_i) begin
-                next_state_int = TLBMiss;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else if (req_fetch_icache_i.invalidate_buffer) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else if (old_pc_req_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = !buffer_miss_int;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end 
-            else if (icache_req_ready_i) begin
-                next_state_int = NoReq;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
-            else begin
-                next_state_int = Replay;
-                icache_req_valid_o = 1'b0;
-                resp_icache_fetch_o.valid = 1'b0;
-
-                tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_vpn_o = old_pc_req_q[39:12];
-                icache_req_bits_idx_o = old_pc_req_q[11:0];
-            end
+        ReqValid: begin //10
+            next_state_int        = (to_NoReq) ? NoReq : ReqValid;
+            icache_req_valid_o    = 1'b0;
+            resp_icache_fetch_o.valid = ~buffer_miss_int | a_valid_resp;
+            kill                  = new_addr_req;
         end
         default: begin
             next_state_int =  NoReq;
             icache_req_valid_o = 1'b0;
             resp_icache_fetch_o.valid = 1'b0;
-
-            tlb_req_bits_vpn_o = old_pc_req_q[39:12];
-            icache_req_bits_vpn_o = old_pc_req_q[39:12];
-            icache_req_bits_idx_o = old_pc_req_q[11:0];
+            kill = 1'b0;
         end
     endcase;
 end
+
 // We need and access when:
 //    - there is a new request that is valid and
 //      there is a miss buffer
-assign icache_access_needed_int =   req_fetch_icache_i.valid & buffer_miss_int;
+assign icache_access_needed_int = req_fetch_icache_i.valid & buffer_miss_int;
+
 // Icache output connections
-// when we want to send invalidation of request
+// when we want to send invalidation of request?
 assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 
-assign icache_req_kill_o = tlb_resp_miss_i | ptw_invalidate_i | tlb_resp_xcp_if_i;
+assign tlb_req_valid_o = icache_req_valid_o;
 
-assign tlb_req_valid_o = icache_req_valid_o;// & !req_fetch_icache_i.invalidate_icache;
-
-//assign resp_icache_fetch_o.instr_addr_misaligned = misaligned_fetch_ex_int;
-//assign resp_icache_fetch_o.instr_access_fault = |;
-assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i & buffer_miss_int;
+assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i & buffer_miss_int;
+assign resp_icache_fetch_o.instr_page_fault = 1'b0;
 
 // sequential logic cacheline register buffer
-always_ff @(posedge clk_i, negedge rstn_i) begin //, posedge icache_resp_valid_i
+always_ff @(posedge clk_i, negedge rstn_i) begin 
     if(!rstn_i) begin
         icache_line_reg_q <= 128'b0;
         valid_buffer_q <= 1'b0;
-    end else begin // if (icache_resp_valid_i) begin
+    end else begin 
         icache_line_reg_q <= icache_line_int;
         valid_buffer_q <= valid_buffer_d;
     end
 end
 
 always_comb begin
-    //icache_line_req_d = (icache_line_int) icache_line_reg_q | icache_resp_valid_i;
-    //valid_buffer_d = valid_buffer_q | (icache_resp_valid_i && state_int==RespReady);
     valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) & 
-                    !(req_fetch_icache_i.invalidate_buffer) &
-                    !(ptw_invalidate_i) &
-                    !tlb_resp_miss_i;
+                    ~req_fetch_icache_i.invalidate_buffer   ;
 end
 
 // Manage the pc_int_register
@@ -269,22 +174,25 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
 end
 
 // old pc is the pc of the last cycle
-assign old_pc_req_d = do_request_int && (state_int == NoReq) ? req_fetch_icache_i.vaddr : old_pc_req_q;
+assign old_pc_req_d = do_request_int && (state_int == NoReq) ? 
+                                            req_fetch_icache_i.vaddr : 
+                                            old_pc_req_q             ;   
 
 // Multiplexor to select the correct cacheline
 assign icache_line_int = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
-                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]))  
+     (icache_resp_vaddr_i[ADDR_SIZE-1:4] ==  req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]))  
                     ? icache_resp_datablock_i : icache_line_reg_q;
 
 // It is a miss on the datablock buffered
 // We check for all the address if there is the need to access the TLB
 // don't speculate
-assign pc_buffer_d = (icache_resp_valid_i & !tlb_resp_xcp_if_i & !tlb_resp_miss_i & 
-                    (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) 
+assign pc_buffer_d = (icache_resp_valid_i & !tlb_resp_xcp_if_i & 
+      (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4])) 
                     ? req_fetch_icache_i.vaddr : pc_buffer_q; 
 
 // whether the buffer addr is different than the pc req
-assign buffer_diff_int = valid_buffer_q & (pc_buffer_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
+assign buffer_diff_int = valid_buffer_q & 
+             (pc_buffer_q[ADDR_SIZE-1:4] != req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
 
 // whether we don't have a valid buffer
 //         or we have a different addr 

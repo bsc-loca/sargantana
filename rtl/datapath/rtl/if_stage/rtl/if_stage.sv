@@ -124,7 +124,7 @@ module if_stage(
     assign req_cpu_icache_o.vaddr = pc[39:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
-
+    assign req_cpu_icache_o.inval_fetch = /*inval_fetch_i |*/ retry_fetch_i;
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
