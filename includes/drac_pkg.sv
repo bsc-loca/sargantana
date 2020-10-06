@@ -106,7 +106,6 @@ typedef struct packed {
 typedef struct packed {
     logic   valid;               // Response valid
     inst_t  data;                // Word of 32 bits from Icache
-    logic   instr_access_fault;  // Upper 24 bits of PC are used. We have 40 bits of PC
     logic   instr_page_fault;    // Page Fault from TLB
 } resp_icache_cpu_t;
 

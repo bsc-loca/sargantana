@@ -143,8 +143,7 @@ assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 
 assign tlb_req_valid_o = icache_req_valid_o;
 
-assign resp_icache_fetch_o.instr_access_fault = tlb_resp_xcp_if_i & buffer_miss_int;
-assign resp_icache_fetch_o.instr_page_fault = 1'b0;
+assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i & buffer_miss_int;
 
 // sequential logic cacheline register buffer
 always_ff @(posedge clk_i, negedge rstn_i) begin 
