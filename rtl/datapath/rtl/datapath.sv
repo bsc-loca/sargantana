@@ -226,6 +226,8 @@ module datapath(
     );
 
     assign stage_rr_exe_d.instr = stage_id_rr_q;
+    assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
+    assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
 
     assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
 
@@ -244,8 +246,8 @@ module datapath(
         .rstn_i(rstn_i),
 
         .kill_i(flush_int.flush_exe),
-        .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
-        .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
+        .csr_interrupt_i(stage_rr_exe_q.csr_interrupt),
+        .csr_interrupt_cause_i(stage_rr_exe_q.csr_interrupt_cause),
 
         .from_rr_i(stage_rr_exe_q),
         .from_wb_i(wb_to_exe_exe),

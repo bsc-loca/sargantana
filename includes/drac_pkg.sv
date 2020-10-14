@@ -255,6 +255,11 @@ typedef struct packed {
     instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
     bus64_t data_rs2;                   // Data operand 2
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
 } rr_exe_instr_t;       //  Read Regfile to Execution stage
 
 typedef struct packed {

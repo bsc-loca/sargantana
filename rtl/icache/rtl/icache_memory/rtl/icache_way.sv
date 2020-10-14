@@ -41,17 +41,41 @@ module icache_way (
 //);
 //end
 //endgenerate
-
-set_ram sram(
-    .clk_i (clk_i ),
-    .rstn_i(rstn_i),
-    .req_i (req_i ),
-    .we_i  (we_i  ),
-    .addr_i(addr_i),
-    .data_i(data_i),  
-    .data_o(data_o) 
-);
-
+`ifndef SRAM_MEMORIES
+    set_ram sram(
+        .clk_i (clk_i ),
+        .rstn_i(rstn_i),
+        .req_i (req_i ),
+        .we_i  (we_i  ),
+        .addr_i(addr_i),
+        .data_i(data_i),  
+        .data_o(data_o) 
+    );
+`else
+    logic [127:0] RW0O_sram;
+    logic [127:0]  write_data;
+    logic write_enable;
+    
+    `ifdef INCISIVE_SIMULATION
+        assign #1 write_data = data_i;
+        assign #1 write_enable = ~we_i;
+    `else
+        assign write_data = data_i;
+        assign write_enable = ~we_i;
+    `endif
+    
+    TS1N65LPHSA256X128M4F L1InstArray (
+        .A  (addr_i) ,
+        .D  (write_data) ,
+        .BWEB  ({128{1'b0}}) ,
+        .WEB  (write_enable) ,
+        .CEB  (~req_i) ,
+        .CLK  (clk_i) ,
+        .Q  (RW0O_sram)
+    ); 
+    
+    assign data_o = RW0O_sram;
+`endif
 //logic  [WAY_WIDHT-1:0] data_aux;
 //logic [ICACHE_N_SET-1:0] control;
 //

@@ -47,18 +47,33 @@ idata_memory idata_memory(
 );
 
 //- Tags memory
-itag_memory itag_memory(
-    .clk_i      ( clk_i       ),
-    .rstn_i     ( rstn_i      ),
-    .req_i      ( tag_req_i   ),
-    .we_i       ( tag_we_i    ),
-    .vbit_i     ( valid_bit_i ),
-    .flush_i    ( flush_en_i  ),
-    .data_i     ( tag_i       ),
-    .addr_i     ( addr_i      ),
-    .tag_way_o  ( tag_way_o   ),
-    .vbit_o     ( valid_bit_o )
-);
+`ifndef SRAM_MEMORIES
+    itag_memory itag_memory(
+        .clk_i      ( clk_i       ),
+        .rstn_i     ( rstn_i      ),
+        .req_i      ( tag_req_i   ),
+        .we_i       ( tag_we_i    ),
+        .vbit_i     ( valid_bit_i ),
+        .flush_i    ( flush_en_i  ),
+        .data_i     ( tag_i       ),
+        .addr_i     ( addr_i      ),
+        .tag_way_o  ( tag_way_o   ),
+        .vbit_o     ( valid_bit_o )
+    );
+`else
+    itag_memory_sram64x80 itag_memory(
+        .clk_i      ( clk_i       ),
+        .rstn_i     ( rstn_i      ),
+        .req_i      ( tag_req_i   ),
+        .we_i       ( tag_we_i    ),
+        .vbit_i     ( valid_bit_i ),
+        .flush_i    ( flush_en_i  ),
+        .data_i     ( tag_i       ),
+        .addr_i     ( addr_i      ),
+        .tag_way_o  ( tag_way_o   ),
+        .vbit_o     ( valid_bit_o )
+    );
 
+`endif
 
 endmodule

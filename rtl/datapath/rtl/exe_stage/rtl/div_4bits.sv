@@ -24,23 +24,23 @@ module div_4bits (
 
     // Declarations
     /* verilator lint_off UNOPTFLAT */
-    bus64_t tmp_remanent[3:0];
+    bus64_t tmp_remanent[1:0];
     /* verilator lint_on UNOPTFLAT */
-    bus64_t tmp_remanent_sub[3:0];
-    bus64_t tmp_dividend_quotient[3:0];
-    logic   quotient_bit[3:0];
+    bus64_t tmp_remanent_sub[1:0];
+    bus64_t tmp_dividend_quotient[1:0];
+    logic   quotient_bit[1:0];
 
     always_comb begin
-        tmp_remanent[3] = {remanent_i[62:0], dividend_quotient_i[63]};
-        tmp_dividend_quotient[3] = {dividend_quotient_i[62:0], quotient_bit[3]};
-        for(int i = 2; i >= 0; i--) begin
+        tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[63]};
+        tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+        for(int i = 0; i >= 0; i--) begin
             tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][63]};
             tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
         end
     end
 
     always_comb begin
-        for(int i = 3; i >= 0; i--) begin
+        for(int i = 1; i >= 0; i--) begin
             if (tmp_remanent[i] >= divisor_i) begin
                 tmp_remanent_sub[i] = tmp_remanent[i] - divisor_i;
                 quotient_bit[i] = 1'b1;
