@@ -61,6 +61,12 @@ bus64_t dmem_req_addr_64;
 
 logic [1:0] type_of_op;
 
+// registers of tlb exceptions to not propagate the stall signal
+logic dmem_xcpt_ma_st_reg;
+logic dmem_xcpt_ma_ld_reg; 
+logic dmem_xcpt_pf_st_reg;
+logic dmem_xcpt_pf_ld_reg;
+
 // Possible states of the control automata
 parameter ResetState  = 2'b00,
           Idle = 2'b01,
@@ -100,10 +106,19 @@ assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
 
 // UPDATE STATE
 always@(posedge clk_i, negedge rstn_i) begin
-    if(~rstn_i)
+    if(~rstn_i)begin
         state <= ResetState;
-    else
+        dmem_xcpt_ma_st_reg <= 1'b0;
+        dmem_xcpt_ma_ld_reg <= 1'b0; 
+        dmem_xcpt_pf_st_reg <= 1'b0;
+        dmem_xcpt_pf_ld_reg <= 1'b0;
+    end else begin
         state <= next_state;
+        dmem_xcpt_ma_st_reg <= dmem_xcpt_ma_st_i;
+        dmem_xcpt_ma_ld_reg <= dmem_xcpt_ma_ld_i; 
+        dmem_xcpt_pf_st_reg <= dmem_xcpt_pf_st_i;
+        dmem_xcpt_pf_ld_reg <= dmem_xcpt_pf_ld_i;
+    end
 end
 
 // MEALY OUTPUT and NEXT STATE
@@ -118,20 +133,20 @@ always_comb begin
         // IN IDLE STATE
         Idle: begin
             dmem_req_valid_o = !req_cpu_dcache_i.kill & req_cpu_dcache_i.valid & dmem_req_ready_i;
-            resp_dcache_cpu_o.lock = !req_cpu_dcache_i.kill & req_cpu_dcache_i.valid;
-            next_state = dmem_req_valid_o ?  MakeRequest : Idle;
+            resp_dcache_cpu_o.lock =  req_cpu_dcache_i.valid;
+            next_state = dmem_req_valid_o ?  MakeRequest : req_cpu_dcache_i.kill ? ResetState : Idle;
         end
         // IN MAKE REQUEST STATE
         MakeRequest: begin
-            if(dmem_resp_valid_i & dmem_req_ready_i) begin // case: io response uart
+            /*if(dmem_resp_valid_i & dmem_req_ready_i) begin // case: io response uart
                 dmem_req_valid_o = 1'b0;
                 resp_dcache_cpu_o.lock = 1'b0;
                 next_state = Idle;
-            end else begin
+            end else begin*/
                 dmem_req_valid_o = 1'b0;
-                resp_dcache_cpu_o.lock = !kill_mem_ope;
-                next_state = (!kill_mem_ope) ? WaitResponse : Idle;
-            end
+                resp_dcache_cpu_o.lock = 1'b1;
+                next_state = (!kill_mem_ope) ? WaitResponse : ResetState ;
+            //end
         end
         // IN WAIT RESPONSE STATE
         WaitResponse: begin
@@ -145,8 +160,8 @@ always_comb begin
                 resp_dcache_cpu_o.lock = 1'b1;
             end else begin
                 dmem_req_valid_o = 1'b0;
-                next_state = (kill_mem_ope | kill_io_resp) ? Idle : WaitResponse;
-                resp_dcache_cpu_o.lock = !(kill_mem_ope | kill_io_resp);
+                next_state = req_cpu_dcache_i.kill | mem_xcpt | kill_io_resp ? ResetState : WaitResponse;
+                resp_dcache_cpu_o.lock = 1'b1;
             end
         end
         default: begin
@@ -249,10 +264,10 @@ assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (type_of_op != MEM_STORE);
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;
 
 // Fill exceptions for exe stage
-assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_i;
-assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_i;
-assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_i;
-assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
+assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_reg;
+assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_reg;
+assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_reg;
+assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_reg;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
 
 endmodule

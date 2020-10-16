@@ -78,7 +78,8 @@ module control_unit(
                      pipeline_ctrl_o.stall_if || 
                      id_cu_i.stall_csr_fence  || 
                      rr_cu_i.stall_csr_fence  || 
-                     exe_cu_i.stall_csr_fence || 
+                     exe_cu_i.stall_csr_fence ||
+                     wb_cu_i.stall_csr_fence  || 
                      (wb_cu_i.valid && wb_cu_i.fence) ||
                      debug_halt_i)  begin
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
@@ -110,7 +111,8 @@ module control_unit(
     // when a fence, invalidate buffer and also when csr eret
     // when it is a csr it should be checked more?
     assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | 
-                                                    csr_cu_i.csr_eret));
+                                                    csr_cu_i.csr_eret|
+                                                    wb_cu_i.stall_csr_fence));
 
 
     // logic about flush the pipeline if branch
@@ -146,7 +148,8 @@ module control_unit(
             end
         end else if ((id_cu_i.stall_csr_fence | 
                      rr_cu_i.stall_csr_fence | 
-                     exe_cu_i.stall_csr_fence )  && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+                     exe_cu_i.stall_csr_fence |
+                     wb_cu_i.stall_csr_fence )  && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
@@ -176,6 +179,12 @@ module control_unit(
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end  else if ( wb_cu_i.valid && wb_cu_i.stall_csr_fence ) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end
         /*else if (debug_halt_i) begin
