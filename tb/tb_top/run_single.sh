@@ -1,5 +1,6 @@
 #$1
-VLOG_FLAGS="-svinputport=compat +define+SIMULATION"
+#VLOG_FLAGS="-svinputport=compat +define+SIMULATION"
+VLOG_FLAGS="-svinputport=compat +define+QSIM_SIMULATION"
 TEST=$1
 CYCLES=-all
 BASE_DIR="../.."
@@ -13,17 +14,20 @@ EXE_STAGE="${BASE_DIR}/rtl/datapath/rtl/exe_stage/rtl"
 DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
 DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
 ICACHE="${BASE_DIR}/rtl/interface_icache/rtl"
+I_CACHE="${BASE_DIR}/rtl/icache/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
 rm -rf lib_module
 
 vlib lib_module
 vmap work $PWD/lib_module
-vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $DRAC_FOLDER_RTL/register.sv\
+vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv \
+ $INCLUDES/drac_icache_pkg.sv $DRAC_FOLDER_RTL/register.sv\
  $IF_STAGE/if_stage.sv $IF_STAGE/bimodal_predictor.sv $IF_STAGE/branch_predictor.sv $ID_STAGE/decoder.sv $ID_STAGE/immediate.sv $RR_STAGE/regfile.sv \
  $EXE_STAGE/exe_stage.sv $EXE_STAGE/alu.sv  $EXE_STAGE/mul_unit.sv $EXE_STAGE/div_unit.sv $EXE_STAGE/div_4bits.sv\
  $EXE_STAGE/branch_unit.sv $DCACHE/dcache_interface.sv $CONTROL/control_unit.sv \
- $ICACHE/icache_interface.sv $DATAPATH/datapath.sv $TOP/top_drac.sv \
+ $ICACHE/icache_interface.sv $DATAPATH/datapath.sv \
+ $TOP/top_drac.sv \
  tb_top.sv perfect_memory_hex.sv perfect_memory_hex_write.sv colors.vh 
 
 vmake lib_module/ > Makefile_test
