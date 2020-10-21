@@ -19,50 +19,58 @@ module perfect_memory_hex #(
     parameter SIZE = 32*1024*128,
     parameter LINE_SIZE = 128,
     parameter ADDR_SIZE = 40,
-    parameter DELAY = 1,
+    parameter DELAY = 20,
     localparam HEX_LOAD_ADDR = 'h000
 
 ) (
     input logic                     clk_i,
     input logic                     rstn_i,
-    input logic  [ADDR_SIZE-1:0]    addr_i,
+    input logic  [25:0]             addr_i,
     input logic                     valid_i,
-    output logic [27:0]		        vpaddr_o,
     output logic [LINE_SIZE-1:0]    line_o,
     output logic                    ready_o,
-    output logic                    done_o
+    output logic                    valid_o,
+    output logic [1:0]              seq_num_o
 );
     localparam BASE = 128;
     logic [BASE-1:0] memory [SIZE/BASE];
-    logic [$clog2(DELAY):0] counter;
-    logic [$clog2(DELAY):0] next_counter;
+    logic [$clog2(DELAY)+1:0] counter;
+    logic [$clog2(DELAY)+1:0] next_counter;
 
-    logic  [ADDR_SIZE-1:0]    addr_int;
-    assign addr_int = addr_i[19:4];
+    logic  [25:0]    addr_int;
+    logic request_q;
 
     // counter stuff
     assign next_counter = (counter > 0) ? counter-1 : 0;
-    assign ready_o = (counter == 0) && (valid_i == 0);
+    assign seq_num_o = 2'b11 - counter[1:0];
 
     // counter procedure
     always_ff @(posedge clk_i, negedge rstn_i) begin : proc_counter
         if(~rstn_i) begin
-            counter <= 0;
-	    done_o  <= 1'b0;
-	    vpaddr_o <= 27'h0;
-        end else if (ready_o && valid_i) begin
-            counter <= DELAY;
-	    done_o  <= 1'b0;
-	    vpaddr_o <= 27'h0;
-        end else begin
+            counter <= 'h0;
+            request_q <= 1'b0;
+	        valid_o <= 1'b0;
+        end else if (valid_i && !request_q) begin
+            counter <= DELAY + 4;
+	        valid_o  <= 1'b0;
+	        request_q <= 1'b1;
+   	        addr_int <= addr_i;
+        end else if (request_q && counter > 0) begin
             counter <= next_counter;
-	        vpaddr_o <= addr_i[39:12]; 
-            done_o <= 1'b1;
-
+	        addr_int <= addr_i;
+   	        request_q <= 1'b1;
+	        if ((next_counter < 4) && (!valid_i)) begin
+	            valid_o <= 1'b1;
+	        end else begin
+	            valid_o <= 1'b0;
+	        end
+        end else begin
+        	valid_o  <= 1'b0;
+	        request_q <= 1'b0;
         end
      end 
 
-    assign line_o = memory[addr_int];
+    assign line_o = memory[{addr_int[14:0], 2'b11 - counter[1:0]}];
       
     // Here we could add a write in order to also check the saving of data
     always_ff @(posedge clk_i, negedge rstn_i) begin : proc_load_memory

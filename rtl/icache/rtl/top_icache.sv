@@ -13,7 +13,7 @@
  */
 
 import drac_icache_pkg::*;
-//`include "../includes/drac_config.v"
+
 
 module top_icache (
     input  logic          clk_i              ,
@@ -49,10 +49,10 @@ logic [ICACHE_N_WAY-1:0][TAG_WIDHT-1:0] way_tags     ;
 logic [ICACHE_N_WAY-1:0][WAY_WIDHT-1:0] cline_data_rd;
 
 
-icache_idx_t idx_d ;
-icache_idx_t idx_q ;
-icache_vpn_t vpn_d ;
-icache_vpn_t vpn_q ;
+drac_pkg::icache_idx_t idx_d ;
+drac_pkg::icache_idx_t idx_q ;
+drac_pkg::icache_vpn_t vpn_d ;
+drac_pkg::icache_vpn_t vpn_q ;
 
 logic flush_d           ;
 logic flush_q           ;

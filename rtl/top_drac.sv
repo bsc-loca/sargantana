@@ -55,13 +55,6 @@ module top_drac(
 // I-CANCHE INPUT INTERFACE
 //------------------------------------------------------------------------------------
     
-`ifdef QSIM_SIMULATION     
-    input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
-    input addr_t                ICACHE_RESP_BITS_VADDR,
-    input logic                 ICACHE_RESP_VALID,
-    input logic                 ICACHE_REQ_READY,    
-`endif
-
     input logic                 PTWINVALIDATE     ,
     input logic                 TLB_RESP_MISS     ,
     input logic                 TLB_RESP_XCPT_IF  ,
@@ -104,12 +97,6 @@ module top_drac(
 // I-CACHE OUTPUT INTERFACE
 //-----------------------------------------------------------------------------------
     
-`ifdef QSIM_SIMULATION     
-    output logic [11:0]         ICACHE_REQ_BITS_IDX,
-    output logic                ICACHE_REQ_VALID,
-    output logic [27:0]         ICACHE_REQ_BITS_VPN,
-`endif
-
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
 
@@ -253,7 +240,6 @@ assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
 
 //L2 Network conection - response
 assign ifill_resp.data  = io_mem_grant_bits_data             ;  
-//assign ifill_resp.valid = io_mem_grant_valid                 ;
 assign ifill_resp.beat  = io_mem_grant_bits_addr_beat        ;
 assign ifill_resp.valid = io_mem_grant_valid                 ;
 assign ifill_resp.ack   = io_mem_grant_bits_addr_beat[0] &
@@ -301,20 +287,6 @@ icache_interface icache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
 
-`ifdef QSIM_SIMULATION     
-    //// Inputs ICache
-    .icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK),
-    .icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
-    .icache_resp_valid_i(ICACHE_RESP_VALID),
-    .icache_req_ready_i(ICACHE_REQ_READY), 
-    .tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),
-    //// Outputs ICache
-    .icache_invalidate_o(  ), 
-    .icache_req_bits_idx_o(ICACHE_REQ_BITS_IDX), 
-    .icache_req_kill_o(  ), 
-    .icache_req_valid_o(ICACHE_REQ_VALID),
-    .icache_req_bits_vpn_o(ICACHE_REQ_BITS_VPN), 
-`else
     // Inputs ICache
     .icache_resp_datablock_i    ( icache_resp.data  ),
     .icache_resp_vaddr_i        ( icache_resp.vaddr ), 
@@ -328,7 +300,6 @@ icache_interface icache_interface_inst(
     .icache_req_kill_o      ( lagarto_ireq.kill  ), 
     .icache_req_valid_o     ( lagarto_ireq.valid ),
     .icache_req_bits_vpn_o  ( lagarto_ireq.vpn   ), 
-`endif
 
     // Fetch stage interface - Request packet from fetch_stage
     .req_fetch_icache_i(req_datapath_icache_interface),
@@ -371,7 +342,6 @@ dcache_interface dcache_interface_inst(
 );
 
 
-`ifndef QSIM_SIMULATION     
 top_icache icache (
     .clk_i              ( CLK           ) ,
     .rstn_i             ( RST           ) ,
@@ -383,7 +353,6 @@ top_icache icache (
     .ifill_resp_i       ( ifill_resp    ) , //- From upper levels.
     .icache_ifill_req_o ( ifill_req     )   //- To upper levels. 
 );
-`endif
 
 
 

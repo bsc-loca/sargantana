@@ -14,15 +14,16 @@
 
 import drac_icache_pkg::*;
 
+
 module icache_ff(
     input  logic                            clk_i            ,
     input  logic                            rstn_i           ,
     input  logic           [VADDR_SIZE-1:0] vaddr_d          ,
     output logic           [VADDR_SIZE-1:0] vaddr_q          ,
-    input   icache_idx_t                     idx_d            ,
-    output  icache_idx_t                     idx_q            ,
-    input   icache_vpn_t                     vpn_d            ,
-    output  icache_vpn_t                    vpn_q            ,
+    input  drac_pkg::icache_idx_t                     idx_d            ,
+    output drac_pkg::icache_idx_t                     idx_q            ,
+    input  drac_pkg::icache_vpn_t                     vpn_d            ,
+    output drac_pkg::icache_vpn_t                    vpn_q            ,
     //input  logic  [ICACHE_OFFSET_WIDTH-1:0] cline_offset_d   ,
     //output logic  [ICACHE_OFFSET_WIDTH-1:0] cline_offset_q   ,
     input  logic     [ICACHE_TAG_WIDTH-1:0] cline_tag_d      , 

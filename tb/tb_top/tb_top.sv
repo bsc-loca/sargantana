@@ -43,16 +43,6 @@ module tb_top();
     reg     tb_clk_i;
     reg     tb_rstn_i;
 
-    icache_line_t tb_icache_rdata_i;
-    addr_t        tb_icache_rvaddr_i;
-    logic         tb_icache_valid_i;
-    logic 	  tb_icache_done_i;
-    icache_vpn_t  tb_icache_vpn_i;
-
-    logic         tb_icache_valid_o;
-    icache_idx_t  tb_icache_idx_o;
-    icache_vpn_t  tb_icache_vpn_o;
-
     
     bus64_t     tb_csr_rw_rdata;
     logic       tb_csr_replay;
@@ -70,9 +60,8 @@ module tb_top();
     logic       tb_csr_retire;
     bus64_t     tb_csr_xcpt_cause;
     addr_t      tb_csr_pc; 
-    
 
-    logic [127:0] tb_line_o;
+
 
     bus64_t tb_dmem_resp_data_i;
     logic tb_dmem_resp_valid_i;
@@ -82,10 +71,16 @@ module tb_top();
     addr_t  tb_dmem_req_addr_o;
     logic [3:0] tb_dmem_op_type_o;
     bus64_t tb_dmem_req_data_o;
-
-    assign tb_icache_rdata_i = tb_line_o;
-    assign tb_icache_rvaddr_i = {tb_icache_vpn_i,tb_icache_idx_o};
-
+    
+    logic [27:0] l1_vpn_request;
+    logic l1_vpn_valid;
+    
+    logic l2_response_valid;
+    logic [25:0] l1_request_paddr;
+    logic [127:0] l2_response_data;
+    logic [1:0] l2_response_seqnum;
+    
+    
     assign tb_csr_rw_rdata = (tb_csr_rw_addr == 12'h342) ? 64'h0B : 64'h0;
     assign tb_csr_replay = 1'b0;
     assign tb_csr_stall = 1'b0;
@@ -114,19 +109,15 @@ module tb_top();
         .CSR_INTERRUPT(tb_csr_interrupt),
         .CSR_INTERRUPT_CAUSE(tb_csr_interrupt_cause),
 
-	    .ICACHE_RESP_BITS_DATABLOCK(tb_icache_rdata_i),
-        .ICACHE_RESP_BITS_VADDR(tb_icache_rvaddr_i),
-        .ICACHE_RESP_VALID(tb_icache_done_i),
-        .ICACHE_REQ_READY(tb_dmem_resp_valid_i),
         .PTWINVALIDATE(1'b0),
         .TLB_RESP_MISS(1'b0),
         .TLB_RESP_XCPT_IF(1'b0),
         .iptw_resp_valid_i(1'b0),
-        .itlb_resp_ppn_i(20'b0),
+        .itlb_resp_ppn_i(l1_vpn_request[19:0]),
 
-        .io_mem_grant_valid(1'b0),         
-        .io_mem_grant_bits_data(128'b0),     
-        .io_mem_grant_bits_addr_beat(2'b0),
+        .io_mem_grant_valid(l2_response_valid),         
+        .io_mem_grant_bits_data(l2_response_data),     
+        .io_mem_grant_bits_addr_beat(l2_response_seqnum),
 
         .DMEM_REQ_READY(tb_dmem_resp_valid_i),
         .DMEM_RESP_BITS_DATA_SUBW(tb_dmem_resp_data_i),
@@ -146,17 +137,11 @@ module tb_top();
         .CSR_CAUSE(tb_csr_xcpt_cause),
         .CSR_PC(tb_csr_pc),
 
-        //.ICACHE_INVALIDATE(),
-        .ICACHE_REQ_BITS_IDX(tb_icache_idx_o),
-        //.ICACHE_REQ_BITS_KILL(),
-        .ICACHE_REQ_VALID(tb_icache_valid_o),
-        //.ICACHE_RESP_READY(),
-        .ICACHE_REQ_BITS_VPN(tb_icache_vpn_o),
-        .TLB_REQ_BITS_VPN(),
-        .TLB_REQ_VALID(),
+        .TLB_REQ_BITS_VPN(l1_vpn_request),
+        .TLB_REQ_VALID(l1_vpn_valid),
 
-        .io_mem_acquire_valid(),               
-        .io_mem_acquire_bits_addr_block(),     
+        .io_mem_acquire_valid(l1_request_valid),               
+        .io_mem_acquire_bits_addr_block(l1_request_paddr),         
         .io_mem_acquire_bits_client_xact_id(), 
         .io_mem_acquire_bits_addr_beat(),      
         .io_mem_acquire_bits_data(),          
@@ -200,12 +185,11 @@ module tb_top();
     perfect_memory_hex perfect_memory_hex_inst (
         .clk_i(tb_clk_i),
         .rstn_i(tb_rstn_i),
-        .addr_i({tb_icache_vpn_o,tb_icache_idx_o}),
-        .valid_i(tb_icache_valid_o),
-        .line_o(tb_line_o),
-        .ready_o(tb_icache_valid_i),
-	    .done_o(tb_icache_done_i),
-	    .vpaddr_o(tb_icache_vpn_i)
+        .addr_i(l1_request_paddr),
+        .valid_i(l1_request_valid),
+        .valid_o(l2_response_valid),
+        .line_o(l2_response_data),
+	    .seq_num_o(l2_response_seqnum)
     );
 
     perfect_memory_hex_write perfect_memory_hex_write_inst (
@@ -252,12 +236,6 @@ module tb_top();
             //$display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            //tb_icache_fetch_i.valid<='{default:0};
-            //tb_icache_fetch_i.data<='{default:0};
-            //tb_icache_fetch_i.ex.valid<={default:0};
-	    //tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
-            //tb_icache_fetch_i.instr_access_fault<='{default:0};
-            //tb_icache_fetch_i.instr_page_fault<='{default:0};
             //tb_addr_i<='{default:0};
             //$display("Done");
             
