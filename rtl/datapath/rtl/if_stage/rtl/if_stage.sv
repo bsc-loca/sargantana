@@ -119,8 +119,8 @@ module if_stage(
         end
     end
 
-    // logic for icache access: if not misaligned and not stall
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int & !stall_i;
+    // logic for icache access: if not misaligned 
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int;
     assign req_cpu_icache_o.vaddr = pc[39:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;

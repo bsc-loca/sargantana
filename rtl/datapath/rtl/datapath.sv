@@ -48,6 +48,7 @@ module datapath(
     pipeline_flush_t flush_int;
     cu_if_t cu_if_int;
     addrPC_t pc_jump_if_int;
+    addrPC_t pc_evec_q;
 
     
     // Pipelines stages data
@@ -114,7 +115,7 @@ module datapath(
         if(!rstn_i) begin
             io_base_addr <=  40'h0040000000;
         end else if(!soft_rstn_i) begin
-            io_base_addr <=  40'h0080000000;
+            io_base_addr <=  40'h0040000000;
         end else begin 
             io_base_addr <= io_base_addr;
         end
@@ -122,6 +123,8 @@ module datapath(
 
     // Control Unit
     control_unit control_unit_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
         .valid_fetch(resp_icache_cpu_i.valid),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
@@ -150,7 +153,7 @@ module datapath(
         end else if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
             pc_jump_if_int = exe_to_wb_exe.result_pc;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
-            pc_jump_if_int = resp_csr_cpu_i.csr_evec;
+            pc_jump_if_int = pc_evec_q;
             retry_fetch = 1'b1;
         end else begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
@@ -360,11 +363,21 @@ module datapath(
     // data to write to regfile at WB from CSR or exe stage
     assign data_wb_rr_int = (wb_csr_ena_int) ?  resp_csr_cpu_i.csr_rw_rdata : 
                                                 exe_to_wb_wb.result; 
-     
+
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(!rstn_i) begin
+            pc_evec_q <=  'b0;
+        end else begin 
+            pc_evec_q <= resp_csr_cpu_i.csr_evec;
+        end
+    end
     // For bypasses
+    // IMPORTANT: since we can not do bypassig of a  CSR, we will not take into acount the case 
+    // of forwarding the result of a CSR to increasse the frequency
     assign wb_to_exe_exe.valid  = exe_to_wb_wb.regfile_we && exe_to_wb_wb.valid;
     assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
-    assign wb_to_exe_exe.data   = data_wb_rr_int;
+    assign wb_to_exe_exe.data   = exe_to_wb_wb.result;
 
     // Control Unit
     assign wb_cu_int.valid = exe_to_wb_wb.valid;//; & !control_int.stall_wb; // and not flush???

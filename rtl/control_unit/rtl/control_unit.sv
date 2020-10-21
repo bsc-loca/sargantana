@@ -16,6 +16,8 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module control_unit(
+    input logic             rstn_i,
+    input logic             clk_i,
     input logic             valid_fetch,
     input id_cu_t           id_cu_i,
     input rr_cu_t           rr_cu_i,
@@ -35,21 +37,18 @@ module control_unit(
     output cu_rr_t          cu_rr_o
 );
     logic jump_enable_int;
+    logic exception_enable_q, exception_enable_d;
     // jump enable logic
     always_comb begin
-        jump_enable_int =   (wb_cu_i.valid && wb_cu_i.xcpt) ||
-                            // branch at exe
-                            (exe_cu_i.valid && ~correct_branch_pred_i) || 
-                            // valid jal
-                            id_cu_i.valid_jal ||
-                            // jump to evec when eret
-                            csr_cu_i.csr_eret ||
-                            // jump to evec when xcpt from csr
-                            csr_cu_i.csr_exception ||
-                            // jump to evec when ecall
-                            (wb_cu_i.valid && wb_cu_i.ecall_taken);
-                            // we can add here the debug jump also
+        jump_enable_int =   (exe_cu_i.valid && ~correct_branch_pred_i) ||   // branch at exe
+                            id_cu_i.valid_jal;                              // valid jal
     end
+
+    // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
+    assign exception_enable_d = exception_enable_q ? 1'b0 : ((wb_cu_i.valid && wb_cu_i.xcpt) || 
+                                                            csr_cu_i.csr_eret || 
+                                                            csr_cu_i.csr_exception || 
+                                                            (wb_cu_i.valid && wb_cu_i.ecall_taken));
 
     // logic enable write register file at commit
     always_comb begin
@@ -72,7 +71,7 @@ module control_unit(
         // branches or valid jal
         if (debug_change_pc_i && debug_halt_i) begin
             cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
-        end else if (jump_enable_int) begin
+        end else if (jump_enable_int || exception_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (!valid_fetch || 
                      pipeline_ctrl_o.stall_if || 
@@ -91,8 +90,7 @@ module control_unit(
     // logic to select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
-        if (wb_cu_i.xcpt & wb_cu_i.valid || csr_cu_i.csr_eret || csr_cu_i.csr_exception ||
-                     (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
+        if (exception_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (exe_cu_i.valid && ~correct_branch_pred_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
@@ -111,7 +109,7 @@ module control_unit(
     // when a fence, invalidate buffer and also when csr eret
     // when it is a csr it should be checked more?
     assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | 
-                                                    csr_cu_i.csr_eret|
+                                                    exception_enable_q |
                                                     wb_cu_i.stall_csr_fence));
 
 
@@ -123,10 +121,7 @@ module control_unit(
         pipeline_flush_o.flush_rr  = 1'b0;
         pipeline_flush_o.flush_exe = 1'b0;
         pipeline_flush_o.flush_wb  = 1'b0;
-        if ((wb_cu_i.xcpt & wb_cu_i.valid) ||
-                     (csr_cu_i.csr_eret) ||
-                     (csr_cu_i.csr_exception) ||
-                     (wb_cu_i.valid && wb_cu_i.ecall_taken)) begin
+        if ((wb_cu_i.xcpt & wb_cu_i.valid) || exception_enable_q) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;
@@ -195,4 +190,14 @@ module control_unit(
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end*/
     end
+
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(!rstn_i) begin
+            exception_enable_q <= 1'b0;
+        end else begin 
+            exception_enable_q <= exception_enable_d;
+        end
+    end
+
 endmodule

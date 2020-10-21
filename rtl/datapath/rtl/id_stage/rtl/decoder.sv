@@ -545,12 +545,15 @@ module decoder(
                                             case (decode_i.inst.rtype.rs2)
                                                 RS2_ECALL_ERET: begin
                                                     decode_instr_o.instr_type = ECALL;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 RS2_EBREAK_SFENCEVM: begin
                                                     decode_instr_o.instr_type = EBREAK;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 RS2_URET_SRET_MRET: begin
                                                     decode_instr_o.instr_type = URET;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
@@ -565,6 +568,7 @@ module decoder(
                                             case (decode_i.inst.rtype.rs2)
                                                 RS2_URET_SRET_MRET: begin
                                                     decode_instr_o.instr_type = SRET;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 RS2_WFI: begin
                                                     decode_instr_o.instr_type = WFI;
@@ -575,9 +579,6 @@ module decoder(
                                                     decode_instr_o.instr_type = FENCE;
                                                     decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
-                                                /*RS2_ECALL_ERET: begin
-                                                    decode_instr_o.instr_type = ERET;
-                                                end*/
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end 
@@ -591,13 +592,8 @@ module decoder(
                                             case (decode_i.inst.rtype.rs2)
                                                 RS2_URET_SRET_MRET: begin
                                                     decode_instr_o.instr_type = MRET;
+                                                    decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
-                                                /*RS2_MRTS_HRTS: begin
-                                                    decode_instr_o.instr_type = MRTS;
-                                                end
-                                                RS2_MRTH: begin
-                                                    decode_instr_o.instr_type = MRTH;
-                                                end*/
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end 
