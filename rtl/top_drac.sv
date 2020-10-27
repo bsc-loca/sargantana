@@ -45,11 +45,13 @@ module top_drac(
     input bus64_t               CSR_RW_RDATA,
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
+    input [63:0]                CSR_XCPT_CAUSE,
     input logic                 CSR_ERET,
     input addr_t                CSR_EVEC,
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
     input logic                 io_csr_csr_replay,
+    input [1:0]			csr_priv_lvl_i,
 
 //--------------------------------------------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -234,6 +236,7 @@ assign resp_csr_interface_datapath.csr_rw_rdata = CSR_RW_RDATA;
 assign resp_csr_interface_datapath.csr_replay = 1'b0; 
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
+assign resp_csr_interface_datapath.csr_exception_cause = CSR_XCPT_CAUSE;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
 assign resp_csr_interface_datapath.csr_evec = {{25{CSR_EVEC[39]}},CSR_EVEC[38:0]};
 assign resp_csr_interface_datapath.csr_interrupt = CSR_INTERRUPT;
@@ -294,7 +297,8 @@ datapath datapath_inst(
     .req_cpu_dcache_o(req_datapath_dcache_interface),
     .req_cpu_icache_o(req_datapath_icache_interface),
     .req_cpu_csr_o(req_datapath_csr_interface),
-    .debug_o(debug_out)
+    .debug_o(debug_out),
+    .csr_priv_lvl_i(csr_priv_lvl_i)
 );
 
 icache_interface icache_interface_inst(

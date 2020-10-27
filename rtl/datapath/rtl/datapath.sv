@@ -25,6 +25,7 @@ module datapath(
     input resp_dcache_cpu_t resp_dcache_cpu_i,
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input debug_in_t        debug_i,
+    input [1:0]             csr_priv_lvl_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
@@ -340,12 +341,14 @@ module datapath(
         end
     end
 
+    logic [63:0] csr_rw_data;
     // CSR and Exceptions
     assign req_cpu_csr_o.csr_rw_addr = (wb_csr_ena_int) ? exe_to_wb_wb.csr_addr : {CSR_ADDR_SIZE{1'b0}};
     // if csr not enabled send command NOP
     assign req_cpu_csr_o.csr_rw_cmd = (wb_csr_ena_int) ? wb_csr_cmd_int : CSR_CMD_NOPE;
     // if csr not enabled send the interesting addr that you are accesing, exception help
-    assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.ex.origin;
+    assign csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.ex.origin;
+    assign req_cpu_csr_o.csr_rw_data = csr_rw_data;
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
@@ -429,7 +432,13 @@ module datapath(
             .pc(commit_pc),
             .inst(exe_to_wb_wb.inst),
             .reg_dst(commit_addr_reg),
-            .data(commit_data)
+            .data(commit_data),
+	    .xcpt(wb_xcpt),
+	    .xcpt_cause(exe_to_wb_wb.ex.cause),
+	    .csr_priv_lvl(csr_priv_lvl_i),
+	    .csr_rw_data(csr_rw_data),
+	    .csr_xcpt(resp_csr_cpu_i.csr_exception),
+	    .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause)
         );
     `endif
 
