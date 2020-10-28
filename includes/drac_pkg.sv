@@ -407,6 +407,7 @@ typedef struct packed {
     // don't care about cause and do the typical
     // flush and charge evec? 
     logic       csr_exception;
+    bus64_t     csr_exception_cause;
     // old uret, sret, mret
     // return  from system to user
     logic       csr_eret;
