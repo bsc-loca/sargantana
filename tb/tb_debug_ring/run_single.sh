@@ -13,6 +13,7 @@ EXE_STAGE="${BASE_DIR}/rtl/datapath/rtl/exe_stage/rtl"
 DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
 DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
 ICACHE="${BASE_DIR}/rtl/interface_icache/rtl"
+CSR_INTERFACE="${BASE_DIR}/rtl/datapath/rtl/interface_csr/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
 rm -rf lib_module
@@ -24,6 +25,7 @@ vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv $
  $EXE_STAGE/exe_stage.sv $EXE_STAGE/alu.sv  $EXE_STAGE/mul_unit.sv $EXE_STAGE/div_unit.sv $EXE_STAGE/div_4bits.sv\
  $EXE_STAGE/branch_unit.sv $DCACHE/dcache_interface.sv $CONTROL/control_unit.sv \
  $ICACHE/icache_interface.sv $DATAPATH/datapath.sv $TOP/top_drac.sv \
+ $CSR_INTERFACE/csr_interface.sv \
  tb_top_debug.sv perfect_memory_hex.sv perfect_memory_hex_write.sv colors.vh 
 
 vmake lib_module/ > Makefile_test

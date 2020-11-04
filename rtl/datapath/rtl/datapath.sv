@@ -292,32 +292,32 @@ module datapath(
                 CSRRW: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 CSRRS: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 CSRRC: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 CSRRWI: begin
                     wb_csr_cmd_int = CSR_CMD_WRITE;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 CSRRSI: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 CSRRCI: begin
                     wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
                     wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};  
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 ECALL,
                 EBREAK,
@@ -329,7 +329,7 @@ module datapath(
                 MRTS: begin
                     wb_csr_cmd_int = CSR_CMD_SYS;
                     wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;//!resp_csr_cpu_i.csr_interrupt;
+                    wb_csr_ena_int = 1'b1;
                 end
                 default: begin
                     `ifdef ASSERTIONS
@@ -341,27 +341,19 @@ module datapath(
         end
     end
 
-    logic [63:0] csr_rw_data;
-    // CSR and Exceptions
-    assign req_cpu_csr_o.csr_rw_addr = (wb_csr_ena_int) ? exe_to_wb_wb.csr_addr : {CSR_ADDR_SIZE{1'b0}};
-    // if csr not enabled send command NOP
-    assign req_cpu_csr_o.csr_rw_cmd = (wb_csr_ena_int) ? wb_csr_cmd_int : CSR_CMD_NOPE;
-    // if csr not enabled send the interesting addr that you are accesing, exception help
-    assign csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_to_wb_wb.ex.origin;
-    assign req_cpu_csr_o.csr_rw_data = csr_rw_data;
-
+    csr_interface csr_interface_inst
+    (
+        .wb_csr_ena_int_i(wb_csr_ena_int),
+        .exe_to_wb_wb_i(exe_to_wb_wb),
+        .wb_csr_cmd_int_i(wb_csr_cmd_int),
+        .wb_csr_rw_data_int_i(wb_csr_rw_data_int),
+        .wb_xcpt_i(wb_xcpt),
+        .req_cpu_csr_o(req_cpu_csr_o)
+    );
+    
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
     assign wb_xcpt = exe_to_wb_wb.ex.valid;
-
-    assign req_cpu_csr_o.csr_exception = wb_xcpt;
-
-    // if we can retire an instruction
-    assign req_cpu_csr_o.csr_retire = exe_to_wb_wb.valid && !wb_xcpt;
-    // if there is a csr interrupt we take the interrupt?
-    assign req_cpu_csr_o.csr_xcpt_cause = exe_to_wb_wb.ex.cause;
-    assign req_cpu_csr_o.csr_pc = exe_to_wb_wb.pc;
-    
     
     // data to write to regfile at WB from CSR or exe stage
     assign data_wb_rr_int = (wb_csr_ena_int) ?  resp_csr_cpu_i.csr_rw_rdata : 
@@ -436,7 +428,7 @@ module datapath(
 	    .xcpt(wb_xcpt),
 	    .xcpt_cause(exe_to_wb_wb.ex.cause),
 	    .csr_priv_lvl(csr_priv_lvl_i),
-	    .csr_rw_data(csr_rw_data),
+	    .csr_rw_data(req_cpu_csr_o.csr_rw_data),
 	    .csr_xcpt(resp_csr_cpu_i.csr_exception),
 	    .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause)
         );

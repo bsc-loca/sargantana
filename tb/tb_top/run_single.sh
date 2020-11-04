@@ -14,6 +14,7 @@ DATAPATH="${BASE_DIR}/rtl/datapath/rtl"
 DCACHE="${BASE_DIR}/rtl/interface_dcache/rtl"
 ICACHE_INTERFACE="${BASE_DIR}/rtl/interface_icache/rtl"
 ICACHE="${BASE_DIR}/rtl/icache/rtl"
+CSR_INTERFACE="${BASE_DIR}/rtl/datapath/rtl/interface_csr/rtl"
 INCLUDES="${BASE_DIR}/includes"
 
 rm -rf lib_module
@@ -27,6 +28,7 @@ vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv \
  $EXE_STAGE/branch_unit.sv $DCACHE/dcache_interface.sv $CONTROL/control_unit.sv \
  $ICACHE_INTERFACE/icache_interface.sv $DATAPATH/datapath.sv \
  $ICACHE/*.sv $ICACHE/icache_ctrl/rtl/icache_ctrl.sv  $ICACHE/icache_memory/rtl/*.sv \
+ $CSR_INTERFACE/csr_interface.sv \
  $TOP/top_drac.sv \
  tb_top.sv perfect_memory_hex.sv perfect_memory_hex_write.sv colors.vh 
 
