@@ -16,18 +16,18 @@ import drac_pkg::*;
 import drac_icache_pkg::*;
 
 module top_drac(
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
 // ORIGINAL INPUTS OF LAGARTO 
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
     input logic                 CLK,
     input logic                 RST,
     input logic                 SOFT_RST,
     input addr_t                RESET_ADDRESS,
 
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
 // DEBUG RING SIGNALS INPUT
 // debug_halt_i is istall_test 
-//--------------------------------------------------------------------------------------------------------------------------    
+//------------------------------------------------------------------------------------    
     input                       debug_halt_i,
 
     input addr_t                IO_FETCH_PC_VALUE,
@@ -39,9 +39,9 @@ module top_drac(
     input bus64_t               IO_REG_WRITE_DATA,
 
 
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
 // CSR INPUT INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
     input bus64_t               CSR_RW_RDATA,
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
@@ -53,18 +53,10 @@ module top_drac(
     input logic                 io_csr_csr_replay,
     input [1:0]			csr_priv_lvl_i,
 
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
-    //input icache_line_t         ICACHE_RESP_BITS_DATABLOCK,
-    //input addr_t                ICACHE_RESP_BITS_VADDR,
-    //input logic                 ICACHE_RESP_VALID,
-    //input logic                 ICACHE_REQ_READY,
-    //input logic                 PTWINVALIDATE,
-    //input logic                 TLB_RESP_MISS,
-    //input logic                 TLB_RESP_XCPT_IF,
-    //input logic                 iptw_resp_valid_i,
-
+//------------------------------------------------------------------------------------
+    
     input logic                 PTWINVALIDATE     ,
     input logic                 TLB_RESP_MISS     ,
     input logic                 TLB_RESP_XCPT_IF  ,
@@ -78,9 +70,9 @@ module top_drac(
     input  logic   [1:0] io_mem_grant_bits_addr_beat        ,
     
 
-//--------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------
     input logic                 DMEM_REQ_READY,
     input bus64_t               DMEM_RESP_BITS_DATA_SUBW,
     input logic                 DMEM_RESP_BITS_NACK,
@@ -92,9 +84,9 @@ module top_drac(
     input logic                 DMEM_XCPT_PF_LD,
     input logic                 DMEM_ORDERED, // TODO: remove if we dont used
 
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
 // CSR OUTPUT INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
     output logic   [11:0]       CSR_RW_ADDR,
     output logic   [2:0]        CSR_RW_CMD,
     output bus64_t              CSR_RW_WDATA,
@@ -103,15 +95,10 @@ module top_drac(
     output bus64_t              CSR_CAUSE,
     output addr_t               CSR_PC,
 
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
-    //output logic                ICACHE_INVALIDATE,
-    //output logic [11:0]         ICACHE_REQ_BITS_IDX,
-    //output logic                ICACHE_REQ_BITS_KILL,
-    //output logic                ICACHE_REQ_VALID,
-    //output logic                ICACHE_RESP_READY,
-    //output logic [27:0]         ICACHE_REQ_BITS_VPN,
+//-----------------------------------------------------------------------------------
+    
     output logic [27:0]         TLB_REQ_BITS_VPN,
     output logic                TLB_REQ_VALID,
 
@@ -126,9 +113,9 @@ module top_drac(
     output logic  [16:0] io_mem_acquire_bits_union          ,
     output logic         io_mem_grant_ready                 ,
 
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
 // D-CACHE  OUTPUT INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
     output logic                DMEM_REQ_VALID,  
     output logic   [3:0]        DMEM_OP_TYPE,
     output logic   [4:0]        DMEM_REQ_CMD,
@@ -138,9 +125,9 @@ module top_drac(
     output logic                DMEM_REQ_INVALIDATE_LR,
     output logic                DMEM_REQ_BITS_KILL,
 
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
 // DEBUGGING MODULE SIGNALS
-//--------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------
 
 // PC
     output addr_t               IO_FETCH_PC,
@@ -157,9 +144,9 @@ module top_drac(
     output bus64_t              IO_REG_READ_DATA,
 
 
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
 // PMU INTERFACE
-//--------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------
     output logic                io_core_pmu_branch_miss,
     output logic                io_core_pmu_EXE_STORE,
     output logic                io_core_pmu_EXE_LOAD,
@@ -256,7 +243,6 @@ assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
 
 //L2 Network conection - response
 assign ifill_resp.data  = io_mem_grant_bits_data             ;  
-assign ifill_resp.valid = io_mem_grant_valid                 ;
 assign ifill_resp.beat  = io_mem_grant_bits_addr_beat        ;
 assign ifill_resp.valid = io_mem_grant_valid                 ;
 assign ifill_resp.ack   = io_mem_grant_bits_addr_beat[0] &
@@ -305,48 +291,22 @@ icache_interface icache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
 
-    //// Inputs ICache
-    //.icache_resp_datablock_i(ICACHE_RESP_BITS_DATABLOCK),
-    //.icache_resp_vaddr_i(ICACHE_RESP_BITS_VADDR), 
-    //.icache_resp_valid_i(ICACHE_RESP_VALID),
-    //.icache_req_ready_i(ICACHE_REQ_READY), 
-    //.iptw_resp_valid_i(iptw_resp_valid_i),
-    //.ptw_invalidate_i(PTWINVALIDATE),
-    //.tlb_resp_miss_i(TLB_RESP_MISS),
-    //.tlb_resp_xcp_if_i(TLB_RESP_XCPT_IF),
-    //            
-    //// Fetch stage interface - Request packet from fetch_stage
-    //.req_fetch_icache_i(req_datapath_icache_interface),
-    //                    
-    //// Outputs ICache
-    //.icache_invalidate_o(ICACHE_INVALIDATE), 
-    //.icache_req_bits_idx_o(ICACHE_REQ_BITS_IDX), 
-    //.icache_req_kill_o(ICACHE_REQ_BITS_KILL), 
-    //.icache_req_valid_o(ICACHE_REQ_VALID),
-    //.icache_resp_ready_o(ICACHE_RESP_READY),
-    //.icache_req_bits_vpn_o(ICACHE_REQ_BITS_VPN), 
-    //.tlb_req_bits_vpn_o(TLB_REQ_BITS_VPN), 
-    //.tlb_req_valid_o(TLB_REQ_VALID),
-    //                    
-    //// Fetch stage interface - Response packet icache to fetch
-    //.resp_icache_fetch_o(resp_icache_interface_datapath)
-
     // Inputs ICache
     .icache_resp_datablock_i    ( icache_resp.data  ),
     .icache_resp_vaddr_i        ( icache_resp.vaddr ), 
     .icache_resp_valid_i        ( icache_resp.valid ),
     .icache_req_ready_i         ( icache_resp.ready ), 
     .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ), 
-    
-    // Fetch stage interface - Request packet from fetch_stage
-    .req_fetch_icache_i(req_datapath_icache_interface),
-
+   
     // Outputs ICache
     .icache_invalidate_o    ( iflush             ), 
     .icache_req_bits_idx_o  ( lagarto_ireq.idx   ), 
     .icache_req_kill_o      ( lagarto_ireq.kill  ), 
     .icache_req_valid_o     ( lagarto_ireq.valid ),
     .icache_req_bits_vpn_o  ( lagarto_ireq.vpn   ), 
+
+    // Fetch stage interface - Request packet from fetch_stage
+    .req_fetch_icache_i(req_datapath_icache_interface),
     
     // Fetch stage interface - Response packet icache to fetch
     .resp_icache_fetch_o(resp_icache_interface_datapath)
@@ -385,6 +345,7 @@ dcache_interface dcache_interface_inst(
     .resp_dcache_cpu_o(resp_dcache_interface_datapath) 
 );
 
+
 top_icache icache (
     .clk_i              ( CLK           ) ,
     .rstn_i             ( RST           ) ,
@@ -396,7 +357,6 @@ top_icache icache (
     .ifill_resp_i       ( ifill_resp    ) , //- From upper levels.
     .icache_ifill_req_o ( ifill_req     )   //- To upper levels. 
 );
-
 
 
 

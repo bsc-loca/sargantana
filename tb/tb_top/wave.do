@@ -86,15 +86,18 @@ add wave -noupdate -group Commit /tb_top/top_drac_inst/datapath_inst/pc_jump_if_
 add wave -noupdate -group Commit /tb_top/top_drac_inst/datapath_inst/wb_cu_int
 add wave -noupdate -group Commit -expand /tb_top/top_drac_inst/datapath_inst/exe_to_wb_wb
 add wave -noupdate -group Commit /tb_top/top_drac_inst/datapath_inst/wb_to_exe_exe
-add wave -noupdate /tb_top/tb_icache_valid_i
-add wave -noupdate /tb_top/tb_icache_valid_o
-add wave -noupdate /tb_top/tb_icache_done_i
-add wave -noupdate /tb_top/tb_icache_vpn_i
+add wave -noupdate /tb_top/l1_vpn_request
+add wave -noupdate /tb_top/l1_request_paddr
+add wave -noupdate /tb_top/l1_request_valid
+add wave -noupdate /tb_top/perfect_memory_hex_inst/request_q
 add wave -noupdate /tb_top/perfect_memory_hex_inst/addr_int
 add wave -noupdate -radix hexadecimal /tb_top/perfect_memory_hex_inst/line_o
 add wave -noupdate /tb_top/perfect_memory_hex_inst/memory
+add wave -noupdate /tb_top/perfect_memory_hex_inst/counter
+add wave -noupdate /tb_top/l2_response_valid
+add wave -noupdate /tb_top/l2_response_seqnum
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {1 ns} 0}
+WaveRestoreCursors {{Cursor 1} {9 ns} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 451
 configure wave -valuecolwidth 153

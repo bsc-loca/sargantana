@@ -13,7 +13,6 @@
  */
 
 import drac_pkg::*;
-import riscv_pkg::*;
 
 package drac_icache_pkg;
 
