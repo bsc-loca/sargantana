@@ -113,6 +113,7 @@ always_comb begin
             next_state_int     = (do_request_int && !tlb_resp_xcp_if_i) ? ReqValid : 
                                                                           NoReq    ;
             icache_req_valid_o = do_request_int;
+            //icache_req_valid_o = do_request_int && !tlb_resp_xcp_if_i;
             resp_icache_fetch_o.valid =  ~buffer_miss_int  | 
                                         (tlb_resp_xcp_if_i & do_request_int);
             kill = 1'b0;

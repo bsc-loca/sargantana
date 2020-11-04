@@ -23,8 +23,6 @@ module icache_ff(
     output  icache_idx_t                     idx_q            ,
     input   icache_vpn_t                     vpn_d            ,
     output  icache_vpn_t                    vpn_q            ,
-    //input  logic  [ICACHE_OFFSET_WIDTH-1:0] cline_offset_d   ,
-    //output logic  [ICACHE_OFFSET_WIDTH-1:0] cline_offset_q   ,
     input  logic     [ICACHE_TAG_WIDTH-1:0] cline_tag_d      , 
     output logic     [ICACHE_TAG_WIDTH-1:0] cline_tag_q      , 
     input  logic [$clog2(ICACHE_N_WAY)-1:0] way_to_replace_d ,
@@ -33,6 +31,16 @@ module icache_ff(
     output logic                            cmp_enable_q     ,                          
     input  logic                            flush_d          ,
     output logic                            flush_q          ,                          
+    
+    input  logic                            valid_ireq_d     ,
+    output logic                            valid_ireq_q     ,
+    input  logic                            ireq_kill_d      ,
+    output logic                            ireq_kill_q      ,                 
+    
+    input   tresp_i_t      mmu_tresp_d        ,
+    output  tresp_i_t      mmu_tresp_q        ,
+    
+    
     input  logic                            cache_enable_d   ,
     output logic                            cache_enable_q                             
 );
@@ -46,9 +54,11 @@ always_ff @(posedge clk_i or negedge rstn_i) begin
         vpn_q            <= '0;
         idx_q            <= '0;
         flush_q          <= '0;
-        //cline_offset_q   <= '0; 
         cline_tag_q      <= '0; 
         way_to_replace_q <= '0; 
+        mmu_tresp_q   <= '0;     
+        valid_ireq_q <= '0; 
+        ireq_kill_q <= '0; 
     end
     else begin
         cache_enable_q   <= cache_enable_d   ;
@@ -57,9 +67,11 @@ always_ff @(posedge clk_i or negedge rstn_i) begin
         vpn_q            <= vpn_d            ;
         idx_q            <= idx_d            ;
         flush_q          <= flush_d          ;
-        //cline_offset_q   <= cline_offset_d   ; 
         cline_tag_q      <= cline_tag_d      ; 
         way_to_replace_q <= way_to_replace_d ; 
+        valid_ireq_q     <= valid_ireq_d; 
+        ireq_kill_q     <= ireq_kill_d; 
+        mmu_tresp_q   <= mmu_tresp_d   ;     
     end
 end
 
