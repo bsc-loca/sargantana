@@ -158,7 +158,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
 end
 
 always_comb begin
-    valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) & 
+    valid_buffer_d = (valid_buffer_q | icache_resp_valid_i) && 
                     ~req_fetch_icache_i.invalidate_buffer   ;
 end
 

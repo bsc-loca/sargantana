@@ -105,8 +105,11 @@ assign cline_tag_d  = mmu_tresp_q.ppn ;
 assign icache_resp_o.vaddr = {vpn_q,idx_q};
 
 // pass exception through
-assign icache_resp_o.xcpt = mmu_tresp_q.xcpt;
+logic icache_resp_valid ; 
+assign icache_resp_o.xcpt = mmu_tresp_q.xcpt && icache_resp_valid;
 
+//assign icache_resp_o.valid = icache_resp_valid && !ireq_kill_d;       
+assign icache_resp_o.valid = icache_resp_valid;       
 
 //---------------------------------------------------------------------
 //------------------------------------------------------ IFILL request.
@@ -135,7 +138,8 @@ icache_ctrl  icache_ctrl (
     .ireq_valid_i       ( valid_ireq_q              ),
     .ireq_kill_i        ( ireq_kill_q       ),
     .iresp_ready_o      ( icache_resp_o.ready       ),
-    .iresp_valid_o      ( icache_resp_o.valid       ),
+    //.iresp_valid_o      ( icache_resp_o.valid       ),
+    .iresp_valid_o      ( icache_resp_valid       ),
     .mmu_miss_i         ( mmu_tresp_q.miss          ),
     .mmu_ptw_valid_i    ( mmu_tresp_q.ptw_v         ),
     .mmu_ex_valid_i     ( mmu_tresp_q.xcpt          ),

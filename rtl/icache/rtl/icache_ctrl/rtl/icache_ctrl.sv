@@ -88,13 +88,12 @@ always_comb begin
             treq_valid_o      = 1'b0;
             cmp_enable_o      = cache_enable_i;
             cache_rd_ena_o    = 1'b0;
-            iresp_ready_o     = is_hit_or_excpt || !new_request;
-            ifill_req_valid_o = ( !is_hit_or_excpt && !mmu_miss_i && !is_flush_or_kill && new_request) ;
+            iresp_ready_o     = !new_request;
+            ifill_req_valid_o = ( !is_hit_or_excpt  && !mmu_miss_i   && 
+                                  !is_flush_or_kill &&  new_request  );
             miss_o            = 1'b0; 
-            iresp_valid_o     = ( is_hit_or_excpt && !mmu_miss_i && 
+            iresp_valid_o     = ( is_hit && !mmu_miss_i && 
                                  !is_flush_or_kill && new_request) ;
-            //iresp_valid_o     = ((is_hit && new_request) || mmu_ex_valid_i && 
-            //                            !mmu_miss_i && !is_flush_or_kill) ;
             cache_wr_ena_o    = 1'b0  ;
             flush_en_o        = flush_i  ;
             replay_valid_o    = 1'b0;
@@ -116,30 +115,26 @@ always_comb begin
             replay_valid_o    = 1'b0;
         end
         TLB_MISS: begin//011
-            //state_d = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i) ? READ      :
-            state_d = ( !mmu_miss_i) ? READ      :
-                      ( is_flush_or_kill ) ? KILL      :
-                                                                     TLB_MISS  ;
+            state_d = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i) ? READ      :
+                                                                             TLB_MISS  ;
                                                                                      
             treq_valid_o      = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill);
-            cmp_enable_o      = 1'b0 ;
+            cmp_enable_o      = cache_enable_i ;
             cache_rd_ena_o    = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill) ;
-            //cache_rd_ena_o    = !mmu_miss_i ;
             iresp_valid_o     = (mmu_ex_valid_i);
             miss_o            = 1'b0 ;
             iresp_ready_o     = 1'b0 ;
             ifill_req_valid_o = 1'b0 ;
             cache_wr_ena_o    = 1'b0 ;
             flush_en_o        = flush_i ;
-            //replay_valid_o    = is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i;
-            replay_valid_o    =  mmu_ex_valid_i || !mmu_miss_i;
-            //replay_valid_o    = !mmu_miss_i;
+            replay_valid_o    = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i);
         end
+
         REPLAY: begin //100
             state_d           = READ   ;
             cmp_enable_o      = cache_enable_i ;
             iresp_ready_o     = 1'b0  ;
-            iresp_valid_o     = 1'b0  ;
+            iresp_valid_o     = mmu_ex_valid_i;
             cache_rd_ena_o    = (!is_flush_or_kill && !mmu_ex_valid_i ) ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
@@ -150,10 +145,7 @@ always_comb begin
         end
         KILL: begin //101
             //- It must wait to translation response and data will be ignored.
-            //state_d = (!ifill_sent_ack_i) ? READ : KILL;
-            state_d = ( !mmu_ptw_valid_i && mmu_miss_i ) ? KILL : 
-                      ( !ifill_sent_ack_i ) ? READ : 
-                                              KILL;
+            state_d = (!ifill_sent_ack_i) ? READ : KILL;
             cmp_enable_o      = 1'b0  ;
             iresp_ready_o     = 1'b0  ;
             iresp_valid_o     = mmu_ex_valid_i  ;
