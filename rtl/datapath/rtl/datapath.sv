@@ -297,7 +297,6 @@ module datapath(
         .do_recover_i(cu_id_int.do_recover),
         .delete_checkpoint_i(cu_id_int.delete_checkpoint),
         .recover_checkpoint_i(cu_id_int.recover_checkpoint),
-        .commit_read_head_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid & (instruction_gl_commit.rd != 'h0)),
         .commit_roll_back_i(commit_xcpt | resp_csr_cpu_i.csr_exception ),
         .new_register_o(free_register_to_rename),
         .checkpoint_o(checkpoint_free_list),

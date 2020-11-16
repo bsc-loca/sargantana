@@ -6,8 +6,8 @@
 * Project Name   : DRAC
 * File           : tb_graduation_list.v
 * Organization   : Barcelona Supercomputing Center
-* Author(s)      : David Álvarez
-* Email(s)       : david.alvarez@bsc.es
+* Author(s)      : Víctor Soria
+* Email(s)       : victor.soria@bsc.es
 * References     :
 */
 
@@ -16,10 +16,8 @@
 //-----------------------------
 
 `timescale 1 ns / 1 ns
-//`default_nettype none
 
 `include "colors.vh"
-//`include "../definitions.v"
 
 import riscv_pkg::*;
 import drac_pkg::*;
@@ -32,31 +30,30 @@ module tb_graduation_list();
     parameter VERBOSE         = 1;
     parameter CLK_PERIOD      = 2;
     parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
-    parameter NUM_PORTS       = 1;
     parameter GL_ENTRIES      = 32;
-//***DUT parameters***
-    //parameter TB_DATA_WIDTH = 32;
-    //parameter TB_WEIGHTS_WIDTH = 7;
-    //parameter TB_N_CORES = 1;
-    //parameter TB_CORE_EVENTS = 1;
 
 //-----------------------------
 // Signals
 //-----------------------------
-reg                             tb_clk_i;
-reg                             tb_rstn_i;
-rob_instruction_in_interface_t  tb_instruction_i[NUM_PORTS];
+logic                           tb_clk_i;
+logic                           tb_rstn_i;
+gl_instruction_t                tb_instruction_i;
 logic                           tb_read_head_i;
-logic                           tb_read_tail_i;
-rob_index                       tb_instruction_writeback_i;
-logic                           tb_instruction_writeback_enable_i;
-rob_index                       tb_instruction_exc_i;
-logic                           tb_instruction_exc_enable_i;
-exception_t                     tb_instruction_exc_data_i;
-rob_index                       tb_assigned_rob_entry_o[NUM_PORTS];
-rob_instruction_in_interface_t  tb_instruction_o[NUM_PORTS];
-reg                             tb_full_o;
-reg                             tb_empty_o;
+gl_index_t                      tb_instruction_writeback_1_i;
+logic                           tb_instruction_writeback_enable_1_i;
+gl_instruction_t                tb_instruction_writeback_data_1_i;
+gl_index_t                      tb_instruction_writeback_2_i;
+logic                           tb_instruction_writeback_enable_2_i;
+gl_instruction_t                tb_instruction_writeback_data_2_i;
+gl_index_t                      tb_assigned_gl_entry_o;
+gl_index_t                      tb_commit_gl_entry_o;
+gl_instruction_t                tb_instruction_o;
+logic                           tb_full_o;
+logic                           tb_empty_o;
+
+logic                           tb_flush_i;
+gl_index_t                      tb_flush_index_i;
+logic                           tb_flush_commit_i;
 
 //-----------------------------
 // Module
@@ -67,17 +64,22 @@ graduation_list module_inst (
     .rstn_i(tb_rstn_i),
     .instruction_i(tb_instruction_i),
     .read_head_i(tb_read_head_i),
-    .read_tail_i(tb_read_tail_i),
-    .instruction_writeback_i(tb_instruction_writeback_i),
-    .instruction_writeback_enable_i(tb_instruction_writeback_enable_i),
-    .instruction_exc_i(tb_instruction_exc_i),
-    .instruction_exc_enable_i(tb_instruction_exc_enable_i),
-    .instruction_exc_data_i(tb_instruction_exc_data_i),
-    .assigned_rob_entry_o(tb_assigned_rob_entry_o),
+    .instruction_writeback_1_i(tb_instruction_writeback_1_i),
+    .instruction_writeback_enable_1_i(tb_instruction_writeback_enable_1_i),
+    .instruction_writeback_data_1_i(tb_instruction_writeback_data_1_i),
+    .instruction_writeback_2_i(tb_instruction_writeback_2_i),
+    .instruction_writeback_enable_2_i(tb_instruction_writeback_enable_2_i),
+    .instruction_writeback_data_2_i(tb_instruction_writeback_data_2_i),
+    .flush_i(tb_flush_i),
+    .flush_index_i(tb_flush_index_i),
+    .flush_commit_i(tb_flush_commit_i),
+    .assigned_gl_entry_o(tb_assigned_gl_entry_o),
     .instruction_o(tb_instruction_o),
+    .commit_gl_entry_o(tb_commit_gl_entry_o),
     .full_o(tb_full_o),
     .empty_o(tb_empty_o)
 );
+
 
 //-----------------------------
 // DUT
@@ -104,20 +106,22 @@ graduation_list module_inst (
     endtask
 
 //***task automatic init_sim***
-//This is an empty structure for initializing your testbench, consider how the real hardware will behave instead of set all to zero as the initial state. Remove the TODO label and start writing.
     task automatic init_sim;
         begin
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_instruction_i[0] <= '{default: 0};
+            tb_instruction_i <= '{default: 0};
             tb_read_head_i <= '{default:0};
-            tb_read_tail_i <= '{default:0};
-            tb_instruction_writeback_i <= '{default:0};
-            tb_instruction_writeback_enable_i <= '{default:0};
-            tb_instruction_exc_i <= '{default:0};
-            tb_instruction_exc_enable_i <= '{default:0};
-            tb_instruction_exc_data_i <= '{default:0};
+            tb_instruction_writeback_1_i <= '{default:0};
+            tb_instruction_writeback_enable_1_i <= '{default:0};
+            tb_instruction_writeback_data_1_i <= '{default:0};
+            tb_instruction_writeback_2_i <= '{default:0};
+            tb_instruction_writeback_enable_2_i <= '{default:0};
+            tb_instruction_writeback_data_2_i <= '{default:0};
+            tb_flush_i <= '{default:0};
+            tb_flush_index_i <= '{default:0};
+            tb_flush_commit_i <= '{default:0};
             $display("Done");
         end
     endtask
@@ -137,57 +141,151 @@ graduation_list module_inst (
 //This is an empty structure for a test. Remove the TODO label and start writing, several tasks can be used.
     task automatic test_sim;
         begin
+            int tmp;
             $display("*** test_sim");
-            test_sim_1();
-            test_sim_2();
-            test_sim_3();
-            test_sim_4();
-            test_sim_5();
-            $display("*** finished tests. Please check for assertion failures");
+            test_sim_1(tmp); 
+            if (tmp >= 1) begin
+                `START_RED_PRINT
+                        $display("TEST 1 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 1 PASSED.");
+                `END_COLOR_PRINT
+            end
+            test_sim_2(tmp); 
+            if (tmp >= 1) begin
+                `START_RED_PRINT
+                        $display("TEST 2 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 2 PASSED.");
+                `END_COLOR_PRINT
+            end
+            test_sim_3(tmp); 
+            if (tmp >= 1) begin
+                `START_RED_PRINT
+                        $display("TEST 3 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 3 PASSED.");
+                `END_COLOR_PRINT
+            end
+            test_sim_4(tmp); 
+            if (tmp >= 1) begin
+                `START_RED_PRINT
+                        $display("TEST 4 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 4 PASSED.");
+                `END_COLOR_PRINT
+            end
         end
     endtask
 
 // Test getting a petition that is not valid
 // Output should be nothing
     task automatic test_sim_1;
+        output int tmp;
         begin
-            $display("Testing GL is empty to begin");
             tb_read_head_i <= 1'b1;
             #CLK_PERIOD;
-            assert(tb_full_o == 0);
-            assert(tb_empty_o == 1);
+            assert(tb_full_o == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert(tb_empty_o == 1'b1) else begin tmp++; assert(1 == 0); end
         end
     endtask
 
-// Test getting a petition that is not valid
+// Test filling the GL with instructions, mark them as executed and read them in order
 // Output should be nothing
     task automatic test_sim_2;
+        output int tmp;
         begin
             tb_read_head_i <= 1'b0;
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_full_o == 0);
+                assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i[0] = {
-                    1'b1,
-                    reg_t'(1),
-                    reg_t'(1),
-                    reg_t'(1),
-                    addr_t'(i),
-                    1'b0,
-                    exception_t'(0)
+                tb_instruction_i = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
                 };
-                #CLK_PERIOD;
 
-                assert(tb_assigned_rob_entry_o[0] == rob_index'(i));
+                assert(tb_assigned_gl_entry_o == gl_index_t'(i)) else begin tmp++; assert(1 == 0); end
+                #CLK_PERIOD;
             end
 
-            assert(tb_full_o == 1);
+            assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
+            
             // Disable writing
-            tb_instruction_i[0].valid = 1'b0;
+            tb_instruction_i.valid = 1'b0;
             #CLK_PERIOD;
+
+            // Enable reading
+            tb_read_head_i <= 1'b1;
+            #CLK_PERIOD;
+            
+            // We do the assertions one cycle after 
+            // We haven't marked it as valid so no instructions should be outputed
+            assert(tb_instruction_o.valid == 0) else begin tmp++; assert(1 == 0); end
+            
+            tb_read_head_i <= 1'b0;
+            #CLK_PERIOD;
+            
+            // Mark everything as finished using two ports 
+            for(int i = 0; i < GL_ENTRIES; i = i + 2) begin
+                tb_instruction_writeback_1_i <= gl_index_t'(i);
+                tb_instruction_writeback_enable_1_i <= 1'b1;
+                tb_instruction_writeback_data_1_i <= {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(0),           // PC of the instruction
+                    instr_type_t'(0),       // Type of instruction
+                    reg_t'(0),              // Destination Register
+                    reg_t'(0),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(0),            // Physical register destination to write      
+                    phreg_t'(0)             // Old Physical register destination  
+                };
+
+                tb_instruction_writeback_2_i <= gl_index_t'(i + 1);
+                tb_instruction_writeback_enable_2_i <= 1'b1;
+                tb_instruction_writeback_data_2_i <= {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(0),           // PC of the instruction
+                    instr_type_t'(0),       // Type of instruction
+                    reg_t'(0),              // Destination Register
+                    reg_t'(0),              // Source register 1
+                    reg_csr_addr_t'(0),   // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(0),            // Physical register destination to write      
+                    phreg_t'(0)             // Old Physical register destination  
+                };
+                #CLK_PERIOD;
+            end    
+            
+            tb_instruction_writeback_enable_1_i <= 1'b0;
+            tb_instruction_writeback_enable_2_i <= 1'b0;
 
             // Enable reading
             tb_read_head_i <= 1'b1;
@@ -196,65 +294,117 @@ graduation_list module_inst (
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
             // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
             for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_empty_o == 0);
+                assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 #CLK_PERIOD;
 
-                // We haven't marked it as valid!
-                assert(tb_instruction_o[0].valid == 0);
-                assert(tb_instruction_o[0].destination_register == 1);
-                assert(tb_instruction_o[0].source_register_1 == 1);
-                assert(tb_instruction_o[0].source_register_2 == 1);
-                assert(tb_instruction_o[0].program_counter == addr_t'(i));
-                assert(tb_instruction_o[0].exception == 0);
-                assert(tb_full_o == 0);
+                assert(tb_instruction_o.valid == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.rd == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.rs1 == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.pc == addrPC_t'(i)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.csr_addr == reg_csr_addr_t'(0)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.exception.valid == 0) else begin tmp++; assert(1 == 0); end
+                assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(tb_empty_o == 1);
+            assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
         end
     endtask
 
-
-// Test getting a petition that is not valid
+// Test filling the GL with instructions, mark them as executed and read them in order
 // Output should be nothing
     task automatic test_sim_3;
+        output int tmp;
         begin
             tb_read_head_i <= 1'b0;
-            #CLK_PERIOD;
-            assert(tb_empty_o == 1);
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_full_o == 0);
+                assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i[0] = {
-                    1'b1,
-                    reg_t'(1),
-                    reg_t'(1),
-                    reg_t'(1),
-                    addr_t'(i),
-                    1'b0,
-                    exception_t'(0)
+                tb_instruction_i = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
                 };
-                #CLK_PERIOD;
 
-                assert(tb_assigned_rob_entry_o[0] == rob_index'(i));
+                assert(tb_assigned_gl_entry_o == gl_index_t'(i)) else begin tmp++; assert(1 == 0); end
+                #CLK_PERIOD;
             end
 
-            assert(tb_full_o == 1);
+            assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
+            
             // Disable writing
-            tb_instruction_i[0].valid = 1'b0;
+            tb_instruction_i.valid = 1'b0;
             #CLK_PERIOD;
 
-            tb_instruction_writeback_enable_i <= 1'b1;
+            // Enable reading
+            tb_read_head_i <= 1'b1;
+            #CLK_PERIOD;
+            
+            // We do the assertions one cycle after 
+            // We haven't marked it as valid so no instructions should be outputed
+            assert(tb_instruction_o.valid == 0) else begin tmp++; assert(1 == 0); end
+            
+            tb_read_head_i <= 1'b0;
+            #CLK_PERIOD;
+            
+            // Mark everything as finished using two ports 
+            for(int i = 0; i < GL_ENTRIES; i = i + 2) begin
+                tb_instruction_writeback_1_i <= gl_index_t'(i);
+                tb_instruction_writeback_enable_1_i <= 1'b1;
+                tb_instruction_writeback_data_1_i <= {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(0),           // PC of the instruction
+                    instr_type_t'(0),       // Type of instruction
+                    reg_t'(0),              // Destination Register
+                    reg_t'(0),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(0),            // Physical register destination to write      
+                    phreg_t'(0)             // Old Physical register destination  
+                };
+                tb_instruction_writeback_data_1_i.exception.valid <= 1'b1;
+                tb_instruction_writeback_data_1_i.exception.cause <= INSTR_ACCESS_FAULT;
+                tb_instruction_writeback_data_1_i.exception.origin <= bus64_t'(i);
 
-            // Mark everything as valid (finished)
-            for(int i = 0; i < GL_ENTRIES; ++i) begin
-                tb_instruction_writeback_i <= rob_index'(i);
+                tb_instruction_writeback_2_i <= gl_index_t'(i + 1);
+                tb_instruction_writeback_enable_2_i <= 1'b1;
+                tb_instruction_writeback_data_2_i <= {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(0),           // PC of the instruction
+                    instr_type_t'(0),       // Type of instruction
+                    reg_t'(0),              // Destination Register
+                    reg_t'(0),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(0),            // Physical register destination to write      
+                    phreg_t'(0)             // Old Physical register destination  
+                };
+                tb_instruction_writeback_data_2_i.exception.valid <= 1'b1;
+                tb_instruction_writeback_data_2_i.exception.cause <= INSTR_ACCESS_FAULT;
+                tb_instruction_writeback_data_2_i.exception.origin <= bus64_t'(i+1);
+                
                 #CLK_PERIOD;
-            end
-
-            tb_instruction_writeback_enable_i <= 1'b0;
+            end    
+            
+            tb_instruction_writeback_enable_1_i <= 1'b0;
+            tb_instruction_writeback_enable_2_i <= 1'b0;
 
             // Enable reading
             tb_read_head_i <= 1'b1;
@@ -263,149 +413,69 @@ graduation_list module_inst (
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
             // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
             for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_empty_o == 0);
+                assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 #CLK_PERIOD;
 
-                assert(tb_instruction_o[0].valid == 1);
-                assert(tb_instruction_o[0].destination_register == 1);
-                assert(tb_instruction_o[0].source_register_1 == 1);
-                assert(tb_instruction_o[0].source_register_2 == 1);
-                assert(tb_instruction_o[0].program_counter == addr_t'(i));
-                assert(tb_instruction_o[0].exception == 0);
-                assert(tb_full_o == 0);
+                assert(tb_instruction_o.valid == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.rd == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.rs1 == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.pc == addrPC_t'(i)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.csr_addr == reg_csr_addr_t'(0)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.exception.valid == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.exception.cause == INSTR_ACCESS_FAULT) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o.exception.origin == addrPC_t'(i)) else begin tmp++; assert(1 == 0); end
+                assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(tb_empty_o == 1);
+            assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
         end
     endtask
-
-// Test getting a petition that is not valid
+    
+    
+// Test filling the GL with instructions, mark them as executed and read them in order
 // Output should be nothing
     task automatic test_sim_4;
+        output int tmp;
         begin
             tb_read_head_i <= 1'b0;
-            #CLK_PERIOD;
-            assert(tb_empty_o == 1);
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_full_o == 0);
+                assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i[0] = {
-                    1'b1,
-                    reg_t'(1),
-                    reg_t'(1),
-                    reg_t'(1),
-                    addr_t'(i),
-                    1'b0,
-                    exception_t'(0)
+                tb_instruction_i = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
                 };
-                #CLK_PERIOD;
 
-                assert(tb_assigned_rob_entry_o[0] == rob_index'(i));
+                assert(tb_assigned_gl_entry_o == gl_index_t'(i)) else begin tmp++; assert(1 == 0); end
+                #CLK_PERIOD;
             end
 
-            assert(tb_full_o == 1);
+            assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
+            
             // Disable writing
-            tb_instruction_i[0].valid = 1'b0;
+            tb_instruction_i.valid = 1'b0;
             #CLK_PERIOD;
 
-            tb_instruction_exc_enable_i <= 1'b1;
-
-            // Mark everything as exception
-            for(int i = 0; i < GL_ENTRIES; ++i) begin
-                tb_instruction_exc_i <= rob_index'(i);
-                tb_instruction_exc_data_i <= {
-                    INSTR_ACCESS_FAULT,
-                    addrPC_t'(i),
-                    1'b1
-                };
-                #CLK_PERIOD;
-            end
-
-            tb_instruction_exc_enable_i <= 1'b0;
-
-            // Enable reading
-            tb_read_head_i <= 1'b1;
+            tb_flush_commit_i <= 1'b1;
             #CLK_PERIOD;
 
-            // We do the assertions one cycle after because we're dealing with flops in instruction_o
-            // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
-            for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_empty_o == 0);
-                #CLK_PERIOD;
-
-                // Setting an exception marks this as valid.
-                assert(tb_instruction_o[0].valid == 1);
-                assert(tb_instruction_o[0].destination_register == 1);
-                assert(tb_instruction_o[0].source_register_1 == 1);
-                assert(tb_instruction_o[0].source_register_2 == 1);
-                assert(tb_instruction_o[0].program_counter == addr_t'(i));
-                assert(tb_instruction_o[0].exception == 1);
-                assert(tb_instruction_o[0].exception_data.valid == 1);
-                assert(tb_instruction_o[0].exception_data.cause == INSTR_ACCESS_FAULT);
-                assert(tb_instruction_o[0].exception_data.origin == addrPC_t'(i));
-                assert(tb_full_o == 0);
-            end
-
-            assert(tb_empty_o == 1);
-        end
-    endtask
-
-    task automatic test_sim_5;
-        begin
-            tb_read_head_i <= 1'b0;
+            tb_flush_commit_i <= 1'b0;
             #CLK_PERIOD;
-            assert(tb_empty_o == 1);
-            #CLK_PERIOD;
-
-            // Now let's fill this with instructions
-            for(int i = 0; i < GL_ENTRIES; ++i) begin
-                assert(tb_full_o == 0);
-
-                tb_instruction_i[0] = {
-                    1'b1,
-                    reg_t'(1),
-                    reg_t'(1),
-                    reg_t'(1),
-                    addr_t'(i),
-                    1'b0,
-                    exception_t'(0)
-                };
-                #CLK_PERIOD;
-
-                assert(tb_assigned_rob_entry_o[0] == rob_index'(i));
-            end
-
-            assert(tb_full_o == 1);
-            // Disable writing
-            tb_instruction_i[0].valid = 1'b0;
-            #CLK_PERIOD;
-
-            // Enable reading _backwards_
-            tb_read_tail_i <= 1'b1;
-            #CLK_PERIOD;
-
-            // We do the assertions one cycle after because we're dealing with flops in instruction_o
-            // Recover the instructions. Should be LIFO as we're reading backwards.
-            for(int i = GL_ENTRIES - 1; i >= 0; --i) begin
-                assert(tb_empty_o == 0);
-                #CLK_PERIOD;
-
-                // Should not be valid
-                assert(tb_instruction_o[0].valid == 0);
-                assert(tb_instruction_o[0].destination_register == 1);
-                assert(tb_instruction_o[0].source_register_1 == 1);
-                assert(tb_instruction_o[0].source_register_2 == 1);
-                assert(tb_instruction_o[0].program_counter == addr_t'(i));
-                assert(tb_instruction_o[0].exception == 0);
-                assert(tb_full_o == 0);
-            end
-
-            assert(tb_empty_o == 1);
-            tb_read_tail_i <= 1'b0;
-            #CLK_PERIOD;
+            
+            assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
         end
     endtask
 
@@ -416,8 +486,8 @@ graduation_list module_inst (
         init_dump();
         reset_dut();
         test_sim();
+        $finish;
     end
 
 
 endmodule
-//`default_nettype wire

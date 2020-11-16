@@ -3,9 +3,7 @@
  * File           : graduation_list.sv
  * Organization   : Barcelona Supercomputing Center
  * Author(s)      : Víctor Soria Pardos
- *                  David Álvarez Robert
  * Email(s)       : victor.soria@bsc.es
- *                  david.alvarez@bsc.es
  * -----------------------------------------------
  */
 
@@ -25,7 +23,6 @@ module graduation_list #
 
     // Read Entry Interface
     input wire                            read_head_i,      // Read oldest instruction
-    input wire                            read_tail_i,      // Read newest instruction
 
     // Write Back Interface
     input gl_index_t                      instruction_writeback_1_i, // Mark instruction as finished
@@ -63,7 +60,6 @@ logic [num_bits_index:0] num;
 
 logic write_enable;
 logic read_enable;
-logic read_inverse_enable;
 
 logic is_store_or_amo;
 
@@ -76,8 +72,7 @@ assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES) & ~(flush_
 
 // User can read the head of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & (num > 0) & ~(read_tail_i) & (valid_bit[head]) & ~(flush_i);
-assign read_inverse_enable = read_tail_i & (num > 0);
+assign read_enable = read_head_i & (num > 0) & (valid_bit[head]) & ~(flush_i);
 
 
 assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.instr_type == SW) ||
@@ -112,9 +107,7 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
                 end else begin
                     instruction_o <= entries[head];
                     commit_gl_entry_o <= head;
-                end
-            end else if (read_inverse_enable) begin
-                instruction_o <= entries[tail - 'b1];
+                end;
             end else begin
                 instruction_o.valid <= 1'b0;
                 instruction_o.instr_type <= ADD;
@@ -169,9 +162,9 @@ begin
             num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-1{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
         end
     end else begin
-        tail <= tail + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-1{1'b0}}, read_inverse_enable};
+        tail <= tail + {{num_bits_index-1{1'b0}}, write_enable};
         head <= head + {{num_bits_index-1{1'b0}}, read_enable};
-        num  <= num + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-1{1'b0}}, read_enable} - {{num_bits_index-1{1'b0}}, read_inverse_enable};
+        num  <= num + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-1{1'b0}}, read_enable};
     end
 end
 
