@@ -91,10 +91,7 @@ module datapath(
     cu_rr_t cu_rr_int;
 
     // wb csr
-    bus64_t wb_csr_rw_data_int;
     logic   wb_csr_ena_int;
-    csr_cmd_t wb_csr_cmd_int;
-
 
     // data to write to RR from wb
     bus64_t data_wb_rr_int;
@@ -280,74 +277,12 @@ module datapath(
         .output_o(exe_to_wb_wb)
     );
 
-    // WB
-    // CSR
-    // This could be placed in an outsite module
-    always_comb begin
-        wb_csr_cmd_int = CSR_CMD_NOPE;
-        wb_csr_rw_data_int = 64'b0;
-        wb_csr_ena_int = 1'b0;
-        if (exe_to_wb_wb.valid) begin
-            case (exe_to_wb_wb.instr_type)
-                CSRRW: begin
-                    wb_csr_cmd_int = CSR_CMD_WRITE;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;
-                end
-                CSRRS: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;
-                end
-                CSRRC: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                    wb_csr_rw_data_int = exe_to_wb_wb.result;
-                    wb_csr_ena_int = 1'b1;
-                end
-                CSRRWI: begin
-                    wb_csr_cmd_int = CSR_CMD_WRITE;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
-                    wb_csr_ena_int = 1'b1;
-                end
-                CSRRSI: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};
-                    wb_csr_ena_int = 1'b1;
-                end
-                CSRRCI: begin
-                    wb_csr_cmd_int = (exe_to_wb_wb.rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                    wb_csr_rw_data_int = {59'b0,exe_to_wb_wb.rs1};  
-                    wb_csr_ena_int = 1'b1;
-                end
-                ECALL,
-                EBREAK,
-                URET,
-                SRET,
-                MRET,
-                WFI,
-                FENCE,
-                MRTS: begin
-                    wb_csr_cmd_int = CSR_CMD_SYS;
-                    wb_csr_rw_data_int = 64'b0;
-                    wb_csr_ena_int = 1'b1;
-                end
-                default: begin
-                    `ifdef ASSERTIONS
-                       assert (1 == 0);
-                    `endif
-                     wb_csr_ena_int = 1'b0;
-                end
-            endcase
-        end
-    end
-
     csr_interface csr_interface_inst
     (
-        .wb_csr_ena_int_i(wb_csr_ena_int),
-        .exe_to_wb_wb_i(exe_to_wb_wb),
-        .wb_csr_cmd_int_i(wb_csr_cmd_int),
-        .wb_csr_rw_data_int_i(wb_csr_rw_data_int),
         .wb_xcpt_i(wb_xcpt),
+        .exe_to_wb_wb_i(exe_to_wb_wb),
+
+        .wb_csr_ena_int_o(wb_csr_ena_int),
         .req_cpu_csr_o(req_cpu_csr_o)
     );
     
