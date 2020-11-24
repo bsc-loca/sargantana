@@ -26,6 +26,7 @@ module if_stage(
     
     // Signals from Control Unit
     input logic                 stall_i,
+    input logic                 stall_debug_i,
     input cu_if_t               cu_if_i,
     // Signals to invalidate buffer/icache
     // from control unit
@@ -120,7 +121,7 @@ module if_stage(
     end
 
     // logic for icache access: if not misaligned 
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int;
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !stall_debug_i;
     assign req_cpu_icache_o.vaddr = pc[39:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
@@ -129,7 +130,7 @@ module if_stage(
     // Output fetch
     assign fetch_o.pc_inst = pc;
     assign fetch_o.inst    = resp_icache_cpu_i.data;
-    assign fetch_o.valid   = !stall_i && (resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int));  // valid if the response of the cache is valid or xcpt
+    assign fetch_o.valid   = !stall_debug_i && !stall_i && (resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int));  // valid if the response of the cache is valid or xcpt
 
     // Branch predictor and RAS
     branch_predictor brach_predictor_inst (

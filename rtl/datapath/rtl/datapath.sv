@@ -164,6 +164,7 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
+        .stall_debug_i(debug_i.halt_valid),
         .stall_i(stall_if),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
