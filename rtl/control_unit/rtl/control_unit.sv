@@ -19,6 +19,7 @@ import riscv_pkg::*;
 module control_unit(
     input logic             rstn_i,
     input logic             clk_i,
+
     input logic             valid_fetch,
     input id_cu_t           id_cu_i,
     input rr_cu_t           rr_cu_i,

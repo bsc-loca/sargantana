@@ -231,8 +231,12 @@ module datapath(
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = pc_evec_q;
             retry_fetch = 1'b1;
-        end else begin
+        end else if (control_int.sel_addr_if == SEL_JUMP_DECODE) begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
+        end else begin
+            `ifdef ASSERTIONS
+                assert (1 == 0);
+            `endif
         end
     end
 
@@ -640,7 +644,6 @@ module datapath(
         .output_o(instruction_gl_commit_old_q)
     );
 
-
     // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
     always @(posedge clk_i) begin
         src_select_commit <= !control_int.stall_commit;
@@ -787,6 +790,7 @@ module datapath(
             .csr_tval(resp_csr_cpu_i.csr_tval)
         );
     `endif
+`endif
 
     // Debug Ring signals Output
     // PC
