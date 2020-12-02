@@ -116,6 +116,7 @@ always_comb begin
         end
         TLB_MISS: begin//011
             state_d = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i) ? READ      :
+                                                         (mmu_ptw_valid_i) ? REPLAY_TLB:
                                                                              TLB_MISS  ;
                                                                                      
             treq_valid_o      = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill);
@@ -156,6 +157,19 @@ always_comb begin
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = 1'b0  ;
             replay_valid_o    = 1'b0;
+        end
+        REPLAY_TLB: begin //110
+            state_d           = READ   ;
+            cmp_enable_o      = cache_enable_i ;
+            iresp_ready_o     = 1'b0  ;
+            iresp_valid_o     = (mmu_ex_valid_i);
+            cache_rd_ena_o    = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill) ;
+            cache_wr_ena_o    = 1'b0  ;
+            miss_o            = 1'b0  ;
+            treq_valid_o      = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill); 
+            ifill_req_valid_o = 1'b0  ;
+            flush_en_o        = flush_i  ;
+            replay_valid_o    = 1'b1;
         end
         default: begin
             state_d           = READ  ;

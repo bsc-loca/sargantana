@@ -81,7 +81,8 @@ typedef enum logic[2:0] {NO_REQ,
                          MISS, 
                          TLB_MISS, 
                          REPLAY, 
-                         KILL
+                         KILL,
+                         REPLAY_TLB
                      } ictrl_state_t;
 
 //------------------------------------------------------
