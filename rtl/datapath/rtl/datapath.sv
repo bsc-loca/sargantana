@@ -30,7 +30,9 @@ module datapath(
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
-    output debug_out_t      debug_o
+    output debug_out_t      debug_o ,
+    //--PMU   
+    output to_PMU_t         pmu_flags_o
 );
 // RISCV TESTS
 
@@ -262,7 +264,15 @@ module datapath(
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
-        .correct_branch_pred_o(correct_branch_pred)
+        .correct_branch_pred_o(correct_branch_pred),
+
+        //PMU Neiel-Leyva
+        .pmu_is_branch_o        ( pmu_flags_o.is_branch     ),      
+        .pmu_branch_taken_o     ( pmu_flags_o.branch_taken  ),   
+        .pmu_miss_prediction_o  ( pmu_flags_o.branch_miss   ),
+        .pmu_stall_mul_o        ( pmu_flags_o.stall_rr      ),
+        .pmu_stall_div_o        ( pmu_flags_o.stall_exe     ),
+        .pmu_stall_mem_o        ( pmu_flags_o.stall_wb      )
     );
 
     assign exe_cu_int.valid = stage_rr_exe_q.instr.valid;
@@ -278,11 +288,10 @@ module datapath(
         .output_o(exe_to_wb_wb)
     );
 
-    csr_interface csr_interface_inst
-    (
+    csr_interface csr_interface_inst(
         .wb_xcpt_i(wb_xcpt),
         .exe_to_wb_wb_i(exe_to_wb_wb),
-
+        .stall_exe_i(control_int.stall_exe),
         .wb_csr_ena_int_o(wb_csr_ena_int),
         .req_cpu_csr_o(req_cpu_csr_o)
     );
@@ -383,5 +392,10 @@ module datapath(
     assign debug_o.wb_reg_we = cu_rr_int.write_enable;
     // Register File read 
     assign debug_o.reg_read_data = stage_rr_exe_d.data_rs1;
+
+
+    //PMU
+    assign pmu_flags_o.stall_if     = resp_csr_cpu_i.csr_stall ; 
+    assign pmu_flags_o.stall_id     = exe_cu_int.stall ; 
 
 endmodule

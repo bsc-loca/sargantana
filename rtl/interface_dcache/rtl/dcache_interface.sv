@@ -47,7 +47,11 @@ module dcache_interface (
     output logic        dmem_req_kill_o,     // Kill actual memory access
 
     // DCACHE Answer to WB
-    output resp_dcache_cpu_t resp_dcache_cpu_o // Dcache to CPU
+    output resp_dcache_cpu_t resp_dcache_cpu_o, // Dcache to CPU
+
+    // PMU
+    output logic dmem_is_store_o,
+    output logic dmem_is_load_o
 );
 
 // Declarations of internal variables
@@ -269,6 +273,10 @@ assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_reg;
 assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_reg;
 assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_reg;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
+
+//-PMU
+assign dmem_is_store_o = (type_of_op == MEM_STORE) && dmem_req_valid_o   ;
+assign dmem_is_load_o  = (type_of_op == MEM_LOAD) && dmem_req_valid_o ;
 
 endmodule
 //`default_nettype wire

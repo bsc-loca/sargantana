@@ -36,8 +36,10 @@ module icache_interface(
     output icache_vpn_t      icache_req_bits_vpn_o   , // ICACHE_REQ_BITS_VPN,
     
     // Fetch stage interface - Request packet icache to fetch
-    output resp_icache_cpu_t  resp_icache_fetch_o
+    output resp_icache_cpu_t  resp_icache_fetch_o    ,
 
+    // PMU flag                                         
+    output logic  buffer_miss_o                         
     
 );
 
@@ -224,5 +226,8 @@ always_comb begin
         endcase
     end
 end
+
+//PMU
+assign buffer_miss_o = icache_access_needed_int  ;
 
 endmodule

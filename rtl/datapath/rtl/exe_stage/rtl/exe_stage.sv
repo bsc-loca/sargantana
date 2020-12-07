@@ -36,7 +36,15 @@ module exe_stage (
 
     output req_cpu_dcache_t req_cpu_dcache_o, // Request to dcache interface 
     output logic                     correct_branch_pred_o, // Decides if the branch prediction was correct  
-    output exe_if_branch_pred_t      exe_if_branch_pred_o // Branch prediction (taken, target) and result (take, target)
+    output exe_if_branch_pred_t      exe_if_branch_pred_o , // Branch prediction (taken, target) and result (take, target)
+
+    //--PMU
+    output logic  pmu_is_branch_o       ,
+    output logic  pmu_branch_taken_o    ,                    
+    output logic  pmu_miss_prediction_o ,
+    output logic  pmu_stall_mul_o       ,
+    output logic  pmu_stall_div_o       ,
+    output logic  pmu_stall_mem_o       
 );
 
 // Declarations
@@ -313,6 +321,18 @@ assign stall_o = (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL) ? st
                  (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV) ? stall_div :
                  (from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM) ? stall_mem :
                  0;
+
+
+//-PMU 
+assign pmu_is_branch_o       = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.valid;
+assign pmu_branch_taken_o    = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.bpred.decision && 
+                               from_rr_i.instr.valid            ;
+assign pmu_miss_prediction_o = !correct_branch_pred_o;
+
+assign pmu_stall_mul_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL & stall_mul;
+assign pmu_stall_div_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV & stall_div;
+assign pmu_stall_mem_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM & stall_mem; 
+
 
 endmodule
 

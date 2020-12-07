@@ -144,14 +144,27 @@ module top_drac(
     output bus64_t              IO_REG_READ_DATA,
 
 
-//------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // PMU INTERFACE
-//------------------------------------------------------------------------------------
-    output logic                io_core_pmu_branch_miss,
-    output logic                io_core_pmu_EXE_STORE,
-    output logic                io_core_pmu_EXE_LOAD,
-    //output logic  [39:0]           io_core_pmu_EXE_PC,
-    output logic                io_core_pmu_new_instruction
+//-----------------------------------------------------------------------------
+    input  logic                io_core_pmu_l2_hit_i        ,
+    output logic                io_core_pmu_branch_miss     ,
+    output logic                io_core_pmu_is_branch       ,
+    output logic                io_core_pmu_branch_taken    , 
+    output logic                io_core_pmu_EXE_STORE       ,
+    output logic                io_core_pmu_EXE_LOAD        ,
+    output logic                io_core_pmu_new_instruction ,
+    output logic                io_core_pmu_icache_req      ,
+    output logic                io_core_pmu_icache_kill     ,
+    output logic                io_core_pmu_stall_if        ,
+    output logic                io_core_pmu_stall_id        ,
+    output logic                io_core_pmu_stall_rr        ,
+    output logic                io_core_pmu_stall_exe       ,
+    output logic                io_core_pmu_stall_wb        ,           
+    output logic                io_core_pmu_buffer_miss     ,           
+    output logic                io_core_pmu_imiss_kill      ,           
+    output logic                io_core_pmu_icache_bussy    ,
+    output logic                io_core_pmu_imiss_time      
 
 );
 
@@ -184,6 +197,13 @@ treq_o_t       itlb_treq    ;
 ifill_resp_i_t ifill_resp   ;
 ifill_req_o_t  ifill_req    ;
 logic          iflush       ;
+
+//--PMU
+to_PMU_t       pmu_flags    ;
+logic          buffer_miss  ;
+logic imiss_time_pmu  ;
+logic imiss_kill_pmu ;
+logic imiss_l2_hit ;
 
 assign debug_in.halt_valid=debug_halt_i;
 assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
@@ -267,7 +287,22 @@ assign itlb_tresp.xcpt   = TLB_RESP_XCPT_IF  ;
 assign TLB_REQ_BITS_VPN  = itlb_treq.vpn     ;
 assign TLB_REQ_VALID     = itlb_treq.valid   ;
 
-
+//-- PMU conection
+assign io_core_pmu_icache_req       = lagarto_ireq.valid                    ; 
+assign io_core_pmu_icache_kill      = lagarto_ireq.kill                     ;
+assign io_core_pmu_stall_if         = pmu_flags.stall_if                    ;  
+assign io_core_pmu_stall_id         = pmu_flags.stall_id                    ; 
+assign io_core_pmu_stall_rr         = pmu_flags.stall_rr                    ; 
+assign io_core_pmu_stall_exe        = pmu_flags.stall_exe                   ; 
+assign io_core_pmu_stall_wb         = pmu_flags.stall_wb                    ; 
+assign io_core_pmu_branch_miss      = pmu_flags.branch_miss                 ; 
+assign io_core_pmu_is_branch        = pmu_flags.is_branch                   ; 
+assign io_core_pmu_branch_taken     = pmu_flags.branch_taken                ; 
+assign io_core_pmu_new_instruction  = req_datapath_csr_interface.csr_retire ;
+assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
+assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
+assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
+assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
 
 datapath datapath_inst(
     .clk_i(CLK),
@@ -284,7 +319,9 @@ datapath datapath_inst(
     .req_cpu_icache_o(req_datapath_icache_interface),
     .req_cpu_csr_o(req_datapath_csr_interface),
     .debug_o(debug_out),
-    .csr_priv_lvl_i(csr_priv_lvl_i)
+    .csr_priv_lvl_i(csr_priv_lvl_i),
+    //PMU                                                   
+    .pmu_flags_o        (pmu_flags)
 );
 
 icache_interface icache_interface_inst(
@@ -309,9 +346,9 @@ icache_interface icache_interface_inst(
     .req_fetch_icache_i(req_datapath_icache_interface),
     
     // Fetch stage interface - Response packet icache to fetch
-    .resp_icache_fetch_o(resp_icache_interface_datapath)
+    .resp_icache_fetch_o(resp_icache_interface_datapath),
     //PMU
-    //.buffer_miss_o (buffer_miss )
+    .buffer_miss_o (buffer_miss )
 );
 
 dcache_interface dcache_interface_inst(
@@ -341,6 +378,10 @@ dcache_interface dcache_interface_inst(
     .dmem_req_invalidate_lr_o(DMEM_REQ_INVALIDATE_LR),
     .dmem_req_kill_o(DMEM_REQ_BITS_KILL),
 
+    // PMU
+    .dmem_is_store_o ( io_core_pmu_EXE_STORE ),
+    .dmem_is_load_o  ( io_core_pmu_EXE_LOAD  ),
+    
     // DCACHE Answer to cpu
     .resp_dcache_cpu_o(resp_dcache_interface_datapath) 
 );
@@ -358,8 +399,8 @@ top_icache icache (
     .icache_ifill_req_o ( ifill_req     )   //- To upper levels. 
 );
 
-
-
+//PMU  
+assign imiss_l2_hit = ifill_resp.ack & io_core_pmu_l2_hit_i; 
 
 
 

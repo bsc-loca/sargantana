@@ -367,6 +367,18 @@ typedef struct packed {
     addrPC_t    jump_addr;
 } jal_id_if_t;
 
+//PMU flags
+typedef struct packed {
+    logic stall_if   ;         // Stop Fetch
+    logic stall_id   ;         // Stop Decode
+    logic stall_rr   ;         // Stop Read Register
+    logic stall_exe  ;         // Stop Exe
+    logic stall_wb   ;         // Stop Write Back
+    logic branch_miss;         // Stop Write Back
+    logic is_branch  ;         // Stop Write Back
+    logic branch_taken;         // Stop Write Back
+} to_PMU_t;  // Control signals to PMU counters
+
 // CSR output
 typedef struct packed {
     // csr addr or 12 imm bits from system instr

@@ -21,7 +21,7 @@ module csr_interface (
     // Datapath signals
     input  logic          wb_xcpt_i,
     input exe_wb_instr_t  exe_to_wb_wb_i,
-
+    input  logic          stall_exe_i,
     // CSR interruption
     output logic          wb_csr_ena_int_o,
     // Request to CSR
@@ -100,7 +100,8 @@ assign req_cpu_csr_o.csr_rw_data = (wb_csr_ena_int) ? wb_csr_rw_data_int : exe_t
 assign req_cpu_csr_o.csr_exception = wb_xcpt_i;
 
 // if we can retire an instruction
-assign req_cpu_csr_o.csr_retire = exe_to_wb_wb_i.valid && !wb_xcpt_i;
+//assign req_cpu_csr_o.csr_retire = exe_to_wb_wb_i.valid && !wb_xcpt_i;
+assign req_cpu_csr_o.csr_retire = exe_to_wb_wb_i.valid && !wb_xcpt_i && !stall_exe_i;
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = exe_to_wb_wb_i.ex.cause;
 assign req_cpu_csr_o.csr_pc = exe_to_wb_wb_i.pc;
