@@ -52,6 +52,8 @@ module tb_datapath();
     resp_csr_cpu_t resp_csr_cpu_i;
     req_cpu_csr_t req_cpu_csr_o;
     
+    phreg_t pr;
+    
 
     logic [31:0] tb_addr_i;
     logic [31:0] tb_line_o;
@@ -196,7 +198,9 @@ module tb_datapath();
             tmp = 0;
             $display("*** test_sim1");
             #N2000_CLK_PERIOD;
-            if (datapath_inst.rr_stage_inst.registers[3] == 1) begin
+            pr <= datapath_inst.rename_table_inst.commit_table[3];
+            #CLK_PERIOD;
+            if (datapath_inst.regfile.registers[pr] == 1) begin
                 //FAIL
                 tmp = 0;
             end else begin

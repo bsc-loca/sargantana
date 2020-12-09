@@ -110,8 +110,8 @@ assign instruction_o.branch_taken  = branch_taken;
 
 assign result = (branch_taken) ? target : instruction_i.instr.pc + 4;
 assign instruction_o.result     = instruction_i.instr.pc + 4;
-assign instruction_o.result_pc  = result;
-
+assign instruction_o.result_pc  = (instruction_i.instr.instr_type == JAL) ? 'h0 : result;
+        
 // Exceptions
 
 always_comb begin

@@ -164,7 +164,7 @@ begin
             if (checkpoint_enable) begin
                 version_head <= version_head + checkpoint_enable;
                 // Copy head position
-                head[version_head + 'b1] <= head[version_head] + read_enable;
+                head[version_head + 1'b1] <= head[version_head] + read_enable;
                 // Copy number of free registers.
                 num_registers[version_head + 1'b1]  <= num_registers[version_head]  + write_enable - read_enable;
             end

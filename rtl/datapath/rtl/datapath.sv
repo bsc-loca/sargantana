@@ -141,6 +141,8 @@ module datapath(
     cu_wb_t cu_wb_int;
     rr_cu_t rr_cu_int;
     cu_rr_t cu_rr_int;
+    
+    exe_if_branch_pred_t exe_if_branch_pred_int;   
 
     // Commit signals
     commit_cu_t commit_cu_int;
@@ -215,6 +217,7 @@ module datapath(
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
         .cu_id_o(cu_id_int),
+        .correct_branch_pred_i(correct_branch_pred),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int)
     );
@@ -436,7 +439,6 @@ module datapath(
         .rstn_i(rstn_i),
         .instruction_i(instruction_decode_gl),
         .read_head_i(cu_commit_int.enable_commit),
-        .read_tail_i(1'b0),
         .instruction_writeback_1_i(alu_mul_div_wb.gl_index),
         .instruction_writeback_enable_1_i(alu_mul_div_wb.valid),
         .instruction_writeback_data_1_i(instruction_writeback_gl_1),
@@ -754,6 +756,8 @@ module datapath(
     assign commit_pc        = (instruction_to_commit.valid) ? instruction_to_commit.pc : 64'b0;
     assign commit_data      = (instruction_to_commit.valid) ? data_wb_csr_to_rr  : 64'b0;
     assign commit_addr_reg  = instruction_to_commit.rd;
+    assign commit_reg_we    = instruction_to_commit.regfile_we && instruction_to_commit.valid;
+    assign commit_branch_taken = instruction_to_commit.branch_taken;
 
     // PC
     assign pc_if  = stage_if_id_d.pc_inst;
