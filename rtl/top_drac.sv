@@ -38,7 +38,6 @@ module top_drac(
     input                       IO_REG_WRITE,
     input bus64_t               IO_REG_WRITE_DATA,
 
-
 //------------------------------------------------------------------------------------
 // CSR INPUT INTERFACE
 //------------------------------------------------------------------------------------
@@ -405,7 +404,6 @@ top_icache icache (
 
 //PMU  
 assign imiss_l2_hit = ifill_resp.ack & io_core_pmu_l2_hit_i; 
-
 
 
 endmodule
