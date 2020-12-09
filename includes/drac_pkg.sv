@@ -306,6 +306,7 @@ typedef struct packed {
     addrPC_t result_pc;                 // PC result
     reg_t rd;                           // Destination Register
     bus64_t result;                     // Result or immediate                  
+    logic branch_taken;                 // Branch taken
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
     logic regfile_we;                   // Write to register file

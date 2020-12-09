@@ -44,7 +44,6 @@ module datapath(
     bus64_t commit_pc, commit_data;
     logic commit_valid, commit_reg_we;
     logic [4:0] commit_addr_reg;
-    logic commit_branch_taken;
 `endif
 
     bus64_t pc_if, pc_id, pc_rr, pc_exe, pc_wb;
@@ -756,7 +755,6 @@ module datapath(
     assign commit_data      = (instruction_to_commit.valid) ? data_wb_csr_to_rr  : 64'b0;
     assign commit_addr_reg  = instruction_to_commit.rd;
     assign commit_reg_we    = instruction_to_commit.regfile_we && instruction_to_commit.valid;
-    assign commit_branch_taken = instruction_to_commit.branch_taken;
 
     // PC
     assign pc_if  = stage_if_id_d.pc_inst;
