@@ -27,6 +27,7 @@ module icache_ctrl (
     //----Lagarto interface                         
     input  logic ireq_valid_i       , //- A valid request. 
     input  logic ireq_kill_i        , //- Kill the current request. 
+    input  logic ireq_kill_d        , //- Kill in the first stage. 
     output logic iresp_ready_o      , //- iCache is ready.  
     output logic iresp_valid_o      , //- A valid response.  
     //----iTLB interface                        
@@ -42,7 +43,8 @@ module icache_ctrl (
     output logic ifill_req_valid_o  , //- The IFILL request sent is valid.   
     input logic [ICACHE_N_WAY-1:0] cline_hit_i , //- A hit on any read cache line.  
     //---                                           
-    output logic miss_o     ,
+    output logic miss_o          ,//PMU
+    output logic miss_kill_o     ,//PMU
     output logic replay_valid_o,
     output logic flush_en_o                 
 );                                          
@@ -90,8 +92,9 @@ always_comb begin
             cache_rd_ena_o    = 1'b0;
             iresp_ready_o     = !new_request;
             ifill_req_valid_o = ( !is_hit_or_excpt  && !mmu_miss_i   && 
-                                  !is_flush_or_kill &&  new_request  );
-            miss_o            = 1'b0; 
+                                  !is_flush_or_kill &&  new_request && !ireq_kill_d);
+            miss_o            = 1'b0  ;//PMU
+            miss_kill_o       = 1'b0  ;//PMU
             iresp_valid_o     = ( is_hit && !mmu_miss_i && 
                                  !is_flush_or_kill && new_request) ;
             cache_wr_ena_o    = 1'b0  ;
@@ -107,7 +110,8 @@ always_comb begin
             cache_wr_ena_o = (ifill_resp_valid_i && !is_flush_or_kill ) ; 
             cmp_enable_o      = 1'b0  ;
             iresp_ready_o     = 1'b0  ;
-            miss_o            = 1'b0  ;
+            miss_o            = 1'b1  ;
+            miss_kill_o       = 1'b0  ;//PMU
             treq_valid_o      = 1'b0  ;
             ifill_req_valid_o = 1'b0  ;
             cache_rd_ena_o    = 1'b0  ;
@@ -124,6 +128,7 @@ always_comb begin
             cache_rd_ena_o    = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill) ;
             iresp_valid_o     = (mmu_ex_valid_i);
             miss_o            = 1'b0 ;
+            miss_kill_o       = 1'b0 ;//PMU
             iresp_ready_o     = 1'b0 ;
             ifill_req_valid_o = 1'b0 ;
             cache_wr_ena_o    = 1'b0 ;
@@ -139,6 +144,7 @@ always_comb begin
             cache_rd_ena_o    = (!is_flush_or_kill && !mmu_ex_valid_i ) ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
+            miss_kill_o       = 1'b0 ;//PMU
             treq_valid_o      = 1'b0  ;  
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = flush_i  ;
@@ -153,6 +159,7 @@ always_comb begin
             cache_rd_ena_o    = 1'b0  ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
+            miss_kill_o       = 1'b1  ;//PMU
             treq_valid_o      = 1'b0  ;
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = 1'b0  ;
@@ -166,6 +173,7 @@ always_comb begin
             cache_rd_ena_o    = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill) ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
+            miss_kill_o       = 1'b0 ;//PMU
             treq_valid_o      = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill); 
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = flush_i  ;
@@ -179,10 +187,11 @@ always_comb begin
             cache_rd_ena_o    = 1'b0  ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
+            miss_kill_o       = 1'b0  ;//PMU
             treq_valid_o      = 1'b0  ;
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = 1'b0  ;
-            replay_valid_o    = 1'b0;
+            replay_valid_o    = 1'b0  ;
         end
     endcase
 end

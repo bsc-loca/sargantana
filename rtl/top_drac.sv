@@ -396,7 +396,9 @@ top_icache icache (
     .mmu_tresp_i        ( itlb_tresp    ) , //- From MMU.
     .icache_treq_o      ( itlb_treq     ) , //- To MMU.
     .ifill_resp_i       ( ifill_resp    ) , //- From upper levels.
-    .icache_ifill_req_o ( ifill_req     )   //- To upper levels. 
+    .icache_ifill_req_o ( ifill_req     ) ,  //- To upper levels. 
+    .imiss_time_pmu_o    ( imiss_time_pmu ) ,
+    .imiss_kill_pmu_o    ( imiss_kill_pmu )
 );
 
 //PMU  

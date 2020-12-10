@@ -26,7 +26,11 @@ module top_icache (
     output treq_o_t       icache_treq_o      , //- To MMU.
     // iFill interface
     input  ifill_resp_i_t ifill_resp_i       , //- From upper levels.
-    output ifill_req_o_t  icache_ifill_req_o   //- To upper levels. 
+    output ifill_req_o_t  icache_ifill_req_o , //- To upper levels. 
+
+    // PMU
+    output logic imiss_time_pmu_o            , 
+    output logic imiss_kill_pmu_o           
 );
 
 logic     [ICACHE_TAG_WIDTH-1:0] cline_tag_d      ; //- Cache-line tag
@@ -108,8 +112,8 @@ assign icache_resp_o.vaddr = {vpn_q,idx_q};
 logic icache_resp_valid ; 
 assign icache_resp_o.xcpt = mmu_tresp_q.xcpt && icache_resp_valid;
 
-//assign icache_resp_o.valid = icache_resp_valid && !ireq_kill_d;       
-assign icache_resp_o.valid = icache_resp_valid;       
+assign icache_resp_o.valid = icache_resp_valid && !ireq_kill_d;       
+//assign icache_resp_o.valid = icache_resp_valid;       
 
 //---------------------------------------------------------------------
 //------------------------------------------------------ IFILL request.
@@ -128,29 +132,30 @@ assign ifill_req_was_sent_d = icache_ifill_req_o.valid |
 icache_ctrl  icache_ctrl (
     .clk_i              ( clk_i                     ),
     .rstn_i             ( rstn_i                    ),
-    .cache_enable_i     ( 1'b1            ),
+    .cache_enable_i     ( 1'b1                      ),
     .paddr_is_nc_i      ( paddr_is_nc               ),
     .flush_i            ( is_flush_q                ),
-    .flush_done_i       ( 1'b0                ),
+    .flush_done_i       ( 1'b0                      ),
     .cmp_enable_o       (  cmp_enable               ),
     .cache_rd_ena_o     ( cache_rd_ena              ),
     .cache_wr_ena_o     ( cache_wr_ena              ),
     .ireq_valid_i       ( valid_ireq_q              ),
-    .ireq_kill_i        ( ireq_kill_q       ),
+    .ireq_kill_i        ( ireq_kill_q               ),
+    .ireq_kill_d        ( ireq_kill_d               ),
     .iresp_ready_o      ( icache_resp_o.ready       ),
-    //.iresp_valid_o      ( icache_resp_o.valid       ),
-    .iresp_valid_o      ( icache_resp_valid       ),
+    .iresp_valid_o      ( icache_resp_valid         ),
     .mmu_miss_i         ( mmu_tresp_q.miss          ),
     .mmu_ptw_valid_i    ( mmu_tresp_q.ptw_v         ),
     .mmu_ex_valid_i     ( mmu_tresp_q.xcpt          ),
-    .treq_valid_o       ( treq_valid       ),
-    .valid_ifill_resp_i  ( valid_ifill_resp ),
+    .treq_valid_o       ( treq_valid                ),
+    .valid_ifill_resp_i ( valid_ifill_resp          ),
     .ifill_resp_valid_i ( ifill_resp_i.valid        ),
     .ifill_sent_ack_i   ( ifill_req_was_sent_d      ),
-    .ifill_req_valid_o  ( ifill_req_valid  ),
+    .ifill_req_valid_o  ( ifill_req_valid           ),
     .cline_hit_i        ( cline_hit                 ),   
-    .miss_o             ( /* to monitor */          ),                       
-    .replay_valid_o     ( replay_valid          ),                       
+    .miss_o             ( imiss_time_pmu_o          ),                       
+    .miss_kill_o        ( imiss_kill_pmu_o          ),                       
+    .replay_valid_o     ( replay_valid              ),                       
     .flush_en_o         (flush_enable               )        
 );                                          
 
