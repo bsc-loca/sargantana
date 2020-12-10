@@ -229,7 +229,7 @@ module datapath(
         if (control_int.sel_addr_if == SEL_JUMP_DEBUG) begin
             pc_jump_if_int = debug_i.change_pc_addr;
         end else if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
-            pc_jump_if_int = alu_mul_div_wb.result_pc;
+            pc_jump_if_int = exe_if_branch_pred_int.branch_addr_result_exe;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = pc_evec_q;
             retry_fetch = 1'b1;
