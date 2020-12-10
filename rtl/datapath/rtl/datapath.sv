@@ -623,6 +623,7 @@ module datapath(
     // Control Unit From Write Back
     assign wb_cu_int.valid_1 = alu_mul_div_wb.valid;
     assign wb_cu_int.change_pc_ena = alu_mul_div_wb.change_pc_ena;
+    assign wb_cu_int.branch_taken = alu_mul_div_wb.branch_taken;
     assign wb_cu_int.write_enable_1 = alu_mul_div_wb.regfile_we;
     assign wb_cu_int.checkpoint_done = alu_mul_div_wb.checkpoint_done;
     assign wb_cu_int.chkp = alu_mul_div_wb.chkp;
