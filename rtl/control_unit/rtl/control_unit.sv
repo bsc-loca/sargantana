@@ -104,11 +104,11 @@ module control_unit(
     // logic invalidate icache
     // when there is a fence, it could be a self modifying code
     // invalidate icache
-    assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence);
+    assign invalidate_icache_o = (wb_cu_i.valid && wb_cu_i.fence_i);
     // logic invalidate buffer and repeat fetch
     // when a fence, invalidate buffer and also when csr eret
     // when it is a csr it should be checked more?
-    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence | 
+    assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence_i | 
                                                     exception_enable_q |
                                                     wb_cu_i.stall_csr_fence));
 

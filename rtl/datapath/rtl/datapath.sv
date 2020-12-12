@@ -320,9 +320,13 @@ module datapath(
     assign wb_cu_int.ecall_taken = (exe_to_wb_wb.instr_type == ECALL ||
                                     exe_to_wb_wb.instr_type == MRTS  ||
                                     exe_to_wb_wb.instr_type == EBREAK );
-    // tell cu that there is a fence
+    // tell cu that there is a fence or fence_i
     assign wb_cu_int.fence = (exe_to_wb_wb.instr_type == FENCE_I || 
-                              exe_to_wb_wb.instr_type == FENCE);
+                              exe_to_wb_wb.instr_type == FENCE || 
+                              exe_to_wb_wb.instr_type == SFENCE_VMA);
+    // tell cu there is a fence i to flush the icache
+    assign wb_cu_int.fence_i = (exe_to_wb_wb.instr_type == FENCE_I || 
+                                exe_to_wb_wb.instr_type == SFENCE_VMA);
 
 `ifdef VERILATOR
     // Debug signals

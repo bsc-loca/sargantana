@@ -332,6 +332,7 @@ typedef struct packed {
     logic xcpt;                 // Exception
     logic ecall_taken;          // Ecall 
     logic fence;                // Is fence
+    logic fence_i;              // Is fence i
 } wb_cu_t;      // Write Back to Control Unit
 
 
