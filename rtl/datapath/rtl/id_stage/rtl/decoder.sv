@@ -511,7 +511,7 @@ module decoder(
                         // implement fence as fence i 
                         // to be more restrictive
                         F3_FENCE: begin
-                            decode_instr_o.instr_type = FENCE_I;
+                            decode_instr_o.instr_type = FENCE;
                             decode_instr_o.stall_csr_fence = 1'b1;
                         end
                         F3_FENCE_I: begin
@@ -576,7 +576,8 @@ module decoder(
                                                 end
                                                 RS2_EBREAK_SFENCEVM: begin
                                                     // SFENCE here is old ISA
-                                                    decode_instr_o.instr_type = FENCE;
+                                                    // TODO (guillemlp): check and delete this option 
+                                                    decode_instr_o.instr_type = SFENCE_VMA;
                                                     decode_instr_o.stall_csr_fence = 1'b1;
                                                 end
                                                 default: begin
@@ -615,7 +616,7 @@ module decoder(
                                         end
                                     end*/
                                     F7_SFENCE_VM:begin
-                                        decode_instr_o.instr_type = FENCE;
+                                        decode_instr_o.instr_type = SFENCE_VMA;
                                         decode_instr_o.stall_csr_fence = 1'b1;
                                     end
                                     default: begin // check illegal instruction

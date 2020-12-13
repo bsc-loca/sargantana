@@ -74,7 +74,7 @@ always_comb begin
             SRET,
             MRET,
             WFI,
-            FENCE,
+            SFENCE_VMA,
             MRTS: begin
                 wb_csr_cmd_int = CSR_CMD_SYS;
                 wb_csr_rw_data_int = 64'b0;
