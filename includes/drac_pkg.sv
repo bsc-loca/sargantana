@@ -418,6 +418,8 @@ typedef struct packed {
     // save until the instruction then 
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
+    // tval
+    bus64_t     csr_tval;
 } resp_csr_cpu_t;
 
 typedef struct packed {

@@ -366,7 +366,8 @@ module datapath(
 	    .csr_priv_lvl(csr_priv_lvl_i),
 	    .csr_rw_data(req_cpu_csr_o.csr_rw_data),
 	    .csr_xcpt(resp_csr_cpu_i.csr_exception),
-	    .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause)
+	    .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause),
+	    .csr_tval(resp_csr_cpu_i.csr_tval)
         );
     `endif
 
