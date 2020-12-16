@@ -110,7 +110,7 @@ module control_unit(
     // when it is a csr it should be checked more?
     assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence_i | 
                                                     exception_enable_q |
-                                                    wb_cu_i.stall_csr_fence));
+                                                    wb_cu_i.stall_csr_fence & !wb_cu_i.fence ));
 
 
     // logic about flush the pipeline if branch
