@@ -46,6 +46,7 @@ module top_drac(
     input logic                 CSR_CSR_STALL,
     input logic                 CSR_XCPT,
     input [63:0]                CSR_XCPT_CAUSE,
+    input [63:0]                CSR_TVAL,
     input logic                 CSR_ERET,
     input addr_t                CSR_EVEC,
     input logic                 CSR_INTERRUPT,
@@ -244,6 +245,7 @@ assign resp_csr_interface_datapath.csr_replay = 1'b0;
 assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
 assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
 assign resp_csr_interface_datapath.csr_exception_cause = CSR_XCPT_CAUSE;
+assign resp_csr_interface_datapath.csr_tval = CSR_TVAL;
 assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
 assign resp_csr_interface_datapath.csr_evec = {{25{CSR_EVEC[39]}},CSR_EVEC[38:0]};
 assign resp_csr_interface_datapath.csr_interrupt = CSR_INTERRUPT;
