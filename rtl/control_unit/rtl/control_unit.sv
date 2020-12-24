@@ -53,16 +53,23 @@ module control_unit(
     // logic enable write register file at commit
     always_comb begin
         // we don't allow regular reads/writes if not halted
-        if (debug_wr_valid_i && debug_halt_i) begin
-            cu_rr_o.write_enable = 1'b1;
-        end else if (wb_cu_i.valid &&
-           !wb_cu_i.xcpt &&
-           !csr_cu_i.csr_exception &&
+        if (wb_cu_i.valid &&
+            !wb_cu_i.xcpt &&
+            !csr_cu_i.csr_exception &&
             wb_cu_i.write_enable) 
         begin
             cu_rr_o.write_enable = 1'b1;
         end else begin
             cu_rr_o.write_enable = 1'b0;
+        end
+    end
+
+    always_comb begin
+        // we don't allow regular reads/writes if not halted
+        if (debug_wr_valid_i && debug_halt_i) begin
+            cu_rr_o.write_enable_dbg = 1'b1;
+        end else begin
+            cu_rr_o.write_enable_dbg = 1'b0;
         end
     end
 
@@ -110,7 +117,7 @@ module control_unit(
     // when it is a csr it should be checked more?
     assign invalidate_buffer_o = (wb_cu_i.valid && (wb_cu_i.fence_i | 
                                                     exception_enable_q |
-                                                    wb_cu_i.stall_csr_fence & !wb_cu_i.fence ));
+                                                    (wb_cu_i.stall_csr_fence & !wb_cu_i.fence)));
 
 
     // logic about flush the pipeline if branch

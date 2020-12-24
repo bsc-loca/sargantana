@@ -310,6 +310,7 @@ typedef struct packed {
 
 typedef struct packed {
     logic write_enable;         // Enable write on register file
+    logic write_enable_dbg;     // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
 // Control Unit signals

@@ -219,7 +219,7 @@ module datapath(
     regfile rr_stage_inst(
         .clk_i(clk_i),
 
-        .write_enable_i(cu_rr_int.write_enable),
+        .write_enable_i(cu_rr_int.write_enable | cu_rr_int.write_enable_dbg),
         .write_addr_i(reg_wr_addr),
         .write_data_i(reg_wr_data),
         
@@ -374,13 +374,13 @@ module datapath(
             .inst(exe_to_wb_wb.inst),
             .reg_dst(commit_addr_reg),
             .data(commit_data),
-	    .xcpt(wb_xcpt),
-	    .xcpt_cause(exe_to_wb_wb.ex.cause),
-	    .csr_priv_lvl(csr_priv_lvl_i),
-	    .csr_rw_data(req_cpu_csr_o.csr_rw_data),
-	    .csr_xcpt(resp_csr_cpu_i.csr_exception),
-	    .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause),
-	    .csr_tval(resp_csr_cpu_i.csr_tval)
+            .xcpt(wb_xcpt),
+            .xcpt_cause(exe_to_wb_wb.ex.cause),
+            .csr_priv_lvl(csr_priv_lvl_i),
+            .csr_rw_data(req_cpu_csr_o.csr_rw_data),
+            .csr_xcpt(resp_csr_cpu_i.csr_exception),
+            .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause),
+            .csr_tval(resp_csr_cpu_i.csr_tval)
         );
     `endif
 
