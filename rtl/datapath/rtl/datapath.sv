@@ -550,7 +550,7 @@ module datapath(
 
         .alu_mul_div_to_wb_o(alu_mul_div_to_wb),
         .mem_to_wb_o(mem_to_wb),
-        .stall_o(exe_cu_int.stall),
+        .exe_cu_o(exe_cu_int),
 
         .mem_commit_stall_o(mem_commit_stall_int),
         .exception_mem_commit_o(exception_mem_commit_int),
@@ -566,10 +566,6 @@ module datapath(
         .pmu_stall_mem_o        ( pmu_flags_o.stall_wb      )
     );
 
-    assign exe_cu_int.valid = stage_rr_exe_q.instr.valid;
-    assign exe_cu_int.change_pc_ena = stage_rr_exe_q.instr.change_pc_ena;
-    assign exe_cu_int.stall_csr_fence = stage_rr_exe_q.instr.stall_csr_fence && stage_rr_exe_q.instr.valid;
-
     register #($bits(exe_wb_instr_t) + $bits(exe_wb_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -583,13 +579,6 @@ module datapath(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// WRITE BACK STAGE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    assign wb_cu_int.is_branch = (alu_mul_div_wb.instr_type == BLT)  ||
-                                 (alu_mul_div_wb.instr_type == BLTU) ||
-                                 (alu_mul_div_wb.instr_type == BGE)  ||
-                                 (alu_mul_div_wb.instr_type == BGEU) ||
-                                 (alu_mul_div_wb.instr_type == BEQ)  ||
-                                 (alu_mul_div_wb.instr_type == BNE);
 
     assign instruction_writeback_gl_1.csr_addr = alu_mul_div_wb.csr_addr;
     assign instruction_writeback_gl_1.exception = alu_mul_div_wb.ex;
@@ -623,11 +612,7 @@ module datapath(
     // Control Unit From Write Back
     assign wb_cu_int.valid_1 = alu_mul_div_wb.valid;
     assign wb_cu_int.change_pc_ena = alu_mul_div_wb.change_pc_ena;
-    assign wb_cu_int.branch_taken = alu_mul_div_wb.branch_taken;
     assign wb_cu_int.write_enable_1 = alu_mul_div_wb.regfile_we;
-    assign wb_cu_int.checkpoint_done = alu_mul_div_wb.checkpoint_done;
-    assign wb_cu_int.chkp = alu_mul_div_wb.chkp;
-    assign wb_cu_int.gl_index = alu_mul_div_wb.gl_index;
 
     assign wb_cu_int.valid_2 = mem_wb.valid;
     assign wb_cu_int.write_enable_2 = mem_wb.regfile_we;

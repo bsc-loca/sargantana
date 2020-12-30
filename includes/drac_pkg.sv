@@ -369,11 +369,15 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
-    logic valid;
-    logic change_pc_ena;
-    logic is_branch;
-    logic stall;                // Execution unit stalled
-    logic stall_csr_fence;      // CSR or fence
+    logic valid_1;                // Valid Intruction ALU, MUL, DIV
+    logic valid_2;                // Valid Intruction MEM
+    logic change_pc_ena_1;        // Enable PC write
+    logic is_branch;              // There is a branch in the ALU
+    logic branch_taken;           // Branch taken
+    logic stall;                  // Execution unit stalled
+    logic checkpoint_done;        // It has a checkpoint
+    checkpoint_ptr  chkp;         // Label of the checkpoint
+    gl_index_t gl_index;          // Graduation List entry of ALU
 } exe_cu_t;
 
 // Control Unit signals
@@ -381,7 +385,6 @@ typedef struct packed {
     logic valid_1;                // Valid Intruction ALU, MUL, DIV
     logic valid_2;                // Valid Intruction MEM
     logic change_pc_ena;          // Enable PC write
-    logic branch_taken;           // Branch taken
     logic write_enable_1;         // Write Enable to Register File. ALU,MUL,DIV
     logic write_enable_2;         // Write Enable to Register File. MEM
 

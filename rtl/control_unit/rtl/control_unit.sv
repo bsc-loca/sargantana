@@ -154,11 +154,11 @@ module control_unit(
     // logic do rename/free list checkpoint
     assign cu_id_o.do_checkpoint = (id_cu_i.is_branch & ~id_cu_i.out_of_checkpoints) & ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
 
-    assign cu_id_o.do_recover = (wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid_1);
+    assign cu_id_o.do_recover = (~correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
 
-    assign cu_id_o.recover_checkpoint = wb_cu_i.chkp;
+    assign cu_id_o.recover_checkpoint = exe_cu_i.chkp;
 
-    assign cu_id_o.delete_checkpoint = (~wb_cu_i.branch_taken & wb_cu_i.checkpoint_done & wb_cu_i.valid_1);
+    assign cu_id_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
 
     // logic about flush the pipeline if branch
     always_comb begin
@@ -176,8 +176,24 @@ module control_unit(
             pipeline_flush_o.flush_exe = 1'b1;
             pipeline_flush_o.flush_wb  = 1'b0;
             flush_csr_fence            = 1'b1;
-        end else if ((id_cu_i.stall_csr_fence |
-                      csr_fence_in_pipeline   |
+        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
+            if (exe_cu_i.stall) begin
+                pipeline_flush_o.flush_if  = 1'b1;
+                pipeline_flush_o.flush_id  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b0;
+                pipeline_flush_o.flush_exe = 1'b0;
+                pipeline_flush_o.flush_wb  = 1'b0;
+                flush_csr_fence            = 1'b1;
+            end else begin
+                pipeline_flush_o.flush_if  = 1'b1;
+                pipeline_flush_o.flush_id  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b1;
+                pipeline_flush_o.flush_exe = 1'b0;
+                pipeline_flush_o.flush_wb  = 1'b0;
+                flush_csr_fence            = 1'b1;
+            end
+        end else if ((id_cu_i.stall_csr_fence | 
+                      csr_fence_in_pipeline   | 
                       commit_cu_i.stall_csr_fence) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
@@ -248,9 +264,9 @@ module control_unit(
 
     // logic flush gl
     always_comb begin
-        if (wb_cu_i.branch_taken & wb_cu_i.valid_1) begin
+        if (~correct_branch_pred_i & exe_cu_i.valid_1) begin
             cu_wb_o.flush_gl = 1'b1;
-            cu_wb_o.flush_gl_index = wb_cu_i.gl_index;
+            cu_wb_o.flush_gl_index = exe_cu_i.gl_index;
         end else begin
             cu_wb_o.flush_gl = 1'b0;
             cu_wb_o.flush_gl_index = 'b0;

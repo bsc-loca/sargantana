@@ -34,7 +34,7 @@ module exe_stage (
     // OUTPUTS
     output exe_wb_instr_t               alu_mul_div_to_wb_o,
     output exe_wb_instr_t               mem_to_wb_o,
-    output logic                        stall_o,
+    output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o, // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
 
@@ -67,6 +67,7 @@ exe_wb_instr_t mem_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
+logic stall_int;
 
 logic ready_interface_mem;
 bus64_t data_interface_mem;
@@ -120,7 +121,7 @@ score_board score_board_inst(
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
 
 always_comb begin
-    if (~stall_o & ~flush_i)
+    if (~stall_int & ~flush_i)
         instruction_to_functional_unit = from_rr_i;
     else
         instruction_to_functional_unit = 'h0;
@@ -199,29 +200,29 @@ always_comb begin
 end
 
 always_comb begin
-    stall_o = 1'b0;
+    stall_int = 1'b0;
     set_div_32_inst = 1'b0;
     set_div_64_inst = 1'b0;
     set_mul_64_inst = 1'b0;
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
-            stall_o = ~ready | ~ready_div_32_inst;
+            stall_int = ~ready | ~ready_div_32_inst;
             set_div_32_inst = ready & ready_div_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
-            stall_o = ~ready | ~ready_div_64_inst;
+            stall_int = ~ready | ~ready_div_64_inst;
             set_div_64_inst = ready & ready_div_64_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) 
-            stall_o = ~ready | ~ready_1cycle_inst;
+            stall_int = ~ready | ~ready_1cycle_inst;
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
-            stall_o = ~ready | ~ready_mul_64_inst;
+            stall_int = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))
-            stall_o = ~ready | ~ready_1cycle_inst;
+            stall_int = ~ready | ~ready_1cycle_inst;
         else if (from_rr_i.instr.unit == UNIT_MEM)
-            stall_o = stall_mem | (~ready);
+            stall_int = stall_mem | (~ready);
     end
 end
 
@@ -263,6 +264,19 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              from_rr_i.instr.instr_type == BGEU |
                                              from_rr_i.instr.instr_type == BEQ  |
                                              from_rr_i.instr.instr_type == BNE  );
+                                             
+
+// Data for the Control Unit
+assign exe_cu_o.valid_1 = alu_mul_div_to_wb_o.valid;
+assign exe_cu_o.valid_2 = mem_to_wb_o.valid;
+assign exe_cu_o.change_pc_ena_1 = alu_mul_div_to_wb_o.change_pc_ena;
+assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
+assign exe_cu_o.branch_taken = alu_mul_div_to_wb_o.branch_taken;
+assign exe_cu_o.checkpoint_done = alu_mul_div_to_wb_o.checkpoint_done;
+assign exe_cu_o.chkp = alu_mul_div_to_wb_o.chkp;
+assign exe_cu_o.gl_index = alu_mul_div_to_wb_o.gl_index;
+
+assign exe_cu_o.stall = stall_int;
 
 
 //-PMU 
