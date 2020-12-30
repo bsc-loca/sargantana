@@ -97,6 +97,7 @@ assign ready_enable_2 = ready2_i &  (~recover_commit_i);
             for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
                 register_table[j][0] = j[5:0];
                 ready_table[j][0] = 1'b1;
+                commit_table[j] = j[5:0];
             end
             // Checkpoint signals
             version_head <= 2'b0;       // Current table, 0
