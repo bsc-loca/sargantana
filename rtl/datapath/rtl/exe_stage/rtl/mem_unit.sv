@@ -31,8 +31,9 @@ module mem_unit (
     output req_cpu_dcache_t req_cpu_dcache_o,   // Request to dcache
     output exe_wb_instr_t   instruction_o,      // Output instruction     
     output exception_t      exception_mem_commit_o, // Exception of the commit instruction
-    output logic            mem_commit_stall_o, // Stall commit stage
-    output logic            lock_o              // Mem unit is able to accept more petitions
+    output logic            mem_commit_stall_o,  // Stall commit stage
+    output logic            lock_o,              // Mem unit is able to accept more petitions
+    output logic            empty_o              // Mem unit has no pending Ops
 );
 
 logic is_STORE_or_AMO;
@@ -334,8 +335,9 @@ assign lock = resp_dcache_cpu_i.lock;
 assign req_cpu_dcache_o.kill = kill_i;
 assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 
-//assign mem_commit_stall_o = resp_dcache_cpu_i.lock & (is_STORE_or_AMO & commit_store_or_amo_i);
-//assign lock_o = resp_dcache_cpu_i.lock || (is_STORE_or_AMO & ~commit_store_or_amo_i);
+
 assign lock_o   = full_lsq;
+
+assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 endmodule

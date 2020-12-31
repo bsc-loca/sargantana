@@ -68,6 +68,7 @@ exe_wb_instr_t mem_to_wb;
 bus64_t result_mem;
 logic stall_mem;
 logic stall_int;
+logic empty_mem;
 
 logic ready_interface_mem;
 bus64_t data_interface_mem;
@@ -176,7 +177,8 @@ mem_unit mem_unit_inst(
     .instruction_o          (mem_to_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
-    .lock_o                 (stall_mem)
+    .lock_o                 (stall_mem),
+    .empty_o                (empty_mem)
 );
 
 always_comb begin
@@ -188,12 +190,32 @@ always_comb begin
     
     if (alu_to_wb.valid) begin
         alu_mul_div_to_wb_o = alu_to_wb;
+        if (~alu_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            alu_mul_div_to_wb_o.ex.valid = 1;
+            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+        end
     end else if (mul_to_wb.valid) begin
         alu_mul_div_to_wb_o = mul_to_wb;
+        if (~mul_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            alu_mul_div_to_wb_o.ex.valid = 1;
+            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+        end
     end else if (div_to_wb.valid) begin
         alu_mul_div_to_wb_o = div_to_wb;
+        if (~div_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            alu_mul_div_to_wb_o.ex.valid = 1;
+            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+        end
     end else if (branch_to_wb.valid) begin
         alu_mul_div_to_wb_o = branch_to_wb;
+        if (~branch_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            alu_mul_div_to_wb_o.ex.valid = 1;
+            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+        end
     end else begin
         alu_mul_div_to_wb_o = 'h0;
     end
@@ -290,4 +312,3 @@ assign pmu_stall_div_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DI
 assign pmu_stall_mem_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM & stall_mem; 
 
 endmodule
-
