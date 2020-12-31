@@ -68,11 +68,11 @@ reg valid_bit [0:NUM_ENTRIES-1];
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES) & ~(flush_i);
+assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES) & ~(flush_i) & (~flush_commit_i); 
 
 // User can read the head of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & (num > 0) & (valid_bit[head]) & ~(flush_i);
+assign read_enable = read_head_i & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
 
 
 assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.instr_type == SW) ||
