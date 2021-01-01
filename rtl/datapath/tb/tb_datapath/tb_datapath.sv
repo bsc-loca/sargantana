@@ -62,14 +62,24 @@ module tb_datapath();
 
     assign tb_resp_dcache_cpu_i.lock = 1'b0;
 
-    assign resp_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'hf10) ? 64'h0 : 64'hf123456776543210;
+    assign resp_csr_cpu_i.csr_rw_rdata = (req_cpu_csr_o.csr_rw_addr == 12'h342) ? 64'h0B : 64'h0;
     assign resp_csr_cpu_i.csr_replay = 1'b0;
     assign resp_csr_cpu_i.csr_stall = 1'b0;
     assign resp_csr_cpu_i.csr_exception = 1'b0;
     assign resp_csr_cpu_i.csr_eret = 1'b0;
-    assign resp_csr_cpu_i.csr_evec = 64'h0;
+    assign resp_csr_cpu_i.csr_evec = 64'h04;
     assign resp_csr_cpu_i.csr_interrupt = 1'b0;
     assign resp_csr_cpu_i.csr_interrupt_cause = 64'b0;
+    
+    debug_in_t debug_in;
+    
+    assign debug_in.halt_valid=1'b0;
+    assign debug_in.change_pc_addr='h0;   
+    assign debug_in.change_pc_valid='h0;
+    assign debug_in.reg_read_valid='h0;
+    assign debug_in.reg_read_write_addr='h0;
+    assign debug_in.reg_write_valid='h0;
+    assign debug_in.reg_write_data='h0;
 
 //-----------------------------
 // Module
@@ -80,21 +90,15 @@ module tb_datapath();
         .rstn_i(tb_rstn_i),
         .resp_icache_cpu_i(tb_icache_fetch_i),
         .req_cpu_icache_o(tb_fetch_icache_o),
-        .soft_rstn_i(soft_rstn_i),
-        .reset_addr_i(40'h200),
+        .soft_rstn_i(1'b1),
+        .reset_addr_i(40'h000),
+        .debug_i(debug_in),
         .resp_csr_cpu_i(resp_csr_cpu_i),
         .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
         .resp_dcache_cpu_i(tb_resp_dcache_cpu_i)
 
     );
-
-    /*perfect_memory perfect_memory_inst (
-        .clk_i(tb_clk_i),
-        .rstn_i(tb_rstn_i),
-        .addr_i(tb_addr_i),
-        .line_o(tb_line2_o)
-    );*/
 
     perfect_memory_hex perfect_memory_hex_inst (
         .clk_i(tb_clk_i),
@@ -221,7 +225,7 @@ module tb_datapath();
             tmp = 0;
             $display("*** test_sim1");
             #N2000_CLK_PERIOD;
-            if (datapath_inst.rr_stage_inst.registers[28] == 1) begin
+            if (datapath_inst.rr_stage_inst.registers[3] == 1) begin
                 //FAIL
                 tmp = 0;
             end else begin
