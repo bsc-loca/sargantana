@@ -175,7 +175,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         neg_def_1_q              <= 1'b0;
         result_low_q             <= 'h0;
         result_high_q            <= 'h0;
-    end else if (kill_mul_i | (~instruction_0_q.valid) | op_32) begin
+    end else if (kill_mul_i | (~instruction_0_q.valid) | int_32_0_q) begin
         instruction_1_q          <= 'h0;
         type_1_q                 <= 3'b111;
         int_32_1_q               <= 1'b0;

@@ -72,7 +72,7 @@ module control_unit(
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
-                                                            (commit_cu_i.valid && wb_cu_i.ecall_taken));
+                                                            (commit_cu_i.valid && commit_cu_i.ecall_taken));
 
     // logic enable write register file at commit
     always_comb begin
@@ -169,7 +169,7 @@ module control_unit(
         pipeline_flush_o.flush_exe = 1'b0;
         pipeline_flush_o.flush_wb  = 1'b0;
         flush_csr_fence            = 1'b0;
-        if (commit_cu_i.xcpt & commit_cu_i.valid) || exception_enable_q) begin
+        if ((commit_cu_i.xcpt & commit_cu_i.valid) || exception_enable_q) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;

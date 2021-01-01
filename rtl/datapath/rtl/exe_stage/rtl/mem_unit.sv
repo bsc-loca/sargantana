@@ -302,7 +302,7 @@ always_comb begin
             instruction_o.ex.cause = LD_ACCESS_FAULT;//LD_PAGE_FAULT;
             instruction_o.ex.origin = resp_dcache_cpu_i.addr;
             instruction_o.ex.valid = 1;
-        end else if (((|resp_dcache_cpu_i.addr[63:40] != 0 && && !resp_dcache_cpu_i.addr[39]) ||
+        end else if (((|resp_dcache_cpu_i.addr[63:40] != 0 && !resp_dcache_cpu_i.addr[39]) ||
                       ( !(&resp_dcache_cpu_i.addr[63:40]) && resp_dcache_cpu_i.addr[39] )) &&
                      stored_instr_to_dcache.instr.unit == UNIT_MEM) begin // invalid address
             case(stored_instr_to_dcache.instr.instr_type)

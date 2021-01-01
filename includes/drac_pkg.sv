@@ -393,7 +393,6 @@ typedef struct packed {
     checkpoint_ptr  chkp;       // Label of the checkpoint     
 
     gl_index_t gl_index;        // Graduation List entry
-    logic fence_i;              // Is fence i
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
@@ -404,6 +403,7 @@ typedef struct packed {
     logic xcpt;                 // Exception
     logic ecall_taken;          // Ecall 
     logic fence;                // Is fence
+    logic fence_i;              // Is fence i
     logic write_enable;         // Write Enable to Register File
     logic stall_commit;         // Stop commits
     gl_index_t gl_index;        // Graduation List entry

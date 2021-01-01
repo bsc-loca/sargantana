@@ -226,25 +226,35 @@ always_comb begin
     set_div_32_inst = 1'b0;
     set_div_64_inst = 1'b0;
     set_mul_64_inst = 1'b0;
+    pmu_stall_mul_o = 1'b0;
+    pmu_stall_div_o = 1'b0;
+    pmu_stall_mem_o = 1'b0; 
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_32_inst;
+            pmu_stall_div_o = ~ready | ~ready_div_32_inst;
             set_div_32_inst = ready & ready_div_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_64_inst;
+            pmu_stall_div_o = ~ready | ~ready_div_32_inst;
             set_div_64_inst = ready & ready_div_64_inst;
         end
-        else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) 
+        else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_1cycle_inst;
+            pmu_stall_mul_o = ~ready | ~ready_1cycle_inst;
+        end
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_64_inst;
+            pmu_stall_mul_o = ~ready | ~ready_1cycle_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))
             stall_int = ~ready | ~ready_1cycle_inst;
-        else if (from_rr_i.instr.unit == UNIT_MEM)
+        else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
+            pmu_stall_mem_o = stall_mem | (~ready);
+        end
     end
 end
 
@@ -306,9 +316,5 @@ assign pmu_is_branch_o       = from_rr_i.instr.bpred.is_branch && from_rr_i.inst
 assign pmu_branch_taken_o    = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.bpred.decision && 
                                from_rr_i.instr.valid            ;
 assign pmu_miss_prediction_o = !correct_branch_pred_o;
-
-assign pmu_stall_mul_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MUL & stall_mul;
-assign pmu_stall_div_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_DIV & stall_div;
-assign pmu_stall_mem_o = from_rr_i.instr.valid & from_rr_i.instr.unit == UNIT_MEM & stall_mem; 
 
 endmodule

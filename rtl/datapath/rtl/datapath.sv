@@ -216,7 +216,6 @@ module datapath(
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
         .cu_id_o(cu_id_int),
-        .correct_branch_pred_i(correct_branch_pred),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int)
     );
@@ -367,9 +366,6 @@ module datapath(
         .input_i({stage_id_rr_d.instr,free_register_to_rename,cu_id_int.do_checkpoint}),
         .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd,stage_no_stall_rr_q.checkpoint_done})
     );
-
-
-
 
     // Second ID to RR. To store rename in case of stall
     register #($bits(id_rr_stage_t)) reg_rename_inst(
@@ -599,15 +595,6 @@ module datapath(
     
     assign write_paddr_2 = mem_wb.prd;
     assign write_vaddr_2 = mem_wb.rd;
-    
-    // For bypasses
-    // IMPORTANT: since we can not do bypassig of a CSR, we will not take into acount the case 
-    // of forwarding the result of a CSR to increasse the frequency
-    assign wb_to_exe_exe.valid  = exe_to_wb_wb.valid;
-    assign wb_to_exe_exe.rd     = exe_to_wb_wb.rd;
-    assign wb_to_exe_exe.prd    = exe_to_wb_wb.prd;
-    assign wb_to_exe_exe.data   = data_wb_rr_int;
-    
 
     // Control Unit From Write Back
     assign wb_cu_int.valid_1 = alu_mul_div_wb.valid;
@@ -655,24 +642,9 @@ module datapath(
         end
     end
 
-    // CSR and Exceptions
-    assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? instruction_to_commit.csr_addr : {CSR_ADDR_SIZE{1'b0}};
-    // if csr not enabled send command NOP
-    assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
-    // if csr not enabled send the interesting addr that you are accesing, exception help
-    assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_store_or_amo_int)? instruction_to_commit.exception.origin : exception_mem_commit_int.origin;
-
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
     assign commit_xcpt = (~commit_store_or_amo_int)? instruction_to_commit.exception.valid : exception_mem_commit_int.valid;
-
-    assign req_cpu_csr_o.csr_exception = commit_xcpt;
-
-    // if we can retire an instruction
-    assign req_cpu_csr_o.csr_retire = instruction_to_commit.valid && !commit_xcpt && (!commit_store_or_amo_int | !mem_commit_stall_int);
-    // if there is a csr interrupt we take the interrupt?
-    assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_int)? instruction_to_commit.exception.cause : exception_mem_commit_int.cause;
-    assign req_cpu_csr_o.csr_pc = instruction_to_commit.pc;
 
     // Control Unit From Commit
     assign commit_cu_int.valid = instruction_to_commit.valid;
