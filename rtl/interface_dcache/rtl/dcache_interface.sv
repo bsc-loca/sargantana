@@ -130,9 +130,9 @@ always_comb begin
     case(state)
         // IN RESET STATE
         ResetState: begin
-            dmem_req_valid_o = 1'b0;  // NO request
-            resp_dcache_cpu_o.lock = 1'b0;            // NOT busy
-            next_state = Idle;        // Next state IDLE
+            dmem_req_valid_o = 1'b0;        // NO request
+            resp_dcache_cpu_o.lock = 1'b0;  // NOT busy
+            next_state = Idle;              // Next state IDLE
         end
         // IN IDLE STATE
         Idle: begin
@@ -142,15 +142,9 @@ always_comb begin
         end
         // IN MAKE REQUEST STATE
         MakeRequest: begin
-            /*if(dmem_resp_valid_i & dmem_req_ready_i) begin // case: io response uart
-                dmem_req_valid_o = 1'b0;
-                resp_dcache_cpu_o.lock = 1'b0;
-                next_state = Idle;
-            end else begin*/
-                dmem_req_valid_o = 1'b0;
-                resp_dcache_cpu_o.lock = 1'b1;
-                next_state = (!kill_mem_ope) ? WaitResponse : ResetState ;
-            //end
+            dmem_req_valid_o = 1'b0;
+            resp_dcache_cpu_o.lock = 1'b1;
+            next_state = (!kill_mem_ope) ? WaitResponse : ResetState ;
         end
         // IN WAIT RESPONSE STATE
         WaitResponse: begin

@@ -93,7 +93,9 @@ dcache_interface module_inst (
     .dmem_req_invalidate_lr_o(tb_dmem_req_invalidate_lr_o),
     .dmem_req_kill_o(tb_dmem_req_kill_o),
 
-    .resp_dcache_cpu_o(tb_resp_dcache_cpu_o)
+    .resp_dcache_cpu_o(tb_resp_dcache_cpu_o),
+    .dmem_is_store_o(),
+    .dmem_is_load_o()
 );
 
 //-----------------------------
@@ -654,7 +656,7 @@ dcache_interface module_inst (
 
             assert (tb_resp_dcache_cpu_o.data == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
             assert (tb_resp_dcache_cpu_o.ready == 1'b0) else begin tmp++; assert(1 == 0); end
-            assert (tb_resp_dcache_cpu_o.lock == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_resp_dcache_cpu_o.lock == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_req_cpu_dcache_i.kill <= 1;
             tb_req_cpu_dcache_i.valid <= 0;
@@ -740,7 +742,7 @@ dcache_interface module_inst (
 
             assert (tb_resp_dcache_cpu_o.data == 64'hBA00BA00BA00BA00) else begin tmp++; assert(1 == 0); end
             assert (tb_resp_dcache_cpu_o.ready == 1'b0) else begin tmp++; assert(1 == 0); end
-            assert (tb_resp_dcache_cpu_o.lock == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_resp_dcache_cpu_o.lock == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_req_cpu_dcache_i.kill <= 1;
             tb_req_cpu_dcache_i.valid <= 0;
@@ -925,7 +927,7 @@ dcache_interface module_inst (
 
             assert (tb_resp_dcache_cpu_o.data == 64'hDEADBEEFDEADBEEF) else begin tmp++; assert(1 == 0); end
             assert (tb_resp_dcache_cpu_o.ready == 1'b0) else begin tmp++; assert(1 == 0); end
-            assert (tb_resp_dcache_cpu_o.lock == 1'b0) else begin tmp++; assert(1 == 0); end
+            assert (tb_resp_dcache_cpu_o.lock == 1'b1) else begin tmp++; assert(1 == 0); end
 
             tb_req_cpu_dcache_i.kill <= 1;
             tb_req_cpu_dcache_i.valid <= 0;
