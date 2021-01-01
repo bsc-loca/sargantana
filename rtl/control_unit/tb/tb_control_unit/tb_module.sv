@@ -40,6 +40,9 @@ parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
 // Signals
 //-----------------------------
 
+logic     tb_clk_i;
+logic     tb_rstn_i;
+
 logic             valid_fetch;
 id_cu_t           id_cu_i;
 rr_cu_t           rr_cu_i;
@@ -62,6 +65,8 @@ reg[64*8:0] tb_test_name;
 //-----------------------------
 
 control_unit module_inst (
+    .clk_i(tb_clk_i),
+    .rstn_i(tb_rstn_i),
     .valid_fetch(valid_fetch),
     .id_cu_i(id_cu_i),
     .rr_cu_i(rr_cu_i),
@@ -69,6 +74,7 @@ control_unit module_inst (
     .wb_cu_i(wb_cu_i),
     .csr_cu_i(csr_cu_i),
     .correct_branch_pred_i(correct_branch_pred_i),
+    .debug_halt_i(1'b0),
 
     .pipeline_ctrl_o(pipeline_ctrl_o),
     .pipeline_flush_o(pipeline_flush_o),
@@ -82,6 +88,24 @@ control_unit module_inst (
 //-----------------------------
 // DUT
 //-----------------------------
+
+    //***clk_gen***
+    // A single clock source is used in this design.
+    initial tb_clk_i = 1;
+    always #CLK_HALF_PERIOD tb_clk_i = !tb_clk_i;
+    
+    //***task automatic reset_dut***
+    task automatic reset_dut;
+        begin
+            //$display("*** Toggle reset.");
+            tb_rstn_i <= 1'b0; 
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+            tb_rstn_i <= 1'b1;
+            #CLK_PERIOD;
+            //$display("Done");
+        end
+    endtask
 
 //***task automatic init_sim***
     task automatic init_sim;
@@ -182,6 +206,7 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
+            wb_cu_i.fence_i<=0;
 
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
@@ -255,7 +280,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
-
+            wb_cu_i.fence_i<=0;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -328,7 +354,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
-
+            wb_cu_i.fence_i<=0;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -401,7 +428,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=1;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
-
+            wb_cu_i.fence_i<=0;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -414,6 +442,7 @@ control_unit module_inst (
             correct_branch_pred_i<=0;
 
             #CLK_PERIOD;
+            #CLK_PERIOD;
             incorrect_result = 0;
 
             // --- pipeline_ctrl_o ---
@@ -422,14 +451,13 @@ control_unit module_inst (
             incorrect_result += (pipeline_ctrl_o.stall_id!=1);
             incorrect_result += (pipeline_ctrl_o.stall_rr!=1);
             incorrect_result += (pipeline_ctrl_o.stall_exe!=1);
-            //incorrect_result += (pipeline_ctrl_o.stall_wb!=0);
+
 
             // --- pipeline_flush_o ---
             incorrect_result += (pipeline_flush_o.flush_if!=1);
             incorrect_result += (pipeline_flush_o.flush_id!=1);
             incorrect_result += (pipeline_flush_o.flush_rr!=1);
             incorrect_result += (pipeline_flush_o.flush_exe!=1);
-            //incorrect_result += (pipeline_flush_o.flush_wb!=0);
 
             // --- cu_if_o ---
             incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_JUMP);
@@ -439,7 +467,7 @@ control_unit module_inst (
             incorrect_result += (invalidate_icache_o!=0);
 
             // --- invalidate_buffer_o ---
-            incorrect_result += (invalidate_buffer_o!=0);
+            incorrect_result += (invalidate_buffer_o!=1);
 
             // --- cu_rr_o ---
             incorrect_result += (cu_rr_o.write_enable!=0);
@@ -474,7 +502,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
-
+            wb_cu_i.fence_i<=0;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -486,6 +515,7 @@ control_unit module_inst (
 
             correct_branch_pred_i<=0;
 
+            #CLK_PERIOD;
             #CLK_PERIOD;
             incorrect_result = 0;
 
@@ -547,7 +577,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=0;
-
+            wb_cu_i.fence_i<=0;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -620,7 +651,8 @@ control_unit module_inst (
             wb_cu_i.xcpt<=0;
             wb_cu_i.ecall_taken<=0;
             wb_cu_i.fence<=1;
-
+            wb_cu_i.fence_i<=1;
+            
             csr_cu_i.csr_rw_rdata<=0;
             csr_cu_i.csr_replay<=0;
             csr_cu_i.csr_stall<=0;
@@ -652,7 +684,6 @@ control_unit module_inst (
 
             // --- cu_if_o ---
             incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_KEEP_PC);
-            //incorrect_result += (cu_if_o.invalidate_icache!=0);
 
             // --- invalidate_icache_o ---
             incorrect_result += (invalidate_icache_o!=1);
@@ -667,6 +698,7 @@ control_unit module_inst (
 
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
     initial begin
+        reset_dut();
         init_dump();
         test_sim();
         $finish;

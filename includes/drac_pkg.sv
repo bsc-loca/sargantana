@@ -305,7 +305,6 @@ typedef struct packed {
 
 typedef struct packed {
     next_pc_sel_t next_pc;      // Select next PC
-    logic invalidate_icache;    // Invalidate ICache content
 } cu_if_t;      // Control Unit to Fetch
 
 typedef struct packed {
