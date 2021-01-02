@@ -72,6 +72,7 @@ module tb_datapath();
     assign resp_csr_cpu_i.csr_interrupt_cause = 64'b0;
     
     debug_in_t debug_in;
+    debug_out_t debug_out;
     
     assign debug_in.halt_valid=1'b0;
     assign debug_in.change_pc_addr='h0;   
@@ -80,6 +81,9 @@ module tb_datapath();
     assign debug_in.reg_read_write_addr='h0;
     assign debug_in.reg_write_valid='h0;
     assign debug_in.reg_write_data='h0;
+    
+    logic [1:0] csr_priv_lvl_i;
+    to_PMU_t pmu_flags;
 
 //-----------------------------
 // Module
@@ -96,8 +100,10 @@ module tb_datapath();
         .resp_csr_cpu_i(resp_csr_cpu_i),
         .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
-        .resp_dcache_cpu_i(tb_resp_dcache_cpu_i)
-
+        .resp_dcache_cpu_i(tb_resp_dcache_cpu_i),
+        .debug_o(debug_out),
+        .csr_priv_lvl_i(csr_priv_lvl_i),
+        .pmu_flags_o        (pmu_flags)
     );
 
     perfect_memory_hex perfect_memory_hex_inst (
@@ -140,14 +146,7 @@ module tb_datapath();
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            //req_csr_cpu_i.csr_rw_rdata<='{default:0};
-            //tb_icache_fetch_i.valid<='{default:0};
-            //tb_icache_fetch_i.data<='{default:0};
-            //tb_icache_fetch_i.ex.valid<={default:0};
-	    //tb_icache_fetch_i.instr_addr_misaligned<='{default:0};
-            //tb_icache_fetch_i.instr_access_fault<='{default:0};
-            //tb_icache_fetch_i.instr_page_fault<='{default:0};
-            //tb_addr_i<='{default:0};
+            csr_priv_lvl_i<='{default:0};
             $display("Done");
             
         end
@@ -190,34 +189,6 @@ module tb_datapath();
         end
     endtask
 
-    task automatic read_mem; 
-        begin
-            // Simulate memory maybe made a delay here?
-            if (tb_fetch_icache_o.valid == 1'b1) begin
-                //tb_addr_i = tb_fetch_icache_o.vaddr;
-                //tb_icache_fetch_i.valid <= 1;
-                // /tb_icache_fetch_i.data  = tb_line_o;
-                // /tb_icache_fetch_i.ex    ='{default:0};
-            end          
-        end
-    endtask
-
-    task automatic set_mem_valid;
-        input bit valid; 
-        begin
-            // Simulate memory maybe made a delay here?
-            //if (tb_fetch_icache_o.valid == 1'b1) begin
-                //tb_addr_i = tb_fetch_icache_o.vaddr;
-            //tb_icache_fetch_i.valid <= valid;
-                // /tb_icache_fetch_i.data  = tb_line_o;
-                // /tb_icache_fetch_i.ex    ='{default:0};         
-        end
-    endtask
-
-//    2000:   00000093                slt     x0,x0,-1
-//    2004:   00000113                sltiu   x0,x0,0
-//    2008:   00500013                addi    x0,x0,5
-//    200C:   00804013                xori    x0,x0,8
 
     task automatic test_sim1;
         output int tmp;
@@ -245,8 +216,4 @@ module tb_datapath();
         test_sim();
         $finish;
     end
-//assert property (@(posedge tb_clk_i) (tb_fetch_icache_o.vaddr != 'h0740));
-//assert property (@(posedge tb_clk_i) (datapath_inst.wb_cu_int.branch_taken == 0 | datapath_inst.exe_to_wb_wb.result_pc != 'h0740));
-
 endmodule
-//`default_nettype wire
