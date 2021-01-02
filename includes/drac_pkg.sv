@@ -115,7 +115,7 @@ typedef struct packed {
     addr_t  vaddr;               // Virtual Addr requested
     logic   invalidate_icache;   // Petition to invalidate cache content
     logic   invalidate_buffer;   // Petition to invalidate buffer, which also serves as repeat the req
-    logic  inval_fetch;         //
+    logic   inval_fetch;         //
 } req_cpu_icache_t;
 
 typedef enum logic [2:0] {

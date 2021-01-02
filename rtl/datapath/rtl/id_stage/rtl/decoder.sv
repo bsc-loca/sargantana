@@ -508,8 +508,6 @@ module decoder(
                     // Zifence is implemented 
                     // NOTE: Remove if spec is updated
                     case (decode_i.inst.itype.func3)
-                        // implement fence as fence i 
-                        // to be more restrictive
                         F3_FENCE: begin
                             decode_instr_o.instr_type = FENCE;
                             decode_instr_o.stall_csr_fence = 1'b1;

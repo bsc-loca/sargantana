@@ -338,36 +338,9 @@ module tb_if_stage();
     endtask
     
 
-    // test exceptions from icache acces_fault
-    task automatic test_sim_5;
-        output int tmp;
-        begin
-            $display("%0tns:   *** test sim 5 ***",$time);
-            tb_test_name = "test_sim_5";
-            tmp=0;
-            reset_dut();
-            tick(); // 0x8000_0004 (+4)
-            tb_resp_icache_cpu_i.valid<=1'b1;
-            tb_resp_icache_cpu_i.data<=32'h1234_5678;
-            tb_resp_icache_cpu_i.instr_access_fault<=1'b1;
-            tb_resp_icache_cpu_i.instr_page_fault<=1'b0;
-            half_tick();
-            // Add BRED check
-            if (tb_fetch_o.pc_inst != 40'h0080000008 |
-                tb_fetch_o.inst != 32'h1234_5678 |
-                tb_fetch_o.valid != 1'b1 |
-                tb_fetch_o.ex.valid != 1'b1 |
-                tb_fetch_o.ex.cause != 64'h01) 
-            begin
-                tmp=1;
-                $error("There should be an exception from icache access fault");
-            end
-            half_tick();
-        end
-    endtask
 
     // test exceptions from icache  instr_page_fault
-    task automatic test_sim_6;
+    task automatic test_sim_5;
         output int tmp;
         begin
             $display("%0tns:   *** test sim 6 ***",$time);
@@ -377,7 +350,6 @@ module tb_if_stage();
             tick(); // 0x8000_0004 (+4)
             tb_resp_icache_cpu_i.valid<=1'b1;
             tb_resp_icache_cpu_i.data<=32'h1234_5678;
-            tb_resp_icache_cpu_i.instr_access_fault<=1'b0;
             tb_resp_icache_cpu_i.instr_page_fault<=1'b1;
             // Add BRED check
             half_tick();
@@ -396,7 +368,7 @@ module tb_if_stage();
     endtask
 
     // test exceptions from icache mislaigned
-    task automatic test_sim_7;
+    task automatic test_sim_6;
         output int tmp;
         begin
             $display("%0tns:   *** test sim 7 ***",$time);
@@ -436,15 +408,12 @@ module tb_if_stage();
             // checks inputs from icache
             test_sim_4(tmp);
             check_out(4,tmp);
-            // checks exceptions access_fault
+            // checks exceptions page_fault
             test_sim_5(tmp);
             check_out(5,tmp);
-            // checks exceptions page_fault
+            // checks exceptions addr misaligned
             test_sim_6(tmp);
             check_out(6,tmp);
-            // checks exceptions addr misaligned
-            test_sim_7(tmp);
-            check_out(7,tmp);
         end
     endtask
 
