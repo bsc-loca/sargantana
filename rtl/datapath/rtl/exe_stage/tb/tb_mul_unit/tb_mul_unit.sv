@@ -157,6 +157,7 @@ mul_unit mul_unit_inst (
                 set_srcs(src1,src2);
                 tick();
                 tick();
+                tick();
                 result = src1*src2;
                 if (tb_mul_result != result) begin
                     tmp = 1;
@@ -180,6 +181,7 @@ mul_unit mul_unit_inst (
                 longint src1 = {$urandom(),$urandom()};
                 longint src2 = {$urandom(),$urandom()};
                 set_srcs(src1,src2);
+                tick();
                 tick();
                 tick();
                 result = src1*src2;
@@ -207,6 +209,7 @@ mul_unit mul_unit_inst (
                 longint unsigned src1 = {$urandom(),$urandom()};
                 longint unsigned src2 = {$urandom(),$urandom()};
                 set_srcs(src1,src2);
+                tick();
                 tick();
                 tick();
                 result = src1*src2;
