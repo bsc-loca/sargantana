@@ -1648,7 +1648,7 @@ module tb_decoder();
 
             half_tick();
 
-            // Test SRL
+            // Test SRLScope
             $display ("Checking alui 8: SRLI");
             tb_test_name = "test_9_alui_srli";
             tb_decode_i.inst.itype.func3 = F3_SRLAI;
@@ -2119,7 +2119,7 @@ module tb_decoder();
             tb_test_name = "test_13_fence";
             tb_decode_i.inst.itype.func3 = F3_FENCE;
             //tb_decode_i.inst.rtype.func7 = F7_64_NORMAL;
-            expected_out.instr_type = FENCE_I;
+            expected_out.instr_type = FENCE;
             half_tick();
             
             checkSYSTEM(expected_out,0,differ);
@@ -2191,7 +2191,7 @@ module tb_decoder();
             expected_out.regfile_we = 1'b0;
             //expected_out.result = 9;
             expected_out.signed_op = 1'b0;
-            expected_out.stall_csr_fence = 1'b0;
+            expected_out.stall_csr_fence = 1'b1;
             
             
             // Test ECALL
@@ -2225,52 +2225,10 @@ module tb_decoder();
             // Test ERET
             $display ("Checking SYSTEM  3: ERET");
             tb_test_name = "test_14_sys_eret";
-            tb_decode_i.inst.rtype.func7 = F7_SRET_WFI_ERET_SFENCE;
+            tb_decode_i.inst.rtype.func7 = F7_ECALL_EBREAK_URET;
             tb_decode_i.inst.rtype.func3 = F3_ECALL_EBREAK_ERET;
             tb_decode_i.inst.rtype.rs2 = RS2_ECALL_ERET;
-            expected_out.instr_type = ERET;
-            half_tick();
-            
-            checkSYSTEM(expected_out,0,differ);
-            tmp=tmp+differ;
-            
-            half_tick();
-
-            // Test MRTS
-            $display ("Checking SYSTEM  4: MRTS");
-            tb_test_name = "test_14_sys_mrts";
-            tb_decode_i.inst.rtype.func7 = F7_MRET_MRTS_MRTH;
-            tb_decode_i.inst.rtype.func3 = 'h0;
-            tb_decode_i.inst.rtype.rs2 = RS2_MRTS_HRTS;
-            expected_out.instr_type = MRTS;
-            half_tick();
-            
-            checkSYSTEM(expected_out,0,differ);
-            tmp=tmp+differ;
-            
-            half_tick();
-
-            // Test MRTH
-            $display ("Checking SYSTEM  5: MRTH");
-            tb_test_name = "test_14_sys_mrth";
-            tb_decode_i.inst.rtype.func7 = F7_MRET_MRTS_MRTH;
-            tb_decode_i.inst.rtype.func3 = 'h0;
-            tb_decode_i.inst.rtype.rs2 = RS2_MRTH;
-            expected_out.instr_type = MRTH;
-            half_tick();
-            
-            checkSYSTEM(expected_out,0,differ);
-            tmp=tmp+differ;
-            
-            half_tick();
-
-            // Test HRTS
-            $display ("Checking SYSTEM  6: HRTS");
-            tb_test_name = "test_14_sys_hrts";
-            tb_decode_i.inst.rtype.func7 = F7_HRTS;
-            tb_decode_i.inst.rtype.func3 = 'h0;
-            tb_decode_i.inst.rtype.rs2 = RS2_MRTS_HRTS;
-            expected_out.instr_type = HRTS;
+            expected_out.instr_type = ECALL;
             half_tick();
             
             checkSYSTEM(expected_out,0,differ);
@@ -2298,7 +2256,7 @@ module tb_decoder();
             tb_decode_i.inst.rtype.func7 = F7_SRET_WFI_ERET_SFENCE;
             tb_decode_i.inst.rtype.func3 = 'h0;
             tb_decode_i.inst.rtype.rs2 = RS2_EBREAK_SFENCEVM;
-            expected_out.instr_type = FENCE;
+            expected_out.instr_type = SFENCE_VMA;
             expected_out.stall_csr_fence = 1'b1;
             half_tick();
             
