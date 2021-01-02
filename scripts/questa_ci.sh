@@ -131,7 +131,7 @@ if [ $rval -ne 0 ]; then
   	echo -e "$RED"
     echo "$name_warnings"
     echo -e "$NC"
-	ret_val+=2
+	ret_val+=0
 fi
 
 echo "fails"
