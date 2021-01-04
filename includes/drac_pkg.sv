@@ -554,7 +554,6 @@ typedef struct packed {
     phreg_t         old_prd;                // Old Physical register destination      
 } gl_instruction_t;
 
-typedef logic [31:0] gl_index;
 
 typedef struct packed {
     // current pc in fetch stage
