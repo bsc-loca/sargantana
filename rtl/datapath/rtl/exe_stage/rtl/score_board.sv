@@ -29,7 +29,7 @@ module score_board (
     output logic            ready_div_32_o              // Instruction of 8 cycles duration can be issued
 );
 
-    logic div[15:0];
+    logic div[32:0];
     logic mul[1:0];
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -37,7 +37,7 @@ module score_board (
             for(int i = 1; i >= 0; i--) begin
                 mul[i] <= 0;
             end 
-            for(int i = 15; i >= 0; i--) begin
+            for(int i = 32; i >= 0; i--) begin
                 div[i] <= 0;
             end 
         end 
@@ -45,7 +45,7 @@ module score_board (
             for(int i = 1; i >= 0; i--) begin
                 mul[i] <= 0;
             end 
-            for(int i = 15; i >= 0; i--) begin
+            for(int i = 32; i >= 0; i--) begin
                 div[i] <= 0;
             end  
         end 
@@ -54,21 +54,21 @@ module score_board (
             for(int i = 0; i >= 0; i--) begin
                 mul[i] <= mul[i + 1];
             end
-            div[15] <= 1'b0;   
-            for (int i = 14; i >= 0; i--) begin
+            div[32] <= 1'b0;   
+            for (int i = 31; i >= 0; i--) begin
                 div[i] <= div[i + 1];
             end
             if (set_mul_32_i) begin
-                mul[0] <= 1'b1;
+                mul[0]  <= 1'b1;
             end
             if (set_mul_64_i) begin
-                mul[1] <= 1'b1;
+                mul[1]  <= 1'b1;
             end
             if (set_div_64_i) begin
-                div[15] <= 1'b1;
+                div[32] <= 1'b1;
             end
             if (set_div_32_i) begin
-                div[8]  <= 1'b1;
+                div[16] <= 1'b1;
             end
         end
     end
@@ -76,7 +76,7 @@ module score_board (
     assign ready_1cycle_o = (~mul[0]) & (~div[0]);
     assign ready_mul_32_o = (~mul[1]) & (~div[1]);
     assign ready_mul_64_o = (~div[2]);
-    assign ready_div_32_o = (~div[8]);
+    assign ready_div_32_o = (~div[16]);
 
 endmodule
 

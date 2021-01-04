@@ -92,7 +92,7 @@ assign result_low_d  = src1_def_q * src2_def_q[31:0];
 assign result_high_d = src1_def_q * src2_def_q[63:32];
 
 // 32-bit multiplication MULW, operation finished
-assign result_32_aux = neg_def_0_q ? ~result_low_q[63:0] + 64'b1 : result_low_q[63:0];
+assign result_32_aux = neg_def_0_q ? ~result_low_d[63:0] + 64'b1 : result_low_d[63:0];
 assign result_32 = {{32{result_32_aux[31]}},result_32_aux[31:0]};
 
 assign instruction_0_d.valid         = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_MUL);

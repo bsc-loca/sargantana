@@ -131,7 +131,7 @@ bus64_t rmd_64;
     // Registers
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (~rstn_i) begin
-            for (int i = 0; i < 32; i++) begin
+            for (int i = 0; i <= 32; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;
                 same_sign_q[i]          <= 1'b0;
@@ -142,7 +142,7 @@ bus64_t rmd_64;
                 divisor_q[i]            <= 'h0;
             end
         end else if (kill_div_i) begin
-            for (int i = 0; i < 32; i++) begin
+            for (int i = 0; i <= 32; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;
                 same_sign_q[i]          <= 1'b0;

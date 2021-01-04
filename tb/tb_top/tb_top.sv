@@ -61,7 +61,7 @@ module tb_top();
     bus64_t     tb_csr_xcpt_cause;
     addr_t      tb_csr_pc; 
 
-
+    phreg_t pr;
 
     bus64_t tb_dmem_resp_data_i;
     logic tb_dmem_resp_valid_i;
@@ -285,7 +285,9 @@ module tb_top();
             tmp = 0;
             //$display("*** test_sim1");
             #N4000_CLK_PERIOD;
-            if (top_drac_inst.datapath_inst.rr_stage_inst.registers[3] == 1) begin
+            pr <= top_drac_inst.datapath_inst.rename_table_inst.commit_table[3];
+            #CLK_PERIOD;
+            if (top_drac_inst.datapath_inst.regfile.registers[pr] == 1) begin
                 //FAIL
                 tmp = 0;
             end else begin
