@@ -10,20 +10,24 @@ import drac_pkg::*;
  * Revision History
  *  Revision   | Author     | Description
  *  0.1        | Ruben. L   |
+ *  0.2        | V. Soria P.| Adapt to Sargantana 
  * -----------------------------------------------
  */
  
-// Interface with CSR
+// Interface of Data Path with CSR
 
 module csr_interface (
     // Datapath signals
-    input  logic          commit_xcpt_i,
-    input exe_wb_instr_t  instruction_to_commit_i,
-    input  logic          stall_exe_i,
+    input  logic            commit_xcpt_i,            // Exception at Commit
+    input  gl_instruction_t instruction_to_commit_i,  // Instruction to be Committed
+    input  logic            stall_exe_i,              // Exe Stage is Stalled
+    input  logic            commit_store_or_amo_i,    // The Commit Instruction is AMO or STORE
+    input  logic            mem_commit_stall_i,       // The Commit Instruction is Stalled at Mem Stage
+    input  exception_t      exception_mem_commit_i,   // The Exception comming from AMO or STORE
     // CSR interruption
-    output logic          csr_ena_int_o,
+    output logic            csr_ena_int_o,            // Enable CSR petition
     // Request to CSR
-    output req_cpu_csr_t  req_cpu_csr_o
+    output req_cpu_csr_t    req_cpu_csr_o             // Request to the CSRs
 );
 
 bus64_t csr_rw_data_int;
@@ -94,14 +98,14 @@ assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? instruction_to_commit_i.csr_a
 // if csr not enabled send command NOP
 assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
 // if csr not enabled send the interesting addr that you are accesing, exception help
-assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : : (~commit_store_or_amo_int)? instruction_to_commit_i.exception.origin : exception_mem_commit_int.origin;
+assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_store_or_amo_i)? instruction_to_commit_i.exception.origin : exception_mem_commit_i.origin;
 
 assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
 
 // if we can retire an instruction
-assign req_cpu_csr_o.csr_retire = instruction_to_commit_i.valid && !commit_xcpt_i && && (!commit_store_or_amo_int | !mem_commit_stall_int); //!stall_exe_i;
+assign req_cpu_csr_o.csr_retire = instruction_to_commit_i.valid && !commit_xcpt_i && (!commit_store_or_amo_i | !mem_commit_stall_i); //!stall_exe_i;
 // if there is a csr interrupt we take the interrupt?
-assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_int)? instruction_to_commit_i.exception.cause : exception_mem_commit_int.cause;
+assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? instruction_to_commit_i.exception.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i.pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;

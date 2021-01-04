@@ -54,9 +54,9 @@ module control_unit(
             csr_fence_in_pipeline <= 0;
         else if (flush_csr_fence)
             csr_fence_in_pipeline <= 0;
-        else if(id_cu_i.stall_csr_fence)
+        else if(id_cu_i.valid & id_cu_i.stall_csr_fence)
             csr_fence_in_pipeline <= 1;
-        else if (commit_cu_i.stall_csr_fence)
+        else if (commit_cu_i.valid & commit_cu_i.stall_csr_fence)
                 csr_fence_in_pipeline <= 0;
     end
 
@@ -113,12 +113,13 @@ module control_unit(
             cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
         end else if (jump_enable_int || exception_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        end else if (!valid_fetch || 
-                     pipeline_ctrl_o.stall_if || 
-                     id_cu_i.stall_csr_fence  || 
-                     csr_fence_in_pipeline    || 
-                     (commit_cu_i.valid && commit_cu_i.fence) ||
-                     debug_halt_i)  begin
+        end else if (!valid_fetch                               || 
+                     pipeline_ctrl_o.stall_if                   || 
+                     (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
+                     csr_fence_in_pipeline                      || 
+                     (commit_cu_i.valid && commit_cu_i.fence)   ||
+                     debug_halt_i                               )  begin
+                     
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin
             cu_if_o.next_pc = NEXT_PC_SEL_BP_OR_PC_4;
@@ -152,7 +153,9 @@ module control_unit(
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
-    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch & ~id_cu_i.out_of_checkpoints) & ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
+    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch | id_cu_i.predicted_as_branch) &
+                                   id_cu_i.valid &  ~(id_cu_i.out_of_checkpoints) &
+                                   ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
 
     assign cu_id_o.do_recover = (~correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
 
@@ -163,12 +166,13 @@ module control_unit(
     // logic about flush the pipeline if branch
     always_comb begin
         // if exception
-        pipeline_flush_o.flush_if  = 1'b0;
-        pipeline_flush_o.flush_id  = 1'b0;
-        pipeline_flush_o.flush_rr  = 1'b0;
-        pipeline_flush_o.flush_exe = 1'b0;
-        pipeline_flush_o.flush_wb  = 1'b0;
-        flush_csr_fence            = 1'b0;
+        pipeline_flush_o.flush_if       = 1'b0;
+        pipeline_flush_o.flush_id       = 1'b0;
+        pipeline_flush_o.flush_rr       = 1'b0;
+        pipeline_flush_o.flush_exe      = 1'b0;
+        pipeline_flush_o.flush_wb       = 1'b0;
+        pipeline_flush_o.flush_commit   = 1'b0;
+        flush_csr_fence                 = 1'b0;
         if ((commit_cu_i.xcpt & commit_cu_i.valid) || exception_enable_q) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b1;

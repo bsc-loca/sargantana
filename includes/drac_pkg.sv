@@ -337,10 +337,12 @@ typedef struct packed {
 } if_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {
+    logic valid;                        // Valid instruction
     logic valid_jal;                    // JAL is valid
     logic stall_csr_fence;              // CSR or fence
     logic out_of_checkpoints;           // Rename out of checkpoints
     logic is_branch;                    // Decode instruction is a branch
+    logic predicted_as_branch;          // Decode instruction was predicted as branch
     logic empty_free_list;              // Free list out of registers
 } id_cu_t;      // Decode to Control Unit
 
@@ -361,10 +363,9 @@ typedef struct packed {
 
 
 typedef struct packed {
-    logic write_enable;         // Enable write on register file
     logic write_enable_1;         // Enable write on register file. Port 1
     logic write_enable_2;         // Enable write on register file. Port 2
-    logic write_enable_dbg;     // Enable write on register file dbg usage
+    logic write_enable_dbg;       // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
 // Control Unit signals
@@ -386,13 +387,7 @@ typedef struct packed {
     logic valid_2;                // Valid Intruction MEM
     logic change_pc_ena;          // Enable PC write
     logic write_enable_1;         // Write Enable to Register File. ALU,MUL,DIV
-    logic write_enable_2;         // Write Enable to Register File. MEM
-
-    logic is_branch;            // Decode instruction is a branch
-    logic checkpoint_done;      // It has a checkpoint
-    checkpoint_ptr  chkp;       // Label of the checkpoint     
-
-    gl_index_t gl_index;        // Graduation List entry
+    logic write_enable_2;         // Write Enable to Register File. MEM   
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
@@ -573,11 +568,17 @@ typedef struct packed {
     // current pc in write-back stage
     addr_t          pc_wb;
     // valid write-back
-    logic           wb_valid;
+    logic           wb_valid_1;
     // write-back register file addr
-    logic  [4:0]    wb_reg_addr;
+    logic  [4:0]    wb_reg_addr_1;
     // write-back register file we
-    logic           wb_reg_we;
+    logic           wb_reg_we_1;
+        // valid write-back
+    logic           wb_valid_2;
+    // write-back register file addr
+    logic  [4:0]    wb_reg_addr_2;
+    // write-back register file we
+    logic           wb_reg_we_2;
     // write-back register file read data
     bus64_t         reg_read_data;
 } debug_out_t;

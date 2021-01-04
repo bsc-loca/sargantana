@@ -45,14 +45,11 @@ module tb_div_unit();
 reg tb_clk_i;
 reg tb_rstn_i;
 logic tb_kill_div_i;
-logic tb_request_i;
-logic tb_int_32_i;
-logic tb_signed_op_i;
-bus64_t tb_src1_i;
-bus64_t tb_src2_i;
-bus64_t tb_quo_o;
-bus64_t tb_rmd_o;
-reg tb_stall_o;
+rr_exe_instr_t tb_request_i;
+bus64_t tb_data_src1_i;
+bus64_t tb_data_src2_i;
+exe_wb_instr_t tb_instruction_o;   // Output instruction
+    
 reg[63:0] result_q;
 reg[63:0] result_r;
 reg[64*8:0] tb_test_name;
@@ -65,14 +62,10 @@ div_unit module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .kill_div_i(tb_kill_div_i),
-    .request_i(tb_request_i),
-    .int_32_i(tb_int_32_i),
-    .signed_op_i(tb_signed_op_i),
-    .dvnd_i(tb_src1_i),
-    .dvsr_i(tb_src2_i),
-    .quo_o(tb_quo_o),
-    .rmd_o(tb_rmd_o),
-    .stall_o(tb_stall_o)
+    .instruction_i(tb_request_i),
+    .data_src1_i(tb_data_src1_i),
+    .data_src2_i(tb_data_src2_i),
+    .instruction_o(tb_instruction_o)
 );
 
 //-----------------------------
@@ -105,10 +98,8 @@ div_unit module_inst (
             tb_rstn_i<='{default:0};
             tb_kill_div_i<='{default:0};
             tb_request_i<='{default:0};
-            tb_int_32_i<='{default:0};
-            tb_signed_op_i<='{default:0};
-            tb_src1_i<='{default:0};
-            tb_src2_i<='{default:0};
+            tb_data_src1_i<='{default:0};
+            tb_data_src2_i<='{default:0};
             $display("Done");
         end
     endtask
@@ -152,20 +143,6 @@ div_unit module_inst (
         end
     endtask
 
-//ReadCheck: assert (data === correct_data)
-//               else $error("memory read error");
-//  Igt10: assert (I > 10)
-//           else $warning("I is less than or equal to 10");
-
-    task automatic set_srcs;
-        input int unsigned src1;
-        input int unsigned src2;
-        begin
-            tb_src1_i  <= src1;
-            tb_src2_i  <= src2;
-            tb_request_i <= 1;
-        end
-    endtask
 
 // Test performs division and remanent on unsigned 32 bit operands
     task automatic test_sim_1;
@@ -173,30 +150,40 @@ div_unit module_inst (
         begin
             tb_test_name = "test_sim_1";
             tmp = 0;
-            tb_int_32_i <= 1'b1;
+            #CLK_PERIOD;
+            tb_request_i.instr.op_32 = 1'b1;
             for(int i = 0; i < 500; i++) begin
                 int unsigned src1 = $urandom();
                 int unsigned src2 = $urandom();
-                tb_signed_op_i <= 1'b0;
-                set_srcs(src1,src2);
-                #CLK_PERIOD;
-                result_q[31:0] = (src1/src2);
+                tb_request_i.instr.signed_op = 1'b0;
+                tb_request_i.instr.instr_type = DIVUW;
+                tb_request_i.instr.valid = 1'b1;
+                tb_request_i.instr.unit = UNIT_DIV;
+                tb_data_src1_i  = src1;
+                tb_data_src2_i  = src2;
+                result_q[31:0]  = (src1/src2);
                 result_q[63:32] = {32{result_q[31]}}; 
-                result_r[31:0] = (src1%src2);
+                result_r[31:0]  = (src1%src2);
                 result_r[63:32] = {32{result_r[31]}};
-                while(tb_stall_o == 1) begin
+                #CLK_PERIOD;
+                tb_data_src1_i  = 'h0;
+                tb_data_src2_i  = 'h0;
+                tb_request_i.instr.valid <= 1'b0;
+                tb_request_i.instr.instr_type = ADD;
+                tb_request_i.instr.unit = UNIT_ALU;
+                for(int i = 0; i < 16; i++)begin
                     #CLK_PERIOD;
                 end
-                if (tb_quo_o != result_q) begin
+                if (module_inst.quo_32 != result_q) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,tb_quo_o);
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,module_inst.quo_32);
                     `END_COLOR_PRINT
                 end
-                if (tb_rmd_o != result_r) begin
+                if (module_inst.rmd_32 != result_r) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,tb_rmd_o);
+                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,module_inst.rmd_32);
                     `END_COLOR_PRINT
                 end
             end
@@ -213,31 +200,34 @@ div_unit module_inst (
             for(int i = 0; i < 500; i++) begin
                 longint unsigned src1;
                 longint unsigned src2;
-                tb_src1_i[31:0]  = $urandom();
-                tb_src1_i[63:32] = $urandom();
-                src1 = tb_src1_i;
-                tb_src2_i[31:0]  = $urandom();
-                tb_src2_i[63:32] = $urandom();
-                src2 = tb_src2_i;
-                tb_request_i <= 1'b1;
-                tb_signed_op_i <= 1'b0;
-                tb_int_32_i <= 1'b0;
-                #CLK_PERIOD;
+                tb_data_src1_i[31:0]  = $urandom();
+                tb_data_src1_i[63:32] = $urandom();
+                src1 = tb_data_src1_i;
+                tb_data_src2_i[31:0]  = $urandom();
+                tb_data_src2_i[63:32] = $urandom();
+                src2 = tb_data_src2_i;
+                tb_request_i.instr.valid = 1'b1;
+                tb_request_i.instr.signed_op = 1'b0;
+                tb_request_i.instr.op_32 = 1'b0;
+                tb_request_i.instr.unit = UNIT_DIV;
+                tb_request_i.instr.instr_type = DIVU;
+                tb_data_src1_i  = src1;
+                tb_data_src2_i  = src2;
                 result_q = (src1/src2);
                 result_r = (src1%src2);
-                while(tb_stall_o == 1) begin
+                for(int i = 0; i < 32; i++)begin
                     #CLK_PERIOD;
                 end
-                if (tb_quo_o != result_q) begin
+                if (module_inst.quo_64 != result_q) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,tb_quo_o);
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,result_q,module_inst.quo_64);
                     `END_COLOR_PRINT
                 end
-                if (tb_rmd_o != result_r) begin
+                if (module_inst.rmd_64 != result_r) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,tb_rmd_o);
+                    $error("Result incorrect %h remainder %h = %h out: %h",src1,src2,result_r,module_inst.rmd_64);
                     `END_COLOR_PRINT
                 end
             end

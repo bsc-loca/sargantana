@@ -15,25 +15,25 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module mem_unit (
-    input  wire             clk_i,              // Clock signal
-    input  wire             rstn_i,             // Reset signal
-    input logic             kill_i,             // Exception detected at Commit
-    input logic             flush_i,            // Delete all load_store_queue entries
-    input addr_t            io_base_addr_i,     // Input_output_address
+    input  wire             clk_i,                  // Clock signal
+    input  wire             rstn_i,                 // Reset signal
+    input logic             kill_i,                 // Exception detected at Commit
+    input logic             flush_i,                // Delete all load_store_queue entries
+    input addr_t            io_base_addr_i,         // Input_output_address
 
-    input rr_exe_instr_t    instruction_i,      // Interface to add new instuction
-    input bus64_t           data_rs1_i,         // Data operand 1
-    input bus64_t           data_rs2_i,         // Data operand 2
-    input resp_dcache_cpu_t resp_dcache_cpu_i,  // Response from dcache
-    input wire              commit_store_or_amo_i, // Signal from commit enables writes.
+    input rr_exe_instr_t    instruction_i,          // Interface to add new instuction
+    input bus64_t           data_rs1_i,             // Data operand 1
+    input bus64_t           data_rs2_i,             // Data operand 2
+    input resp_dcache_cpu_t resp_dcache_cpu_i,      // Response from dcache
+    input wire              commit_store_or_amo_i,  // Signal from commit enables writes.
 
 
-    output req_cpu_dcache_t req_cpu_dcache_o,   // Request to dcache
-    output exe_wb_instr_t   instruction_o,      // Output instruction     
+    output req_cpu_dcache_t req_cpu_dcache_o,       // Request to dcache
+    output exe_wb_instr_t   instruction_o,          // Output instruction     
     output exception_t      exception_mem_commit_o, // Exception of the commit instruction
-    output logic            mem_commit_stall_o,  // Stall commit stage
-    output logic            lock_o,              // Mem unit is able to accept more petitions
-    output logic            empty_o              // Mem unit has no pending Ops
+    output logic            mem_commit_stall_o,     // Stall commit stage
+    output logic            lock_o,                 // Mem unit is able to accept more petitions
+    output logic            empty_o                 // Mem unit has no pending Ops
 );
 
 logic is_STORE_or_AMO;
@@ -71,19 +71,19 @@ assign flush_to_lsq = kill_i | flush_i;
 assign  instruction_to_lsq = (instruction_i.instr.unit == UNIT_MEM) ? instruction_i : 'h0 ;
 
 load_store_queue load_store_queue_inst (
-    .clk_i (clk_i),               
-    .rstn_i (rstn_i),
-    .instruction_i(instruction_to_lsq),
-    .data_rs1_i(data_rs1_i),
-    .data_rs2_i(data_rs2_i),                  
-    .flush_i (flush_to_lsq),
-    .read_head_i (read_head_lsq),
-    .instruction_o(instruction_to_dcache),
-    .data_rs1_o(data_rs1_to_dcache),
-    .data_rs2_o(data_rs2_to_dcache),                 
-    .ls_queue_entry_o(),        
-    .full_o(full_lsq),
-    .empty_o(empty_lsq)
+    .clk_i              (clk_i),               
+    .rstn_i             (rstn_i),
+    .instruction_i      (instruction_to_lsq),
+    .data_rs1_i         (data_rs1_i),
+    .data_rs2_i         (data_rs2_i),                  
+    .flush_i            (flush_to_lsq),
+    .read_head_i        (read_head_lsq),
+    .instruction_o      (instruction_to_dcache),
+    .data_rs1_o         (data_rs1_to_dcache),
+    .data_rs2_o         (data_rs2_to_dcache),                 
+    .ls_queue_entry_o   (),        
+    .full_o             (full_lsq),
+    .empty_o            (empty_lsq)
 );
 
 ///////////////////////////////////////////////////////////////////////////////

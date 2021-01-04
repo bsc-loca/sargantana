@@ -126,7 +126,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         int_32_0_q               <= 1'b0;
         src1_def_q               <= 'h0;
         src2_def_q               <= 'h0;
-    end else if (kill_mul_i | (~instruction_d.valid)) begin
+    end else if (kill_mul_i | (~instruction_0_d.valid)) begin
         instruction_0_q          <= 'h0;
         type_0_q                 <= 3'b111;
         neg_def_0_q              <= 1'b0;

@@ -173,9 +173,8 @@ module datapath(
 
     // Debug signals
     bus64_t  reg_wr_data;
-    //logic    reg_wr_enable;
-    logic [REGFILE_WIDTH-1:0] reg_wr_addr;
-    logic [REGFILE_WIDTH-1:0] reg_rd1_addr;
+    phreg_t reg_wr_addr;
+    phreg_t reg_prd1_addr;
     // stall IF
     logic stall_if;
 
@@ -286,11 +285,6 @@ module datapath(
         .jal_id_if_o(jal_id_if_int)
     );
 
-    // valid jal in decode
-    assign id_cu_int.valid_jal = jal_id_if_int.valid;
-
-    assign id_cu_int.stall_csr_fence = stage_id_rr_d.instr.stall_csr_fence && stage_id_rr_d.instr.valid;
-
     // Free List
     free_list free_list_inst(
         .clk_i(clk_i),
@@ -347,8 +341,13 @@ module datapath(
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 
-    assign id_cu_int.empty_free_list = free_list_empty;
+    // valid jal in decode
+    assign id_cu_int.valid              = stage_id_rr_d.instr.valid;
+    assign id_cu_int.valid_jal          = jal_id_if_int.valid;
+    assign id_cu_int.stall_csr_fence    = stage_id_rr_d.instr.stall_csr_fence && stage_id_rr_d.instr.valid;
+    assign id_cu_int.empty_free_list    = free_list_empty;
     assign id_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
+    assign id_cu_int.predicted_as_branch= stage_id_rr_d.instr.bpred.is_branch;
     assign id_cu_int.is_branch = (stage_id_rr_d.instr.instr_type == BLT)  ||
                                  (stage_id_rr_d.instr.instr_type == BLTU) ||
                                  (stage_id_rr_d.instr.instr_type == BGE)  ||
@@ -542,7 +541,7 @@ module datapath(
         .commit_store_or_amo_i(commit_store_or_amo_int),
 
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
-        .correct_branch_pred_i(correct_branch_pred),
+        .correct_branch_pred_o(correct_branch_pred),
 
         .alu_mul_div_to_wb_o(alu_mul_div_to_wb),
         .mem_to_wb_o(mem_to_wb),
@@ -626,17 +625,20 @@ module datapath(
 
     csr_interface csr_interface_inst
     (
-        .wb_xcpt_i(commit_xcpt),
-        .exe_to_wb_wb_i(instruction_to_commit),
-        .stall_exe_i(control_int.stall_exe),
-        .wb_csr_ena_int_o(csr_ena_int),
-        .req_cpu_csr_o(req_cpu_csr_o)
+        .commit_xcpt_i              (commit_xcpt),
+        .instruction_to_commit_i    (instruction_to_commit),
+        .stall_exe_i                (control_int.stall_exe),
+        .commit_store_or_amo_i      (commit_store_or_amo_int),
+        .mem_commit_stall_i         (mem_commit_stall_int),
+        .exception_mem_commit_i     (exception_mem_commit_int),
+        .csr_ena_int_o              (csr_ena_int),
+        .req_cpu_csr_o              (req_cpu_csr_o)
     );
 
-
+    // Delay the PC_EVEC treatment one cycle
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
-            pc_evec_q <=  'b0;
+            pc_evec_q <= 'b0;
         end else begin 
             pc_evec_q <= resp_csr_cpu_i.csr_evec;
         end
@@ -737,11 +739,11 @@ module datapath(
             .commit_valid(commit_valid),
             .reg_wr_valid(cu_rr_int.write_enable && (commit_addr_reg != 5'b0)),
             .pc(commit_pc),
-            .inst(exe_to_wb_wb.inst),
+            .inst(instruction_to_commit.inst),
             .reg_dst(commit_addr_reg),
             .data(commit_data),
             .xcpt(commit_xcpt),
-            .xcpt_cause(instruction_gl_commit.exception.cause),
+            .xcpt_cause(instruction_to_commit.exception.cause),
             .csr_priv_lvl(csr_priv_lvl_i),
             .csr_rw_data(req_cpu_csr_o.csr_rw_data),
             .csr_xcpt(resp_csr_cpu_i.csr_exception),
@@ -759,9 +761,12 @@ module datapath(
     assign debug_o.pc_exe   = pc_exe[39:0];
     assign debug_o.pc_wb    = pc_wb[39:0];
     // Write-back signals
-    assign debug_o.wb_valid = exe_to_wb_wb.valid;
-    assign debug_o.wb_reg_addr = exe_to_wb_wb.rd;
-    assign debug_o.wb_reg_we = cu_rr_int.write_enable;
+    assign debug_o.wb_valid_1 = alu_mul_div_wb.valid;
+    assign debug_o.wb_reg_addr_1 = alu_mul_div_wb.rd;
+    assign debug_o.wb_reg_we_1 = alu_mul_div_wb.regfile_we;
+    assign debug_o.wb_valid_2 = mem_wb.valid;
+    assign debug_o.wb_reg_addr_2 = mem_wb.rd;
+    assign debug_o.wb_reg_we_2 = mem_wb.regfile_we;
     // Register File read 
     assign debug_o.reg_read_data = stage_rr_exe_d.data_rs1;
 

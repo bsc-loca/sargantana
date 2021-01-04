@@ -43,12 +43,12 @@ module exe_stage (
     output exe_if_branch_pred_t         exe_if_branch_pred_o, // Branch prediction (taken, target) and result (take, target)
 
     //--PMU
-    output logic  pmu_is_branch_o       ,
-    output logic  pmu_branch_taken_o    ,                    
-    output logic  pmu_miss_prediction_o ,
-    output logic  pmu_stall_mul_o       ,
-    output logic  pmu_stall_div_o       ,
-    output logic  pmu_stall_mem_o       
+    output logic                        pmu_is_branch_o,
+    output logic                        pmu_branch_taken_o,                    
+    output logic                        pmu_miss_prediction_o,
+    output logic                        pmu_stall_mul_o,
+    output logic                        pmu_stall_div_o,
+    output logic                        pmu_stall_mem_o       
 );
 
 // Declarations
@@ -84,13 +84,15 @@ bus64_t imm_mem_interface;
 
 rr_exe_instr_t instruction_to_functional_unit;
 logic ready;
+logic set_mul_32_inst;
 logic set_mul_64_inst;
 logic set_div_32_inst;
 logic set_div_64_inst;
 logic ready_1cycle_inst;
+logic ready_mul_32_inst; 
 logic ready_mul_64_inst;
 logic ready_div_32_inst;
-logic ready_div_64_inst; 
+
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -107,16 +109,17 @@ assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.da
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.result : from_rr_i.data_rs2;
 
 score_board score_board_inst(
-    .clk_i(clk_i),
-    .rstn_i(rstn_i),
-    .kill_i(kill_i),
-    .set_mul_64_i(set_mul_64_inst),               
-    .set_div_32_i(set_div_32_inst),               
-    .set_div_64_i(set_div_64_inst),       
-    .ready_1cycle_o(ready_1cycle_inst),             
-    .ready_mul_64_o(ready_mul_64_inst),             
-    .ready_div_32_o(ready_div_32_inst),             
-    .ready_div_64_o(ready_div_64_inst)
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
+    .kill_i         (kill_i),
+    .set_mul_32_i   (set_mul_32_inst),               
+    .set_mul_64_i   (set_mul_64_inst),               
+    .set_div_32_i   (set_div_32_inst),               
+    .set_div_64_i   (set_div_64_inst),
+    .ready_1cycle_o (ready_1cycle_inst),
+    .ready_mul_32_o (ready_mul_32_inst),
+    .ready_mul_64_o (ready_mul_64_inst),
+    .ready_div_32_o (ready_div_32_inst)
 );
 
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
@@ -225,6 +228,7 @@ always_comb begin
     stall_int = 1'b0;
     set_div_32_inst = 1'b0;
     set_div_64_inst = 1'b0;
+    set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
     pmu_stall_mul_o = 1'b0;
     pmu_stall_div_o = 1'b0;
@@ -236,17 +240,18 @@ always_comb begin
             set_div_32_inst = ready & ready_div_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
-            stall_int = ~ready | ~ready_div_64_inst;
-            pmu_stall_div_o = ~ready | ~ready_div_32_inst;
-            set_div_64_inst = ready & ready_div_64_inst;
+            stall_int = ~ready;
+            pmu_stall_div_o = ~ready;
+            set_div_64_inst = ready;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
-            stall_int = ~ready | ~ready_1cycle_inst;
-            pmu_stall_mul_o = ~ready | ~ready_1cycle_inst;
+            stall_int = ~ready | ~ready_mul_32_inst;
+            pmu_stall_mul_o = ~ready | ~ready_mul_32_inst;
+            set_mul_32_inst = ready & ready_mul_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_64_inst;
-            pmu_stall_mul_o = ~ready | ~ready_1cycle_inst;
+            pmu_stall_mul_o = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))
@@ -314,7 +319,8 @@ assign exe_cu_o.stall = stall_int;
 //-PMU 
 assign pmu_is_branch_o       = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.valid;
 assign pmu_branch_taken_o    = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.bpred.decision && 
-                               from_rr_i.instr.valid            ;
+                               from_rr_i.instr.valid;
+                               
 assign pmu_miss_prediction_o = !correct_branch_pred_o;
 
 endmodule

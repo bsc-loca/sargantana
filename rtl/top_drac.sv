@@ -219,9 +219,9 @@ assign IO_DEC_PC=debug_out.pc_dec;
 assign IO_RR_PC=debug_out.pc_rr;
 assign IO_EXE_PC=debug_out.pc_exe;
 assign IO_WB_PC=debug_out.pc_wb;
-assign IO_WB_PC_VALID=debug_out.wb_valid;
-assign IO_WB_ADDR=debug_out.wb_reg_addr;
-assign IO_WB_WE=debug_out.wb_reg_we;
+assign IO_WB_PC_VALID=debug_out.wb_valid_1;
+assign IO_WB_ADDR=debug_out.wb_reg_addr_1;
+assign IO_WB_WE=debug_out.wb_reg_we_1;
 assign IO_REG_READ_DATA=debug_out.reg_read_data;
 
 
