@@ -43,9 +43,9 @@ module bimodal_predictor(
     output  addrPC_t    bimodal_predict_addr_o         // Address predicted to jump
 );
 
-reg [_BITS_BIMODAL_STATE_MACHINE_-1:0] new_state_to_pht;
-reg [_BITS_BIMODAL_STATE_MACHINE_-1:0] readed_state_pht;
-reg [1:0] past_state_pht;
+logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] new_state_to_pht;
+logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] readed_state_pht;
+logic [1:0] past_state_pht;
 
     // Creates an array of _NUM_BIMODAL_ENTRIES_ registers of _BITS_BIMODAL_STATE_MACHINE_ length
     // This array stores 1024 states machines for predicting the branches
@@ -67,11 +67,11 @@ reg [1:0] past_state_pht;
 
 
     // Read pattern history table at addres pc_fetch_i
-    always@(posedge clk_i)
+    always_comb
     begin
-        readed_state_pht <= pattern_history_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-        past_state_pht <= pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-        bimodal_predict_addr_o <= branch_target_buffer[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        readed_state_pht = pattern_history_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        past_state_pht = pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        bimodal_predict_addr_o = branch_target_buffer[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
     end
    
     always_comb begin

@@ -51,7 +51,7 @@ module branch_predictor(
                 
 wire            bimodal_predict_taken;
 addrPC_t        bimodal_predict_addr;
-tag_reg         is_branch_tag;
+tag             is_branch_tag;
 wire            is_branch_prediction;
 logic           is_branch_tag_valid;
                 
@@ -92,10 +92,10 @@ bimodal_predictor bimodal_predictor_inst(
 	end
 `endif
 
-    always_ff @(posedge clk_i) 
+    always_comb 
     begin
-        is_branch_tag <= is_branch_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-        is_branch_tag_valid <= is_branch_table_valid[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        is_branch_tag = is_branch_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        is_branch_tag_valid = is_branch_table_valid[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
     end
     
     always @(posedge clk_i, negedge rstn_i) 
