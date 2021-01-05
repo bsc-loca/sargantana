@@ -552,6 +552,9 @@ typedef struct packed {
     logic           regfile_we;             // Write to register file
     phreg_t         prd;                    // Physical register destination to write      
     phreg_t         old_prd;                // Old Physical register destination      
+    `ifdef VERILATOR
+    riscv_pkg::instruction_t inst;          // Bits of the instruction
+    `endif
 } gl_instruction_t;
 
 

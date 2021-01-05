@@ -718,14 +718,14 @@ module datapath(
 
     // PC
     assign pc_if  = stage_if_id_d.pc_inst;
-    assign pc_id  = (valid_id)  ? stage_id_rr_d.pc : 64'b0;
+    assign pc_id  = (valid_id)  ? stage_id_rr_d.instr.pc : 64'b0;
     assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? alu_mul_div_wb.pc : 64'b0;
 
     // Valid
     assign valid_if  = stage_if_id_d.valid;
-    assign valid_id  = stage_id_rr_d.valid;
+    assign valid_id  = stage_id_rr_d.instr.valid;
     assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
     assign valid_wb = alu_mul_div_wb.valid;
@@ -737,7 +737,7 @@ module datapath(
             .clk(clk_i),
             .rst(rstn_i),
             .commit_valid(commit_valid),
-            .reg_wr_valid(cu_rr_int.write_enable && (commit_addr_reg != 5'b0)),
+            .reg_wr_valid(cu_rr_int.write_enable_1 && (commit_addr_reg != 5'b0)),
             .pc(commit_pc),
             .inst(instruction_to_commit.inst),
             .reg_dst(commit_addr_reg),
