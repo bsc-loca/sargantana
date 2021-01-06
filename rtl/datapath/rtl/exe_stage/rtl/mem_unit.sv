@@ -295,11 +295,11 @@ always_comb begin
             instruction_o.ex.origin = resp_dcache_cpu_i.addr;
             instruction_o.ex.valid = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_st && stored_instr_to_dcache.instr.unit == UNIT_MEM) begin // Page fault store
-            exception_mem_commit_o.cause  = ST_AMO_ACCESS_FAULT;
+            exception_mem_commit_o.cause  = ST_AMO_PAGE_FAULT;
             exception_mem_commit_o.origin = resp_dcache_cpu_i.addr;
             exception_mem_commit_o.valid  = 1;
         end else if (resp_dcache_cpu_i.xcpt_pf_ld && stored_instr_to_dcache.instr.unit == UNIT_MEM) begin // Page fault load
-            instruction_o.ex.cause = LD_ACCESS_FAULT;//LD_PAGE_FAULT;
+            instruction_o.ex.cause = LD_PAGE_FAULT;
             instruction_o.ex.origin = resp_dcache_cpu_i.addr;
             instruction_o.ex.valid = 1;
         end else if (((|resp_dcache_cpu_i.addr[63:40] != 0 && !resp_dcache_cpu_i.addr[39]) ||
