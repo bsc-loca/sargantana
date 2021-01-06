@@ -483,9 +483,6 @@ module datapath(
     assign stage_rr_exe_d.chkp = stage_id_rr_q.chkp;
     assign stage_rr_exe_d.checkpoint_done = stage_id_rr_q.checkpoint_done;
 
-    assign rr_cu_int.stall_csr_fence = stage_rr_exe_d.instr.stall_csr_fence && stage_rr_exe_d.instr.valid;
-
-
 
     assign selection_rr_exe_d = (control_int.stall_rr) ? reg_to_exe : stage_rr_exe_d;
 
