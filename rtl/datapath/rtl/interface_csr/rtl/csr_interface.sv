@@ -103,7 +103,7 @@ assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_st
 assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
 
 // if we can retire an instruction
-assign req_cpu_csr_o.csr_retire = instruction_to_commit_i.valid && !commit_xcpt_i && (!commit_store_or_amo_i | !mem_commit_stall_i); //!stall_exe_i;
+assign req_cpu_csr_o.csr_retire = instruction_to_commit_i.valid && !commit_xcpt_i && !mem_commit_stall_i; //!stall_exe_i;
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? instruction_to_commit_i.exception.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i.pc;

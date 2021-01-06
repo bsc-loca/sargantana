@@ -445,7 +445,7 @@ module datapath(
         .assigned_gl_entry_o(stage_rr_exe_d.gl_index),
         .instruction_o(instruction_gl_commit),
         .commit_gl_entry_o(commit_cu_int.gl_index),
-        .full_o(),
+        .full_o(rr_cu_int.gl_full),
         .empty_o()
     );
 

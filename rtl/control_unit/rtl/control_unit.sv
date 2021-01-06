@@ -240,10 +240,10 @@ module control_unit(
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
-        end  else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
+        end else if (rr_cu_i.gl_full) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b0;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
@@ -258,6 +258,12 @@ module control_unit(
             pipeline_ctrl_o.stall_rr     = 1'b0;
             pipeline_ctrl_o.stall_exe    = 1'b0;
             pipeline_ctrl_o.stall_wb     = 1'b0;
+        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b0;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
         end
     end
 

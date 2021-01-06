@@ -228,11 +228,11 @@ typedef struct packed {
 
 // Fetch Stage
 typedef struct packed {
-    addrPC_t pc_inst;                   // Actual PC
+    addrPC_t                 pc_inst;   // Actual PC
     riscv_pkg::instruction_t inst;      // Bits of the instruction
-    logic valid;                        // Valid instruction
-    branch_pred_t bpred;                // Branch prediction
-    exception_t ex;                     // Exceptions
+    logic                    valid;     // Valid instruction
+    branch_pred_t            bpred;     // Branch prediction
+    exception_t              ex;        // Exceptions
 } if_id_stage_t;       // FETCH STAGE TO DECODE STAGE
 
 // This is created by decode
@@ -325,7 +325,7 @@ typedef struct packed {
 } exe_wb_instr_t;       //  Execution Stage to Write Back
 
 typedef struct packed {
-    logic valid;                        // Valid instruction
+    logic   valid;                      // Valid instruction
     bus64_t data;                       // Result data
     reg_t   rd;                         // Virtual register destination
     phreg_t prd;                        // Physical register destination
@@ -347,7 +347,7 @@ typedef struct packed {
 } id_cu_t;      // Decode to Control Unit
 
 typedef struct packed {
-    logic stall_csr_fence;  // CSR or fence
+    logic gl_full;  // CSR or fence
 } rr_cu_t;      // Read Register to Control Unit 
 
 typedef struct packed {
