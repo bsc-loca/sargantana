@@ -160,10 +160,11 @@ always_comb begin
         WaitResponse: begin
             if (kill_i) begin
                 req_cpu_dcache_o.valid = 1'b0;              // Invalid instruction
-                req_cpu_dcache_o.data_rs1 = 64'h0;
-                req_cpu_dcache_o.data_rs2 = 64'h0;
-                req_cpu_dcache_o.instr_type = ADD;
-                req_cpu_dcache_o.mem_size = 3'h0;
+                req_cpu_dcache_o.data_rs1 = stored_data_rs1;
+                req_cpu_dcache_o.data_rs2 = stored_data_rs2;
+                req_cpu_dcache_o.imm = stored_instr_to_dcache.instr.result;
+                req_cpu_dcache_o.instr_type = stored_instr_to_dcache.instr.instr_type;
+                req_cpu_dcache_o.mem_size = stored_instr_to_dcache.instr.mem_size;
                 req_cpu_dcache_o.rd = 5'h0;
                 next_state = ReadHead;        // Next state Read Head
                 read_head_lsq = 1'b0;         
