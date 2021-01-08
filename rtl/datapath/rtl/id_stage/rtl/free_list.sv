@@ -88,7 +88,7 @@ begin
         num_registers[0]  <= 6'b100000; // Number of free registers 32
 
         for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
-            register_table[i] = i[5:0] + 6'b100000;
+            register_table[i] <= i[5:0] + 6'b100000;
         end
     end
     else if (commit_roll_back_i) begin
