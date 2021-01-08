@@ -113,7 +113,13 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
-    if(~rstn_i | flush_i) begin
+    if(~rstn_i) begin
+        head <= 3'h1;
+        tail <= 3'b0;
+        num  <= 4'b0;
+        ls_queue_entry_o <= 3'b0;
+    end
+    else if (flush_i) begin
         head <= 3'h1;
         tail <= 3'b0;
         num  <= 4'b0;
