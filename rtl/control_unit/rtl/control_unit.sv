@@ -173,7 +173,7 @@ module control_unit(
         pipeline_flush_o.flush_wb       = 1'b0;
         pipeline_flush_o.flush_commit   = 1'b0;
         flush_csr_fence                 = 1'b0;
-        if ((commit_cu_i.xcpt & commit_cu_i.valid) || exception_enable_q) begin
+        if (exception_enable_q) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;
