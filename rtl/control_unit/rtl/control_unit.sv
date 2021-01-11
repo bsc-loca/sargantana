@@ -272,7 +272,7 @@ module control_unit(
 
     assign cu_commit_o.enable_commit = ~(commit_cu_i.stall_commit);
 
-    assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit;
+    assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit | exception_enable_q;
 
 
     // logic flush gl
