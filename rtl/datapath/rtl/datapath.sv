@@ -441,7 +441,7 @@ module datapath(
         .instruction_writeback_data_2_i(instruction_writeback_gl_2),
         .flush_i(cu_wb_int.flush_gl),
         .flush_index_i(cu_wb_int.flush_gl_index),
-        .flush_commit_i(commit_cu_int.flush_gl_commit),
+        .flush_commit_i(cu_commit_int.flush_gl_commit),
         .assigned_gl_entry_o(stage_rr_exe_d.gl_index),
         .instruction_o(instruction_gl_commit),
         .commit_gl_entry_o(commit_cu_int.gl_index),
