@@ -174,12 +174,13 @@ module control_unit(
         pipeline_flush_o.flush_commit   = 1'b0;
         flush_csr_fence                 = 1'b0;
         if (exception_enable_q) begin
-            pipeline_flush_o.flush_if  = 1'b1;
-            pipeline_flush_o.flush_id  = 1'b1;
-            pipeline_flush_o.flush_rr  = 1'b1;
-            pipeline_flush_o.flush_exe = 1'b1;
-            pipeline_flush_o.flush_wb  = 1'b0;
-            flush_csr_fence            = 1'b1;
+            pipeline_flush_o.flush_if       = 1'b1;
+            pipeline_flush_o.flush_id       = 1'b1;
+            pipeline_flush_o.flush_rr       = 1'b1;
+            pipeline_flush_o.flush_exe      = 1'b1;
+            pipeline_flush_o.flush_wb       = 1'b0;
+            pipeline_flush_o.flush_commit   = 1'b1;
+            flush_csr_fence                 = 1'b1;
         end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
             if (exe_cu_i.stall) begin
                 pipeline_flush_o.flush_if  = 1'b1;
