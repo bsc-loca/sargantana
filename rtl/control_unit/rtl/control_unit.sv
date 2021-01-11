@@ -267,6 +267,8 @@ module control_unit(
         end
     end
 
+    assign cu_commit_o.flush_gl_commit = exception_enable_q;
+
     assign cu_commit_o.enable_commit = ~(commit_cu_i.stall_commit);
 
     assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit;

@@ -401,6 +401,7 @@ typedef struct packed {
     logic fence_i;              // Is fence i
     logic write_enable;         // Write Enable to Register File
     logic stall_commit;         // Stop commits
+    logic flush_gl_commit;      // Flush Graduation List
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
