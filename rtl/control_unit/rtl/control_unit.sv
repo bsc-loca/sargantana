@@ -179,7 +179,6 @@ module control_unit(
             pipeline_flush_o.flush_rr       = 1'b1;
             pipeline_flush_o.flush_exe      = 1'b1;
             pipeline_flush_o.flush_wb       = 1'b0;
-            pipeline_flush_o.flush_commit   = 1'b1;
             flush_csr_fence                 = 1'b1;
         end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
             if (exe_cu_i.stall) begin
@@ -268,11 +267,20 @@ module control_unit(
         end
     end
 
+    // Enable Update of Free List and Rename from Commit
+    assign cu_id_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+
+    // Recover checkpoint of Commit stage in Rename and Free List
+    assign cu_id_o.recover_commit = exception_enable_q;
+
+    // Flush the Graduation List from commit
     assign cu_commit_o.flush_gl_commit = exception_enable_q;
 
-    assign cu_commit_o.enable_commit = ~(commit_cu_i.stall_commit);
+    // Allow committing a new instruction (works like stall)
+    assign cu_commit_o.enable_commit = ~(commit_cu_i.stall_commit) & ~(exception_enable_d);
 
-    assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit | exception_enable_q;
+    // Stall the commit stage
+    assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit;
 
 
     // logic flush gl

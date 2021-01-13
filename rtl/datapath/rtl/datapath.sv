@@ -290,13 +290,13 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (stage_id_rr_d.instr.rd != 'h0) & (~control_int.stall_id)),
-        .add_free_register_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid),
-        .free_register_i(instruction_gl_commit.old_prd),
+        .add_free_register_i(cu_id_int.enable_commit_update),
+        .free_register_i(instruction_to_commit.old_prd),
         .do_checkpoint_i(cu_id_int.do_checkpoint),
         .do_recover_i(cu_id_int.do_recover),
         .delete_checkpoint_i(cu_id_int.delete_checkpoint),
         .recover_checkpoint_i(cu_id_int.recover_checkpoint),
-        .commit_roll_back_i(commit_xcpt | resp_csr_cpu_i.csr_exception ),
+        .commit_roll_back_i(cu_id_int.recover_commit),
         .new_register_o(free_register_to_rename),
         .checkpoint_o(checkpoint_free_list),
         .out_of_checkpoints_o(out_of_checkpoints_free_list),
@@ -322,10 +322,10 @@ module datapath(
         .do_recover_i(cu_id_int.do_recover),
         .delete_checkpoint_i(cu_id_int.delete_checkpoint),
         .recover_checkpoint_i(cu_id_int.recover_checkpoint),
-        .recover_commit_i(commit_xcpt | resp_csr_cpu_i.csr_exception), 
-        .commit_old_dst_i(instruction_gl_commit.rd),    
-        .commit_write_dst_i(instruction_gl_commit.regfile_we & instruction_gl_commit.valid),  
-        .commit_new_dst_i(instruction_gl_commit.prd),
+        .recover_commit_i(cu_id_int.recover_commit), 
+        .commit_old_dst_i(instruction_to_commit.rd),    
+        .commit_write_dst_i(cu_id_int.enable_commit_update),  
+        .commit_new_dst_i(instruction_to_commit.prd),
         .src1_o(stage_no_stall_rr_q.prs1),
         .rdy1_o(stage_no_stall_rr_q.rdy1),
         .src2_o(stage_no_stall_rr_q.prs2),
@@ -550,12 +550,12 @@ module datapath(
         .req_cpu_dcache_o(req_cpu_dcache_o),
 
         //PMU Neiel-Leyva
-        .pmu_is_branch_o        ( pmu_flags_o.is_branch     ),      
-        .pmu_branch_taken_o     ( pmu_flags_o.branch_taken  ),   
-        .pmu_miss_prediction_o  ( pmu_flags_o.branch_miss   ),
-        .pmu_stall_mul_o        ( pmu_flags_o.stall_rr      ),
-        .pmu_stall_div_o        ( pmu_flags_o.stall_exe     ),
-        .pmu_stall_mem_o        ( pmu_flags_o.stall_wb      )
+        .pmu_is_branch_o        (pmu_flags_o.is_branch),      
+        .pmu_branch_taken_o     (pmu_flags_o.branch_taken),   
+        .pmu_miss_prediction_o  (pmu_flags_o.branch_miss),
+        .pmu_stall_mul_o        (pmu_flags_o.stall_rr),
+        .pmu_stall_div_o        (pmu_flags_o.stall_exe),
+        .pmu_stall_mem_o        (pmu_flags_o.stall_wb)
     );
 
     register #($bits(exe_wb_instr_t) + $bits(exe_wb_instr_t)) reg_exe_inst(
@@ -586,8 +586,8 @@ module datapath(
                                                 
     assign data_mem_to_rr = mem_wb.result;
      
-    assign write_paddr_1 = (commit_cu_int.write_enable) ? instruction_gl_commit.prd : alu_mul_div_wb.prd;
-    assign write_vaddr_1 = (commit_cu_int.write_enable) ? instruction_gl_commit.rd  : alu_mul_div_wb.rd;
+    assign write_paddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.prd : alu_mul_div_wb.prd;
+    assign write_vaddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.rd  : alu_mul_div_wb.rd;
     
     assign write_paddr_2 = mem_wb.prd;
     assign write_vaddr_2 = mem_wb.rd;
@@ -647,6 +647,7 @@ module datapath(
 
     // Control Unit From Commit
     assign commit_cu_int.valid = instruction_to_commit.valid;
+    assign commit_cu_int.regfile_we = instruction_to_commit.regfile_we;
     assign commit_cu_int.csr_enable = csr_ena_int;
     assign commit_cu_int.stall_csr_fence = instruction_to_commit.stall_csr_fence && instruction_to_commit.valid;
     assign commit_cu_int.xcpt = commit_xcpt;
@@ -665,7 +666,8 @@ module datapath(
                                     instruction_to_commit.instr_type == SFENCE_VMA);
 
     // tell cu that commit needs to write there is a fence
-    assign commit_cu_int.write_enable = (instruction_to_commit.instr_type == CSRRW  ||
+    assign commit_cu_int.write_enable = instruction_to_commit.valid &
+                                        (instruction_to_commit.instr_type == CSRRW  ||
                                          instruction_to_commit.instr_type == CSRRS  ||
                                          instruction_to_commit.instr_type == CSRRC  ||
                                          instruction_to_commit.instr_type == CSRRWI ||

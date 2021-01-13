@@ -359,6 +359,8 @@ typedef struct packed {
     logic delete_checkpoint;            // Delete last checkpoint
     logic do_recover;                   // Recover checkpoint
     checkpoint_ptr recover_checkpoint;  // Label of the checkpoint to recover   
+    logic recover_commit;               // Recover at Commit
+    logic enable_commit_update;         // Enable update of Free List and Rename from commit
 } cu_id_t;      // Control Unit to Decode
 
 
@@ -401,6 +403,7 @@ typedef struct packed {
     logic fence_i;              // Is fence i
     logic write_enable;         // Write Enable to Register File
     logic stall_commit;         // Stop commits
+    logic regfile_we;           // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
