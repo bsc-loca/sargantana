@@ -65,7 +65,7 @@ assign write_enable = instruction_i.instr.valid & (num < NUM_ENTRIES);
 
 // User can read the tail of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
+assign read_enable = read_head_i & (num > 0) ;
 
 
 `ifndef SRAM_MEMORIES
@@ -90,20 +90,6 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
                 data_table[tail] <= data_rs2_i;
                 control_table[tail] <= instruction_i;
             end
-
-            // Write first instruction
-            if (write_enable & ((num == 0) | (num == 1) & read_enable)) begin
-                stored_rs1_q <= data_rs1_i;
-                stored_rs2_q <= data_rs2_i;
-                stored_instruction_q <= instruction_i;
-            end
-
-            // Read head to first instruction
-            if (read_enable & (num > 1)) begin
-                stored_instruction_q <= control_table[head];
-                stored_rs1_q <= addr_table[head];
-                stored_rs2_q <= data_table[head];
-            end
         end
     end
 
@@ -114,13 +100,13 @@ assign read_enable = read_head_i & ((num > 0) | instruction_i.instr.valid) ;
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
-        head <= 3'h1;
+        head <= 3'h0;
         tail <= 3'b0;
         num  <= 4'b0;
         ls_queue_entry_o <= 3'b0;
     end
     else if (flush_i) begin
-        head <= 3'h1;
+        head <= 3'h0;
         tail <= 3'b0;
         num  <= 4'b0;
         ls_queue_entry_o <= 3'b0;
@@ -134,12 +120,12 @@ begin
 end
 
 
-assign instruction_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? instruction_i : stored_instruction_q;
-assign data_rs1_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? data_rs1_i : stored_rs1_q;
-assign data_rs2_o = (~read_enable)? 'h0 : ((num == 0) & (write_enable))? data_rs2_i : stored_rs2_q;
+assign instruction_o = (~read_enable)? 'h0 : control_table[head];
+assign data_rs1_o = (~read_enable)? 'h0 : addr_table[head];
+assign data_rs2_o = (~read_enable)? 'h0 : data_table[head];
 
 
-assign empty_o = (num == 0) & (~write_enable);
+assign empty_o = (num == 0);
 assign full_o  = ((num == NUM_ENTRIES) | flush_i | ~rstn_i);
 
 endmodule

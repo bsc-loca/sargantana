@@ -32,6 +32,7 @@ module mem_unit (
     output exe_wb_instr_t   instruction_o,          // Output instruction     
     output exception_t      exception_mem_commit_o, // Exception of the commit instruction
     output logic            mem_commit_stall_o,     // Stall commit stage
+    output gl_index_t       mem_gl_index_o,         // GL Index of the memory instruction
     output logic            lock_o,                 // Mem unit is able to accept more petitions
     output logic            empty_o                 // Mem unit has no pending Ops
 );
@@ -135,7 +136,7 @@ always_comb begin
         end
         // Read head of LSQ
         ReadHead: begin
-            if (kill_i) begin
+            if (kill_i | empty_lsq) begin
                 req_cpu_dcache_o.valid = 1'b0;              // Invalid instruction
                 req_cpu_dcache_o.instr_type = ADD;
                 next_state = ReadHead;        // Next state Read Head
@@ -271,6 +272,9 @@ assign is_STORE_or_AMO = (instruction_to_dcache.instr.instr_type == SD)         
                          (instruction_to_dcache.instr.instr_type == AMO_LRW)     ||
                          (instruction_to_dcache.instr.instr_type == AMO_LRD)     ||
                          (instruction_to_dcache.instr.instr_type == SW)          ;
+
+
+assign mem_gl_index_o = instruction_to_dcache.gl_index;
 
 
 ///////////////////////////////////////////////////////////////////////////////

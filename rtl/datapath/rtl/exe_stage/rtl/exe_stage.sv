@@ -19,12 +19,12 @@ module exe_stage (
     input logic                         kill_i,
     input logic                         flush_i,
 
-    input logic                         csr_interrupt_i, // interrupt detected on the csr
+    input logic                         csr_interrupt_i,        // interrupt detected on the csr
     input bus64_t                       csr_interrupt_cause_i,  // which interrupt has been detected
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
-    input resp_dcache_cpu_t             resp_dcache_cpu_i, // Response from dcache interface
+    input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
 
     // I/O base space pointer to dcache interface
     input addr_t                        io_base_addr_i,
@@ -35,12 +35,13 @@ module exe_stage (
     output exe_wb_instr_t               alu_mul_div_to_wb_o,
     output exe_wb_instr_t               mem_to_wb_o,
     output exe_cu_t                     exe_cu_o,
-    output logic                        mem_commit_stall_o, // Stall commit stage
+    output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
+    output gl_index_t                   mem_gl_index_o,
 
-    output req_cpu_dcache_t             req_cpu_dcache_o, // Request to dcache interface 
-    output logic                        correct_branch_pred_o, // Decides if the branch prediction was correct  
-    output exe_if_branch_pred_t         exe_if_branch_pred_o, // Branch prediction (taken, target) and result (take, target)
+    output req_cpu_dcache_t             req_cpu_dcache_o,       // Request to dcache interface 
+    output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
+    output exe_if_branch_pred_t         exe_if_branch_pred_o,   // Branch prediction (taken, target) and result (take, target)
 
     //--PMU
     output logic                        pmu_is_branch_o,
@@ -180,6 +181,7 @@ mem_unit mem_unit_inst(
     .instruction_o          (mem_to_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
+    .mem_gl_index_o         (mem_gl_index_o),
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem)
 );

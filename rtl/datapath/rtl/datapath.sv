@@ -153,6 +153,7 @@ module datapath(
     gl_instruction_t instruction_to_commit;
     logic src_select_commit;
     exception_t exception_mem_commit_int;
+    gl_index_t mem_gl_index_int;
 
     // CSR signals
     logic   csr_ena_int;
@@ -545,6 +546,7 @@ module datapath(
         .exe_cu_o(exe_cu_int),
 
         .mem_commit_stall_o(mem_commit_stall_int),
+        .mem_gl_index_o(mem_gl_index_int),
         .exception_mem_commit_o(exception_mem_commit_int),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
@@ -701,7 +703,7 @@ module datapath(
                                      (instruction_to_commit.instr_type == AMO_LRW)     ||
                                      (instruction_to_commit.instr_type == AMO_LRD)     ;
 
-    assign commit_cu_int.stall_commit = mem_commit_stall_int;
+    assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & (commit_cu_int.gl_index != mem_gl_index_int));
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// DEBUG SIGNALS                                                                                /////////

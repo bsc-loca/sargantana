@@ -118,10 +118,17 @@ always@(posedge clk_i, negedge rstn_i) begin
         dmem_xcpt_pf_ld_reg <= 1'b0;
     end else begin
         state <= next_state;
-        dmem_xcpt_ma_st_reg <= dmem_xcpt_ma_st_i;
-        dmem_xcpt_ma_ld_reg <= dmem_xcpt_ma_ld_i; 
-        dmem_xcpt_pf_st_reg <= dmem_xcpt_pf_st_i;
-        dmem_xcpt_pf_ld_reg <= dmem_xcpt_pf_ld_i;
+        if (req_cpu_dcache_i.valid) begin
+            dmem_xcpt_ma_st_reg <= dmem_xcpt_ma_st_i;
+            dmem_xcpt_ma_ld_reg <= dmem_xcpt_ma_ld_i; 
+            dmem_xcpt_pf_st_reg <= dmem_xcpt_pf_st_i;
+            dmem_xcpt_pf_ld_reg <= dmem_xcpt_pf_ld_i;
+        end else begin
+            dmem_xcpt_ma_st_reg <= 1'b0;
+            dmem_xcpt_ma_ld_reg <= 1'b0;
+            dmem_xcpt_pf_st_reg <= 1'b0;
+            dmem_xcpt_pf_ld_reg <= 1'b0;
+        end
     end
 end
 
