@@ -63,7 +63,7 @@ module decoder(
         decode_instr_o.signed_op = 1'b0;
 
         jal_id_if_o.valid = 1'b0;
-        jal_id_if_o.jump_addr = 64'b0;
+        jal_id_if_o.jump_addr = decode_i.pc_inst + 64'h04;
 
         // Signal that tells whether it is a csr or fence
         decode_instr_o.stall_csr_fence = 1'b0;

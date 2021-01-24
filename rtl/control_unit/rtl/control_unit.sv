@@ -57,7 +57,7 @@ module control_unit(
         else if(id_cu_i.valid & id_cu_i.stall_csr_fence)
             csr_fence_in_pipeline <= 1;
         else if (commit_cu_i.valid & commit_cu_i.stall_csr_fence)
-                csr_fence_in_pipeline <= 0;
+            csr_fence_in_pipeline <= 0;
     end
 
     logic jump_enable_int;
@@ -65,7 +65,8 @@ module control_unit(
     // jump enable logic
     always_comb begin
         jump_enable_int =   (exe_cu_i.valid_1 && ~correct_branch_pred_i) ||   // branch at exe
-                            id_cu_i.valid_jal;                              // valid jal
+                            (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || // invalid prediction
+                            id_cu_i.valid_jal; // valid jal
     end
 
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
@@ -153,7 +154,7 @@ module control_unit(
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
-    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch | id_cu_i.predicted_as_branch) &
+    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch) &
                                    id_cu_i.valid &  ~(id_cu_i.out_of_checkpoints) &
                                    ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
 
@@ -161,7 +162,7 @@ module control_unit(
 
     assign cu_id_o.recover_checkpoint = exe_cu_i.chkp;
 
-    assign cu_id_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
+    assign cu_id_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1); // & ~(pipeline_ctrl_o.stall_id);
 
     // logic about flush the pipeline if branch
     always_comb begin
@@ -211,6 +212,24 @@ module control_unit(
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
             pipeline_flush_o.flush_wb  = 1'b0;
+        end else if ((id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+            pipeline_flush_o.flush_if  = 1'b1;
+            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;    
+        end else if (exe_cu_i.stall) begin   
+            pipeline_flush_o.flush_if  = 1'b0;
+            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_rr  = 1'b0;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
+        end else if (rr_cu_i.gl_full) begin
+            pipeline_flush_o.flush_if  = 1'b0;
+            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_rr  = 1'b1;
+            pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.flush_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
             pipeline_flush_o.flush_if  = 1'b0;
             pipeline_flush_o.flush_id  = 1'b1;
@@ -234,7 +253,13 @@ module control_unit(
         pipeline_ctrl_o.stall_rr  = 1'b0;
         pipeline_ctrl_o.stall_exe = 1'b0;
         pipeline_ctrl_o.stall_wb  = 1'b0;
-        if (csr_cu_i.csr_stall || exe_cu_i.stall) begin
+        if (csr_cu_i.csr_stall) begin
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b1;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
+        end else if (exe_cu_i.stall) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
@@ -247,17 +272,17 @@ module control_unit(
             pipeline_ctrl_o.stall_exe = 1'b0;
             pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.empty_free_list) begin
-            pipeline_ctrl_o.stall_if     = 1'b1;
-            pipeline_ctrl_o.stall_id     = 1'b1;
-            pipeline_ctrl_o.stall_rr     = 1'b0;
-            pipeline_ctrl_o.stall_exe    = 1'b0;
-            pipeline_ctrl_o.stall_wb     = 1'b0;
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (id_cu_i.out_of_checkpoints) begin
-            pipeline_ctrl_o.stall_if     = 1'b1;
-            pipeline_ctrl_o.stall_id     = 1'b1;
-            pipeline_ctrl_o.stall_rr     = 1'b0;
-            pipeline_ctrl_o.stall_exe    = 1'b0;
-            pipeline_ctrl_o.stall_wb     = 1'b0;
+            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+            pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;

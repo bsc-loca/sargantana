@@ -276,7 +276,7 @@ always_comb begin
         from_rr_i.instr.instr_type != BGE && from_rr_i.instr.instr_type != BGEU &&
         from_rr_i.instr.instr_type != BEQ && from_rr_i.instr.instr_type != BNE  &&
         from_rr_i.instr.instr_type != JALR) begin            
-        correct_branch_pred_o = ((~from_rr_i.instr.bpred.is_branch) | (from_rr_i.instr.bpred.decision == PRED_NOT_TAKEN));
+        correct_branch_pred_o = 1'b1; // Correct because Decode and Control Unit Already fixed the missprediciton
     end else begin
         if (from_rr_i.instr.bpred.is_branch) begin
             correct_branch_pred_o = (from_rr_i.instr.bpred.decision == branch_to_wb.branch_taken) &&

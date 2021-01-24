@@ -155,9 +155,8 @@ begin
     end else if (flush_i & (num > 0)) begin
         tail <= flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}; 
         head <= head + {{num_bits_index-1{1'b0}}, read_enable};
-        if ( (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-1{1'b0}}, read_enable}) ) begin   // Recompute number of entries
+        if ((flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-1{1'b0}}, read_enable}) && (int'(num) != NUM_ENTRIES)) begin   // Recompute number of entries
             num <= {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{num_bits_index-1{1'b0}}, read_enable} )};
-
         end else begin
             num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-1{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
         end
