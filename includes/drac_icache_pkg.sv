@@ -18,18 +18,16 @@ package drac_icache_pkg;
 
 //------------------------------------------------ Global Configuration
 //- L1 instruction cache
-localparam int unsigned WORD_SIZE    = 64                       ; //- Word size in a set.
-localparam int unsigned SET_WIDHT    = WORD_SIZE*2              ; //- Size of a set.
-//localparam int unsigned SET_DEPTH    = 256                      ; //- 
-//localparam int unsigned ICACHE_N_SET = 4                        ; //- Set associative.
-//localparam int unsigned ICACHE_DEPTH = SET_DEPTH/ICACHE_N_SET   ; //- .
-localparam int unsigned ICACHE_DEPTH = 256   ; //- .
+localparam int unsigned WORD_SIZE    = 64           ; //- Word size in a set.
+localparam int unsigned SET_WIDHT    = WORD_SIZE*2  ; //- Size of a set.
+localparam int unsigned ASSOCIATIVE  = 4            ; //- Size of a set.
+localparam int unsigned ICACHE_DEPTH = 256          ; //- .
 
 localparam int unsigned ICACHE_N_WAY = 4                        ; //- Ways number.
 localparam int unsigned TAG_WIDHT    = 20                       ; //- Tag size.
-//localparam int unsigned ADDR_WIDHT   = $clog2( SET_DEPTH )      ; //- icache Addr vector
-localparam int unsigned ADDR_WIDHT   = $clog2( ICACHE_DEPTH )      ; //- icache Addr vector
-//localparam int unsigned WAY_WIDHT    = SET_WIDHT * ICACHE_N_SET ; //- 
+localparam int unsigned TAG_DEPTH    = ICACHE_DEPTH/ASSOCIATIVE ; //- .
+localparam int unsigned ADDR_WIDHT   = $clog2( ICACHE_DEPTH )   ; //- icache Addr vector
+localparam int unsigned TAG_ADDR_WIDHT = $clog2( TAG_DEPTH )   ; //- 
 localparam int unsigned WAY_WIDHT    = SET_WIDHT ; //- 
 
 localparam int unsigned PADDR_SIZE          = 26  ;

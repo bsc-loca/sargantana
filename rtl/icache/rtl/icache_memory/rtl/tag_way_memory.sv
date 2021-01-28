@@ -22,14 +22,14 @@ module tag_way_memory(
     input  logic                  vbit_i ,
     input  logic                  flush_i ,
     input  logic  [TAG_WIDHT-1:0] data_i,
-    input  logic [ADDR_WIDHT-1:0] addr_i,
+    input  logic [TAG_ADDR_WIDHT-1:0] addr_i,
     output logic  [TAG_WIDHT-1:0] data_o,
     output logic                  vbit_o
 );
     
-logic [TAG_WIDHT-1:0] memory [0:ICACHE_DEPTH-1];
+logic [TAG_WIDHT-1:0] memory [0:TAG_DEPTH-1];
 
-logic [ICACHE_DEPTH-1:0] vbit_vec;
+logic [TAG_DEPTH-1:0] vbit_vec;
 
 //--TAG memory
 always_ff @(posedge clk_i) begin

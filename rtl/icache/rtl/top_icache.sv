@@ -165,10 +165,10 @@ top_memory icache_memory(
     .rstn_i      ( rstn_i ),
     .tag_req_i   ( tag_req_valid  ),
     .data_req_i  ( data_req_valid ),
-    .tag_we_i    ( tag_we_valid ),
+    .tag_we_i    ( tag_we_valid & (ifill_resp_i.beat == 2'b00) ),
     .data_we_i   ( cache_wr_ena ),
     .flush_en_i  ( is_flush_d ),
-    .valid_bit_i ( cache_wr_ena ),
+    .valid_bit_i ( cache_wr_ena & (ifill_resp_i.beat == 2'b00)),
     .cline_i     ( ifill_resp_i.data ),
     .tag_i       ( cline_tag_q ),
     .addr_i      ( addr_valid ),
@@ -186,13 +186,13 @@ icache_replace_unit replace_unit(
     .cache_wr_ena_i ( cache_wr_ena     ),
     .flush_ena_i    ( flush_enable     ),
     .way_valid_bits_i ( way_valid_bits      ),
-    .we_valid_o     ( tag_we_valid     ),
+    .we_valid_o     ( tag_we_valid ),
     .addr_valid_o   ( addr_valid       ),
     .cmp_en_q       ( cmp_enable_q       ),
     .way_to_replace_q ( way_to_replace_q      ),
     .way_to_replace_d ( way_to_replace_d      ),
     .way_to_replace_o ( icache_ifill_req_o.way ),
-    .data_req_valid_o  ( data_req_valid        ),
+    .data_req_valid_o ( data_req_valid        ),
     .tag_req_valid_o  ( tag_req_valid        )
 );
 

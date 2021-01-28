@@ -22,7 +22,7 @@ module itag_memory(
     input  logic                                   vbit_i     ,
     input  logic                                   flush_i    ,
     input  logic                   [TAG_WIDHT-1:0] data_i     ,
-    input  logic                  [ADDR_WIDHT-1:0] addr_i     ,
+    input  logic                  [TAG_ADDR_WIDHT-1:0] addr_i     ,
     output logic [ICACHE_N_WAY-1:0][TAG_WIDHT-1:0] tag_way_o  , //- one for each way.
     output logic                [ICACHE_N_WAY-1:0] vbit_o       
 );
