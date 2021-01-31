@@ -74,9 +74,15 @@ logic tag_we_valid      ;
 logic cmp_enable        ;
 logic cmp_enable_q      ;
 logic treq_valid        ;
+logic valid_bit         ;
 
 logic ifill_req_was_sent_d;
 logic ifill_req_was_sent_q;
+
+logic ifill_process_started_d   ;
+logic ifill_process_started_q   ;
+logic tag_we                    ;
+logic block_invalidate         ;
 
 tresp_i_t  mmu_tresp_d;  
 tresp_i_t  mmu_tresp_q; 
@@ -129,6 +135,17 @@ assign valid_ifill_resp = ifill_resp_i.valid & ifill_resp_i.ack;
 assign ifill_req_was_sent_d = icache_ifill_req_o.valid | 
                               (ifill_req_was_sent_q & ~valid_ifill_resp);
 
+assign ifill_process_started_d = ((ifill_resp_i.beat == 2'b00) && ifill_resp_i.valid) ? 1'b1 :
+                                  (valid_ifill_resp) ? 1'b0 : ifill_process_started_q;
+
+assign block_invalidate = ifill_process_started_q && ireq_kill_d ;
+
+assign valid_bit = 
+    (tag_we_valid && (ifill_resp_i.beat == 2'b00) && !ireq_kill_d && !ireq_kill_q) ?
+                                                                             1'b1 : 1'b0 ;
+                                         
+assign tag_we = tag_we_valid && ((ifill_resp_i.beat == 2'b00) || block_invalidate) ;
+
 icache_ctrl  icache_ctrl (
     .clk_i              ( clk_i                     ),
     .rstn_i             ( rstn_i                    ),
@@ -165,10 +182,11 @@ top_memory icache_memory(
     .rstn_i      ( rstn_i ),
     .tag_req_i   ( tag_req_valid  ),
     .data_req_i  ( data_req_valid ),
-    .tag_we_i    ( tag_we_valid & (ifill_resp_i.beat == 2'b00) ),
+    .tag_we_i    ( tag_we  ),
     .data_we_i   ( cache_wr_ena ),
     .flush_en_i  ( is_flush_d ),
-    .valid_bit_i ( cache_wr_ena & (ifill_resp_i.beat == 2'b00)),
+    //.we_valid_bit_i ( tag_we || block_invalidate )
+    .valid_bit_i ( valid_bit ),
     .cline_i     ( ifill_resp_i.data ),
     .tag_i       ( cline_tag_q ),
     .addr_i      ( addr_valid ),
@@ -180,19 +198,19 @@ top_memory icache_memory(
 icache_replace_unit replace_unit(
     .clk_i          ( clk_i            ),
     .rstn_i         ( rstn_i           ),
-    .inval_i        ( '0 ),
+    .inval_i        ( block_invalidate ),
     .cline_index_i  ( vaddr_index      ),
     .cache_rd_ena_i ( valid_ireq_d | cache_rd_ena ),
     .cache_wr_ena_i ( cache_wr_ena     ),
     .flush_ena_i    ( flush_enable     ),
     .way_valid_bits_i ( way_valid_bits      ),
-    .we_valid_o     ( tag_we_valid ),
+    .we_valid_o     ( tag_we_valid     ),
     .addr_valid_o   ( addr_valid       ),
     .cmp_en_q       ( cmp_enable_q       ),
     .way_to_replace_q ( way_to_replace_q      ),
     .way_to_replace_d ( way_to_replace_d      ),
     .way_to_replace_o ( icache_ifill_req_o.way ),
-    .data_req_valid_o ( data_req_valid        ),
+    .data_req_valid_o  ( data_req_valid        ),
     .tag_req_valid_o  ( tag_req_valid        )
 );
 
@@ -230,6 +248,8 @@ icache_ff icache_ff(
     .valid_ireq_q       (valid_ireq_q),
     .ireq_kill_d        (ireq_kill_d ),
     .ireq_kill_q        (ireq_kill_q ),
+    .ifill_process_started_d (ifill_process_started_d),
+    .ifill_process_started_q (ifill_process_started_q ),
     .mmu_tresp_d        (mmu_tresp_d),
     .mmu_tresp_q        (mmu_tresp_q),
     .cache_enable_d     ( ifill_req_was_sent_d ),

@@ -21,7 +21,8 @@ import drac_icache_pkg::*;
 module icache_replace_unit (
     input                                   clk_i            ,
     input                                   rstn_i           ,
-    input  inval_t                          inval_i          ,
+    //input  inval_t                          inval_i          ,
+    input  logic                          inval_i          ,
     input  logic                            flush_ena_i      ,
     input  logic                            cache_rd_ena_i   ,
     input  logic                            cache_wr_ena_i   ,
@@ -38,12 +39,12 @@ module icache_replace_unit (
 
 );
 
-logic inval_req;
+//logic inval_req;
 logic lfsr_ena ;
 logic all_ways_valid ;
 
-logic [ICACHE_IDX_WIDTH-1:0] addr_to_inval       ; 
-logic     [ICACHE_N_WAY-1:0] way_to_inval_oh     ;  // way to invalidate (onehot)
+//logic [ICACHE_IDX_WIDTH-1:0] addr_to_inval       ; 
+//logic     [ICACHE_N_WAY-1:0] way_to_inval_oh     ;  // way to invalidate (onehot)
 logic     [ICACHE_N_WAY-1:0] way_to_replace_q_oh ; // way to replace (onehot)
 
 logic [$clog2(ICACHE_N_WAY)-1:0] a_random_way  ;
@@ -53,30 +54,33 @@ logic [$clog2(ICACHE_N_WAY)-1:0] a_invalid_way ;
 //----------------------------- Invalidation request from upper cache levels
 //  A valid invalidation request
 //  flushing takes precedence over invals
-assign inval_req     = ~flush_ena_i & inval_i.valid;
-assign addr_to_inval = inval_i.idx[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH];
+//assign inval_req     = ~flush_ena_i & inval_i.valid;
+assign inval_req     = ~flush_ena_i & inval_i;
+//assign addr_to_inval = inval_i.idx[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH];
 
 //- Way to invalidate
 // translate to Onehot
-always_comb begin
-   way_to_inval_oh = '0;
-   if (inval_req) way_to_inval_oh[inval_i.way] = 1'b1; 
-end
+//always_comb begin
+//   way_to_inval_oh = '0;
+//   if (inval_req) way_to_inval_oh[inval_i.way] = 1'b1; 
+//end
 
 //--------------------------------------------------------------------------
 //------------------------------------------------- Invalidation/Replacement
-assign addr_valid_o = (inval_req) ? addr_to_inval : cline_index_i;
+//assign addr_valid_o = (inval_req) ? addr_to_inval : cline_index_i;
+assign addr_valid_o = cline_index_i;
 
 //- To tag ram. In an invalidation only clear valid bits. 
                          // A valid read from core.
 assign tag_req_valid_o = (cache_rd_ena_i )          ? '1 :
                          // Invalidation request to all ways.
-                         (inval_req && inval_i.all) ? '1 :
+                         //(inval_req && inval_i.all) ? '1 :
                          // Invalidation request to one way.
-                         (inval_req)                ? way_to_inval_oh : 
+                         //(inval_req)                ? way_to_inval_oh : 
+                         //(inval_req)                ? way_to_replace_q_oh : 
                                                       way_to_replace_q_oh;
 
-assign we_valid_o = cache_wr_ena_i | inval_req;
+assign we_valid_o = cache_wr_ena_i | inval_req ;
 
 //- Chose random replacement if all are valid
 //- Linear feedback shift register (LFSR)

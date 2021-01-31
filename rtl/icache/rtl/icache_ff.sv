@@ -31,8 +31,9 @@ module icache_ff(
     input  logic                            cmp_enable_d     ,
     output logic                            cmp_enable_q     ,                          
     input  logic                            flush_d          ,
-    output logic                            flush_q          ,                          
-    
+    output logic                            flush_q          ,                           
+    input  logic                            ifill_process_started_d     ,
+    output logic                            ifill_process_started_q     ,
     input  logic                            valid_ireq_d     ,
     output logic                            valid_ireq_q     ,
     input  logic                            ireq_kill_d      ,
@@ -57,6 +58,7 @@ always_ff @(posedge clk_i or negedge rstn_i) begin
         flush_q          <= '0;
         cline_tag_q      <= '0; 
         way_to_replace_q <= '0; 
+        ifill_process_started_q <= '0; 
         mmu_tresp_q   <= '0;     
         valid_ireq_q <= '0; 
         ireq_kill_q <= '0; 
@@ -70,6 +72,7 @@ always_ff @(posedge clk_i or negedge rstn_i) begin
         flush_q          <= flush_d          ;
         cline_tag_q      <= cline_tag_d      ; 
         way_to_replace_q <= way_to_replace_d ; 
+        ifill_process_started_q <= ifill_process_started_d ; 
         valid_ireq_q     <= valid_ireq_d; 
         ireq_kill_q     <= ireq_kill_d; 
         mmu_tresp_q   <= mmu_tresp_d   ;     

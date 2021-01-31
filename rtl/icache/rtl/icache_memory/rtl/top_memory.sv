@@ -24,6 +24,7 @@ module top_memory(
     input  logic                    data_we_i    ,//- Write enabled.            
     input  logic                    flush_en_i   ,//- Flush enabled.            
     input  logic                    valid_bit_i  ,//- The valid bit to be written.
+    //input  logic                    we_valid_bit_i  ,//- 
     input  logic    [WAY_WIDHT-1:0] cline_i      ,//- The cache line to be written.
     input  logic    [TAG_WIDHT-1:0] tag_i        ,//- The tag of the cache line 
                                                   //  to be written.
@@ -69,7 +70,7 @@ idata_memory idata_memory(
         .vbit_i     ( valid_bit_i ),
         .flush_i    ( flush_en_i  ),
         .data_i     ( tag_i       ),
-        .addr_i     ( addr_i      ),
+        .addr_i     ( addr_i[ADDR_WIDHT-1:2]),
         .tag_way_o  ( tag_way_o   ),
         .vbit_o     ( valid_bit_o )
     );
