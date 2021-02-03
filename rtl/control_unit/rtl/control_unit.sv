@@ -20,7 +20,8 @@ module control_unit(
     input logic             rstn_i,
     input logic             clk_i,
 
-    input logic             valid_fetch,
+    input logic             miss_icache_i,
+    input logic             ready_icache_i,
     input id_cu_t           id_cu_i,
     input ir_cu_t           ir_cu_i,
     input rr_cu_t           rr_cu_i,
@@ -115,8 +116,7 @@ module control_unit(
             cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
         end else if (jump_enable_int || exception_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
-        end else if (!valid_fetch                               || 
-                     pipeline_ctrl_o.stall_if                   || 
+        end else if (pipeline_ctrl_o.stall_if_1                 || 
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
                      csr_fence_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
@@ -238,16 +238,20 @@ module control_unit(
 
     // Logic to stall the Front End
     always_comb begin
-        pipeline_ctrl_o.stall_if  = 1'b0;
-        pipeline_ctrl_o.stall_id  = 1'b0;
+        pipeline_ctrl_o.stall_if_1  = 1'b0;
+        pipeline_ctrl_o.stall_if_2  = 1'b0;
+        pipeline_ctrl_o.stall_id    = 1'b0;
         if (csr_cu_i.csr_stall) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
+            pipeline_ctrl_o.stall_if_1  = 1'b1;
+            pipeline_ctrl_o.stall_if_2  = 1'b1;
+            pipeline_ctrl_o.stall_id    = 1'b1;
         end else if (ir_cu_i.full_iq) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
+            pipeline_ctrl_o.stall_if_1  = 1'b1;
+            pipeline_ctrl_o.stall_if_2  = 1'b1;
+            pipeline_ctrl_o.stall_id    = 1'b1;
+        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence && miss_icache_i && ready_icache_i) begin
+            pipeline_ctrl_o.stall_if_1  = 1'b1;
+            pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
         end
     end

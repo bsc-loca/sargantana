@@ -26,6 +26,7 @@ module datapath(
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input debug_in_t        debug_i,
     input [1:0]             csr_priv_lvl_i,
+    input logic             req_icache_ready_i;
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
@@ -58,8 +59,10 @@ module datapath(
     
     // Pipelines stages data
     // Fetch
-    if_id_stage_t stage_if_id_d; // this is the saving in the current cycle
-    if_id_stage_t stage_if_id_q; // this is the next or output of reg
+    if_1_if_2_stage_t stage_if_1_if_2_d;
+    if_1_if_2_stage_t stage_if_1_if_2_q;
+    if_id_stage_t stage_if_2_id_d; // this is the saving in the current cycle
+    if_id_stage_t stage_if_2_id_q; // this is the next or output of reg
     logic invalidate_icache_int;
     logic invalidate_buffer_int;
     logic retry_fetch;
@@ -185,6 +188,7 @@ module datapath(
     phreg_t reg_prd1_addr;
     // stall IF
     logic stall_if;
+    logic miss_icache;
 
     // This addresses are fixed from lowrisc
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -205,7 +209,8 @@ module datapath(
     control_unit control_unit_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .valid_fetch(resp_icache_cpu_i.valid),
+        .miss_icache_i(miss_icache),
+        .ready_icache_i(req_icache_ready_i).
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
         .cu_ir_o(cu_ir_int),
@@ -242,6 +247,8 @@ module datapath(
             retry_fetch = 1'b1;
         end else if (control_int.sel_addr_if == SEL_JUMP_DECODE) begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
+        else if (control_int.sel_addr_if == SEL_JUMP_BTB) begin
+            pc_jump_if_int = stage_if_1_if_2_q.bpred.pred_addr;
         end else begin
             `ifdef ASSERTIONS
                 assert (1 == 0);
@@ -256,21 +263,37 @@ module datapath(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // IF Stage
-    if_stage if_stage_inst(
+    if_stage_1 if_stage_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
         .stall_debug_i(debug_i.halt_valid),
-        .stall_i(stall_if),
+        .stall_i(stall_if_1),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
         .invalidate_buffer_i(invalidate_buffer_int),
         .pc_jump_i(pc_jump_if_int),
-        .resp_icache_cpu_i(resp_icache_cpu_i),
         .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
-        .fetch_o(stage_if_id_d),
+        .fetch_o(stage_if_1_if_2_d),
         .exe_if_branch_pred_i(exe_if_branch_pred_int)
+    );
+
+    // Register IF1 to IF2
+    register #($bits(if_1_if_2_stage_t)) reg_if_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .flush_i(flush_int.flush_if),
+        .load_i(!control_int.stall_if_1),
+        .input_i(stage_if_1_if_2_d),
+        .output_o(stage_if_1_if_2_q)
+    );
+
+    if_stage_2 if_stage_2_inst(
+        .fetch_i(stage_if_1_if_2_q),
+        .resp_icache_cpu_i(resp_icache_cpu_i),
+        .fetch_o(stage_if_2_id_d),
+        .stall_o(miss_icache)
     );
 
     // Register IF to ID
@@ -278,9 +301,9 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
-        .load_i(!control_int.stall_if),
-        .input_i(stage_if_id_d),
-        .output_o(stage_if_id_q)
+        .load_i(!control_int.stall_if_2),
+        .input_i(stage_if_2_id_d),
+        .output_o(stage_if_2_id_q)
     );
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -289,7 +312,7 @@ module datapath(
 
     // ID Stage
     decoder id_decode_inst(
-        .decode_i       (stage_if_id_q),
+        .decode_i       (stage_if_2_id_q),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)
     );

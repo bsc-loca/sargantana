@@ -233,7 +233,15 @@ typedef struct packed {
     addr_t        io_base_addr;      // Address Base Pointer of INPUT/OUPUT
 } req_cpu_dcache_t;
 
-// Fetch Stage
+// Fetch 1 Stage
+typedef struct packed {
+    addrPC_t                 pc_inst;   // Actual PC
+    logic                    valid;     // Valid instruction
+    branch_pred_t            bpred;     // Branch prediction
+    exception_t              ex;        // Exceptions
+} if_1_if_2_stage_t;       // FETCH 1 STAGE TO DECODE STAGE
+
+// Fetch 2 Stage
 typedef struct packed {
     addrPC_t                 pc_inst;   // Actual PC
     riscv_pkg::instruction_t inst;      // Bits of the instruction
@@ -462,7 +470,8 @@ typedef struct packed {
 
 //PMU flags
 typedef struct packed {
-    logic stall_if   ;         // Stop Fetch
+    logic stall_if_1 ;         // Stop Fetch 1
+    logic stall_if_2 ;         // Stop Fetch 2
     logic stall_id   ;         // Stop Decode
     logic stall_ir   ;         // Stop Rename
     logic stall_rr   ;         // Stop Read Register

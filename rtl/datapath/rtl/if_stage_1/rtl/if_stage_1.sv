@@ -1,6 +1,6 @@
 /* -----------------------------------------------
 * Project Name   : DRAC
-* File           : if_stage.sv
+* File           : if_stage_1.sv
 * Organization   : Barcelona Supercomputing Center
 * Author(s)      : Guillem Lopez Paradis
 * Email(s)       : guillem.lopez@bsc.es
@@ -9,6 +9,7 @@
 * Revision History
 *  Revision   | Author     | Commit | Description
 *  0.1        | Guillem.LP | 
+*  0.2        | Max Doblas | Divide the fetch stage in two
 * -----------------------------------------------
 */
 //`default_nettype none
@@ -16,7 +17,7 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
-module if_stage(
+module if_stage_1(
     input logic                 clk_i,
     input logic                 rstn_i,
     input addr_t                reset_addr_i,
@@ -34,8 +35,6 @@ module if_stage(
     input logic                 invalidate_buffer_i,
     // PC comming from commit/decode/ecall/debug
     input addrPC_t              pc_jump_i,
-    // Response packet coming from Icache
-    input resp_icache_cpu_t     resp_icache_cpu_i,
     // Signals for branch predictor from exe stage 
     input exe_if_branch_pred_t  exe_if_branch_pred_i,
     // Retry requesto to icache
@@ -43,7 +42,7 @@ module if_stage(
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,  
     // fetch data output
-    output if_id_stage_t        fetch_o
+    output if_1_if_2_stage_t    fetch_o
 );
     // next pc logic
     addrPC_t next_pc;
@@ -54,7 +53,6 @@ module if_stage(
     // on icache interface or icache itself
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
-    logic ex_if_page_fault_int;
 
     // Branch Predictor wires
     logic       branch_predict_is_branch;
@@ -110,15 +108,6 @@ module if_stage(
             ex_addr_misaligned_int = 1'b0;
         end
     end
-    // check exceptions instr page fault
-    always_comb begin
-        if (resp_icache_cpu_i.valid && 
-            resp_icache_cpu_i.instr_page_fault) begin
-            ex_if_page_fault_int = 1'b1;
-        end else begin
-            ex_if_page_fault_int = 1'b0;
-        end
-    end
 
     // logic for icache access: if not misaligned 
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !stall_debug_i;
@@ -129,8 +118,7 @@ module if_stage(
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
-    assign fetch_o.inst    = resp_icache_cpu_i.data;
-    assign fetch_o.valid   = !stall_debug_i && !stall_i && (resp_icache_cpu_i.valid || (ex_addr_misaligned_int | ex_if_addr_fault_int | ex_if_page_fault_int));  // valid if the response of the cache is valid or xcpt
+    assign fetch_o.valid   = !stall_debug_i && !stall_i;  // valid if the response of the cache is valid or xcpt
 
     // Branch predictor and RAS
     branch_predictor brach_predictor_inst (
@@ -154,9 +142,6 @@ module if_stage(
         end else 
         if (ex_if_addr_fault_int) begin
             fetch_o.ex.cause = INSTR_ACCESS_FAULT;
-            fetch_o.ex.valid = 1'b1;
-        end else if (ex_if_page_fault_int) begin
-            fetch_o.ex.cause = INSTR_PAGE_FAULT;
             fetch_o.ex.valid = 1'b1;
         end else begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;

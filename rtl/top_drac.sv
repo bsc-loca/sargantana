@@ -197,6 +197,7 @@ treq_o_t       itlb_treq    ;
 ifill_resp_i_t ifill_resp   ;
 ifill_req_o_t  ifill_req    ;
 logic          iflush       ;
+logic          req_icache_ready;
 
 //--PMU
 to_PMU_t       pmu_flags    ;
@@ -315,6 +316,7 @@ datapath datapath_inst(
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .debug_i(debug_in),
+    .req_icache_ready_i(req_icache_ready),
     // Output datapath
     .req_cpu_dcache_o(req_datapath_dcache_interface),
     .req_cpu_icache_o(req_datapath_icache_interface),
@@ -348,6 +350,7 @@ icache_interface icache_interface_inst(
     
     // Fetch stage interface - Response packet icache to fetch
     .resp_icache_fetch_o(resp_icache_interface_datapath),
+    .req_ready_i(req_icache_ready),
     //PMU
     .buffer_miss_o (buffer_miss )
 );
