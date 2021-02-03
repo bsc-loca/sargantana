@@ -63,24 +63,24 @@ module datapath(
     logic invalidate_icache_int;
     logic invalidate_buffer_int;
     logic retry_fetch;
+    
     // Decode
-    id_rr_stage_t stage_id_rr_d;
-    id_rr_stage_t stage_id_rr_q;
-    id_rr_stage_t stage_stall_rr_q;
-    id_rr_stage_t stage_no_stall_rr_q;
+    instr_entry_t decoded_instr;
+    instr_entry_t stored_instr_id_d;
+    instr_entry_t stored_instr_id_q;
+    instr_entry_t selection_id_ir;
 
-    cu_id_t cu_id_int;
-
-    // RR
-    rr_exe_instr_t stage_rr_exe_d;
-    rr_exe_instr_t stage_rr_exe_q;
-
-    // Control Unit Decode
     id_cu_t id_cu_int;
     jal_id_if_t jal_id_if_int;
-
-
+    
+    logic src_select_id_ir_q;
+    
     // Rename and free list
+    ir_rr_stage_t stage_ir_rr_d;
+    ir_rr_stage_t stage_ir_rr_q;
+    ir_rr_stage_t stage_stall_rr_q;
+    ir_rr_stage_t stage_no_stall_rr_q;
+
     logic do_checkpoint;
     logic do_recover;
     logic delete_checkpoint;
@@ -98,14 +98,23 @@ module datapath(
     checkpoint_ptr checkpoint_free_list;
     checkpoint_ptr checkpoint_rename;
 
-    logic src_select_id_rr_q;
+    logic src_select_ir_rr_q;
+
+    ir_cu_t ir_cu_int;
+    cu_ir_t cu_ir_int;
 
     // Read Registers
+    rr_exe_instr_t stage_rr_exe_d;
+    rr_exe_instr_t stage_rr_exe_q;
+
     logic snoop_rs1_rr_alu_mul_div;
     logic snoop_rs2_rr_alu_mul_div;
     logic snoop_rs1_rr_mem;
     logic snoop_rs2_rr_mem;
 
+    rr_cu_t rr_cu_int;
+    cu_rr_t cu_rr_int;
+    
     // Graduation List
 
     gl_instruction_t instruction_decode_gl;
@@ -138,8 +147,6 @@ module datapath(
     // WB->Commit
     wb_cu_t wb_cu_int;
     cu_wb_t cu_wb_int;
-    rr_cu_t rr_cu_int;
-    cu_rr_t cu_rr_int;
     
     exe_if_branch_pred_t exe_if_branch_pred_int;   
 
@@ -199,6 +206,9 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .valid_fetch(resp_icache_cpu_i.valid),
+        .id_cu_i(id_cu_int),
+        .ir_cu_i(ir_cu_int),
+        .cu_ir_o(cu_ir_int),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
         .wb_cu_i(wb_cu_int),
@@ -210,12 +220,10 @@ module datapath(
         .cu_if_o(cu_if_int),
         .invalidate_icache_o(invalidate_icache_int),
         .invalidate_buffer_o(invalidate_buffer_int),
-        .id_cu_i(id_cu_int),
         .correct_branch_pred_i(correct_branch_pred),
         .debug_halt_i(debug_i.halt_valid),
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
-        .cu_id_o(cu_id_int),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int)
     );
@@ -276,42 +284,92 @@ module datapath(
     );
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////// DECODER, RENAME AND FREE LIST     STAGE                                                      /////////
+    //////// DECODER                           STAGE                                                      /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // ID Stage
     decoder id_decode_inst(
-        .decode_i(stage_if_id_q),
-        .decode_instr_o(stage_id_rr_d.instr),
-        .jal_id_if_o(jal_id_if_int)
+        .decode_i       (stage_if_id_q),
+        .decode_instr_o (decoded_instr),
+        .jal_id_if_o    (jal_id_if_int)
+    );
+
+
+    // valid jal in decode
+    assign id_cu_int.valid               = decoded_instr.valid;
+    assign id_cu_int.valid_jal           = jal_id_if_int.valid;
+    assign id_cu_int.stall_csr_fence     = decoded_instr.stall_csr_fence && decoded_instr.valid;
+    assign id_cu_int.predicted_as_branch = decoded_instr.bpred.is_branch;
+    assign id_cu_int.is_branch           = (decoded_instr.instr_type == BLT)  ||
+                                           (decoded_instr.instr_type == BLTU) ||
+                                           (decoded_instr.instr_type == BGE)  ||
+                                           (decoded_instr.instr_type == BGEU) ||
+                                           (decoded_instr.instr_type == BEQ)  ||
+                                           (decoded_instr.instr_type == BNE)  ||
+                                           (decoded_instr.instr_type == JALR);
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+
+    // Register ID to IR when stall
+    register #($bits(instr_entry_t)) reg_id_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .flush_i(flush_int.flush_id),
+        .load_i(1'b1),
+        .input_i(stored_instr_id_d),
+        .output_o(stored_instr_id_q)
+    );
+
+    // Syncronus Mux to decide between actual decode or one cycle before
+    always @(posedge clk_i) begin
+        src_select_id_ir_q <= !control_int.stall_id;
+    end
+    
+    assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+
+    // Instruction Queue 
+    instruction_queue instruction_queue_inst(
+        .clk_i          (clk_i),
+        .rstn_i         (rstn_i),  
+        .flush_i        (flush_int.flush_ir),  
+        .instruction_i  (selection_id_ir), 
+        .read_head_i    (~control_int.stall_ir),
+        .instruction_o  (stage_ir_rr_d.instr),
+        .full_o         (ir_cu_int.full_iq),
+        .empty_o        ()
     );
 
     // Free List
     free_list free_list_inst(
-        .clk_i(clk_i),
-        .rstn_i(rstn_i),
-        .read_head_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (stage_id_rr_d.instr.rd != 'h0) & (~control_int.stall_id)),
-        .add_free_register_i(cu_id_int.enable_commit_update),
-        .free_register_i(instruction_to_commit.old_prd),
-        .do_checkpoint_i(cu_id_int.do_checkpoint),
-        .do_recover_i(cu_id_int.do_recover),
-        .delete_checkpoint_i(cu_id_int.delete_checkpoint),
-        .recover_checkpoint_i(cu_id_int.recover_checkpoint),
-        .commit_roll_back_i(cu_id_int.recover_commit),
-        .new_register_o(free_register_to_rename),
-        .checkpoint_o(checkpoint_free_list),
-        .out_of_checkpoints_o(out_of_checkpoints_free_list),
-        .empty_o(free_list_empty)
+        .clk_i                  (clk_i),
+        .rstn_i                 (rstn_i),
+        .read_head_i            (stage_ir_rr_d.instr.regfile_we & stage_ir_rr_d.instr.valid & (stage_ir_rr_d.instr.rd != 'h0) & (~control_int.stall_ir)),
+        .add_free_register_i    (cu_ir_int.enable_commit_update),
+        .free_register_i        (instruction_to_commit.old_prd),
+        .do_checkpoint_i        (cu_ir_int.do_checkpoint),
+        .do_recover_i           (cu_ir_int.do_recover),
+        .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i   (cu_ir_int.recover_checkpoint),
+        .commit_roll_back_i     (cu_ir_int.recover_commit),
+        .new_register_o         (free_register_to_rename),
+        .checkpoint_o           (checkpoint_free_list),
+        .out_of_checkpoints_o   (out_of_checkpoints_free_list),
+        .empty_o                (free_list_empty)
     );
 
     // Rename Table
     rename_table rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i(stage_id_rr_d.instr.rs1),
-        .read_src2_i(stage_id_rr_d.instr.rs2),
-        .old_dst_i(stage_id_rr_d.instr.rd),
-        .write_dst_i(stage_id_rr_d.instr.regfile_we & stage_id_rr_d.instr.valid & (~control_int.stall_id)),
+        .read_src1_i(stage_ir_rr_d.instr.rs1),
+        .read_src2_i(stage_ir_rr_d.instr.rs2),
+        .old_dst_i(stage_ir_rr_d.instr.rd),
+        .write_dst_i(stage_ir_rr_d.instr.regfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .new_dst_i(free_register_to_rename),
         .ready1_i(cu_rr_int.write_enable_1),            
         .vaddr1_i(write_vaddr_1), 
@@ -319,13 +377,13 @@ module datapath(
         .ready2_i(cu_rr_int.write_enable_2),            
         .vaddr2_i(write_vaddr_2), 
         .paddr2_i(write_paddr_2), 
-        .do_checkpoint_i(cu_id_int.do_checkpoint),
-        .do_recover_i(cu_id_int.do_recover),
-        .delete_checkpoint_i(cu_id_int.delete_checkpoint),
-        .recover_checkpoint_i(cu_id_int.recover_checkpoint),
-        .recover_commit_i(cu_id_int.recover_commit), 
+        .do_checkpoint_i(cu_ir_int.do_checkpoint),
+        .do_recover_i(cu_ir_int.do_recover),
+        .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
+        .recover_commit_i(cu_ir_int.recover_commit), 
         .commit_old_dst_i(instruction_to_commit.rd),    
-        .commit_write_dst_i(cu_id_int.enable_commit_update),  
+        .commit_write_dst_i(cu_ir_int.enable_commit_update),  
         .commit_new_dst_i(instruction_to_commit.prd),
         .src1_o(stage_no_stall_rr_q.prs1),
         .rdy1_o(stage_no_stall_rr_q.rdy1),
@@ -342,92 +400,91 @@ module datapath(
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 
-    // valid jal in decode
-    assign id_cu_int.valid              = stage_id_rr_d.instr.valid;
-    assign id_cu_int.valid_jal          = jal_id_if_int.valid;
-    assign id_cu_int.stall_csr_fence    = stage_id_rr_d.instr.stall_csr_fence && stage_id_rr_d.instr.valid;
-    assign id_cu_int.empty_free_list    = free_list_empty;
-    assign id_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
-    assign id_cu_int.predicted_as_branch= stage_id_rr_d.instr.bpred.is_branch;
-    assign id_cu_int.is_branch = (stage_id_rr_d.instr.instr_type == BLT)  ||
-                                 (stage_id_rr_d.instr.instr_type == BLTU) ||
-                                 (stage_id_rr_d.instr.instr_type == BGE)  ||
-                                 (stage_id_rr_d.instr.instr_type == BGEU) ||
-                                 (stage_id_rr_d.instr.instr_type == BEQ)  ||
-                                 (stage_id_rr_d.instr.instr_type == BNE)  ||
-                                 (stage_id_rr_d.instr.instr_type == JALR);
+    // Signals for Control Unit
+    assign ir_cu_int.valid              = stage_ir_rr_d.instr.valid;
+    assign ir_cu_int.empty_free_list    = free_list_empty;
+    assign ir_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
+    assign ir_cu_int.is_branch          = (stage_ir_rr_d.instr.instr_type == BLT)  ||
+                                          (stage_ir_rr_d.instr.instr_type == BLTU) ||
+                                          (stage_ir_rr_d.instr.instr_type == BGE)  ||
+                                          (stage_ir_rr_d.instr.instr_type == BGEU) ||
+                                          (stage_ir_rr_d.instr.instr_type == BEQ)  ||
+                                          (stage_ir_rr_d.instr.instr_type == BNE)  ||
+                                          (stage_ir_rr_d.instr.instr_type == JALR);
 
-    // Register ID to RR
-    register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(logic)) reg_id_inst(
+
+    // Register IR to RR
+    register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(flush_int.flush_id),
-        .load_i(!control_int.stall_id),
-        .input_i({stage_id_rr_d.instr,free_register_to_rename,cu_id_int.do_checkpoint}),
+        .flush_i(flush_int.flush_ir),
+        .load_i(!control_int.stall_ir),
+        .input_i({stage_ir_rr_d.instr,free_register_to_rename,cu_ir_int.do_checkpoint}),
         .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd,stage_no_stall_rr_q.checkpoint_done})
     );
 
-    // Second ID to RR. To store rename in case of stall
-    register #($bits(id_rr_stage_t)) reg_rename_inst(
+    // Second IR to RR. To store rename in case of stall
+    register #($bits(ir_rr_stage_t)) reg_rename_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .flush_i(flush_int.flush_id),
-        .load_i(1'b1), // This register is always storing a one cycle old copy of reg_id_inst and the renaming.
-        .input_i(stage_id_rr_q),
+        .flush_i(flush_int.flush_ir),
+        .load_i(1'b1), // This register is always storing a one cycle old copy of reg_ir_inst and the renaming.
+        .input_i(stage_ir_rr_q),
         .output_o(stage_stall_rr_q)
     );
 
-    // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
+    // Syncronus Mux to decide between actual Rename or one cycle before Rename
     always @(posedge clk_i) begin
-        src_select_id_rr_q <= !control_int.stall_id;
+        src_select_ir_rr_q <= !control_int.stall_ir;
     end
 
     always_comb begin
-        if (src_select_id_rr_q) begin
-            stage_id_rr_q.instr = stage_no_stall_rr_q.instr;
-            stage_id_rr_q.prd = stage_no_stall_rr_q.prd;
-            stage_id_rr_q.prs1 = stage_no_stall_rr_q.prs1;
-            stage_id_rr_q.prs2 = stage_no_stall_rr_q.prs2;
-            stage_id_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
-            stage_id_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
-            stage_id_rr_q.old_prd = stage_no_stall_rr_q.old_prd;
-            stage_id_rr_q.chkp = stage_no_stall_rr_q.chkp;
-            stage_id_rr_q.checkpoint_done = stage_no_stall_rr_q.checkpoint_done;
+        if (src_select_ir_rr_q) begin
+            stage_ir_rr_q.instr = stage_no_stall_rr_q.instr;
+            stage_ir_rr_q.prd = stage_no_stall_rr_q.prd;
+            stage_ir_rr_q.prs1 = stage_no_stall_rr_q.prs1;
+            stage_ir_rr_q.prs2 = stage_no_stall_rr_q.prs2;
+            stage_ir_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
+            stage_ir_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
+            stage_ir_rr_q.old_prd = stage_no_stall_rr_q.old_prd;
+            stage_ir_rr_q.chkp = stage_no_stall_rr_q.chkp;
+            stage_ir_rr_q.checkpoint_done = stage_no_stall_rr_q.checkpoint_done;
         end else begin
-            stage_id_rr_q.instr = stage_stall_rr_q.instr;
-            stage_id_rr_q.prd = stage_stall_rr_q.prd;
-            stage_id_rr_q.prs1 = stage_stall_rr_q.prs1;
-            stage_id_rr_q.prs2 = stage_stall_rr_q.prs2;
-            stage_id_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
-            stage_id_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
-            stage_id_rr_q.old_prd = stage_stall_rr_q.old_prd;
-            stage_id_rr_q.chkp = stage_stall_rr_q.chkp;
-            stage_id_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
+            stage_ir_rr_q.instr = stage_stall_rr_q.instr;
+            stage_ir_rr_q.prd = stage_stall_rr_q.prd;
+            stage_ir_rr_q.prs1 = stage_stall_rr_q.prs1;
+            stage_ir_rr_q.prs2 = stage_stall_rr_q.prs2;
+            stage_ir_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
+            stage_ir_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
+            stage_ir_rr_q.old_prd = stage_stall_rr_q.old_prd;
+            stage_ir_rr_q.chkp = stage_stall_rr_q.chkp;
+            stage_ir_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
         end
     end
 
     // Snoop ready from ALU MUL DIV to data source 1 and 2
-    assign snoop_rs1_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_id_rr_q.prs1) & (stage_id_rr_q.instr.rs1 != 0);
-    assign snoop_rs2_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_id_rr_q.prs2) & (stage_id_rr_q.instr.rs2 != 0); 
+    assign snoop_rs1_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1 != 0);
+    assign snoop_rs2_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2 != 0); 
 
     // Snoop ready from MEM to data source 1 and 2
-    assign snoop_rs1_rr_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_id_rr_q.prs1) & (stage_id_rr_q.instr.rs1 != 0);
-    assign snoop_rs2_rr_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_id_rr_q.prs2) & (stage_id_rr_q.instr.rs2 != 0); 
-
+    assign snoop_rs1_rr_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1 != 0);
+    assign snoop_rs2_rr_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2 != 0); 
+    
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// GRADUATION LIST AND READ REGISTER  STAGE                                                     /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    assign instruction_decode_gl.valid                  = stage_id_rr_q.instr.valid & (~control_int.stall_rr);
-    assign instruction_decode_gl.instr_type             = stage_id_rr_q.instr.instr_type;
-    assign instruction_decode_gl.rd                     = stage_id_rr_q.instr.rd;
-    assign instruction_decode_gl.rs1                    = stage_id_rr_q.instr.rs1;
-    assign instruction_decode_gl.pc                     = stage_id_rr_q.instr.pc;
-    assign instruction_decode_gl.exception              = stage_id_rr_q.instr.ex;
-    assign instruction_decode_gl.stall_csr_fence        = stage_id_rr_q.instr.stall_csr_fence;
-    assign instruction_decode_gl.old_prd                = stage_id_rr_q.old_prd;
-    assign instruction_decode_gl.prd                    = stage_id_rr_q.prd;
-    assign instruction_decode_gl.regfile_we             = stage_id_rr_q.instr.regfile_we;
+    assign instruction_decode_gl.valid                  = stage_ir_rr_q.instr.valid & (~control_int.stall_rr);
+    assign instruction_decode_gl.instr_type             = stage_ir_rr_q.instr.instr_type;
+    assign instruction_decode_gl.rd                     = stage_ir_rr_q.instr.rd;
+    assign instruction_decode_gl.rs1                    = stage_ir_rr_q.instr.rs1;
+    assign instruction_decode_gl.pc                     = stage_ir_rr_q.instr.pc;
+    assign instruction_decode_gl.exception              = stage_ir_rr_q.instr.ex;
+    assign instruction_decode_gl.stall_csr_fence        = stage_ir_rr_q.instr.stall_csr_fence;
+    assign instruction_decode_gl.old_prd                = stage_ir_rr_q.old_prd;
+    assign instruction_decode_gl.prd                    = stage_ir_rr_q.prd;
+    assign instruction_decode_gl.regfile_we             = stage_ir_rr_q.instr.regfile_we;
 
     graduation_list graduation_list_inst(
         .clk_i(clk_i),
@@ -453,7 +510,7 @@ module datapath(
 
     assign reg_wr_data    = (debug_i.reg_write_valid && debug_i.halt_valid) ? debug_i.reg_write_data : data_wb_csr_to_rr;
     assign reg_wr_addr    = (debug_i.reg_write_valid && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : write_paddr_1;
-    assign reg_prd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_id_rr_q.prs1;
+    assign reg_prd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_ir_rr_q.prs1;
     
     // RR Stage
     regfile regfile(
@@ -467,22 +524,22 @@ module datapath(
         .write_data_2_i(data_mem_to_rr),
         
         .read_addr1_i(reg_prd1_addr),
-        .read_addr2_i(stage_id_rr_q.prs2),
+        .read_addr2_i(stage_ir_rr_q.prs2),
         .read_data1_o(stage_rr_exe_d.data_rs1),
         .read_data2_o(stage_rr_exe_d.data_rs2)
     );
 
-    assign stage_rr_exe_d.instr = stage_id_rr_q.instr;
+    assign stage_rr_exe_d.instr = stage_ir_rr_q.instr;
     assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
     assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
-    assign stage_rr_exe_d.prd = stage_id_rr_q.prd;
-    assign stage_rr_exe_d.prs1 = stage_id_rr_q.prs1;
-    assign stage_rr_exe_d.prs2 = stage_id_rr_q.prs2;
-    assign stage_rr_exe_d.rdy1 = stage_id_rr_q.rdy1;
-    assign stage_rr_exe_d.rdy2 = stage_id_rr_q.rdy2;
-    assign stage_rr_exe_d.old_prd = stage_id_rr_q.old_prd;
-    assign stage_rr_exe_d.chkp = stage_id_rr_q.chkp;
-    assign stage_rr_exe_d.checkpoint_done = stage_id_rr_q.checkpoint_done;
+    assign stage_rr_exe_d.prd = stage_ir_rr_q.prd;
+    assign stage_rr_exe_d.prs1 = stage_ir_rr_q.prs1;
+    assign stage_rr_exe_d.prs2 = stage_ir_rr_q.prs2;
+    assign stage_rr_exe_d.rdy1 = stage_ir_rr_q.rdy1;
+    assign stage_rr_exe_d.rdy2 = stage_ir_rr_q.rdy2;
+    assign stage_rr_exe_d.old_prd = stage_ir_rr_q.old_prd;
+    assign stage_rr_exe_d.chkp = stage_ir_rr_q.chkp;
+    assign stage_rr_exe_d.checkpoint_done = stage_ir_rr_q.checkpoint_done;
 
 
     assign selection_rr_exe_d = (control_int.stall_rr) ? reg_to_exe : stage_rr_exe_d;
@@ -719,14 +776,14 @@ module datapath(
 
     // PC
     assign pc_if  = stage_if_id_d.pc_inst;
-    assign pc_id  = (valid_id)  ? stage_id_rr_d.instr.pc : 64'b0;
+    assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
     assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? alu_mul_div_wb.pc : 64'b0;
 
     // Valid
     assign valid_if  = stage_if_id_d.valid;
-    assign valid_id  = stage_id_rr_d.instr.valid;
+    assign valid_id  = decoded_instr.valid;
     assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
     assign valid_wb = alu_mul_div_wb.valid;

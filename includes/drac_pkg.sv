@@ -50,6 +50,10 @@ typedef reg   [ICACHELINE_SIZE:0] icache_line_reg_t;
 typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
 typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 
+
+// Instruction Queue
+parameter INSTRUCTION_QUEUE_NUM_ENTRIES = 16;
+
 // Physical registers 
 parameter NUM_PHISICAL_REGISTERS = 64;
 parameter PHISICAL_REGFILE_WIDTH = 6;
@@ -67,7 +71,10 @@ typedef logic [4:0] gl_index_t;
 parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
 
 // Most significative bit from address used to index
-parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 7777777;
+parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
+
+// Load Store Queue
+parameter LSQ_NUM_ENTRIES = 8;
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
@@ -274,7 +281,7 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch  
-} id_rr_stage_t;
+} ir_rr_stage_t;
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
@@ -340,11 +347,17 @@ typedef struct packed {
     logic valid;                        // Valid instruction
     logic valid_jal;                    // JAL is valid
     logic stall_csr_fence;              // CSR or fence
-    logic out_of_checkpoints;           // Rename out of checkpoints
     logic is_branch;                    // Decode instruction is a branch
     logic predicted_as_branch;          // Decode instruction was predicted as branch
-    logic empty_free_list;              // Free list out of registers
 } id_cu_t;      // Decode to Control Unit
+
+typedef struct packed {
+    logic valid;                        // Valid instruction
+    logic full_iq;                      // Instruction Queue full
+    logic out_of_checkpoints;           // Rename out of checkpoints
+    logic empty_free_list;              // Free list out of registers
+    logic is_branch;                    // Rename instruction is a branch
+} ir_cu_t;      // Rename to Control Unit
 
 typedef struct packed {
     logic gl_full;  // CSR or fence
@@ -361,8 +374,7 @@ typedef struct packed {
     checkpoint_ptr recover_checkpoint;  // Label of the checkpoint to recover   
     logic recover_commit;               // Recover at Commit
     logic enable_commit_update;         // Enable update of Free List and Rename from commit
-} cu_id_t;      // Control Unit to Decode
-
+} cu_ir_t;      // Control Unit to Rename
 
 typedef struct packed {
     logic write_enable_1;         // Enable write on register file. Port 1
@@ -423,9 +435,9 @@ typedef struct packed {
 typedef struct packed {
     logic stall_if;         // Stop Fetch
     logic stall_id;         // Stop Decode
+    logic stall_ir;         // Stop Rename
     logic stall_rr;         // Stop Read Register
     logic stall_exe;        // Stop Exe
-    logic stall_wb;         // Stop Write Back
     logic stall_commit;     // Stop Commit
 
     // whether insert in fetch from dec or commit
@@ -436,9 +448,9 @@ typedef struct packed {
 typedef struct packed {
     logic flush_if;         // Flush Fetch
     logic flush_id;         // Flush instruction in Decode
+    logic flush_ir;         // Flush instructions in Rename
     logic flush_rr;         // Flush instruction in Read Register
     logic flush_exe;        // Flush instruction in Execution Stage
-    logic flush_wb;         // Flush instruction in Write Back
     logic flush_commit;     // Flush instruction in commit
 } pipeline_flush_t;
 
@@ -452,6 +464,7 @@ typedef struct packed {
 typedef struct packed {
     logic stall_if   ;         // Stop Fetch
     logic stall_id   ;         // Stop Decode
+    logic stall_ir   ;         // Stop Rename
     logic stall_rr   ;         // Stop Read Register
     logic stall_exe  ;         // Stop Exe
     logic stall_wb   ;         // Stop Write Back
@@ -491,7 +504,7 @@ typedef struct packed {
     // petition to CSR takes more than one cycle
     // when down value ready
     // while up doing req
-    // or WFIdrac
+    // or WFI
     logic       csr_stall;
     // CSR exception
     // read CSR without enough privilege

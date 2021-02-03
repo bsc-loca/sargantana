@@ -22,6 +22,7 @@ module control_unit(
 
     input logic             valid_fetch,
     input id_cu_t           id_cu_i,
+    input ir_cu_t           ir_cu_i,
     input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
@@ -39,7 +40,7 @@ module control_unit(
     output logic            invalidate_icache_o,
     output logic            invalidate_buffer_o,
 
-    output cu_id_t          cu_id_o,
+    output cu_ir_t          cu_ir_o,
     output cu_rr_t          cu_rr_o,
     output cu_wb_t          cu_wb_o,
     output cu_commit_t      cu_commit_o
@@ -154,149 +155,136 @@ module control_unit(
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
-    assign cu_id_o.do_checkpoint = (id_cu_i.is_branch) &
-                                   id_cu_i.valid &  ~(id_cu_i.out_of_checkpoints) &
-                                   ~(pipeline_flush_o.flush_id) & ~(pipeline_ctrl_o.stall_id);
+    assign cu_ir_o.do_checkpoint = (ir_cu_i.is_branch) &
+                                   ir_cu_i.valid &  ~(ir_cu_i.out_of_checkpoints) &
+                                   ~(pipeline_flush_o.flush_ir) & ~(pipeline_ctrl_o.stall_ir);
 
-    assign cu_id_o.do_recover = (~correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
+    assign cu_ir_o.do_recover = (~correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
 
-    assign cu_id_o.recover_checkpoint = exe_cu_i.chkp;
+    assign cu_ir_o.recover_checkpoint = exe_cu_i.chkp;
 
-    assign cu_id_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1); // & ~(pipeline_ctrl_o.stall_id);
+    assign cu_ir_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
 
-    // logic about flush the pipeline if branch
+    // Logic To Flush the frontend
     always_comb begin
         // if exception
         pipeline_flush_o.flush_if       = 1'b0;
         pipeline_flush_o.flush_id       = 1'b0;
-        pipeline_flush_o.flush_rr       = 1'b0;
-        pipeline_flush_o.flush_exe      = 1'b0;
-        pipeline_flush_o.flush_wb       = 1'b0;
-        pipeline_flush_o.flush_commit   = 1'b0;
-        flush_csr_fence                 = 1'b0;
         if (exception_enable_q) begin
             pipeline_flush_o.flush_if       = 1'b1;
             pipeline_flush_o.flush_id       = 1'b1;
-            pipeline_flush_o.flush_rr       = 1'b1;
-            pipeline_flush_o.flush_exe      = 1'b1;
-            pipeline_flush_o.flush_wb       = 1'b0;
-            flush_csr_fence                 = 1'b1;
         end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
-            if (exe_cu_i.stall) begin
                 pipeline_flush_o.flush_if  = 1'b1;
                 pipeline_flush_o.flush_id  = 1'b1;
-                pipeline_flush_o.flush_rr  = 1'b0;
-                pipeline_flush_o.flush_exe = 1'b0;
-                pipeline_flush_o.flush_wb  = 1'b0;
-                flush_csr_fence            = 1'b1;
-            end else begin
-                pipeline_flush_o.flush_if  = 1'b1;
-                pipeline_flush_o.flush_id  = 1'b1;
-                pipeline_flush_o.flush_rr  = 1'b1;
-                pipeline_flush_o.flush_exe = 1'b0;
-                pipeline_flush_o.flush_wb  = 1'b0;
-                flush_csr_fence            = 1'b1;
-            end
         end else if ((id_cu_i.stall_csr_fence | 
                       csr_fence_in_pipeline   | 
-                      commit_cu_i.stall_csr_fence) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+                      commit_cu_i.stall_csr_fence) && !(csr_cu_i.csr_stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
-            pipeline_flush_o.flush_rr  = 1'b0;
-            pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
         end else if ((id_cu_i.valid_jal ||
-                    (commit_cu_i.valid && commit_cu_i.fence)) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+                    (commit_cu_i.valid && commit_cu_i.fence)) && !(csr_cu_i.csr_stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
-            pipeline_flush_o.flush_rr  = 1'b0;
-            pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
-        end else if ((id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) && !(csr_cu_i.csr_stall || exe_cu_i.stall)) begin
+        end else if ((id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) && !(csr_cu_i.csr_stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
-            pipeline_flush_o.flush_rr  = 1'b0;
-            pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;    
+        end
+    end
+
+    // Logic To Flush the Backend
+    always_comb begin
+        // if exception
+        pipeline_flush_o.flush_ir       = 1'b0;
+        pipeline_flush_o.flush_rr       = 1'b0;
+        pipeline_flush_o.flush_exe      = 1'b0;
+        pipeline_flush_o.flush_commit   = 1'b0;
+        flush_csr_fence                 = 1'b0;
+        if (exception_enable_q) begin
+            pipeline_flush_o.flush_ir      = 1'b1;
+            pipeline_flush_o.flush_rr      = 1'b1;
+            pipeline_flush_o.flush_exe     = 1'b1;
+            flush_csr_fence                = 1'b1;
+        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
+            if (exe_cu_i.stall) begin
+                pipeline_flush_o.flush_ir  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b0;
+                pipeline_flush_o.flush_exe = 1'b0;
+                flush_csr_fence            = 1'b1;
+            end else begin
+                pipeline_flush_o.flush_ir  = 1'b1;
+                pipeline_flush_o.flush_rr  = 1'b1;
+                pipeline_flush_o.flush_exe = 1'b0;
+                flush_csr_fence            = 1'b1;
+            end
         end else if (exe_cu_i.stall) begin   
-            pipeline_flush_o.flush_if  = 1'b0;
-            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
         end else if (rr_cu_i.gl_full) begin
-            pipeline_flush_o.flush_if  = 1'b0;
-            pipeline_flush_o.flush_id  = 1'b0;
+            pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.empty_free_list) begin
-            pipeline_flush_o.flush_if  = 1'b0;
-            pipeline_flush_o.flush_id  = 1'b1;
+        end else if (ir_cu_i.empty_free_list) begin
+            pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
-        end else if (id_cu_i.out_of_checkpoints) begin
-            pipeline_flush_o.flush_if  = 1'b0;
-            pipeline_flush_o.flush_id  = 1'b1;
+        end else if (ir_cu_i.out_of_checkpoints) begin
+            pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
-            pipeline_flush_o.flush_wb  = 1'b0;
         end
     end
 
 
-    // Logic to stall the pipeline
+    // Logic to stall the Front End
     always_comb begin
         pipeline_ctrl_o.stall_if  = 1'b0;
         pipeline_ctrl_o.stall_id  = 1'b0;
-        pipeline_ctrl_o.stall_rr  = 1'b0;
-        pipeline_ctrl_o.stall_exe = 1'b0;
-        pipeline_ctrl_o.stall_wb  = 1'b0;
         if (csr_cu_i.csr_stall) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b1;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (exe_cu_i.stall) begin
+        end else if (ir_cu_i.full_iq) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (rr_cu_i.gl_full) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b1;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (id_cu_i.empty_free_list) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end else if (id_cu_i.out_of_checkpoints) begin
-            pipeline_ctrl_o.stall_if  = 1'b1;
-            pipeline_ctrl_o.stall_id  = 1'b1;
-            pipeline_ctrl_o.stall_rr  = 1'b0;
-            pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
         end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence) begin
             pipeline_ctrl_o.stall_if  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
+        end
+    end
+    
+    // Logic to stall the Back End
+    always_comb begin
+        pipeline_ctrl_o.stall_ir  = 1'b0;
+        pipeline_ctrl_o.stall_rr  = 1'b0;
+        pipeline_ctrl_o.stall_exe = 1'b0;
+        if (csr_cu_i.csr_stall) begin
+            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b1;
+        end else if (exe_cu_i.stall) begin
+            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+        end else if (rr_cu_i.gl_full) begin
+            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b1;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+        end else if (ir_cu_i.empty_free_list) begin
+            pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
-            pipeline_ctrl_o.stall_wb  = 1'b0;
-        end
+        end else if (ir_cu_i.out_of_checkpoints) begin
+            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_rr  = 1'b0;
+            pipeline_ctrl_o.stall_exe = 1'b0;
+        end 
     end
 
     // Enable Update of Free List and Rename from Commit
-    assign cu_id_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+    assign cu_ir_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
 
     // Recover checkpoint of Commit stage in Rename and Free List
-    assign cu_id_o.recover_commit = exception_enable_q;
+    assign cu_ir_o.recover_commit = exception_enable_q;
 
     // Flush the Graduation List from commit
     assign cu_commit_o.flush_gl_commit = exception_enable_q;
@@ -308,7 +296,7 @@ module control_unit(
     assign pipeline_ctrl_o.stall_commit = commit_cu_i.stall_commit;
 
 
-    // logic flush gl
+    // Logic to flush gl
     always_comb begin
         if (~correct_branch_pred_i & exe_cu_i.valid_1) begin
             cu_wb_o.flush_gl = 1'b1;
@@ -319,7 +307,7 @@ module control_unit(
         end
     end
 
-
+    // Delay exceptions one cycle
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             exception_enable_q <= 1'b0;

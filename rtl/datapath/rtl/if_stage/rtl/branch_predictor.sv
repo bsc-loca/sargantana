@@ -18,7 +18,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
  
  // Number of entries of the is branch predictor.
-localparam NUM_IS_BRANCH_ENTRIES = 64; 
+localparam NUM_IS_BRANCH_ENTRIES = 1024; 
 
 // Tags stored in is_branch_table
 typedef logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
@@ -102,7 +102,7 @@ bimodal_predictor bimodal_predictor_inst(
     begin
         if(~rstn_i)begin
             for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
-                is_branch_table_valid[i] <= 1'b0;
+                is_branch_table_valid[i] = 1'b0;
             end
         end else if(is_branch_EX_i) begin
             is_branch_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= pc_execution_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1];
