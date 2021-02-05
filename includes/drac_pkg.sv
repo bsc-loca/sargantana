@@ -211,27 +211,30 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
 
 // Response coming from Dcache
 typedef struct packed {
-    logic        ready;     // Dcache_interface ready to accept mem. access
+    logic       valid;      // Response valid
+    logic      replay;      // Replay instruction
+    logic       ready;      // Ready to accept requests
+    logic        nack;      // Request not accepted
     bus64_t      data;      // Data from load
-    logic        lock;      // Dcache cannot accept more mem. accesses
     logic  xcpt_ma_st;      // Misaligned store exception
     logic  xcpt_ma_ld;      // Misaligned load exception
     logic  xcpt_pf_st;      // Page fault store
     logic  xcpt_pf_ld;      // Page fault load 
-    bus64_t      addr;
+    bus64_t      addr;      // Requested Address
+    logic io_address_space; // Request in Input/Output Address Space    
 } resp_dcache_cpu_t;
 
 // Request send to DCache
 typedef struct packed {
-    logic         valid;             // New memory request
-    logic         kill;              // Exception detected at Commit
-    bus64_t       data_rs1;          // Data operand 1
-    bus64_t       data_rs2;          // Data operand 2
-    instr_type_t  instr_type;        // Type of instruction
-    logic [2:0]   mem_size;          // Granularity of mem. access
-    reg_t         rd;                // Destination register. Used for identify a pending Miss
-    bus64_t       imm;               // Inmmediate 
-    addr_t        io_base_addr;      // Address Base Pointer of INPUT/OUPUT
+    logic                valid;        // New memory request
+    logic                 kill;        // Exception detected at Commit
+    bus64_t           data_rs1;        // Data operand 1
+    bus64_t           data_rs2;        // Data operand 2
+    instr_type_t    instr_type;        // Type of instruction
+    logic [2:0]       mem_size;        // Granularity of mem. access
+    reg_t                   rd;        // Destination register. Used for identify a pending Miss
+    bus64_t                imm;        // Inmmediate 
+    addr_t        io_base_addr;        // Address Base Pointer of INPUT/OUPUT
 } req_cpu_dcache_t;
 
 // Fetch 1 Stage

@@ -59,8 +59,8 @@ logic mem_xcpt;
 logic io_address_space;
 logic kill_io_resp;   
 logic kill_mem_ope;
-logic [1:0] state;
-logic [1:0] next_state;
+/*logic [1:0] state;
+logic [1:0] next_state;*/
 bus64_t dmem_req_addr_64;
 
 logic [1:0] type_of_op;
@@ -72,10 +72,10 @@ logic dmem_xcpt_pf_st_reg;
 logic dmem_xcpt_pf_ld_reg;
 
 // Possible states of the control automata
-parameter ResetState  = 2'b00,
+/*parameter ResetState  = 2'b00,
           Idle = 2'b01,
           MakeRequest = 2'b10,
-          WaitResponse = 2'b11;
+          WaitResponse = 2'b11;*/
 
 parameter MEM_NOP   = 2'b00,
           MEM_LOAD  = 2'b01,
@@ -92,13 +92,6 @@ assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dm
 // The address is in the INPUT/OUTPUT space
 assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) & (dmem_req_addr_o < 40'h80000000);
 
-//////////////////////////////////////////////////////////////////////
-// For clarity we have two kill signals. There are two possible cases
-//////////////////////////////////////////////////////////////////////
-
-// Address is in INPUT/OUTPUT space
-assign kill_io_resp =  io_address_space & (type_of_op == MEM_STORE);
-
 // There has been a exception
 assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
 
@@ -108,75 +101,8 @@ assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
 // STATE MACHINE LOGIC
 //-------------------------------------------------------------
 
-// UPDATE STATE
-always@(posedge clk_i, negedge rstn_i) begin
-    if(~rstn_i)begin
-        state <= ResetState;
-        dmem_xcpt_ma_st_reg <= 1'b0;
-        dmem_xcpt_ma_ld_reg <= 1'b0; 
-        dmem_xcpt_pf_st_reg <= 1'b0;
-        dmem_xcpt_pf_ld_reg <= 1'b0;
-    end else begin
-        state <= next_state;
-        if (req_cpu_dcache_i.valid) begin
-            dmem_xcpt_ma_st_reg <= dmem_xcpt_ma_st_i;
-            dmem_xcpt_ma_ld_reg <= dmem_xcpt_ma_ld_i; 
-            dmem_xcpt_pf_st_reg <= dmem_xcpt_pf_st_i;
-            dmem_xcpt_pf_ld_reg <= dmem_xcpt_pf_ld_i;
-        end else begin
-            dmem_xcpt_ma_st_reg <= 1'b0;
-            dmem_xcpt_ma_ld_reg <= 1'b0;
-            dmem_xcpt_pf_st_reg <= 1'b0;
-            dmem_xcpt_pf_ld_reg <= 1'b0;
-        end
-    end
-end
+assign dmem_req_valid_o = req_cpu_dcache_i.valid; 
 
-// MEALY OUTPUT and NEXT STATE
-always_comb begin
-    case(state)
-        // IN RESET STATE
-        ResetState: begin
-            dmem_req_valid_o = 1'b0;        // NO request
-            resp_dcache_cpu_o.lock = 1'b0;  // NOT busy
-            next_state = Idle;              // Next state IDLE
-        end
-        // IN IDLE STATE
-        Idle: begin
-            dmem_req_valid_o = !req_cpu_dcache_i.kill & req_cpu_dcache_i.valid & dmem_req_ready_i;
-            resp_dcache_cpu_o.lock =  req_cpu_dcache_i.valid;
-            next_state = dmem_req_valid_o ?  MakeRequest : req_cpu_dcache_i.kill ? ResetState : Idle;
-        end
-        // IN MAKE REQUEST STATE
-        MakeRequest: begin
-            dmem_req_valid_o = 1'b0;
-            resp_dcache_cpu_o.lock = 1'b1;
-            next_state = (!kill_mem_ope) ? WaitResponse : ResetState ;
-        end
-        // IN WAIT RESPONSE STATE
-        WaitResponse: begin
-            if(dmem_resp_valid_i) begin
-                dmem_req_valid_o = 1'b0;
-                next_state = Idle;
-                resp_dcache_cpu_o.lock = 1'b0;
-            end else if(dmem_resp_nack_i) begin
-                dmem_req_valid_o = 1'b0;
-                next_state = Idle;
-                resp_dcache_cpu_o.lock = 1'b1;
-            end else begin
-                dmem_req_valid_o = 1'b0;
-                next_state = req_cpu_dcache_i.kill | mem_xcpt | kill_io_resp ? ResetState : WaitResponse;
-                resp_dcache_cpu_o.lock = 1'b1;
-            end
-        end
-        default: begin
-            `ifdef ASSERTIONS
-                assert(1 == 0);
-            `endif
-            next_state = ResetState;
-        end
-    endcase
-end
 
 // Decide type of memory operation
 always_comb begin
@@ -262,17 +188,21 @@ assign dmem_req_invalidate_lr_o = req_cpu_dcache_i.kill;
 // Kill actual memory operation                       
 assign dmem_req_kill_o = mem_xcpt | req_cpu_dcache_i.kill;
 
-// Dcache interface is ready
-assign resp_dcache_cpu_o.ready = dmem_resp_valid_i & (type_of_op != MEM_STORE);
+// Dcache interface to CPU 
+assign resp_dcache_cpu_o.valid = dmem_resp_valid_i;
+assign resp_dcache_cpu_o.replay = dmem_resp_replay_i;
+assign resp_dcache_cpu_o.ready = dmem_req_ready_i;
+assign resp_dcache_cpu_o.nack = dmem_resp_nack_i;
+assign resp_dcache_cpu_o.io_address_space = io_address_space;
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;
 
 // Fill exceptions for exe stage
-assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_reg;
-assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_reg;
-assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_reg;
-assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_reg;
+assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_i;
+assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_i;
+assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_i;
+assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
 
 //-PMU

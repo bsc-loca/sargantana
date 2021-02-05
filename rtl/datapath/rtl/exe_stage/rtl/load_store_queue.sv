@@ -11,14 +11,11 @@
  * -----------------------------------------------
  */
 
-//`default_nettype none
 import drac_pkg::*;
 
-localparam NUM_ENTRIES = 8; // Number of entries in circular buffer
 
-
-typedef logic [$clog2(NUM_ENTRIES)-1:0] ls_queue_entry;
-typedef reg [$clog2(NUM_ENTRIES)-1:0] reg_ls_queue_entry;
+typedef logic [$clog2(LSQ_NUM_ENTRIES)-1:0] ls_queue_entry;
+typedef reg [$clog2(LSQ_NUM_ENTRIES)-1:0] reg_ls_queue_entry;
 
 /*
 typedef logic [$bits(exe_wb_instr_t):0] control_cell;
@@ -34,7 +31,9 @@ module load_store_queue(
     input bus64_t          data_rs2_i,       // Data operand 2
      
     input wire             flush_i,          // Flush all entries to 0
-    input wire             read_head_i,      // Read tail of the ciruclar buffer
+    input wire             read_next_i,      // Read next instruction of the ciruclar buffer
+    input wire             reset_next_i,     // Reset next instruction to the head
+    input wire             advance_head_i,   // Advance head one position
 
     output rr_exe_instr_t  instruction_o,    // All intruction output signals
     output bus64_t         data_rs1_o,       // Data operand 1
@@ -47,34 +46,41 @@ module load_store_queue(
 
 reg_ls_queue_entry head;
 reg_ls_queue_entry tail;
+reg_ls_queue_entry next;
 
 rr_exe_instr_t stored_instruction_q;
 bus64_t stored_rs1_q;
 bus64_t stored_rs2_q;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES):0] num;
+logic [$clog2(LSQ_NUM_ENTRIES):0] num;
+logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_read;
 
 logic write_enable;
 logic read_enable;
+logic advance_enable;
 
 
-// User can write to the head of the buffer if the new data is valid and
+// User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.instr.valid & (num < NUM_ENTRIES);
+assign write_enable = instruction_i.instr.valid & (num < LSQ_NUM_ENTRIES);
 
-// User can read the tail of the buffer if there is data stored in the queue
+// User can read the next instruction of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
-assign read_enable = read_head_i & (num > 0) ;
+assign read_enable = read_next_i & (num_to_read > 0) & (~reset_next_i);
+
+// User can advance the head of the buffer if there is data stored in the queue
+// or in this cycle a new entry is written
+assign advance_enable = advance_head_i & (num > 0) & (~reset_next_i);
 
 
 `ifndef SRAM_MEMORIES
 
     // FIFO Memory structure
 
-    reg64_t data_table [0:NUM_ENTRIES-1]; 
-    regPC_t addr_table [0:NUM_ENTRIES-1];
-    rr_exe_instr_t control_table[0:NUM_ENTRIES-1];
+    reg64_t data_table [0:LSQ_NUM_ENTRIES-1]; 
+    regPC_t addr_table [0:LSQ_NUM_ENTRIES-1];
+    rr_exe_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
 
     
     always_ff @(posedge clk_i, negedge rstn_i)
@@ -101,32 +107,46 @@ always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
         head <= 3'h0;
+        next <= 3'h0;
         tail <= 3'b0;
         num  <= 4'b0;
+        num_to_read <= 4'b0;
         ls_queue_entry_o <= 3'b0;
     end
     else if (flush_i) begin
         head <= 3'h0;
+        next <= 3'h0;
         tail <= 3'b0;
         num  <= 4'b0;
+        num_to_read <= 4'b0;
         ls_queue_entry_o <= 3'b0;
+    end
+    else if (reset_next_i) begin
+        ls_queue_entry_o <= tail;
+        next <= head;
+        head <= head;
+        tail <= tail + {2'b00, write_enable};
+        num_to_read <= num  + {3'b0, write_enable};
+        num  <= num  + {3'b0, write_enable};
     end
     else begin
         ls_queue_entry_o <= tail;
-        head <= head + {2'b00, read_enable};
+        next <= next + {2'b00, read_enable};
+        head <= head + {2'b00, advance_enable};
         tail <= tail + {2'b00, write_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, read_enable};
+        num_to_read <= num_to_read  + {3'b0, write_enable} - {3'b0, read_enable};
+        num  <= num  + {3'b0, write_enable} - {3'b0, advance_enable};
     end
 end
 
 
-assign instruction_o = (~read_enable)? 'h0 : control_table[head];
-assign data_rs1_o = (~read_enable)? 'h0 : addr_table[head];
-assign data_rs2_o = (~read_enable)? 'h0 : data_table[head];
+assign instruction_o = (~read_enable)? 'h0 : control_table[next];
+assign data_rs1_o = (~read_enable)? 'h0 : addr_table[next];
+assign data_rs2_o = (~read_enable)? 'h0 : data_table[next];
 
 
-assign empty_o = (num == 0);
-assign full_o  = ((num == NUM_ENTRIES) | flush_i | ~rstn_i);
+assign empty_o = (num_to_read == 0);
+assign full_o  = ((num == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
 endmodule
 
