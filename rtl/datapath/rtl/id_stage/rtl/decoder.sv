@@ -98,9 +98,12 @@ module decoder(
                     decode_instr_o.instr_type = JAL;
                     decode_instr_o.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
-                    xcpt_addr_misaligned_int = |imm_value[1:0]; 
-                    jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid;
-                    jal_id_if_o.jump_addr = imm_value+decode_i.pc_inst;
+                    xcpt_addr_misaligned_int = |imm_value[1:0];
+                    jal_id_if_o.jump_addr = imm_value+decode_i.pc_inst; 
+                    jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
+                                        !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
+                                        (decode_i.bpred.decision == PRED_TAKEN));
+                    
                 end
                 OP_JALR: begin
                     decode_instr_o.regfile_we = 1'b1;

@@ -26,7 +26,7 @@ module datapath(
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input debug_in_t        debug_i,
     input [1:0]             csr_priv_lvl_i,
-    input logic             req_icache_ready_i;
+    input logic             req_icache_ready_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
@@ -55,6 +55,7 @@ module datapath(
     cu_if_t cu_if_int;
     addrPC_t pc_jump_if_int;
     addrPC_t pc_evec_q;
+    addrPC_t pc_next_csr_q;
 
     
     // Pipelines stages data
@@ -210,7 +211,7 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .miss_icache_i(miss_icache),
-        .ready_icache_i(req_icache_ready_i).
+        .ready_icache_i(req_icache_ready_i),
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
         .cu_ir_o(cu_ir_int),
@@ -245,10 +246,11 @@ module datapath(
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = pc_evec_q;
             retry_fetch = 1'b1;
+        end else if (control_int.sel_addr_if == SEL_JUMP_CSR_RW) begin
+            pc_jump_if_int = pc_next_csr_q;
+            retry_fetch = 1'b1;   
         end else if (control_int.sel_addr_if == SEL_JUMP_DECODE) begin
             pc_jump_if_int = jal_id_if_int.jump_addr;
-        else if (control_int.sel_addr_if == SEL_JUMP_BTB) begin
-            pc_jump_if_int = stage_if_1_if_2_q.bpred.pred_addr;
         end else begin
             `ifdef ASSERTIONS
                 assert (1 == 0);
@@ -256,7 +258,7 @@ module datapath(
         end
     end
 
-    assign stall_if = control_int.stall_if || debug_i.halt_valid;
+    assign stall_if_1 = control_int.stall_if_1 || debug_i.halt_valid;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// FETCH                  STAGE                                                                 /////////
@@ -280,7 +282,7 @@ module datapath(
     );
 
     // Register IF1 to IF2
-    register #($bits(if_1_if_2_stage_t)) reg_if_inst(
+    register #($bits(if_1_if_2_stage_t)) reg_if_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
@@ -290,14 +292,18 @@ module datapath(
     );
 
     if_stage_2 if_stage_2_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
         .fetch_i(stage_if_1_if_2_q),
+        .stall_i(control_int.stall_if_2),
+        .flush_i(flush_int.flush_if),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
         .stall_o(miss_icache)
     );
 
     // Register IF to ID
-    register #($bits(if_id_stage_t)) reg_if_inst(
+    register #($bits(if_id_stage_t)) reg_if_2_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
@@ -317,7 +323,6 @@ module datapath(
         .jal_id_if_o    (jal_id_if_int)
     );
 
-
     // valid jal in decode
     assign id_cu_int.valid               = decoded_instr.valid;
     assign id_cu_int.valid_jal           = jal_id_if_int.valid;
@@ -329,6 +334,7 @@ module datapath(
                                            (decoded_instr.instr_type == BGEU) ||
                                            (decoded_instr.instr_type == BEQ)  ||
                                            (decoded_instr.instr_type == BNE)  ||
+                                           (decoded_instr.instr_type == JAL) ||
                                            (decoded_instr.instr_type == JALR);
 
 
@@ -718,8 +724,10 @@ module datapath(
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             pc_evec_q <= 'b0;
+            pc_next_csr_q <= 'b0;
         end else begin 
             pc_evec_q <= resp_csr_cpu_i.csr_evec;
+            pc_next_csr_q <= instruction_to_commit.pc + 64'h4;
         end
     end
 
@@ -798,14 +806,14 @@ module datapath(
     assign commit_reg_we    = instruction_to_commit.regfile_we && instruction_to_commit.valid;
 
     // PC
-    assign pc_if  = stage_if_id_d.pc_inst;
+    assign pc_if  = stage_if_2_id_d.pc_inst;
     assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
     assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? alu_mul_div_wb.pc : 64'b0;
 
     // Valid
-    assign valid_if  = stage_if_id_d.valid;
+    assign valid_if  = stage_if_2_id_d.valid;
     assign valid_id  = decoded_instr.valid;
     assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;

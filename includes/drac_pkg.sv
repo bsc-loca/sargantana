@@ -83,11 +83,12 @@ typedef enum logic [1:0] {
     NEXT_PC_SEL_DEBUG       = 2'b11
 } next_pc_sel_t;    // Enum PC Selection
 
-typedef enum logic [1:0] {
-    SEL_JUMP_EXECUTION = 2'b00,
-    SEL_JUMP_CSR       = 2'b01,
-    SEL_JUMP_DECODE    = 2'b10,
-    SEL_JUMP_DEBUG     = 2'b11
+typedef enum logic [2:0] {
+    SEL_JUMP_EXECUTION = 3'b000,
+    SEL_JUMP_CSR       = 3'b001,
+    SEL_JUMP_DECODE    = 3'b010,
+    SEL_JUMP_DEBUG     = 3'b011,
+    SEL_JUMP_CSR_RW    = 3'b100
 } jump_addr_fetch_t;
 
 typedef enum logic [1:0]{
@@ -441,7 +442,8 @@ typedef struct packed {
 
 // Pipeline control
 typedef struct packed {
-    logic stall_if;         // Stop Fetch
+    logic stall_if_1;       // Stop Fetch 1
+    logic stall_if_2;       // Stop Fetch 2
     logic stall_id;         // Stop Decode
     logic stall_ir;         // Stop Rename
     logic stall_rr;         // Stop Read Register
@@ -470,8 +472,7 @@ typedef struct packed {
 
 //PMU flags
 typedef struct packed {
-    logic stall_if_1 ;         // Stop Fetch 1
-    logic stall_if_2 ;         // Stop Fetch 2
+    logic stall_if   ;         // Stop Fetch
     logic stall_id   ;         // Stop Decode
     logic stall_ir   ;         // Stop Rename
     logic stall_rr   ;         // Stop Read Register

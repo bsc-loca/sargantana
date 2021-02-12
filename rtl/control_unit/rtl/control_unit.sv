@@ -64,6 +64,7 @@ module control_unit(
 
     logic jump_enable_int;
     logic exception_enable_q, exception_enable_d;
+    logic csr_enable_d, csr_enable_q;
     // jump enable logic
     always_comb begin
         jump_enable_int =   (exe_cu_i.valid_1 && ~correct_branch_pred_i) ||   // branch at exe
@@ -73,6 +74,12 @@ module control_unit(
 
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
+                                                            csr_cu_i.csr_eret || 
+                                                            csr_cu_i.csr_exception || 
+                                                            (commit_cu_i.valid && commit_cu_i.ecall_taken));
+    // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
+    assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&
+                                                            !((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
@@ -114,7 +121,7 @@ module control_unit(
         // branches or valid jal
         if (debug_change_pc_i && debug_halt_i) begin
             cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
-        end else if (jump_enable_int || exception_enable_q) begin
+        end else if (jump_enable_int || exception_enable_q || csr_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (pipeline_ctrl_o.stall_if_1                 || 
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
@@ -133,6 +140,8 @@ module control_unit(
         // if exception or eret select from csr
         if (exception_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
+        end else if (csr_enable_q) begin
+            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR_RW;
         end else if (exe_cu_i.valid_1 && ~correct_branch_pred_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
         end else if (debug_change_pc_i && debug_halt_i) begin
@@ -171,6 +180,9 @@ module control_unit(
         pipeline_flush_o.flush_if       = 1'b0;
         pipeline_flush_o.flush_id       = 1'b0;
         if (exception_enable_q) begin
+            pipeline_flush_o.flush_if       = 1'b1;
+            pipeline_flush_o.flush_id       = 1'b1;
+        end else if (csr_enable_q) begin
             pipeline_flush_o.flush_if       = 1'b1;
             pipeline_flush_o.flush_id       = 1'b1;
         end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
@@ -249,7 +261,7 @@ module control_unit(
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;
-        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence && miss_icache_i && ready_icache_i) begin
+        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence || miss_icache_i || !ready_icache_i) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
@@ -315,8 +327,10 @@ module control_unit(
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             exception_enable_q <= 1'b0;
+            csr_enable_q <= 1'b0;
         end else begin 
             exception_enable_q <= exception_enable_d;
+            csr_enable_q <= csr_enable_d;
         end
     end
 

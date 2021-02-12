@@ -350,7 +350,7 @@ icache_interface icache_interface_inst(
     
     // Fetch stage interface - Response packet icache to fetch
     .resp_icache_fetch_o(resp_icache_interface_datapath),
-    .req_ready_i(req_icache_ready),
+    .req_fetch_ready_o(req_icache_ready),
     //PMU
     .buffer_miss_o (buffer_miss )
 );

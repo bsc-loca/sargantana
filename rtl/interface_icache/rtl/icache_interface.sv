@@ -60,6 +60,8 @@ logic new_addr_req ; //
 logic is_same_addr ; //
 logic a_valid_resp ; //
 
+reg_addr_t old_pc_req_d, old_pc_req_q;
+
 
 
 // Icache_interface can do request to icache
@@ -87,13 +89,25 @@ assign icache_access_needed_int = req_fetch_icache_i.valid;
 // when we want to send invalidation of request?
 assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 
+// Manage the pc_int_register
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if (!rstn_i) begin
+        old_pc_req_q <= {ADDR_SIZE{1'b0}};
+    end else begin
+        old_pc_req_q <= old_pc_req_d;
+    end
+end
+// old pc is the pc of the last cycle
+assign old_pc_req_d = do_request_int ? req_fetch_icache_i.vaddr : old_pc_req_q;   
+
+
 
 // return the datablock asked
 always_comb begin
     if(tlb_resp_xcp_if_i) begin
         resp_icache_fetch_o.data = 32'h0;
     end else begin
-        case(req_fetch_icache_i.vaddr[3:2])
+        case(old_pc_req_q[3:2])
             2'b00: begin
                 resp_icache_fetch_o.data = icache_resp_datablock_i[31:0];
             end
@@ -114,8 +128,8 @@ always_comb begin
 end
 
 assign resp_icache_fetch_o.valid =  (tlb_resp_xcp_if_i & do_request_int) || icache_resp_valid_i;
-assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i & buffer_miss_int;
-assign req_ready_o = icache_req_ready_i;
+assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i;
+assign req_fetch_ready_o = icache_req_ready_i;
 
 //PMU
 assign buffer_miss_o = '0; // TODO

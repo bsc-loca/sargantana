@@ -90,7 +90,7 @@ always_comb begin
             treq_valid_o      = 1'b0;
             cmp_enable_o      = cache_enable_i;
             cache_rd_ena_o    = 1'b0;
-            iresp_ready_o     = !new_request;
+            iresp_ready_o     = ( is_flush_or_kill || !new_request || is_hit_or_excpt  && !mmu_miss_i && new_request);
             ifill_req_valid_o = ( !is_hit_or_excpt  && !mmu_miss_i   && 
                                   !is_flush_or_kill &&  new_request && !ireq_kill_d);
             miss_o            = 1'b0  ;//PMU

@@ -302,7 +302,10 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              from_rr_i.instr.instr_type == BGE  |
                                              from_rr_i.instr.instr_type == BGEU |
                                              from_rr_i.instr.instr_type == BEQ  |
-                                             from_rr_i.instr.instr_type == BNE  );
+                                             from_rr_i.instr.instr_type == BNE  |
+                                             from_rr_i.instr.instr_type == JAL  |
+                                             from_rr_i.instr.instr_type == JALR) &
+                                             instruction_to_functional_unit.instr.valid;
                                              
 
 // Data for the Control Unit
