@@ -76,6 +76,9 @@ parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
 // Load Store Queue
 parameter LSQ_NUM_ENTRIES = 8;
 
+// Pending Mem Request Queue
+parameter PMRQ_NUM_ENTRIES = 16;
+
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
     NEXT_PC_SEL_KEEP_PC     = 2'b01,
@@ -216,6 +219,7 @@ typedef struct packed {
     logic       ready;      // Ready to accept requests
     logic        nack;      // Request not accepted
     bus64_t      data;      // Data from load
+    reg_t         tag;      // Tag of the mem access
     logic  xcpt_ma_st;      // Misaligned store exception
     logic  xcpt_ma_ld;      // Misaligned load exception
     logic  xcpt_pf_st;      // Page fault store

@@ -29,6 +29,7 @@ module dcache_interface (
     input  bus64_t      dmem_resp_data_i,    // Readed data from Cache
     input  logic        dmem_req_ready_i,    // Dcache ready to accept request
     input  logic        dmem_resp_valid_i,   // Response is valid
+    input  logic [7:0]  dmem_resp_tag_i,     // Tag 
     input  logic        dmem_resp_nack_i,    // Cache request not accepted
     input  logic        dmem_xcpt_ma_st_i,   // Missaligned store
     input  logic        dmem_xcpt_ma_ld_i,   // Missaligned load
@@ -194,6 +195,7 @@ assign resp_dcache_cpu_o.replay = dmem_resp_replay_i;
 assign resp_dcache_cpu_o.ready = dmem_req_ready_i;
 assign resp_dcache_cpu_o.nack = dmem_resp_nack_i;
 assign resp_dcache_cpu_o.io_address_space = io_address_space;
+assign resp_dcache_cpu_o.tag = dmem_resp_tag_i[5:1];
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;

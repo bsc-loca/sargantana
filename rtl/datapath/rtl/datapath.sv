@@ -165,6 +165,8 @@ module datapath(
     logic src_select_commit;
     exception_t exception_mem_commit_int;
     gl_index_t mem_gl_index_int;
+    gl_index_t index_gl_commit;
+    gl_index_t index_gl_commit_old_q;
 
     // CSR signals
     logic   csr_ena_int;
@@ -531,7 +533,7 @@ module datapath(
         .flush_commit_i(cu_commit_int.flush_gl_commit),
         .assigned_gl_entry_o(stage_rr_exe_d.gl_index),
         .instruction_o(instruction_gl_commit),
-        .commit_gl_entry_o(commit_cu_int.gl_index),
+        .commit_gl_entry_o(index_gl_commit),
         .full_o(rr_cu_int.gl_full),
         .empty_o()
     );
@@ -692,13 +694,13 @@ module datapath(
     //////// COMMIT STAGE                                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    register #($bits(gl_instruction_t)) commit_inst(
+    register #($bits(gl_instruction_t)+$bits(gl_index_t)) commit_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_commit),
         .load_i(src_select_commit),
-        .input_i(instruction_gl_commit),
-        .output_o(instruction_gl_commit_old_q)
+        .input_i({instruction_gl_commit,index_gl_commit}),
+        .output_o({instruction_gl_commit_old_q,index_gl_commit_old_q})
     );
 
     // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
@@ -707,6 +709,7 @@ module datapath(
     end
 
     assign instruction_to_commit = (src_select_commit)? instruction_gl_commit : instruction_gl_commit_old_q;
+    assign commit_cu_int.gl_index = (src_select_commit)? index_gl_commit : index_gl_commit_old_q;
 
     csr_interface csr_interface_inst
     (
