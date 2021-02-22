@@ -219,7 +219,7 @@ typedef struct packed {
     logic       ready;      // Ready to accept requests
     logic        nack;      // Request not accepted
     bus64_t      data;      // Data from load
-    reg_t         tag;      // Tag of the mem access
+    reg_t          rd;      // Tag of the mem access
     logic  xcpt_ma_st;      // Misaligned store exception
     logic  xcpt_ma_ld;      // Misaligned load exception
     logic  xcpt_pf_st;      // Page fault store

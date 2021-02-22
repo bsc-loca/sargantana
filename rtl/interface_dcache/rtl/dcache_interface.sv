@@ -195,7 +195,7 @@ assign resp_dcache_cpu_o.replay = dmem_resp_replay_i;
 assign resp_dcache_cpu_o.ready = dmem_req_ready_i;
 assign resp_dcache_cpu_o.nack = dmem_resp_nack_i;
 assign resp_dcache_cpu_o.io_address_space = io_address_space;
-assign resp_dcache_cpu_o.tag = dmem_resp_tag_i[5:1];
+assign resp_dcache_cpu_o.rd = dmem_resp_tag_i[5:1];
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;
