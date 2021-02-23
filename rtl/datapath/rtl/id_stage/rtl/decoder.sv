@@ -52,6 +52,9 @@ module decoder(
         decode_instr_o.op_32   = 1'b0;
 
         decode_instr_o.instr_type = ADD;
+        `ifdef VERILATOR
+        assign decode_instr_o.id = decode_i.id;
+        `endif
 
         
         decode_instr_o.unit   = UNIT_ALU;

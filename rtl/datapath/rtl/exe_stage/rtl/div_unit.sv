@@ -85,6 +85,9 @@ bus64_t rmd_64;
         instruction_d[32].gl_index        = instruction_i.gl_index;
         instruction_d[32].branch_taken    = 1'b0;
         instruction_d[32].result_pc       = data_src1_i;                 // Store dividend in result_pc
+        `ifdef VERILATOR
+        instruction_d[32].id              = instruction_i.instr.id;
+        `endif
 
 
         for (int i = 31; i >= 0; i--) begin
@@ -213,6 +216,9 @@ bus64_t rmd_64;
             instruction_o.checkpoint_done = instruction_q[16].checkpoint_done;
             instruction_o.chkp            = instruction_q[16].chkp;
             instruction_o.gl_index        = instruction_q[16].gl_index;
+            `ifdef VERILATOR
+            instruction_o.id              = instruction_q[16].id;
+            `endif
             instruction_o.branch_taken    = 1'b0;
             instruction_o.result_pc       = 0;
             instruction_o.ex              = instruction_q[16].ex;
@@ -240,6 +246,9 @@ bus64_t rmd_64;
             instruction_o.checkpoint_done = instruction_q[0].checkpoint_done;
             instruction_o.chkp            = instruction_q[0].chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
+            `ifdef VERILATOR
+            instruction_o.id              = instruction_q[0].id;
+            `endif
             instruction_o.branch_taken    = 1'b0;
             instruction_o.result_pc       = 0;
             instruction_o.ex              = instruction_q[0].ex;

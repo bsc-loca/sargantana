@@ -565,6 +565,9 @@ assign instruction_o.rd            = instruction_to_wb.instr.rd;
 assign instruction_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
 assign instruction_o.regfile_we    = instruction_to_wb.instr.regfile_we;
 assign instruction_o.instr_type    = instruction_to_wb.instr.instr_type;
+`ifdef VERILATOR
+assign instruction_o.id	           = instruction_to_wb.instr.id;
+`endif
 assign instruction_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
 assign instruction_o.csr_addr      = instruction_to_wb.instr.result[CSR_ADDR_SIZE-1:0];
 assign instruction_o.prd           = instruction_to_wb.prd;

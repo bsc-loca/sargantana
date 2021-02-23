@@ -47,8 +47,8 @@ module datapath(
     logic [4:0] commit_addr_reg;
 `endif
 
-    bus64_t pc_if, pc_id, pc_rr, pc_exe, pc_wb;
-    logic valid_if, valid_id, valid_rr, valid_exe, valid_wb;
+    bus64_t pc_if1, pc_if2, pc_id, pc_rr, pc_exe, pc_wb;
+    logic valid_if1, valid_if2, valid_id, valid_rr, valid_exe, valid_wb;
 
     pipeline_ctrl_t control_int;
     pipeline_flush_t flush_int;
@@ -192,6 +192,9 @@ module datapath(
     // stall IF
     logic stall_if;
     logic miss_icache;
+    `ifdef VERILATOR
+        bus64_t id_fetch;
+    `endif
 
     // This addresses are fixed from lowrisc
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -280,6 +283,9 @@ module datapath(
         .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_1_if_2_d),
+        `ifdef VERILATOR
+        .id_o(id_fetch),
+        `endif
         .exe_if_branch_pred_i(exe_if_branch_pred_int)
     );
 
@@ -809,14 +815,16 @@ module datapath(
     assign commit_reg_we    = instruction_to_commit.regfile_we && instruction_to_commit.valid;
 
     // PC
-    assign pc_if  = stage_if_2_id_d.pc_inst;
+    assign pc_if1  = stage_if_1_if_2_d.pc_inst;
+    assign pc_if2  = stage_if_2_id_d.pc_inst;
     assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
     assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
     assign pc_wb = (valid_wb) ? alu_mul_div_wb.pc : 64'b0;
 
     // Valid
-    assign valid_if  = stage_if_2_id_d.valid;
+    assign valid_if1  = stage_if_1_if_2_d.valid;
+    assign valid_if2  = stage_if_2_id_d.valid;
     assign valid_id  = decoded_instr.valid;
     assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
@@ -842,12 +850,54 @@ module datapath(
             .csr_xcpt_cause(resp_csr_cpu_i.csr_exception_cause),
             .csr_tval(resp_csr_cpu_i.csr_tval)
         );
+        konata_dump_behav konata_dump
+        (
+            .clk(clk_i),
+            .rst(rstn_i),
+            .if1_valid(valid_if1),
+            .if1_id(id_fetch), 
+            .if1_stall(control_int.stall_if_1),
+            .if1_flush(flush_int.flush_if),
+
+            .if2_valid(valid_if2),
+            .if2_id(stage_if_2_id_d.id),
+            .if2_stall(control_int.stall_if_2),
+            .if2_flush(flush_int.flush_if),
+
+            .id_valid(valid_id),
+            .id_inst(stage_if_2_id_q.inst),
+            .id_pc(pc_id),
+            .id_id(stage_if_2_id_q.id),
+            .id_stall(control_int.stall_id),
+            .id_flush(flush_int.flush_id),
+
+            .ir_valid(stage_ir_rr_d.instr.valid),
+            .ir_id(stage_ir_rr_d.instr.id),
+            .ir_stall(control_int.stall_ir),
+            .ir_flush(flush_int.flush_ir),
+
+            .rr_valid(valid_rr),
+            .rr_id(stage_ir_rr_q.instr.id),
+            .rr_stall(control_int.stall_rr),
+            .rr_flush(flush_int.flush_rr),
+
+            .exe_valid(valid_exe),
+            .exe_id(stage_rr_exe_q.instr.id),
+            .exe_stall(control_int.stall_exe),
+            .exe_flush(flush_int.flush_exe),
+
+            .wb1_valid(alu_mul_div_wb.valid),
+            .wb1_id(alu_mul_div_wb.id),
+
+            .wb2_valid(mem_wb.valid),
+            .wb2_id(mem_wb.id)
+        );
     `endif
 `endif
 
     // Debug Ring signals Output
     // PC
-    assign debug_o.pc_fetch = pc_if[39:0];
+    assign debug_o.pc_fetch = pc_if2[39:0];
     assign debug_o.pc_dec   = pc_id[39:0];
     assign debug_o.pc_rr    = pc_rr[39:0];
     assign debug_o.pc_exe   = pc_exe[39:0];

@@ -113,6 +113,9 @@ assign instruction_0_d.gl_index      = instruction_i.gl_index;
 assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;
 assign instruction_0_d.result        = instruction_i.instr.result;
+`ifdef VERILATOR
+assign instruction_0_d.id            = instruction_i.instr.id;
+`endif
 
 //--------------------------------------------------------------------------------------------------
 //----- FIRST STAGE  ------------------------------------------------------------------------------
@@ -161,7 +164,9 @@ assign instruction_s1.branch_taken  = 1'b0;
 assign instruction_s1.result_pc     = 0;
 assign instruction_s1.result        = result_32;
 assign instruction_s1.ex            = instruction_0_q.ex;
-
+`ifdef VERILATOR
+assign instruction_s1.id            = instruction_0_q.id;
+`endif
 
 //--------------------------------------------------------------------------------------------------
 //----- SECOND STAGE  ------------------------------------------------------------------------------
@@ -236,6 +241,9 @@ assign instruction_s2.branch_taken  = 1'b0;
 assign instruction_s2.result_pc     = 0;
 assign instruction_s2.result        = result_64;
 assign instruction_s2.ex            = instruction_1_q.ex;
+`ifdef VERILATOR
+assign instruction_s2.id            = instruction_1_q.id;
+`endif 
 
 //--------------------------------------------------------------------------------------------------
 //----- MUX SELECTS OUTPUT -------------------------------------------------------------------------

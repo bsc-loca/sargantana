@@ -247,6 +247,9 @@ typedef struct packed {
     logic                    valid;     // Valid instruction
     branch_pred_t            bpred;     // Branch prediction
     exception_t              ex;        // Exceptions
+    `ifdef VERILATOR
+    bus64_t id;
+    `endif
 } if_1_if_2_stage_t;       // FETCH 1 STAGE TO DECODE STAGE
 
 // Fetch 2 Stage
@@ -256,6 +259,9 @@ typedef struct packed {
     logic                    valid;     // Valid instruction
     branch_pred_t            bpred;     // Branch prediction
     exception_t              ex;        // Exceptions
+    `ifdef VERILATOR
+    bus64_t id;
+    `endif
 } if_id_stage_t;       // FETCH STAGE TO DECODE STAGE
 
 // This is created by decode
@@ -283,6 +289,7 @@ typedef struct packed {
     logic stall_csr_fence;              // CSR or fence
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst; 
+    bus64_t id;
     `endif
 } instr_entry_t;
 
@@ -338,6 +345,7 @@ typedef struct packed {
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
+    bus64_t id;
     `endif
     phreg_t prd;                        // Physical register destination
 
