@@ -856,9 +856,9 @@ module datapath(
 
 `ifdef VERILATOR
     // Debug signals
-    /*assign commit_valid     = instruction_to_commit.valid;
+    assign commit_valid     = instruction_to_commit.valid && !commit_cu_int.stall_commit;
     assign commit_pc        = (instruction_to_commit.valid) ? instruction_to_commit.pc : 64'b0;
-    assign commit_data      = (instruction_to_commit.valid) ? data_wb_csr_to_rr  : 64'b0;
+    assign commit_data      = (instruction_to_commit.valid) ? instruction_to_commit.result : 64'b0;
     assign commit_addr_reg  = instruction_to_commit.rd;
     assign commit_reg_we    = instruction_to_commit.regfile_we && instruction_to_commit.valid;
 
@@ -885,7 +885,7 @@ module datapath(
             .clk(clk_i),
             .rst(rstn_i),
             .commit_valid(commit_valid),
-            .reg_wr_valid(cu_rr_int.write_enable_1 && (commit_addr_reg != 5'b0)),
+            .reg_wr_valid(instruction_to_commit.regfile_we && (commit_addr_reg != 5'b0)),
             .pc(commit_pc),
             .inst(instruction_to_commit.inst),
             .reg_dst(commit_addr_reg),
@@ -940,7 +940,7 @@ module datapath(
             .wb2_valid(wb_scalar[1].valid),
             .wb2_id(wb_scalar[1].id)
         );
-    `endif*/
+    `endif
 `endif
 
     // Debug Ring signals Output
