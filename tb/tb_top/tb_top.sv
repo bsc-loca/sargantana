@@ -65,12 +65,14 @@ module tb_top();
 
     bus64_t tb_dmem_resp_data_i;
     logic tb_dmem_resp_valid_i;
+    logic [7:0] tb_dmem_resp_tag_i;
 
     logic tb_dmem_req_valid_o;
     logic [4:0] tb_dmem_req_cmd_o;
     addr_t  tb_dmem_req_addr_o;
     logic [3:0] tb_dmem_op_type_o;
     bus64_t tb_dmem_req_data_o;
+    logic [7:0] tb_dmem_req_tag_o;
     
     logic [27:0] l1_vpn_request;
     logic l1_vpn_valid;
@@ -124,6 +126,7 @@ module tb_top();
         .DMEM_RESP_BITS_NACK(1'b0),
         .DMEM_RESP_BITS_REPLAY(1'b0),
         .DMEM_RESP_VALID(1'b1),
+        .DMEM_RESP_TAG(tb_dmem_resp_tag_i),
         .DMEM_XCPT_MA_ST(1'b0),
         .DMEM_XCPT_MA_LD(1'b0),
         .DMEM_XCPT_PF_ST(1'b0),
@@ -155,7 +158,7 @@ module tb_top();
         .DMEM_REQ_CMD(tb_dmem_req_cmd_o),
         .DMEM_REQ_BITS_DATA(tb_dmem_req_data_o),
         .DMEM_REQ_BITS_ADDR(tb_dmem_req_addr_o),
-        .DMEM_REQ_BITS_TAG(),
+        .DMEM_REQ_BITS_TAG(tb_dmem_req_tag_o),
         .DMEM_REQ_INVALIDATE_LR(),
         .DMEM_REQ_BITS_KILL(),
         .IO_FETCH_PC_VALUE(),
@@ -197,11 +200,13 @@ module tb_top();
         .rstn_i(tb_rstn_i),
         .addr_i(tb_dmem_req_addr_o),
         .valid_i(tb_dmem_req_valid_o),
+        .tag_i(tb_dmem_req_tag_o),
         .wr_ena_i(tb_dmem_req_cmd_o == 5'b00001),
         .wr_data_i(tb_dmem_req_data_o),
         .word_size_i(tb_dmem_op_type_o),
         .line_o(tb_dmem_resp_data_i),
-        .ready_o(tb_dmem_resp_valid_i)
+        .ready_o(tb_dmem_resp_valid_i),
+        .tag_o(tb_dmem_resp_tag_i)
     );
 
 

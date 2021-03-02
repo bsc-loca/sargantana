@@ -27,11 +27,13 @@ module perfect_memory_hex_write #(
     input logic                     rstn_i,
     input addr_t                    addr_i,
     input logic                     valid_i,
+    input logic [7:0]               tag_i,
     input logic                     wr_ena_i,
     input bus64_t                   wr_data_i,
     input logic [3:0]               word_size_i,
     output logic [LINE_SIZE-1:0]    line_o,
-    output logic                    ready_o
+    output logic                    ready_o,
+    output logic [7:0]              tag_o
 );
     localparam BASE = 128;
     logic [BASE-1:0] memory [SIZE/BASE];
@@ -44,6 +46,7 @@ module perfect_memory_hex_write #(
     // counter stuff
     assign next_counter = (counter > 0) ? counter-1 : 0;
     assign ready_o = (counter == 0);
+    assign tag_o = tag_i;
 
     // counter procedure
     always_ff @(posedge clk_i, negedge rstn_i) begin : proc_counter
@@ -54,7 +57,7 @@ module perfect_memory_hex_write #(
         end else begin
             counter <= next_counter;
         end
-     end 
+    end 
 
 
     always_comb begin

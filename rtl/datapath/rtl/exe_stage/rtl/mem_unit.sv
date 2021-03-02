@@ -103,6 +103,7 @@ rr_exe_instr_t instruction_from_pmrq;
 
 // PMRQ control signals
 logic advance_head_prmq;
+logic full_pmrq;
 
 // Select data source
 bus64_t data_to_wb;
