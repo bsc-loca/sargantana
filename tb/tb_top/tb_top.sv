@@ -67,6 +67,7 @@ module tb_top();
     logic tb_dmem_resp_valid_i;
     logic [7:0] tb_dmem_resp_tag_i;
 
+    logic tb_dmem_req_ready_i;
     logic tb_dmem_req_valid_o;
     logic [4:0] tb_dmem_req_cmd_o;
     addr_t  tb_dmem_req_addr_o;
@@ -121,7 +122,7 @@ module tb_top();
         .io_mem_grant_bits_data(l2_response_data),     
         .io_mem_grant_bits_addr_beat(l2_response_seqnum),
 
-        .DMEM_REQ_READY(tb_dmem_resp_valid_i),
+        .DMEM_REQ_READY(tb_dmem_req_ready_i),
         .DMEM_RESP_BITS_DATA_SUBW(tb_dmem_resp_data_i),
         .DMEM_RESP_BITS_NACK(1'b0),
         .DMEM_RESP_BITS_REPLAY(1'b0),
@@ -205,7 +206,8 @@ module tb_top();
         .wr_data_i(tb_dmem_req_data_o),
         .word_size_i(tb_dmem_op_type_o),
         .line_o(tb_dmem_resp_data_i),
-        .ready_o(tb_dmem_resp_valid_i),
+        .ready_o(tb_dmem_req_ready_i),
+        .valid_o(tb_dmem_resp_valid_i),
         .tag_o(tb_dmem_resp_tag_i)
     );
 
