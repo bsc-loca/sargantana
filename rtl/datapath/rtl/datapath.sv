@@ -527,6 +527,9 @@ module datapath(
     assign instruction_decode_gl.old_prd                = stage_ir_rr_q.old_prd;
     assign instruction_decode_gl.prd                    = stage_ir_rr_q.prd;
     assign instruction_decode_gl.regfile_we             = stage_ir_rr_q.instr.regfile_we;
+    `ifdef VERILATOR
+        assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
+    `endif
 
     graduation_list graduation_list_inst(
         .clk_i(clk_i),

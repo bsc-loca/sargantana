@@ -66,8 +66,10 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
 
 // output instruction and valid bit
     assign fetch_o.inst    = resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data;
-    assign fetch_o.valid   = fetch_i.valid && (resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid);  // valid if the response of the cache is valid or xcpt
-    assign stall_o         = fetch_i.valid && !(resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid); // stall the pipeline in case of a cache miss
+// valid if the response of the cache is valid or xcpt
+    assign fetch_o.valid   = fetch_i.valid && (resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid);
+// stall the pipeline in case of a cache miss 
+    assign stall_o         = fetch_i.valid && !(resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid); 
 
 //bypassing wires
     assign fetch_o.pc_inst = fetch_i.pc_inst;
