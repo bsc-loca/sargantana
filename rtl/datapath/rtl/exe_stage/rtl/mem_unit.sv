@@ -48,14 +48,18 @@ source_lsq_t source_dcache;
 
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s0_d;
-logic is_STORE_or_AMO_s1_d;
 logic is_STORE_or_AMO_s1_q;
 logic is_STORE_or_AMO_s2_q;
-logic is_STORE_or_AMO_to_wb;
+logic is_STORE_s0_d;
+logic is_STORE_s1_q;
+logic is_STORE_s2_q;
 
 logic flush_store;
+logic flush_amo;
+logic flush_amo_prmq;
 logic flush_store_nack;
 logic store_on_fly;
+logic amo_on_fly;
 logic mem_commit_stall_s0;
 
 // Load Store Queue control signals
@@ -204,14 +208,14 @@ always_comb begin
                     // Request Logic
                     req_cpu_dcache_o.valid      = (instruction_to_dcache.instr.valid & resp_dcache_cpu_i.ready) & 
                                                   (~is_STORE_or_AMO_s0_d | commit_store_or_amo_i) & (~full_pmrq) &
-                                                  (~store_on_fly | ~is_STORE_or_AMO_s0_d | 
+                                                  (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | 
                                                     (mem_gl_index_o == instruction_to_dcache.gl_index));
                                                   
                     source_dcache               = READ;     // Use instruction from LSQ
                     read_next_lsq               = 1'b1;     // Advance LSQ 
                     mem_commit_stall_s0         = instruction_to_dcache.instr.valid & (~full_pmrq) & // Stall Commit if Store
                                                   is_STORE_or_AMO_s0_d & commit_store_or_amo_i &
-                                                  (~store_on_fly | (mem_gl_index_o == instruction_to_dcache.gl_index)); 
+                                                  (~(store_on_fly | amo_on_fly) | (mem_gl_index_o == instruction_to_dcache.gl_index)); 
                     
                     // Next Stage Logic
                     if (instruction_to_dcache.instr.valid & ~resp_dcache_cpu_i.ready) begin
@@ -220,7 +224,7 @@ always_comb begin
                         instruction_s1_d        = 'h0;
                     end else if (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) begin
                         instruction_s1_d        = 'h0;
-                    end else if(store_on_fly & is_STORE_or_AMO_s0_d &
+                    end else if((store_on_fly | amo_on_fly) & is_STORE_or_AMO_s0_d &
                                 ~(mem_gl_index_o == instruction_to_dcache.gl_index)) begin
                         instruction_s1_d        = 'h0;
                     end else begin
@@ -229,7 +233,7 @@ always_comb begin
                     
                     // Next Sate Logic                                          
                     next_state = (instruction_to_dcache.instr.valid & resp_dcache_cpu_i.ready & (~full_pmrq) &
-                                 (~store_on_fly | ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == instruction_to_dcache.gl_index))) ?
+                                 (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == instruction_to_dcache.gl_index))) ?
                                     (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) ? WaitCommit : ReadHead :
                                     WaitReady; 
                 end
@@ -239,14 +243,14 @@ always_comb begin
                 // Request Logic
                 req_cpu_dcache_o.valid      = (stored_instr_to_dcache.instr.valid & resp_dcache_cpu_i.ready & 
                                               (commit_store_or_amo_i | ~is_STORE_or_AMO_s0_d) & (~full_pmrq) &
-                                              (~store_on_fly | ~is_STORE_or_AMO_s0_d | 
+                                              (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | 
                                                 (mem_gl_index_o == stored_instr_to_dcache.gl_index)));
                                                  
                 source_dcache               = STORED;   // Use instruction stored previously
                 read_next_lsq               = 1'b0;     // Not Advance LSQ
                 mem_commit_stall_s0         = stored_instr_to_dcache.instr.valid & (~full_pmrq) & // Stall Commit if Store
                                               is_STORE_or_AMO_s0_d & commit_store_or_amo_i & 
-                                              (~store_on_fly | (mem_gl_index_o == stored_instr_to_dcache.gl_index));
+                                              (~(store_on_fly | amo_on_fly)| (mem_gl_index_o == stored_instr_to_dcache.gl_index));
 
                 // Next Stage Logic
                 if (stored_instr_to_dcache.instr.valid & ~resp_dcache_cpu_i.ready) begin
@@ -255,7 +259,7 @@ always_comb begin
                     instruction_s1_d        = 'h0;
                 end else if (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) begin
                     instruction_s1_d        = 'h0;
-                end else if(store_on_fly & is_STORE_or_AMO_s0_d &
+                end else if((store_on_fly | amo_on_fly) & is_STORE_or_AMO_s0_d &
                              ~(mem_gl_index_o == stored_instr_to_dcache.gl_index)) begin
                     instruction_s1_d        = 'h0;
                 end else begin
@@ -264,21 +268,21 @@ always_comb begin
                     
                 // Next Sate Logic
                 next_state = (stored_instr_to_dcache.instr.valid & resp_dcache_cpu_i.ready  & (~full_pmrq) &
-                             (~store_on_fly | ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == stored_instr_to_dcache.gl_index))) ?
+                             (~(store_on_fly | amo_on_fly)| ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == stored_instr_to_dcache.gl_index))) ?
                                 (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) ? WaitCommit : ReadHead :
                                  WaitReady; 
             end
             ////////////////////////////////////////////////// Wait for Store to DCACHE
             WaitCommit: begin
                 // Request Logic
-                req_cpu_dcache_o.valid      = commit_store_or_amo_i & ~store_on_fly &
+                req_cpu_dcache_o.valid      = commit_store_or_amo_i & ~(store_on_fly | amo_on_fly)&
                                               resp_dcache_cpu_i.ready & (~full_pmrq);
                 source_dcache               = STORED;                   // Use instruction stored previously
                 read_next_lsq               = 1'b0;                     // Not Advance LSQ
                 mem_commit_stall_s0         = commit_store_or_amo_i & (~full_pmrq);
 
                 // Next Stage Logic
-                if (commit_store_or_amo_i & ~store_on_fly & resp_dcache_cpu_i.ready) begin
+                if (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready) begin
                     instruction_s1_d  = stored_instr_to_dcache;
                 end else if (full_pmrq) begin
                     instruction_s1_d  = 'h0;
@@ -287,7 +291,7 @@ always_comb begin
                 end
                 
                 // Next Sate Logic
-                next_state = (commit_store_or_amo_i & ~store_on_fly & resp_dcache_cpu_i.ready & (~full_pmrq)) ?
+                next_state = (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready & (~full_pmrq)) ?
                                 ReadHead : WaitCommit;
             end
         endcase
@@ -366,18 +370,30 @@ assign is_STORE_or_AMO_s0_d = (req_cpu_dcache_o.instr_type == SD)          ||
                               (req_cpu_dcache_o.instr_type == AMO_LRW)     ||
                               (req_cpu_dcache_o.instr_type == AMO_LRD)     ;
 
+//// Detect if instruction to Dcache is store or AMO
+assign is_STORE_s0_d = (req_cpu_dcache_o.instr_type == SD)          || 
+                       (req_cpu_dcache_o.instr_type == SW)          ||
+                       (req_cpu_dcache_o.instr_type == SH)          ||
+                       (req_cpu_dcache_o.instr_type == SB)          ;
+
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         store_on_fly    <= 1'b0;
+        amo_on_fly      <= 1'b0;
         mem_gl_index_o  <= 'h0;
     end 
     else if (instruction_s1_d.instr.valid & is_STORE_or_AMO_s0_d) begin
-        store_on_fly    <= 1'b1; 
+        store_on_fly    <= is_STORE_s0_d; 
+        amo_on_fly      <= !is_STORE_s0_d; 
         mem_gl_index_o  <= instruction_s1_d.gl_index;
     end
     else if (flush_store) begin
         store_on_fly    <= 1'b0; 
+        mem_gl_index_o  <= 'h0;
+    end
+    else if (flush_amo | flush_amo_prmq) begin
+        amo_on_fly      <= 1'b0; 
         mem_gl_index_o  <= 'h0;
     end
 end
@@ -387,11 +403,13 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         instruction_s1_q     <= 'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
+        is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <= 'h0;
         
         instruction_s2_q     <= 'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
+        is_STORE_s2_q        <= 1'b0;
         xcpt_ma_st_s2_q      <= 1'b0;
         xcpt_ma_ld_s2_q      <= 1'b0;
         xcpt_pf_st_s2_q      <= 1'b0;
@@ -402,11 +420,13 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end else if (reset_next_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <= 'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
+        is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <= 'h0;
         
         instruction_s2_q     <= 'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
+        is_STORE_s2_q        <= 1'b0;
         xcpt_ma_st_s2_q      <= 1'b0;
         xcpt_ma_ld_s2_q      <= 1'b0;
         xcpt_pf_st_s2_q      <= 1'b0;
@@ -417,12 +437,14 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end else begin          // Update the Pipeline    
         instruction_s1_q     <= instruction_s1_d;
         is_STORE_or_AMO_s1_q <= is_STORE_or_AMO_s0_d;
+        is_STORE_s1_q        <= is_STORE_s0_d;
         xcpt_addr_s1_q       <= resp_dcache_cpu_i.addr;
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
                 
         instruction_s2_q     <= instruction_s1_q;
         is_STORE_or_AMO_s2_q <= is_STORE_or_AMO_s1_q;
+        is_STORE_s2_q        <= is_STORE_s1_q;
         xcpt_ma_st_s2_q      <= resp_dcache_cpu_i.xcpt_ma_st;
         xcpt_ma_ld_s2_q      <= resp_dcache_cpu_i.xcpt_ma_ld;
         xcpt_pf_st_s2_q      <= resp_dcache_cpu_i.xcpt_pf_st;
@@ -450,25 +472,32 @@ always_comb begin
     reset_next_lsq      = 1'b0;
     advance_head_lsq    = 1'b0;
     flush_store         = 1'b0;
+    flush_amo           = 1'b0;
     instruction_to_pmrq = 'h0;
     if(instruction_s2_q.instr.valid & resp_dcache_cpu_i.nack) begin
         reset_next_lsq      = 1'b1;
     end else if (instruction_s2_q.instr.valid & resp_dcache_cpu_i.valid & 
                  ~resp_dcache_cpu_i.replay) begin 
         advance_head_lsq    = 1'b1;
-        flush_store         = is_STORE_or_AMO_s2_q;
+        flush_store         = is_STORE_s2_q;
+        flush_amo           = !is_STORE_s2_q;
     end else if (instruction_s2_q.instr.valid & xcpt_s2_q) begin 
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = 'h0;
-        flush_store         = is_STORE_or_AMO_s2_q;
+        flush_store         = is_STORE_s2_q;
+        flush_amo           = !is_STORE_s2_q;
     end else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_or_AMO_s2_q) begin
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = 'h0;
         flush_store         = 1'b1;
-    end else if (instruction_s2_q.instr.valid) begin 
+        flush_amo           = 1'b1;
+    end else if (instruction_s2_q.instr.valid & !is_STORE_s2_q) begin 
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = instruction_s2_q;
-        flush_store         = is_STORE_or_AMO_s2_q;
+        flush_amo           = is_STORE_or_AMO_s2_q;
+    end else if (instruction_s2_q.instr.valid & is_STORE_s2_q) begin
+        advance_head_lsq    = 1'b1;
+        flush_store         = 1'b1;
     end
 end
 
@@ -541,8 +570,9 @@ always_comb begin
     instruction_to_wb      = 'h0;
     data_to_wb             = 'h0;
     advance_head_prmq      = 1'b0;
+    flush_amo_prmq         = 1'b0;
     if(instruction_s2_q.instr.valid & resp_dcache_cpu_i.valid & 
-                 ~resp_dcache_cpu_i.replay) begin
+                 ~resp_dcache_cpu_i.replay & !is_STORE_s2_q) begin
         instruction_to_wb      = instruction_s2_q;
         advance_head_prmq      = 1'b0;
         data_to_wb             = resp_dcache_cpu_i.data;
@@ -559,6 +589,28 @@ always_comb begin
         instruction_to_wb      = instruction_from_pmrq;
         advance_head_prmq      = 1'b1;
         data_to_wb             = instruction_from_pmrq.instr.imm;
+        flush_amo_prmq         = (instruction_from_pmrq.instr.instr_type == AMO_MAXWU)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MAXDU)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MINWU)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MINDU)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MAXW)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MAXD)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MINW)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_MIND)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ORW)     ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ORD)     ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ANDW)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ANDD)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_XORW)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_XORD)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ADDW)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_ADDD)    ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_SWAPW)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_SWAPD)   ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_SCW)     ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_SCD)     ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_LRW)     ||
+                                 (instruction_from_pmrq.instr.instr_type == AMO_LRD)     ;
     end
 end
 
@@ -592,7 +644,7 @@ assign exception_mem_commit_o      = (exception_to_wb.valid & is_STORE_or_AMO_s2
 ///////////////////////////////////////////////////////////////////////////////
 
 //// Stall committing instruction because it is a store
-assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store);
+assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo);
 
 //// Kill the dcache interface instruction
 assign req_cpu_dcache_o.kill = kill_i;
