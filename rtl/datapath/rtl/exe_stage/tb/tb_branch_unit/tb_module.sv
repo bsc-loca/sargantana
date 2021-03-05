@@ -39,14 +39,17 @@ parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
 // Signals
 //-----------------------------
 
-instr_type_t           tb_instr_type_i;
-addrPC_t               tb_pc_i;
-bus64_t                tb_data_rs1_i;
-bus64_t                tb_data_rs2_i;
-bus64_t                tb_imm_i;
-branch_pred_decision_t tb_taken_o;
-addrPC_t               tb_result_o;
-addrPC_t               tb_link_pc_o;
+instr_type_t  tb_instr_type_i;
+addrPC_t      tb_pc_i;
+bus64_t       tb_data_rs1_i;
+bus64_t       tb_data_rs2_i;
+bus64_t       tb_imm_i;
+bus64_t       tb_taken_o;
+addrPC_t      tb_result_o;
+addrPC_t      tb_link_pc_o;
+
+rr_exe_instr_t tb_instr_i;
+exe_wb_instr_t tb_instr_o;
 
 reg[64*8:0] tb_test_name;
 
@@ -55,14 +58,10 @@ reg[64*8:0] tb_test_name;
 //-----------------------------
 
 branch_unit module_inst (
-    .instr_type_i(tb_instr_type_i),
-    .pc_i(tb_pc_i),
+    .instruction_i(tb_instr_i),
     .data_rs1_i(tb_data_rs1_i),
     .data_rs2_i(tb_data_rs2_i),
-    .imm_i(tb_imm_i),
-    .taken_o(tb_taken_o),
-    .result_o(tb_result_o),
-    .link_pc_o(tb_link_pc_o)
+    .instruction_o(tb_instr_o)
 );
 
 //-----------------------------
@@ -149,9 +148,9 @@ branch_unit module_inst (
                 tb_imm_i <= imm;
 
                 #CLK_PERIOD;
-                correct_taken = PRED_NOT_TAKEN;
+                correct_taken = PRED_TAKEN;
                 correct_link = pc+4;
-                correct_result = pc+4;
+                correct_result = (pc+imm) & 64'hFFFFFFFFFFFFFFFE;
                 if (tb_result_o != correct_result || tb_taken_o != correct_taken || tb_link_pc_o != correct_link) begin
                     tmp = 1;
                     `START_RED_PRINT
@@ -280,6 +279,14 @@ branch_unit module_inst (
         $finish;
     end
 
+//Internal signals assignment
+    assign tb_instr_i.instr.instr_type = tb_instr_type_i;
+    assign tb_instr_i.instr.pc         = tb_pc_i;
+    assign tb_instr_i.instr.result     = tb_imm_i;
+
+    assign tb_taken_o   = tb_instr_o.branch_taken;
+    assign tb_result_o  = tb_instr_o.result_pc;
+    assign tb_link_pc_o = tb_instr_o.result;
 
 endmodule
 //`default_nettype wire

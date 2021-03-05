@@ -39,10 +39,10 @@ parameter CLK_HALF_PERIOD = CLK_PERIOD / 2;
 // Signals
 //-----------------------------
 
-bus64_t      tb_data_rs1_i;
-bus64_t      tb_data_rs2_i;
-instr_type_t tb_instr_type_i;
-bus64_t      tb_result_o;
+bus64_t        tb_data_rs1_i;
+bus64_t        tb_data_rs2_i;
+rr_exe_instr_t tb_instr_i;
+exe_wb_instr_t tb_instr_o;
 
 reg[64*8:0] tb_test_name;
 
@@ -53,8 +53,8 @@ reg[64*8:0] tb_test_name;
 alu module_inst (
     .data_rs1_i(tb_data_rs1_i),
     .data_rs2_i(tb_data_rs2_i),
-    .instr_type_i(tb_instr_type_i),
-    .result_o(tb_result_o)
+    .instruction_i(tb_instr_i),
+    .instruction_o(tb_instr_o)
 );
 
 //-----------------------------
@@ -67,7 +67,7 @@ alu module_inst (
             $display("*** init_sim");
             tb_data_rs1_i<='{default:0};
             tb_data_rs2_i<='{default:0};
-            tb_instr_type_i<='{default:0};
+            tb_instr_i.instr.instr_type<='{default:0};
             $display("Done");
         end
     endtask
@@ -126,7 +126,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_1";
             tmp = 0;
-            tb_instr_type_i <= ADD;
+            tb_instr_i.instr.instr_type <= ADD;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -136,10 +136,10 @@ alu module_inst (
                 tb_data_rs2_i <= src2;
                 #CLK_PERIOD;
                 correct_result = src1+src2;
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -153,7 +153,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_2";
             tmp = 0;
-            tb_instr_type_i <= SUB;
+            tb_instr_i.instr.instr_type <= SUB;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -163,10 +163,10 @@ alu module_inst (
                 tb_data_rs2_i <= src2;
                 #CLK_PERIOD;
                 correct_result = src1-src2;
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -180,7 +180,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_3";
             tmp = 0;
-            tb_instr_type_i <= SLL;
+            tb_instr_i.instr.instr_type <= SLL;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -190,10 +190,10 @@ alu module_inst (
                 tb_data_rs2_i <= src2;
                 #CLK_PERIOD;
                 correct_result = src1<<src2;
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h << %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h << %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -207,7 +207,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_4";
             tmp = 0;
-            tb_instr_type_i <= SRL;
+            tb_instr_i.instr.instr_type <= SRL;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
@@ -217,10 +217,10 @@ alu module_inst (
                 tb_data_rs2_i <= src2;
                 #CLK_PERIOD;
                 correct_result = src1>>src2;
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h >> %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h >> %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -234,7 +234,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_5";
             tmp = 0;
-            tb_instr_type_i <= ADDW;
+            tb_instr_i.instr.instr_type <= ADDW;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src2 = $urandom();
@@ -243,10 +243,10 @@ alu module_inst (
                 #CLK_PERIOD;
                 correct_result[31:0] = src1+src2;
                 correct_result[63:32] = {32{correct_result[31]}};
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -260,7 +260,7 @@ alu module_inst (
             longint src1,src2,correct_result;
             tb_test_name = "test_sim_6";
             tmp = 0;
-            tb_instr_type_i <= SUBW;
+            tb_instr_i.instr.instr_type <= SUBW;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src2 = $urandom();
@@ -269,10 +269,10 @@ alu module_inst (
                 #CLK_PERIOD;
                 correct_result[31:0] = src1-src2;
                 correct_result[63:32] = {32{correct_result[31]}};
-                if (tb_result_o != correct_result) begin
+                if (tb_instr_o.result != correct_result) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,correct_result,tb_result_o);
+                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,correct_result,tb_instr_o.result);
                     `END_COLOR_PRINT
                 end
             end
