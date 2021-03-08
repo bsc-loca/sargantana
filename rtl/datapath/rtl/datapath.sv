@@ -858,9 +858,21 @@ module datapath(
     // Debug signals
     assign commit_valid     = instruction_to_commit.valid && !commit_cu_int.stall_commit;
     assign commit_pc        = (instruction_to_commit.valid) ? instruction_to_commit.pc : 64'b0;
-    assign commit_data      = (instruction_to_commit.valid) ? 
-                                ((commit_cu_int.write_enable) ?  resp_csr_cpu_i.csr_rw_rdata :
-                                instruction_to_commit.result) : 64'b0;
+
+    always_comb begin 
+        if(instruction_to_commit.valid) begin
+            if (commit_cu_int.write_enable) begin
+                commit_data = resp_csr_cpu_i.csr_rw_rdata;
+            end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
+                commit_data = mem_to_wb.result;
+            end else begin
+                commit_data = instruction_to_commit.result;
+            end
+        end else begin
+            commit_data = 64'b0;
+        end
+    end
+
     assign commit_addr_reg  = instruction_to_commit.rd;
     assign commit_reg_we    = instruction_to_commit.regfile_we && commit_valid;
 
