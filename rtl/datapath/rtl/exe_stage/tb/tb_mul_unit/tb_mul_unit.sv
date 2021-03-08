@@ -23,6 +23,7 @@
 `default_nettype none
 
 `include "colors.vh"
+import drac_pkg::*;
 
 module tb_mul_unit();
 
@@ -53,6 +54,9 @@ reg [63:0] tb_mul_result;
 reg tb_lock_mul;
 reg tb_ready_mul;
 
+rr_exe_instr_t tb_instruction_i;
+exe_wb_instr_t tb_instruction_o;
+
 reg[64*8:0] tb_test_name;
 
 //-----------------------------
@@ -63,14 +67,24 @@ mul_unit mul_unit_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .kill_mul_i(tb_wb_exception_i),
-    .request_i(tb_valid_mul),
-    .func3_i(tb_funct3_field),
-    .int_32_i(tb_int_32),
-    .src1_i(tb_source_1),
-    .src2_i(tb_source_2),
-    .result_o(tb_mul_result),
-    .stall_o(tb_lock_mul)
+    .instruction_i(tb_instruction_i),
+    .data_src1_i(tb_source_1),
+    .data_src2_i(tb_source_2),
+    .instruction_o(tb_instruction_o)
 );
+
+//-----------------------------
+// INSTRUCTION ASSIGNATIONS
+//-----------------------------
+
+assign tb_instruction_i.data_rs1       = tb_source_1;
+assign tb_instruction_i.data_rs2       = tb_source_2;
+assign tb_instruction_i.instr.valid    = tb_valid_mul;
+assign tb_instruction_i.instr.mem_size = tb_funct3_field;
+assign tb_instruction_i.instr.op_32    = tb_int_32;
+
+assign tb_mul_result = tb_instruction_o.result;
+assign tb_lock_mul   = tb_instruction_o.stall_csr_fence; 
 
 //-----------------------------
 // DUT
