@@ -15,18 +15,17 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module div_unit (
-    input  logic          clk_i,          // Clock signal
-    input  logic          rstn_i,         // Negative reset  
-    input  logic          kill_div_i,     // Kill on fly instructions
-    input  rr_exe_instr_t instruction_i,  // New incoming instruction
-    input  bus64_t        data_src1_i,    // Dividend
-    input  bus64_t        data_src2_i,    // Divisor
-    output exe_wb_instr_t instruction_o   // Output instruction
+    input  logic                 clk_i,          // Clock signal
+    input  logic                 rstn_i,         // Negative reset  
+    input  logic                 kill_div_i,     // Kill on fly instructions
+    input  rr_exe_arith_instr_t  instruction_i,  // New incoming instruction
+    output exe_wb_scalar_instr_t instruction_o   // Output instruction
 );
 
 // Declarations
-exe_wb_instr_t instruction_d[32:0];
-exe_wb_instr_t instruction_q[32:0];
+bus64_t data_src1, data_src2;
+exe_wb_scalar_instr_t instruction_d[32:0];
+exe_wb_scalar_instr_t instruction_q[32:0];
 logic div_zero_d[32:0];
 logic div_zero_q[32:0];
 logic same_sign_d[32:0];
@@ -55,6 +54,8 @@ bus64_t quo_64;
 bus64_t rmd_32;
 bus64_t rmd_64;
 
+assign data_src1 = instruction_i.data_rs1;
+assign data_src2 = instruction_i.data_rs2;
 
 //--------------------------------------------------------------------------------------------------
 //----- FIRST INSTRUCTION  -------------------------------------------------------------------------
@@ -78,13 +79,13 @@ bus64_t rmd_64;
         instruction_d[32].regfile_we      = instruction_i.instr.regfile_we;
         instruction_d[32].instr_type      = instruction_i.instr.instr_type;
         instruction_d[32].stall_csr_fence = instruction_i.instr.stall_csr_fence;
-        instruction_d[32].csr_addr        = instruction_i.instr.result[CSR_ADDR_SIZE-1:0];
+        instruction_d[32].csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
         instruction_d[32].prd             = instruction_i.prd;
         instruction_d[32].checkpoint_done = instruction_i.checkpoint_done;
         instruction_d[32].chkp            = instruction_i.chkp;
         instruction_d[32].gl_index        = instruction_i.gl_index;
         instruction_d[32].branch_taken    = 1'b0;
-        instruction_d[32].result_pc       = data_src1_i;                 // Store dividend in result_pc
+        instruction_d[32].result_pc       = data_src1;                 // Store dividend in result_pc
         `ifdef VERILATOR
         instruction_d[32].id              = instruction_i.instr.id;
         `endif
@@ -98,17 +99,17 @@ bus64_t rmd_64;
             signed_op_d[i]   = signed_op_q[i + 1]; 
         end
 
-        div_zero_d[32]     = ~(|data_src2_i);
-        same_sign_d[32]    = (instruction_i.instr.op_32) ? ~(data_src2_i[31] ^ data_src1_i[31]) : ~(data_src2_i[63] ^ data_src1_i[63]);
+        div_zero_d[32]     = ~(|data_src2);
+        same_sign_d[32]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) : ~(data_src2[63] ^ data_src1[63]);
     end
 
 
 
-    assign dividend_d     = ((data_src1_i[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
-                             (data_src1_i[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src1_i + 64'b1 : data_src1_i;
+    assign dividend_d     = ((data_src1[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
+                             (data_src1[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src1 + 64'b1 : data_src1;
 
-    assign divisor_d      = ((data_src2_i[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
-                             (data_src2_i[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src2_i + 64'b1 : data_src2_i;
+    assign divisor_d      = ((data_src2[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
+                             (data_src2[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src2 + 64'b1 : data_src2;
 
 
 //--------------------------------------------------------------------------------------------------

@@ -111,8 +111,8 @@ module datapath(
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
 
-    logic snoop_rs1_rr_alu_mul_div;
-    logic snoop_rs2_rr_alu_mul_div;
+    logic snoop_rs1_rr_arith;
+    logic snoop_rs2_rr_arith;
     logic snoop_rs1_rr_mem;
     logic snoop_rs2_rr_mem;
 
@@ -130,15 +130,17 @@ module datapath(
     rr_exe_instr_t selection_rr_exe_d;
 
     exe_cu_t exe_cu_int;
-    exe_wb_instr_t alu_mul_div_to_wb;
-    exe_wb_instr_t mem_to_wb;
-    exe_wb_instr_t alu_mul_div_wb;
-    exe_wb_instr_t mem_wb;
+    exe_wb_scalar_instr_t arith_to_wb;
+    exe_wb_scalar_instr_t mem_to_wb;
+    exe_wb_scalar_instr_t arith_wb;
+    exe_wb_scalar_instr_t mem_wb;
 
-    logic snoop_rs1_exe_alu_mul_div;
-    logic snoop_rs2_exe_alu_mul_div;
+    logic snoop_rs1_exe_arith;
+    logic snoop_rs2_exe_arith;
     logic snoop_rs1_exe_mem;
     logic snoop_rs2_exe_mem;
+    bus64_t snoop_data_rs1;
+    bus64_t snoop_data_rs2;
     rr_exe_instr_t reg_to_exe;
 
     // This addresses are fixed from lowrisc
@@ -481,8 +483,8 @@ module datapath(
             stage_ir_rr_q.prd = stage_no_stall_rr_q.prd;
             stage_ir_rr_q.prs1 = stage_no_stall_rr_q.prs1;
             stage_ir_rr_q.prs2 = stage_no_stall_rr_q.prs2;
-            stage_ir_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
-            stage_ir_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
+            stage_ir_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rs1_rr_arith | snoop_rs1_rr_mem;
+            stage_ir_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rs2_rr_arith | snoop_rs2_rr_mem;
             stage_ir_rr_q.old_prd = stage_no_stall_rr_q.old_prd;
             stage_ir_rr_q.chkp = stage_no_stall_rr_q.chkp;
             stage_ir_rr_q.checkpoint_done = stage_no_stall_rr_q.checkpoint_done;
@@ -491,8 +493,8 @@ module datapath(
             stage_ir_rr_q.prd = stage_stall_rr_q.prd;
             stage_ir_rr_q.prs1 = stage_stall_rr_q.prs1;
             stage_ir_rr_q.prs2 = stage_stall_rr_q.prs2;
-            stage_ir_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rs1_rr_alu_mul_div | snoop_rs1_rr_mem;
-            stage_ir_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rs2_rr_alu_mul_div | snoop_rs2_rr_mem;
+            stage_ir_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rs1_rr_arith | snoop_rs1_rr_mem;
+            stage_ir_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rs2_rr_arith | snoop_rs2_rr_mem;
             stage_ir_rr_q.old_prd = stage_stall_rr_q.old_prd;
             stage_ir_rr_q.chkp = stage_stall_rr_q.chkp;
             stage_ir_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
@@ -500,8 +502,8 @@ module datapath(
     end
 
     // Snoop ready from ALU MUL DIV to data source 1 and 2
-    assign snoop_rs1_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1 != 0);
-    assign snoop_rs2_rr_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2 != 0); 
+    assign snoop_rs1_rr_arith = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1 != 0);
+    assign snoop_rs2_rr_arith = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2 != 0); 
 
     // Snoop ready from MEM to data source 1 and 2
     assign snoop_rs1_rr_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1 != 0);
@@ -528,8 +530,8 @@ module datapath(
         .rstn_i(rstn_i),
         .instruction_i(instruction_decode_gl),
         .read_head_i(cu_commit_int.enable_commit),
-        .instruction_writeback_1_i(alu_mul_div_wb.gl_index),
-        .instruction_writeback_enable_1_i(alu_mul_div_wb.valid),
+        .instruction_writeback_1_i(arith_wb.gl_index),
+        .instruction_writeback_enable_1_i(arith_wb.valid),
         .instruction_writeback_data_1_i(instruction_writeback_gl_1),
         .instruction_writeback_2_i(mem_wb.gl_index),
         .instruction_writeback_enable_2_i(mem_wb.valid),
@@ -594,28 +596,34 @@ module datapath(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// EXECUTION STAGE                                                                              /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    //
     // Snoop data and ready from ALU MUL DIV to data source 1 and 2
-    assign snoop_rs1_exe_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
-    assign snoop_rs2_exe_alu_mul_div = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0);
+    assign snoop_rs1_exe_arith = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
+    assign snoop_rs2_exe_arith = cu_rr_int.write_enable_1 & (write_paddr_1 == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0);
  
     // Snoop data and ready from MEM to data source 1 and 2
     assign snoop_rs1_exe_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
     assign snoop_rs2_exe_mem = cu_rr_int.write_enable_2 & (write_paddr_2 == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0); 
 
-    assign reg_to_exe.data_rs1 = (snoop_rs1_exe_alu_mul_div)? data_wb_csr_to_rr : (snoop_rs1_exe_mem)? data_mem_to_rr : stage_rr_exe_q.data_rs1;
-    assign reg_to_exe.data_rs2 = (snoop_rs2_exe_alu_mul_div)? data_wb_csr_to_rr : (snoop_rs2_exe_mem)? data_mem_to_rr : stage_rr_exe_q.data_rs2;
-    assign reg_to_exe.rdy1 = stage_rr_exe_q.rdy1 | snoop_rs1_exe_alu_mul_div | snoop_rs1_exe_mem;
-    assign reg_to_exe.rdy2 = stage_rr_exe_q.rdy2 | snoop_rs2_exe_alu_mul_div | snoop_rs2_exe_mem;
+    assign snoop_data_rs1 = (snoop_rs1_exe_arith)? data_wb_csr_to_rr : (snoop_rs1_exe_mem)? data_mem_to_rr : stage_rr_exe_q.data_rs1;
+    assign snoop_data_rs2 = (snoop_rs2_exe_arith)? data_wb_csr_to_rr : (snoop_rs2_exe_mem)? data_mem_to_rr : stage_rr_exe_q.data_rs2;
+    assign snoop_rdy1 = stage_rr_exe_q.rdy1 | snoop_rs1_exe_arith | snoop_rs1_exe_mem;
+    assign snoop_rdy2 = stage_rr_exe_q.rdy2 | snoop_rs2_exe_arith | snoop_rs2_exe_mem;
+   
     assign reg_to_exe.instr = stage_rr_exe_q.instr;
+    assign reg_to_exe.data_rs1 = snoop_data_rs1;
+    assign reg_to_exe.data_rs2 = snoop_data_rs2;
+    assign reg_to_exe.csr_interrupt = stage_rr_exe_q.csr_interrupt;
+    assign reg_to_exe.csr_interrupt_cause = stage_rr_exe_q.csr_interrupt_cause;
     assign reg_to_exe.prs1 = stage_rr_exe_q.prs1;
+    assign reg_to_exe.rdy1 = snoop_rdy1;
     assign reg_to_exe.prs2 = stage_rr_exe_q.prs2;
+    assign reg_to_exe.rdy2 = snoop_rdy2;
     assign reg_to_exe.prd = stage_rr_exe_q.prd;
     assign reg_to_exe.old_prd = stage_rr_exe_q.old_prd;
     assign reg_to_exe.checkpoint_done = stage_rr_exe_q.checkpoint_done;
     assign reg_to_exe.chkp = stage_rr_exe_q.chkp;
     assign reg_to_exe.gl_index = stage_rr_exe_q.gl_index;
-
 
     exe_stage exe_stage_inst(
         .clk_i(clk_i),
@@ -635,7 +643,7 @@ module datapath(
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
         .correct_branch_pred_o(correct_branch_pred),
 
-        .alu_mul_div_to_wb_o(alu_mul_div_to_wb),
+        .arith_to_wb_o(arith_to_wb),
         .mem_to_wb_o(mem_to_wb),
         .exe_cu_o(exe_cu_int),
 
@@ -654,13 +662,13 @@ module datapath(
         .pmu_stall_mem_o        (pmu_flags_o.stall_wb)
     );
 
-    register #($bits(exe_wb_instr_t) + $bits(exe_wb_instr_t)) reg_exe_inst(
+    register #($bits(exe_wb_scalar_instr_t) + $bits(exe_wb_scalar_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i({alu_mul_div_to_wb, mem_to_wb}),
-        .output_o({alu_mul_div_wb, mem_wb})
+        .input_i({arith_to_wb, mem_to_wb}),
+        .output_o({arith_wb, mem_wb})
     );
 
 
@@ -668,9 +676,9 @@ module datapath(
     //////// WRITE BACK STAGE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    assign instruction_writeback_gl_1.csr_addr = alu_mul_div_wb.csr_addr;
-    assign instruction_writeback_gl_1.exception = alu_mul_div_wb.ex;
-    assign instruction_writeback_gl_1.result = alu_mul_div_wb.result;
+    assign instruction_writeback_gl_1.csr_addr = arith_wb.csr_addr;
+    assign instruction_writeback_gl_1.exception = arith_wb.ex;
+    assign instruction_writeback_gl_1.result = arith_wb.result;
 
     assign instruction_writeback_gl_2.exception = mem_wb.ex;
     assign instruction_writeback_gl_2.result = mem_wb.result;
@@ -678,20 +686,20 @@ module datapath(
     // Write data regfile from WB or from Commit (CSR)
     // CSR are exclusive with the rest of instrucitons. Therefore, there are no conflicts
     assign data_wb_csr_to_rr = (commit_cu_int.write_enable) ?  resp_csr_cpu_i.csr_rw_rdata : 
-                                                alu_mul_div_wb.result;
+                                                arith_wb.result;
                                                 
     assign data_mem_to_rr = mem_wb.result;
      
-    assign write_paddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.prd : alu_mul_div_wb.prd;
-    assign write_vaddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.rd  : alu_mul_div_wb.rd;
+    assign write_paddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.prd : arith_wb.prd;
+    assign write_vaddr_1 = (commit_cu_int.write_enable) ? instruction_to_commit.rd  : arith_wb.rd;
     
     assign write_paddr_2 = mem_wb.prd;
     assign write_vaddr_2 = mem_wb.rd;
 
     // Control Unit From Write Back
-    assign wb_cu_int.valid_1 = alu_mul_div_wb.valid;
-    assign wb_cu_int.change_pc_ena = alu_mul_div_wb.change_pc_ena;
-    assign wb_cu_int.write_enable_1 = alu_mul_div_wb.regfile_we;
+    assign wb_cu_int.valid_1 = arith_wb.valid;
+    assign wb_cu_int.change_pc_ena = arith_wb.change_pc_ena;
+    assign wb_cu_int.write_enable_1 = arith_wb.regfile_we;
 
     assign wb_cu_int.valid_2 = mem_wb.valid;
     assign wb_cu_int.write_enable_2 = mem_wb.regfile_we;
@@ -820,7 +828,7 @@ module datapath(
     assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
     assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
     assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
-    assign pc_wb = (valid_wb) ? alu_mul_div_wb.pc : 64'b0;
+    assign pc_wb = (valid_wb) ? arith_wb.pc : 64'b0;
 
     // Valid
     assign valid_if1  = stage_if_1_if_2_d.valid;
@@ -828,7 +836,7 @@ module datapath(
     assign valid_id  = decoded_instr.valid;
     assign valid_rr  = stage_rr_exe_d.instr.valid;
     assign valid_exe = stage_rr_exe_q.instr.valid;
-    assign valid_wb = alu_mul_div_wb.valid;
+    assign valid_wb = arith_wb.valid;
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS
@@ -886,8 +894,8 @@ module datapath(
             .exe_stall(control_int.stall_exe),
             .exe_flush(flush_int.flush_exe),
 
-            .wb1_valid(alu_mul_div_wb.valid),
-            .wb1_id(alu_mul_div_wb.id),
+            .wb1_valid(arith_wb.valid),
+            .wb1_id(arith_wb.id),
 
             .wb2_valid(mem_wb.valid),
             .wb2_id(mem_wb.id)
@@ -903,9 +911,9 @@ module datapath(
     assign debug_o.pc_exe   = pc_exe[39:0];
     assign debug_o.pc_wb    = pc_wb[39:0];
     // Write-back signals
-    assign debug_o.wb_valid_1 = alu_mul_div_wb.valid;
-    assign debug_o.wb_reg_addr_1 = alu_mul_div_wb.rd;
-    assign debug_o.wb_reg_we_1 = alu_mul_div_wb.regfile_we;
+    assign debug_o.wb_valid_1 = arith_wb.valid;
+    assign debug_o.wb_reg_addr_1 = arith_wb.rd;
+    assign debug_o.wb_reg_we_1 = arith_wb.regfile_we;
     assign debug_o.wb_valid_2 = mem_wb.valid;
     assign debug_o.wb_reg_addr_2 = mem_wb.rd;
     assign debug_o.wb_reg_we_2 = mem_wb.regfile_we;

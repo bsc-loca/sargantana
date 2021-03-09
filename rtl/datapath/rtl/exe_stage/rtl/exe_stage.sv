@@ -32,8 +32,8 @@ module exe_stage (
     input wire                          commit_store_or_amo_i, // Signal to execute stores and atomics in commit
 
     // OUTPUTS
-    output exe_wb_instr_t               alu_mul_div_to_wb_o,
-    output exe_wb_instr_t               mem_to_wb_o,
+    output exe_wb_scalar_instr_t        arith_to_wb_o,
+    output exe_wb_scalar_instr_t        mem_to_wb_o,
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
@@ -56,15 +56,18 @@ module exe_stage (
 bus64_t rs1_data_def;
 bus64_t rs2_data_def;
 
-exe_wb_instr_t alu_to_wb;
+rr_exe_arith_instr_t arith_instr;
+rr_exe_mem_instr_t mem_instr;
 
-exe_wb_instr_t mul_to_wb;
+exe_wb_scalar_instr_t alu_to_wb;
 
-exe_wb_instr_t div_to_wb;
+exe_wb_scalar_instr_t mul_to_wb;
 
-exe_wb_instr_t branch_to_wb;
+exe_wb_scalar_instr_t div_to_wb;
 
-exe_wb_instr_t mem_to_wb;
+exe_wb_scalar_instr_t branch_to_wb;
+
+exe_wb_scalar_instr_t mem_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
@@ -83,7 +86,6 @@ logic [2:0] mem_size_mem_interface;
 reg_t rd_mem_interface;
 bus64_t imm_mem_interface;
 
-rr_exe_instr_t instruction_to_functional_unit;
 logic ready;
 logic set_mul_32_inst;
 logic set_mul_64_inst;
@@ -107,7 +109,7 @@ logic ready_div_32_inst;
 
 // Select rs2 from imm to avoid bypasses
 assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
-assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.result : from_rr_i.data_rs2;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.data_rs2;
 
 score_board score_board_inst(
     .clk_i          (clk_i),
@@ -126,16 +128,44 @@ score_board score_board_inst(
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
 
 always_comb begin
-    if (~stall_int & ~flush_i)
-        instruction_to_functional_unit = from_rr_i;
-    else
-        instruction_to_functional_unit = 'h0;
+    if (~stall_int & ~flush_i) begin
+        arith_instr.instr               = from_rr_i.instr;
+        arith_instr.data_rs1            = rs1_data_def;
+        arith_instr.data_rs2            = rs2_data_def;
+        arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        arith_instr.prs1                = from_rr_i.prs1;
+        arith_instr.rdy1                = from_rr_i.rdy1;
+        arith_instr.prs2                = from_rr_i.prs2;
+        arith_instr.rdy2                = from_rr_i.rdy2;
+        arith_instr.prd                 = from_rr_i.prd;
+        arith_instr.old_prd             = from_rr_i.old_prd;
+        arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        arith_instr.chkp                = from_rr_i.chkp;
+        arith_instr.gl_index            = from_rr_i.gl_index;
+
+        mem_instr.instr               = from_rr_i.instr;
+        mem_instr.data_rs1            = rs1_data_def;
+        mem_instr.data_rs2            = rs2_data_def;
+        mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        mem_instr.prs1                = from_rr_i.prs1;
+        mem_instr.rdy1                = from_rr_i.rdy1;
+        mem_instr.prs2                = from_rr_i.prs2;
+        mem_instr.rdy2                = from_rr_i.rdy2;
+        mem_instr.prd                 = from_rr_i.prd;
+        mem_instr.old_prd             = from_rr_i.old_prd;
+        mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        mem_instr.chkp                = from_rr_i.chkp;
+        mem_instr.gl_index            = from_rr_i.gl_index;
+    end else begin
+        arith_instr = 'h0;
+        mem_instr   = 'h0;
+    end
 end
 
 alu alu_inst (
-    .data_rs1_i     (rs1_data_def),
-    .data_rs2_i     (rs2_data_def),
-    .instruction_i  (instruction_to_functional_unit),
+    .instruction_i  (arith_instr),
     .instruction_o  (alu_to_wb)
 );
 
@@ -143,9 +173,7 @@ mul_unit mul_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_mul_i     (kill_i),
-    .instruction_i  (instruction_to_functional_unit),
-    .data_src1_i    (rs1_data_def),
-    .data_src2_i    (rs2_data_def),
+    .instruction_i  (arith_instr),
     .instruction_o  (mul_to_wb)
 );
 
@@ -153,16 +181,12 @@ div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_div_i     (kill_i),
-    .instruction_i  (instruction_to_functional_unit),
-    .data_src1_i    (rs1_data_def),
-    .data_src2_i    (rs2_data_def),
+    .instruction_i  (arith_instr),
     .instruction_o  (div_to_wb)
 );
 
 branch_unit branch_unit_inst (
-    .instruction_i      (instruction_to_functional_unit),
-    .data_rs1_i         (rs1_data_def),
-    .data_rs2_i         (rs2_data_def),
+    .instruction_i      (arith_instr),
     .instruction_o      (branch_to_wb)
 );
 
@@ -170,9 +194,7 @@ mem_unit mem_unit_inst(
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
     .io_base_addr_i         (io_base_addr_i),
-    .instruction_i          (instruction_to_functional_unit),
-    .data_rs1_i             (rs1_data_def),
-    .data_rs2_i             (rs2_data_def),
+    .instruction_i          (mem_instr),
     .kill_i                 (kill_i),
     .flush_i                (1'b0),
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
@@ -194,35 +216,35 @@ always_comb begin
     end
     
     if (alu_to_wb.valid) begin
-        alu_mul_div_to_wb_o = alu_to_wb;
+        arith_to_wb_o = alu_to_wb;
         if (~alu_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            alu_mul_div_to_wb_o.ex.valid = 1;
-            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+            arith_to_wb_o.ex.valid = 1;
+            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_wb_o.ex.origin = 64'b0;
         end
     end else if (mul_to_wb.valid) begin
-        alu_mul_div_to_wb_o = mul_to_wb;
+        arith_to_wb_o = mul_to_wb;
         if (~mul_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            alu_mul_div_to_wb_o.ex.valid = 1;
-            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+            arith_to_wb_o.ex.valid = 1;
+            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_wb_o.ex.origin = 64'b0;
         end
     end else if (div_to_wb.valid) begin
-        alu_mul_div_to_wb_o = div_to_wb;
+        arith_to_wb_o = div_to_wb;
         if (~div_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            alu_mul_div_to_wb_o.ex.valid = 1;
-            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+            arith_to_wb_o.ex.valid = 1;
+            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_wb_o.ex.origin = 64'b0;
         end
     end else if (branch_to_wb.valid) begin
-        alu_mul_div_to_wb_o = branch_to_wb;
+        arith_to_wb_o = branch_to_wb;
         if (~branch_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            alu_mul_div_to_wb_o.ex.valid = 1;
-            alu_mul_div_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            alu_mul_div_to_wb_o.ex.origin = 64'b0;
+            arith_to_wb_o.ex.valid = 1;
+            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_wb_o.ex.origin = 64'b0;
         end
     end else begin
-        alu_mul_div_to_wb_o = 'h0;
+        arith_to_wb_o = 'h0;
     end
 end
 
@@ -305,18 +327,18 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              from_rr_i.instr.instr_type == BNE  |
                                              from_rr_i.instr.instr_type == JAL  |
                                              from_rr_i.instr.instr_type == JALR) &
-                                             instruction_to_functional_unit.instr.valid;
+                                             arith_instr.instr.valid;
                                              
 
 // Data for the Control Unit
-assign exe_cu_o.valid_1 = alu_mul_div_to_wb_o.valid;
+assign exe_cu_o.valid_1 = arith_to_wb_o.valid;
 assign exe_cu_o.valid_2 = mem_to_wb_o.valid;
-assign exe_cu_o.change_pc_ena_1 = alu_mul_div_to_wb_o.change_pc_ena;
+assign exe_cu_o.change_pc_ena_1 = arith_to_wb_o.change_pc_ena;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
-assign exe_cu_o.branch_taken = alu_mul_div_to_wb_o.branch_taken;
-assign exe_cu_o.checkpoint_done = alu_mul_div_to_wb_o.checkpoint_done;
-assign exe_cu_o.chkp = alu_mul_div_to_wb_o.chkp;
-assign exe_cu_o.gl_index = alu_mul_div_to_wb_o.gl_index;
+assign exe_cu_o.branch_taken = arith_to_wb_o.branch_taken;
+assign exe_cu_o.checkpoint_done = arith_to_wb_o.checkpoint_done;
+assign exe_cu_o.chkp = arith_to_wb_o.chkp;
+assign exe_cu_o.gl_index = arith_to_wb_o.gl_index;
 
 assign exe_cu_o.stall = stall_int;
 

@@ -25,6 +25,7 @@ parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
+parameter NUM_SCALAR_WB = 2;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -273,6 +274,7 @@ typedef struct packed {
     reg_t rs1;                          // Register Source 1
     reg_t rs2;                          // Register Source 2
     reg_t rd;                           // Destination register
+    bus64_t imm;                        // Instruction immediate
     
     logic use_imm;                      // Use Immediate later
     logic use_pc;                       // Use PC later
@@ -283,7 +285,6 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC 
     logic regfile_we;                   // Write to register file
     instr_type_t instr_type;            // Type of instruction
-    bus64_t result;                     // Result or Immediate
     logic signed_op;                    // Signed Operation
     logic [2:0] mem_size;               // Memory operation size (Byte, Word)
     logic stall_csr_fence;              // CSR or fence
@@ -326,7 +327,52 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
-} rr_exe_instr_t;       //  Read Regfile to Execution stage
+} rr_exe_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
+    bus64_t data_rs1;                   // Data operand 1
+    bus64_t data_rs2;                   // Data operand 2
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
+    phreg_t prs1;                       // Physical register source 1
+    logic   rdy1;                       // Ready register source 1
+    phreg_t prs2;                       // Physical register source 2
+    logic   rdy2;                       // Ready register source 2    
+    phreg_t prd;                        // Physical register destination 
+    phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_arith_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
+    bus64_t data_rs1;                   // Data operand 1
+    bus64_t data_rs2;                   // Data operand 2
+    bus64_t imm;                        // Immediate
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
+    phreg_t prs1;                       // Physical register source 1
+    logic   rdy1;                       // Ready register source 1
+    phreg_t prs2;                       // Physical register source 2
+    logic   rdy2;                       // Ready register source 2    
+    phreg_t prd;                        // Physical register destination 
+    phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
 
 typedef struct packed {
     logic valid;                        // Valid instruction
@@ -353,7 +399,7 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
-} exe_wb_instr_t;       //  Execution Stage to Write Back
+} exe_wb_scalar_instr_t;       //  Execution Stage to scalar Write Back
 
 typedef struct packed {
     logic   valid;                      // Valid instruction
