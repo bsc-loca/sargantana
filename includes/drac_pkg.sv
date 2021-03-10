@@ -447,9 +447,8 @@ typedef struct packed {
 } cu_ir_t;      // Control Unit to Rename
 
 typedef struct packed {
-    logic write_enable_1;         // Enable write on register file. Port 1
-    logic write_enable_2;         // Enable write on register file. Port 2
-    logic write_enable_dbg;       // Enable write on register file dbg usage
+    logic [NUM_SCALAR_WB-1:0] write_enable; // Enable write on register file
+    logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
 // Control Unit signals
@@ -467,11 +466,9 @@ typedef struct packed {
 
 // Control Unit signals
 typedef struct packed {
-    logic valid_1;                // Valid Intruction ALU, MUL, DIV
-    logic valid_2;                // Valid Intruction MEM
-    logic change_pc_ena;          // Enable PC write
-    logic write_enable_1;         // Write Enable to Register File. ALU,MUL,DIV
-    logic write_enable_2;         // Write Enable to Register File. MEM   
+    logic [NUM_SCALAR_WB-1:0] valid;         // Valid Intruction
+    logic change_pc_ena;                     // Enable PC write
+    logic [NUM_SCALAR_WB-1:0] write_enable;  // Write Enable to Register File
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals

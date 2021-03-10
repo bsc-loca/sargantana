@@ -15,38 +15,35 @@ module graduation_list #
         parameter integer NUM_ENTRIES  = 32
     )
     (
-    input wire                            clk_i,             // Clock Singal
-    input wire                            rstn_i,            // Negated Reset Signal
+    input wire                                           clk_i,             // Clock Singal
+    input wire                                           rstn_i,            // Negated Reset Signal
 
     // Input Signals of instruction from Read Register
-    input gl_instruction_t                instruction_i,
+    input gl_instruction_t                               instruction_i,
 
     // Read Entry Interface
-    input wire                            read_head_i,      // Read oldest instruction
+    input wire                                           read_head_i,      // Read oldest instruction
 
     // Write Back Interface
-    input gl_index_t                      instruction_writeback_1_i, // Mark instruction as finished
-    input wire                            instruction_writeback_enable_1_i, // Write enabled for finished
-    input gl_instruction_t                instruction_writeback_data_1_i, // Data of the generated exception
-    input gl_index_t                      instruction_writeback_2_i, // Mark instruction as finished
-    input wire                            instruction_writeback_enable_2_i, // Write enabled for finished
-    input gl_instruction_t                instruction_writeback_data_2_i, // Data of the generated exception
+    input gl_index_t [drac_pkg::NUM_SCALAR_WB-1:0]       instruction_writeback_i,        // Mark instruction as finished
+    input logic [drac_pkg::NUM_SCALAR_WB-1:0]            instruction_writeback_enable_i, // Write enabled for finished
+    input gl_instruction_t [drac_pkg::NUM_SCALAR_WB-1:0] instruction_writeback_data_i,   // Data of the generated exception
 
-    input wire                            flush_i,          // Flush instructions from the graduation list
-    input gl_index_t                      flush_index_i,    // Index that selects the first correct instruction
+    input wire                                           flush_i,          // Flush instructions from the graduation list
+    input gl_index_t                                     flush_index_i,    // Index that selects the first correct instruction
 
-    input wire                            flush_commit_i,   // Flush all instructions
+    input wire                                           flush_commit_i,   // Flush all instructions
 
     // Output Signal of instruction to Read Register 
-    output gl_index_t                     assigned_gl_entry_o,
+    output gl_index_t                                    assigned_gl_entry_o,
 
     // Output Signal of first finished instruction
-    output gl_instruction_t               instruction_o,
-    output gl_index_t                     commit_gl_entry_o,
+    output gl_instruction_t                              instruction_o,
+    output gl_index_t                                    commit_gl_entry_o,
 
     // Output Control Signals 
-    output logic                          full_o,           // GL has no free entries
-    output logic                          empty_o           // GL has no filled entries
+    output logic                                         full_o,           // GL has no free entries
+    output logic                                         empty_o           // GL has no filled entries
 );
 
 
@@ -55,7 +52,7 @@ parameter num_bits_index = $clog2(NUM_ENTRIES);
 gl_index_t head;
 gl_index_t tail;
 
-//Num must be 1 bit bigger than head an tail
+//Num must be 1 bit bigger than head and tail
 logic [num_bits_index:0] num;
 
 logic write_enable;
@@ -123,19 +120,13 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
             entries[tail] <= instruction_i;
         end
 
-        if (rstn_i & instruction_writeback_enable_1_i) begin
-            // Assume this is a correct index
-            valid_bit[instruction_writeback_1_i] <= 1'b1;
-            entries[instruction_writeback_1_i].csr_addr <= instruction_writeback_data_1_i.csr_addr;
-            entries[instruction_writeback_1_i].exception <= instruction_writeback_data_1_i.exception;
-            entries[instruction_writeback_1_i].result <= instruction_writeback_data_1_i.result;
-        end
-
-        if (rstn_i & instruction_writeback_enable_2_i) begin
-            // Assume this is a correct index
-            valid_bit[instruction_writeback_2_i] <= 1'b1;
-            entries[instruction_writeback_2_i].exception <= instruction_writeback_data_2_i.exception;
-            entries[instruction_writeback_2_i].result <= instruction_writeback_data_2_i.result;
+        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+            if (rstn_i & instruction_writeback_enable_i[i]) begin
+                valid_bit[instruction_writeback_i[i]] <= 1'b1;
+                entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
+                entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
+                entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
+            end
         end
     end
 `else

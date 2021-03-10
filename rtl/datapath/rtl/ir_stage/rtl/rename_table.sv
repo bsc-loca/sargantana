@@ -16,41 +16,37 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module rename_table(
-    input wire             clk_i,               // Clock Singal
-    input wire             rstn_i,              // Negated Reset Signal
+    input wire                                 clk_i,               // Clock Singal
+    input wire                                 rstn_i,              // Negated Reset Signal
 
-    input reg_t            read_src1_i,         // Read source register 1 mapping
-    input reg_t            read_src2_i,         // Read source register 2 mapping
-    input reg_t            old_dst_i,           // Read and write to old destination register
-    input logic            write_dst_i,         // Needs to write to old destination register
-    input phreg_t          new_dst_i,           // Wich register write to old destination register
+    input reg_t                                read_src1_i,         // Read source register 1 mapping
+    input reg_t                                read_src2_i,         // Read source register 2 mapping
+    input reg_t                                old_dst_i,           // Read and write to old destination register
+    input logic                                write_dst_i,         // Needs to write to old destination register
+    input phreg_t                              new_dst_i,           // Wich register write to old destination register
 
-    input logic            ready1_i,             // New register is ready
-    input reg_t            vaddr1_i,             // Virtual address 
-    input phreg_t          paddr1_i,             // Physical address
+    input logic   [drac_pkg::NUM_SCALAR_WB-1:0]ready_i, // New register is ready
+    input reg_t   [drac_pkg::NUM_SCALAR_WB-1:0]vaddr_i, // New register is ready
+    input phreg_t [drac_pkg::NUM_SCALAR_WB-1:0]paddr_i, // New register is ready
 
-    input logic            ready2_i,             // New register is ready
-    input reg_t            vaddr2_i,             // Virtual address 
-    input phreg_t          paddr2_i,             // Physical address
+    input logic                                recover_commit_i,    // Copy commit table on register table
+    input reg_t                                commit_old_dst_i,    // Read and write to old destination register at commit table
+    input logic                                commit_write_dst_i,  // Needs to write to old destination register at commit table
+    input phreg_t                              commit_new_dst_i,    // Wich register write to old destination register at commit table
 
-    input logic            recover_commit_i,    // Copy commit table on register table
-    input reg_t            commit_old_dst_i,    // Read and write to old destination register at commit table
-    input logic            commit_write_dst_i,  // Needs to write to old destination register at commit table
-    input phreg_t          commit_new_dst_i,    // Wich register write to old destination register at commit table
+    input wire                                 do_checkpoint_i,     // After renaming do a checkpoint
+    input wire                                 do_recover_i,        // Recover a checkpoint
+    input wire                                 delete_checkpoint_i, // Delete tail checkpoint
+    input checkpoint_ptr                       recover_checkpoint_i,// Label of the checkpoint to recover  
 
-    input wire             do_checkpoint_i,     // After renaming do a checkpoint
-    input wire             do_recover_i,        // Recover a checkpoint
-    input wire             delete_checkpoint_i, // Delete tail checkpoint
-    input checkpoint_ptr   recover_checkpoint_i,// Label of the checkpoint to recover  
+    output phreg_t                             src1_o,              // Read source register 1 mapping
+    output logic                               rdy1_o,              // Ready source register 1
+    output phreg_t                             src2_o,              // Read source register 2 mapping
+    output logic                               rdy2_o,              // Ready source register 2
+    output phreg_t                             old_dst_o,           // Read destination register mapping
 
-    output phreg_t         src1_o,              // Read source register 1 mapping
-    output logic           rdy1_o,              // Ready source register 1
-    output phreg_t         src2_o,              // Read source register 2 mapping
-    output logic           rdy2_o,              // Ready source register 2
-    output phreg_t         old_dst_o,           // Read destination register mapping
-
-    output checkpoint_ptr  checkpoint_o,        // Label of checkpoint
-    output wire            out_of_checkpoints_o // No more checkpoints
+    output checkpoint_ptr                      checkpoint_o,        // Label of checkpoint
+    output wire                                out_of_checkpoints_o // No more checkpoints
 );
 
 // Point to the actual version of free list
@@ -64,7 +60,9 @@ logic write_enable;
 logic read_enable;
 logic checkpoint_enable;
 logic commit_write_enable;
-logic ready_enable;
+logic [drac_pkg::NUM_SCALAR_WB-1:0] ready_enable;
+logic [drac_pkg::NUM_SCALAR_WB-1:0] rdy1;
+logic [drac_pkg::NUM_SCALAR_WB-1:0] rdy2;
 
 // User can do checkpoints when there is at least one free copy of the free list
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
@@ -79,8 +77,11 @@ assign commit_write_enable = commit_write_dst_i & (commit_old_dst_i != 5'h0) & (
 assign read_enable = (~do_recover_i) & (~recover_commit_i);
 
 // User can mark registers as ready if no recover action is being done
-assign ready_enable_1 = ready1_i &  (~recover_commit_i); 
-assign ready_enable_2 = ready2_i &  (~recover_commit_i); 
+always_comb begin
+    for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+        ready_enable[i] = ready_i[i] &  (~recover_commit_i); 
+    end
+end
 
 `ifndef SRAM_MEMORIES
 
@@ -159,14 +160,15 @@ assign ready_enable_2 = ready2_i &  (~recover_commit_i);
 
                 // Second register renaming
                 if (read_enable) begin
+                    for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+                        rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
+                        rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
+                    end
+
                     src1_o <= register_table[read_src1_i][version_head];
-                    rdy1_o <= ready_table[read_src1_i][version_head] |
-                                (ready1_i & (read_src1_i == vaddr1_i) & (register_table[read_src1_i][version_head] == paddr1_i)) |
-                                (ready2_i & (read_src1_i == vaddr2_i) & (register_table[read_src1_i][version_head] == paddr2_i)) ;
+                    rdy1_o <= ready_table[read_src1_i][version_head] | (|rdy1);
                     src2_o <= register_table[read_src2_i][version_head];
-                    rdy2_o <= ready_table[read_src2_i][version_head] |
-                                (ready1_i & (read_src2_i == vaddr1_i) & (register_table[read_src2_i][version_head] == paddr1_i)) |
-                                (ready2_i & (read_src2_i == vaddr2_i) & (register_table[read_src2_i][version_head] == paddr2_i)) ;
+                    rdy2_o <= ready_table[read_src2_i][version_head] | (|rdy2);
                     old_dst_o <= register_table[old_dst_i][version_head];
                 end
 
@@ -183,27 +185,17 @@ assign ready_enable_2 = ready2_i &  (~recover_commit_i);
             end
 
             // Write new ready register
-            if (ready_enable_1) begin
-                for(int i = 0; i<NUM_CHECKPOINTS; i++) begin
-                    if ((register_table[vaddr1_i][i] == paddr1_i) & ~(write_enable & (vaddr1_i == old_dst_i) & (i == version_head) )) 
-                       ready_table[vaddr1_i][i] <= 1'b1;
-                end
-                if((checkpoint_enable & register_table[vaddr1_i][version_head] == paddr1_i) & ~(write_enable & (vaddr1_i == old_dst_i))) begin
-                    ready_table[vaddr1_i][version_head + 2'b1] <= 1'b1;
-                end
-            end
-
-            // Write new ready register
-            if (ready_enable_2) begin
-                for(int i = 0; i<NUM_CHECKPOINTS; i++) begin
-                   if ((register_table[vaddr2_i][i] == paddr2_i) & ~(write_enable & (vaddr2_i == old_dst_i) & (i == version_head) ))
-                       ready_table[vaddr2_i][i] <= 1'b1;
-                end
-                if((checkpoint_enable & register_table[vaddr2_i][version_head] == paddr2_i) & ~(write_enable & (vaddr2_i == old_dst_i))) begin
-                    ready_table[vaddr2_i][version_head + 2'b1] <= 1'b1;
+            for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+                if (ready_enable[i]) begin
+                    for(int j = 0; j<NUM_CHECKPOINTS; j++) begin
+                        if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (j == version_head) )) 
+                           ready_table[vaddr_i[i]][j] <= 1'b1;
+                    end
+                    if((checkpoint_enable & register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
+                        ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1;
+                    end
                 end
             end
-
             checkpoint_o <= version_head;
         end
     end

@@ -86,18 +86,26 @@ module control_unit(
 
     // logic enable write register file at commit
     always_comb begin
-        // we don't allow regular reads/writes if not halted
-        if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
-                       !csr_cu_i.csr_exception && commit_cu_i.write_enable) ||
-                     ( wb_cu_i.valid_1 && wb_cu_i.write_enable_1)) 
-        begin
-            cu_rr_o.write_enable_1 = 1'b1;
-        end else begin
-            cu_rr_o.write_enable_1 = 1'b0;
+        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+            if (i == 0) begin
+                // we don't allow regular reads/writes if not halted
+                if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
+                               !csr_cu_i.csr_exception && commit_cu_i.write_enable) ||
+                             ( wb_cu_i.valid[i] && wb_cu_i.write_enable[i])) 
+                begin
+                    cu_rr_o.write_enable[i] = 1'b1;
+                end else begin
+                    cu_rr_o.write_enable[i] = 1'b0;
+                end
+            end else begin
+                if (wb_cu_i.valid[i] && wb_cu_i.write_enable[i]) begin
+                    cu_rr_o.write_enable[i] = 1'b1;
+                end else begin
+                    cu_rr_o.write_enable[i] = 1'b0;
+                end
+            end
         end
-    end
 
-    always_comb begin
         // we don't allow regular reads/writes if not halted
         if (debug_wr_valid_i && debug_halt_i) begin
             cu_rr_o.write_enable_dbg = 1'b1;
@@ -105,16 +113,6 @@ module control_unit(
             cu_rr_o.write_enable_dbg = 1'b0;
         end
     end
-    
-    always_comb begin
-        if (wb_cu_i.valid_2 && wb_cu_i.write_enable_2)
-        begin
-            cu_rr_o.write_enable_2 = 1'b1;
-        end else begin
-            cu_rr_o.write_enable_2 = 1'b0;
-        end
-    end
-
 
     // logic to select the next pc
     always_comb begin
