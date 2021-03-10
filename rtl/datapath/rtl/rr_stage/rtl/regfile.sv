@@ -67,18 +67,18 @@ always_comb begin
         end
     end
 
-    if (|bypass1) begin
-        read_data1_o = bypass_data1;
-    end else if (read_addr1_i == 0) begin
+    if (read_addr1_i == 0) begin
         read_data1_o = 64'b0;
+    end else if (|bypass1) begin
+        read_data1_o = bypass_data1;
     end else begin
         read_data1_o = registers[read_addr1_i];
     end
 
-    if (|bypass2) begin
-        read_data2_o = bypass_data2;
-    end else if (read_addr2_i == 0) begin
+    if (read_addr2_i == 0) begin
         read_data2_o = 64'b0;
+    end else if (|bypass2) begin
+        read_data2_o = bypass_data2;
     end else begin
         read_data2_o = registers[read_addr2_i];
     end
