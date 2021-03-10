@@ -15,16 +15,15 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module mul_unit (
-    input  logic            clk_i,          // Clock Signal
-    input  logic            rstn_i,         // Negative reset signal
-    input  logic            kill_mul_i,     // Kill on fly instructions signal
-    input  rr_exe_instr_t   instruction_i,  // New instruction
-    input  bus64_t          data_src1_i,    // Source register 1
-    input  bus64_t          data_src2_i,    // Source register 1
-    output exe_wb_instr_t   instruction_o   // Output instruction
+    input  logic                   clk_i,          // Clock Signal
+    input  logic                   rstn_i,         // Negative reset signal
+    input  logic                   kill_mul_i,     // Kill on fly instructions signal
+    input  rr_exe_arith_instr_t    instruction_i,  // New instruction
+    output exe_wb_scalar_instr_t   instruction_o   // Output instruction
 );
 
 // Declarations
+bus64_t data_src1, data_src2;
 logic same_sign;
 logic int_32_0_d, int_32_0_q, int_32_1_q;
 logic neg_def_0_d, neg_def_0_q, neg_def_1_q;
@@ -42,14 +41,16 @@ bus128_t result_128_def;
 bus64_t result_32_aux;
 bus64_t result_32;
 bus64_t result_64;
-exe_wb_instr_t instruction_0_d;
-exe_wb_instr_t instruction_0_q;
-exe_wb_instr_t instruction_1_q;
-exe_wb_instr_t instruction_s1;
-exe_wb_instr_t instruction_s2;
+exe_wb_scalar_instr_t instruction_0_d;
+exe_wb_scalar_instr_t instruction_0_q;
+exe_wb_scalar_instr_t instruction_1_q;
+exe_wb_scalar_instr_t instruction_s1;
+exe_wb_scalar_instr_t instruction_s2;
  
+assign data_src1 = instruction_i.data_rs1;
+assign data_src2 = instruction_i.data_rs2;
 
-assign same_sign = instruction_i.instr.op_32 ? ~(data_src2_i[31] ^ data_src1_i[31]) : ~(data_src2_i[63] ^ data_src1_i[63]);
+assign same_sign = instruction_i.instr.op_32 ? ~(data_src2[31] ^ data_src1[31]) : ~(data_src2[63] ^ data_src1[63]);
 
 assign type_0_d = instruction_i.instr.mem_size;
 
@@ -59,25 +60,25 @@ assign int_32_0_d = instruction_i.instr.op_32;
 always_comb begin
     case (type_0_d)
         3'b000: begin  // Multiply word, Low part, Signed - MUL , MULW
-            src1_def_d   = ((data_src1_i[63] & !int_32_0_d) | (data_src1_i[31]  & int_32_0_d)) ?
-                             ~data_src1_i + 64'b1 : data_src1_i;
-            src2_def_d   = ((data_src2_i[63] & !int_32_0_d) | (data_src2_i[31]  & int_32_0_d)) ?
-                             ~data_src2_i + 64'b1 : data_src2_i;
+            src1_def_d   = ((data_src1[63] & !int_32_0_d) | (data_src1[31]  & int_32_0_d)) ?
+                             ~data_src1 + 64'b1 : data_src1;
+            src2_def_d   = ((data_src2[63] & !int_32_0_d) | (data_src2[31]  & int_32_0_d)) ?
+                             ~data_src2 + 64'b1 : data_src2;
             neg_def_0_d  = !same_sign;
         end
         3'b001: begin  // Multiply word, High part, Signed - MULH
-            src1_def_d   = (data_src1_i[63]) ? ~data_src1_i + 64'b1 : data_src1_i;
-            src2_def_d   = (data_src2_i[63]) ? ~data_src2_i + 64'b1 : data_src2_i;
+            src1_def_d   = (data_src1[63]) ? ~data_src1 + 64'b1 : data_src1;
+            src2_def_d   = (data_src2[63]) ? ~data_src2 + 64'b1 : data_src2;
             neg_def_0_d  = !same_sign;
         end
         3'b010: begin  // Multiply word, High part, SignedxUnsigned - MULHSU
-            src1_def_d   = (data_src1_i[63]) ? ~data_src1_i + 64'b1 : data_src1_i;
-            src2_def_d   = data_src2_i;
-            neg_def_0_d  = data_src1_i[63];
+            src1_def_d   = (data_src1[63]) ? ~data_src1 + 64'b1 : data_src1;
+            src2_def_d   = data_src2;
+            neg_def_0_d  = data_src1[63];
         end
         3'b011: begin  //  Multiply word, High part, Unsigned Unsigned MULHU
-            src1_def_d   = data_src1_i;
-            src2_def_d   = data_src2_i;
+            src1_def_d   = data_src1;
+            src2_def_d   = data_src2;
             neg_def_0_d  = 1'b0;
         end
         default: begin
@@ -105,14 +106,14 @@ assign instruction_0_d.change_pc_ena = instruction_i.instr.change_pc_ena;
 assign instruction_0_d.regfile_we    = instruction_i.instr.regfile_we;
 assign instruction_0_d.instr_type    = instruction_i.instr.instr_type;
 assign instruction_0_d.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-assign instruction_0_d.csr_addr      = instruction_i.instr.result[CSR_ADDR_SIZE-1:0];
+assign instruction_0_d.csr_addr      = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
 assign instruction_0_d.prd           = instruction_i.prd;
 assign instruction_0_d.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_0_d.chkp          = instruction_i.chkp;
 assign instruction_0_d.gl_index      = instruction_i.gl_index;
 assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;
-assign instruction_0_d.result        = instruction_i.instr.result;
+assign instruction_0_d.result        = instruction_i.instr.imm;
 `ifdef VERILATOR
 assign instruction_0_d.id            = instruction_i.instr.id;
 `endif

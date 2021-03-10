@@ -60,7 +60,7 @@ module decoder(
         decode_instr_o.unit   = UNIT_ALU;
 
         // Assign by default the immediate in the result
-        decode_instr_o.result = imm_value;
+        decode_instr_o.imm = imm_value;
         // This is lowrisc related
         decode_instr_o.mem_size = decode_i.inst.common.func3;
         decode_instr_o.signed_op = 1'b0;

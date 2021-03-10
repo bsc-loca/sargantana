@@ -64,9 +64,9 @@ assign advance_head_enable = advance_head_i & (num > 0);
 `ifndef SRAM_MEMORIES
 
     // FIFO Memory structure
-    rr_exe_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
-    reg_t          tag_table            [0:PMRQ_NUM_ENTRIES-1];
-    logic          control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
+    rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
+    reg_t              tag_table            [0:PMRQ_NUM_ENTRIES-1];
+    logic              control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
     
     always_ff @(posedge clk_i)
     begin
@@ -82,7 +82,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
             for (integer j = 0; j <= PMRQ_NUM_ENTRIES; j++) begin
                 if (tag_table[j] == tag_next_i) begin
                     control_bits_table[j] = 1'b1;
-                    instruction_table[j].instr.result = replay_data_i;
+                    instruction_table[j].instr.imm = replay_data_i;
                 end
             end
         end

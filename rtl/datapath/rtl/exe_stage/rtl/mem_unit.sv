@@ -15,26 +15,24 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module mem_unit (
-    input  wire             clk_i,                  // Clock signal
-    input  wire             rstn_i,                 // Reset signal
-    input logic             kill_i,                 // Exception detected at Commit
-    input logic             flush_i,                // Delete all load_store_queue entries
-    input addr_t            io_base_addr_i,         // Input_output_address
+    input  wire                  clk_i,                  // Clock signal
+    input  wire                  rstn_i,                 // Reset signal
+    input logic                  kill_i,                 // Exception detected at Commit
+    input logic                  flush_i,                // Delete all load_store_queue entries
+    input addr_t                 io_base_addr_i,         // Input_output_address
 
-    input rr_exe_instr_t    instruction_i,          // Interface to add new instuction
-    input bus64_t           data_rs1_i,             // Data operand 1
-    input bus64_t           data_rs2_i,             // Data operand 2
-    input resp_dcache_cpu_t resp_dcache_cpu_i,      // Response from dcache
-    input wire              commit_store_or_amo_i,  // Signal from commit enables writes.
+    input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
+    input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
+    input wire                   commit_store_or_amo_i,  // Signal from commit enables writes.
 
 
-    output req_cpu_dcache_t req_cpu_dcache_o,       // Request to dcache
-    output exe_wb_instr_t   instruction_o,          // Output instruction     
-    output exception_t      exception_mem_commit_o, // Exception of the commit instruction
-    output logic            mem_commit_stall_o,     // Stall commit stage
-    output gl_index_t       mem_gl_index_o,         // GL Index of the memory instruction
-    output logic            lock_o,                 // Mem unit is able to accept more petitions
-    output logic            empty_o                 // Mem unit has no pending Ops
+    output req_cpu_dcache_t      req_cpu_dcache_o,       // Request to dcache
+    output exe_wb_scalar_instr_t instruction_o,          // Output instruction     
+    output exception_t           exception_mem_commit_o, // Exception of the commit instruction
+    output logic                 mem_commit_stall_o,     // Stall commit stage
+    output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
+    output logic                 lock_o,                 // Mem unit is able to accept more petitions
+    output logic                 empty_o                 // Mem unit has no pending Ops
 );
 
 // Enum to select instruction to DCache interface
@@ -43,6 +41,8 @@ typedef enum logic[1:0] {
     READ        = 3'b01,
     STORED      = 3'b10
 } source_lsq_t;               
+
+bus64_t data_src1, data_src2;
 
 source_lsq_t source_dcache;
 
@@ -118,6 +118,8 @@ parameter ResetState  = 2'b00,
           WaitReady = 2'b10,
           WaitCommit = 2'b11;
 
+assign data_src1 = instruction_i.data_rs1;
+assign data_src2 = instruction_i.data_rs2;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///// LOAD STORE QUEUE
@@ -128,8 +130,8 @@ assign flush_to_lsq = kill_i | flush_i;
 
 // Input instruction to LSQreplay_data_i
 assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM) ? instruction_i.instr : 'h0 ;
-assign instruction_to_lsq.data_rs1      = data_rs1_i;
-assign instruction_to_lsq.data_rs2      = data_rs2_i;
+assign instruction_to_lsq.data_rs1      = instruction_i.data_rs1;
+assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
 assign instruction_to_lsq.prd           = instruction_i.prd;
 assign instruction_to_lsq.gl_index      = instruction_i.gl_index;
 
@@ -319,14 +321,14 @@ always_comb begin
             req_cpu_dcache_o.instr_type = instruction_to_dcache.instr.instr_type;
             req_cpu_dcache_o.mem_size   = instruction_to_dcache.instr.mem_size;
             req_cpu_dcache_o.rd         = tag_id;
-            req_cpu_dcache_o.imm        = instruction_to_dcache.instr.result;
+            req_cpu_dcache_o.imm        = instruction_to_dcache.instr.imm;
         end
         STORED:         begin
             req_cpu_dcache_o.data_rs1   = stored_instr_to_dcache.data_rs1;
             req_cpu_dcache_o.instr_type = stored_instr_to_dcache.instr.instr_type;
             req_cpu_dcache_o.mem_size   = stored_instr_to_dcache.instr.mem_size;
             req_cpu_dcache_o.rd         = tag_id;
-            req_cpu_dcache_o.imm        = stored_instr_to_dcache.instr.result;
+            req_cpu_dcache_o.imm        = stored_instr_to_dcache.instr.imm;
         end
     endcase
 end
@@ -553,7 +555,7 @@ always_comb begin
     else if(instruction_from_pmrq.instr.valid) begin
         instruction_to_wb      = instruction_from_pmrq;
         advance_head_prmq      = 1'b1;
-        data_to_wb             = instruction_from_pmrq.instr.result;
+        data_to_wb             = instruction_from_pmrq.instr.imm;
     end
 end
 
@@ -570,7 +572,7 @@ assign instruction_o.instr_type    = instruction_to_wb.instr.instr_type;
 assign instruction_o.id	           = instruction_to_wb.instr.id;
 `endif
 assign instruction_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
-assign instruction_o.csr_addr      = instruction_to_wb.instr.result[CSR_ADDR_SIZE-1:0];
+assign instruction_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
 assign instruction_o.prd           = instruction_to_wb.prd;
 assign instruction_o.checkpoint_done = instruction_to_wb.checkpoint_done;
 assign instruction_o.chkp          = instruction_to_wb.chkp;
