@@ -35,6 +35,8 @@ module decoder(
     logic ras_link_rd_int;
     logic ras_link_rs1_int;
 
+    logic check_frm;
+
     immediate immediate_inst(
         .instr_i(decode_i.inst),
         .imm_o(imm_value)
@@ -78,6 +80,15 @@ module decoder(
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
         decode_instr_o.op_32   = 1'b0;
+        // FP special
+        decode_instr_o.rs3     = decode_i.inst.r4type.rs3;
+        decode_instr_o.fmt     = FMT_S;
+        decode_instr_o.frm     = decode_i.inst.frtype.rm;
+        check_frm              = 1'b0;
+
+        // By default go to scalar regfile
+        decode_instr_o.regfile_src = SCALAR_RF;
+        decode_instr_o.regfile_dst = SCALAR_RF;
 
         decode_instr_o.instr_type = ADD;
         `ifdef VERILATOR
@@ -318,15 +329,7 @@ module decoder(
                                 LR_D: begin
                                     if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
-                                    end else begin
-                                        decode_instr_o.instr_type = AMO_LRD;
-                                    end
-                                end
-                                SC_D: begin
-                                    decode_instr_o.instr_type = AMO_SCD;
-                                end
-                                AMOSWAP_D: begin
-                                    decode_instr_o.instr_type = AMO_SWAPD;
+                                    end eeprdona e_instr_o.instr_type = AMO_SWAPD;
                                 end
                                 AMOADD_D: begin
                                     decode_instr_o.instr_type = AMO_ADDD;
@@ -999,6 +1002,214 @@ module decoder(
                             xcpt_illegal_instruction_int = 1'b1;
                         end
                     endcase
+                end
+                OP_LOAD_FP: begin
+                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
+                    decode_instr_o.unit = UNIT_MEM;
+                    decode_instr_o.regfile_dst = FPU_RF;
+                    case (decode_i.inst.itype.func3)
+                        F3_FLW: begin
+                            decode_instr_o.instr_type = FLW;
+                        end
+                        F3_FLD: begin
+                            decode_instr_o.instr_type = FLD;
+                        end
+                        default: begin
+                            xcpt_illegal_instruction_int = 1'b1;
+                        end
+                    endcase
+                end
+                OP_STORE_FP: begin
+                    decode_instr_o.regfile_we = 1'b0;
+                    decode_instr_o.use_imm = 1'b0;
+                    decode_instr_o.unit = UNIT_MEM;
+                    decode_instr_o.regfile_src = FPU_RF;
+                    case (decode_i.inst.stype.func3)
+                        F3_FLW: begin
+                            decode_instr_o.instr_type = FSW;
+                        end
+                        F3_FLD: begin
+                            decode_instr_o.instr_type = FSD;
+                        end
+                        default: begin
+                            xcpt_illegal_instruction_int = 1'b1;
+                        end
+                    endcase
+                end
+                // TODO: (guillemlp) when to use the use imm signal?????
+                OP_FMADD,
+                OP_FMSUB,
+                OP_FNMSUB,
+                OP_FNMADD: begin
+                    // Fused Multiply Add
+                    decode_instr_o.unit = UNIT_FPU;
+                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.regfile_src = FPU_RF;
+                    decode_instr_o.regfile_dst = FPU_RF;
+                    // Select the instruction
+                    unique case (decode_i.inst.r4type.opcode) 
+                        OP_FMADD: begin
+                            decode_instr_o.instr_type = FMADD;
+                        end
+                        OP_FMSUB: begin
+                            decode_instr_o.instr_type = FMSUB;
+                        end
+                        OP_FNMSUB: begin
+                            decode_instr_o.instr_type = FNMSUB;
+                        end
+                        default: begin // OP_FNMADD
+                            decode_instr_o.instr_type = FNMADD;
+                        end
+                    endcase
+                    // Do we need to select the fmt? mode?
+                    // func2 is the fmt
+                    // we only support the first two modes (S,D)
+                    case (decode_i.inst.r4type.fmt)
+                        FMT_S: begin
+                            decode_instr_o.fmt = 1'b0;
+                        end
+                        FMT_D: begin
+                            decode_instr_o.fmt = 1'b1;
+                        end
+                        default: begin
+                            xcpt_illegal_instruction_int = 1'b1;
+                        end
+                    endcase
+                end
+                OP_FP: begin
+                    decode_instr_o.unit = UNIT_FPU;
+                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.regfile_src = FPU_RF;
+                    decode_instr_o.regfile_dst = FPU_RF;
+                    case (decode_i.inst.rtype.func5)
+                        F7_FP_FADD: begin
+                            decode_instr_o.instr_type = FADD;
+                            check_frm = 1'b1;
+                        end
+                        F7_FP_FSUB: begin
+                            decode_instr_o.instr_type = FSUB;
+                            check_frm = 1'b1;
+                        end
+                        F7_FP_FMUL: begin
+                            decode_instr_o.instr_type = FMUL;
+                            check_frm = 1'b1;
+                        end
+                        F7_FP_FDIV: begin
+                            decode_instr_o.instr_type = FDIV;
+                            check_frm = 1'b1;
+                        end
+                        F7_FP_FSQRT: begin
+                            decode_instr_o.instr_type = FSQRT;
+                            check_frm = 1'b1;
+                            // TODO (guillemlp) not sure if the following is required
+                            /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end*/
+                        end
+                        F7_FP_FSGNJ: begin
+                            decode_instr_o.instr_type = FSGNJ;
+                            // Check through rounding modes if illegal instr
+                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        F7_FP_FMIN_MAX: begin
+                            decode_instr_o.instr_type = FMIN_MAX;
+                            // Check through rounding modes if illegal instr
+                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        F5_FP_FCVT_F2I: begin // FP to Integer
+                            decode_instr_o.instr_type = FCVT_F2I;
+                            check_frm = 1'b1;
+                            // Check through rounding modes if illegal instr
+                            if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
+                            case (decode_i.inst.fprtype.rm)
+                                3'b000: begin
+                                    decode_instr_o.instr_type = FMV_F2X;
+                                end
+                                3'b001: begin
+                                    decode_instr_o.instr_type = FCLASS;
+                                end
+                                default: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
+                        end
+                        F5_FP_FCMP: begin // FP comp
+                            decode_instr_o.instr_type = FCMP;
+                            // Check through rounding modes if illegal instr
+                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        F5_FP_FCVT_I2F: begin
+                            decode_instr_o.instr_type = FCVT_I2F;
+                            check_frm = 1'b1;
+                            // Check through rounding modes if illegal instr
+                            if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
+                            decode_instr_o.instr_type = FMV_X2F;
+                            if (decode_i.inst.rtype.rm != 3'b000) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        end
+                        // D2S & S2D specific 
+                        F5_FP_FCVT_SD: begin
+                            decode_instr_o.instr_type = FCVT_F2F;
+                        end
+                        default: begin
+                            xcpt_illegal_instruction_int = 1'b1;
+                        end
+                    endcase
+
+                    unique case (decode_i.inst.fprtype.fmt)
+                        FMT_FP_S: begin
+                            decode_instr_o.fmt = FMT_S;
+                        end
+                        FMT_FP_D: begin
+                            decode_instr_o.fmt = FMT_D;
+                        end
+                        default: begin
+                            xcpt_illegal_instruction_int = 1'b0;
+                        end
+                    endcase
+
+                    if (check_frm) begin
+                        unique case (decode_i.inst.fprtype.rm)
+                            // Illegal modes
+                            FRM_INV_1,
+                            FRM_INV_2: begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                            FRM_DYN: begin // check dynamic one
+                                unique case (decode_i.frm_i) inside // FRM from CSR
+                                    FRM_INV_1,
+                                    FRM_INV_2,
+                                    FRM_DYN: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    default: begin
+                                        //xcpt_illegal_instruction_int = 1'b0;
+                                    end 
+                                endcase
+                            end
+                            default: begin
+                                //xcpt_illegal_instruction_int = 1'b0;
+                            end
+                        endcase
+                    end
                 end
                 default: begin
                     // By default this is not a valid instruction

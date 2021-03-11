@@ -43,6 +43,26 @@ typedef struct packed {
 } instruction_rtype_t;
 
 typedef struct packed {
+    logic [31:27] rs3;
+    logic [26:25] func2;
+    logic [24:20] rs2;
+    logic [19:15] rs1;
+    logic [14:12] rm;
+    logic [11:7]  rd;
+    logic [6:0]   opcode;
+} instruction_r4type_t;
+
+typedef struct packed {
+    logic [31:27] func5;
+    logic [26:25] func2;
+    logic [24:20] rs2;
+    logic [19:15] rs1;
+    logic [14:12] rm;
+    logic [11:7]  rd;
+    logic [6:0]   opcode;
+} instruction_r4type_t;
+
+typedef struct packed {
     logic [31:20] imm;
     logic [19:15] rs1;
     logic [14:12] func3;
@@ -124,6 +144,8 @@ typedef union packed {
     logic [INST_SIZE-1:0] bits;
     instruction_common_t  common;
     instruction_rtype_t   rtype;
+    instruction_r4type_t  r4type;
+    instruction_fprtype_t fprtype;
     instruction_itype_t   itype;
     instruction_stype_t   stype;
     instruction_btype_t   btype;
@@ -156,6 +178,10 @@ typedef enum logic [6:0] {
     OP_STORE_FP  = 7'b0100111,
     OP_FP        = 7'b1010011,
     OP_V         = 7'b1010111
+    OP_FMADD     = 7'b1000011,
+    OP_FMSUB     = 7'b1000111,
+    OP_FNMSUB    = 7'b1001011,
+    OP_FNMADD    = 7'b1001111
 } op_inst_t;
 
 typedef enum logic [2:0] {
@@ -388,6 +414,63 @@ typedef enum logic [4:0] {
 typedef enum logic [6:0] {
     F7_MUL_DIV  = 7'b0000001
 } op_func7_mul_t;
+
+typedef enum logic [4:0] {
+    F5_FP_FADD              = 5'b00000,
+    F5_FP_FSUB              = 5'b00001,
+    F5_FP_FMUL              = 5'b00010,
+    F5_FP_FDIV              = 5'b00011,
+    F5_FP_FSQRT             = 5'b01011,
+    F5_FP_FSGNJ             = 5'b00100,
+    F5_FP_FMIN_MAX          = 5'b00101,
+    F5_FP_FCVT_F2I          = 5'b11000,
+    F5_FP_FMV_F2I_FCLASS    = 5'b11100,
+    F5_FP_FCMP              = 5'b10100,
+    F5_FP_FCVT_I2F          = 5'b11010,
+    F5_FP_FMV_I2F           = 5'b11110,
+    F5_FP_FCVT_SD           = 5'b01000,
+} op_func7_fp_t;
+
+typedef enum logic [1:0] {
+    FMT_FP_S  = 2'b00,
+    FMT_FP_D  = 2'b01,
+    FMT_FP_Q  = 2'b10,
+    FMT_FP_H  = 2'b11
+} op_fmt_fp_t;
+
+typedef enum logic [2:0] {
+    F3_FFF  = 3'b000,
+    F3_FFF  = 3'b001,
+    F3_FLW  = 3'b010,
+    F3_FLD  = 3'b011
+} op_func3_fp_t;
+
+// Rounding modes FP
+typedef enum logic [2:0] {
+    FRM_RNE    = 3'b000, // Round to Nearest, ties to Even
+    FRM_RTZ    = 3'b001, // Round towards Zero
+    FRM_RDN    = 3'b010, // Round Down (towards −∞)
+    FRM_RUP    = 3'b011, // Round Up (towards +∞)
+    FRM_RMM    = 3'b100, // Round to Nearest, ties to Max Magnitude
+    FRM_INV_1  = 3'b101, // Invalid. Reserved for future use.
+    FRM_INV_2  = 3'b110, // Invalid. Reserved for future use.
+    FRM_DYN    = 3'b111  // In instruction’s rm field, selects dynamic rounding mode;
+} op_frm_fp_t;           // In Rounding Mode register, Invalid.
+
+// Rounding modes FP
+typedef enum logic [1:0] {
+    FMT_S = 2'b00, // 32-bit single-precision
+    FMT_D = 2'b01, // 64-bit double-precision
+    FMT_H = 2'b10, // 16-bit half-precision
+    FMT_Q = 2'b11  // 128-bit quad-precision
+} op_riscv_fmt_t; 
+
+// Rounding modes FP
+typedef enum logic [0:0] {
+    FMT_S = 1'b0, // 32-bit single-precision
+    FMT_D = 1'b1  // 64-bit double-precision
+} op_fmt_fp_drac_t; 
+
 
 // By RISCV ISA, exceptions are 64 bits
 typedef enum logic[XLEN-1:0] {

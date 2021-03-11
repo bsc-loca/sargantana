@@ -183,7 +183,8 @@ typedef enum logic [2:0]{
     UNIT_MEM,                   // Select Memory unit
     UNIT_SIMD,                  // Select SIMD
     UNIT_CONTROL,               // Select CONTROL
-    UNIT_SYSTEM                 // Select CSR
+    UNIT_SYSTEM,                // Select CSR
+    UNIT_FPU
 } functional_unit_t;   // Selection of funtional unit in exe stage 
 
 typedef enum logic [1:0]{
@@ -192,6 +193,12 @@ typedef enum logic [1:0]{
     SEL_FROM_BRANCH,            // Select source from Branch computation
     SEL_FROM_CONTROL            // Select source from control
 } reg_sel_t;          // Selection of the result from functional unit 
+
+typedef enum logic [1:0]{
+    SCALAR_RF,     // Select scalar regfile
+    FPU_RF,        // Select fpu regfile
+    SIMD_RF        // Select simd regfile
+} regfile_sel_t;
 
 typedef enum logic [7:0] { 
     // basic ALU op
@@ -222,6 +229,16 @@ typedef enum logic [7:0] {
    MUL, MULH, MULHU, MULHSU, MULW,
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
+   // Floating-Point Load and Store Instructions
+   FLD, FLW, FSD, FSW, // FLH, FLB, FSD, FSW, FSH, FSB,
+   // Floating-Point Computational Instructions
+   FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
+   // Floating-Point Conversion and Move Instructions
+   FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
+   // Floating-Point Compare Instructions
+   FCMP,
+   // Floating-Point Classify Instruction
+   FCLASS,
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
    // Vectorial Instructions
@@ -320,6 +337,13 @@ typedef struct packed {
 
     bus64_t imm;                        // Instruction immediate
     
+    // FP instructions only
+    reg_t rs3;                          // Register Source 3 for fused ops
+    logic fmt;                          // FMT mode (0:S, 1:D)
+    logic fmr;                          // FP rounding mode
+    regfile_sel_t regfile_src;           // which refile get the sources
+    regfile_sel_t regfile_dst;           // which regfile to write
+
     logic use_imm;                      // Use Immediate later
     logic use_pc;                       // Use PC later
     logic op_32;                        // Operation of 32 bits
