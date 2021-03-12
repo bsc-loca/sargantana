@@ -480,12 +480,12 @@ always_comb begin
                  ~resp_dcache_cpu_i.replay) begin 
         advance_head_lsq    = 1'b1;
         flush_store         = is_STORE_s2_q;
-        flush_amo           = !is_STORE_s2_q;
+        flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q;
     end else if (instruction_s2_q.instr.valid & xcpt_s2_q) begin 
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = 'h0;
         flush_store         = is_STORE_s2_q;
-        flush_amo           = !is_STORE_s2_q;
+        flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q;
     end else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_or_AMO_s2_q) begin
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = 'h0;
