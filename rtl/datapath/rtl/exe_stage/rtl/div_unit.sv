@@ -100,9 +100,9 @@ assign data_src2 = instruction_i.data_rs2;
             op_32_d[~div_unit_sel_i]       = op_32_q[~div_unit_sel_i];
             signed_op_d[~div_unit_sel_i]   = signed_op_q[~div_unit_sel_i]; 
 
-            div_zero_d[div_unit_sel_i]     = ~(|data_src2);
-            same_sign_d[div_unit_sel_i]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) :
-            ~(data_src2[63] ^ data_src1[63]);
+            div_zero_d[div_unit_sel_i]     = (~(|data_src2) || (instruction_i.instr.op_32 && ~(|data_src2_i[31:0]));
+            same_sign_d[div_unit_sel_i]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) 
+            : ~(data_src2[63] ^ data_src1[63]);
         end else begin
             for (int i = 1; i >= 0; i--) begin
                 instruction_d[i] = instruction_q[i];
