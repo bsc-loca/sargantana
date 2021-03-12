@@ -16,7 +16,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 // Length of the bimodal index register
-localparam _LENGTH_BIMODAL_INDEX_  = 10;
+localparam _LENGTH_BIMODAL_INDEX_  = 7;
 
 // Number of entries of the bimodal predictor, must be 2^(_LENGTH_BIMODAL_INDEX_)
 localparam _NUM_BIMODAL_ENTRIES_ = 2**_LENGTH_BIMODAL_INDEX_;

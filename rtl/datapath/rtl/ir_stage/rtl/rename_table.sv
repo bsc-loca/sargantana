@@ -83,8 +83,6 @@ always_comb begin
     end
 end
 
-`ifndef SRAM_MEMORIES
-
     // Look up table. Not for r0
     logic ready_table [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
     phreg_t register_table [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
@@ -96,9 +94,9 @@ end
 
             // Table initial state
             for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
-                register_table[j][0] = j[5:0];
-                ready_table[j][0] = 1'b1;
-                commit_table[j] = j[5:0];
+                register_table[j][0] <= j[5:0];
+                ready_table[j][0] <= 1'b1;
+                commit_table[j] <= j[5:0];
             end
             // Checkpoint signals
             version_head <= 2'b0;       // Current table, 0
@@ -112,8 +110,8 @@ end
         end 
         else if (recover_commit_i) begin // Recover commit table because exception
             for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
-                register_table[j][0] = commit_table[j];
-                ready_table[j][0] = 1'b1;
+                register_table[j][0] <= commit_table[j];
+                ready_table[j][0] <= 1'b1;
             end
             version_head <= 2'b0;       // Current table, 0
             num_checkpoints <= 3'b00;   // No checkpoints
@@ -199,8 +197,6 @@ end
             checkpoint_o <= version_head;
         end
     end
-
-`endif
 
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 

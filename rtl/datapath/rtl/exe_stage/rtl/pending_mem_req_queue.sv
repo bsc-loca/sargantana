@@ -61,36 +61,30 @@ assign read_enable = (num > 0);
 assign advance_head_enable = advance_head_i & (num > 0);
 
 
-`ifndef SRAM_MEMORIES
+// FIFO Memory structure
+rr_exe_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
+reg_t          tag_table            [0:PMRQ_NUM_ENTRIES-1];
+logic          control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
 
-    // FIFO Memory structure
-    rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
-    reg_t              tag_table            [0:PMRQ_NUM_ENTRIES-1];
-    logic              control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
+always_ff @(posedge clk_i)
+begin
+    // Write tail
+    if (write_enable) begin
+        instruction_table[tail]  <= instruction_i;
+        tag_table[tail]          <= tag_i;
+        control_bits_table[tail] <= 1'b0;
+    end
     
-    always_ff @(posedge clk_i)
-    begin
-        // Write tail
-        if (write_enable) begin
-            instruction_table[tail]  <= instruction_i;
-            tag_table[tail]          <= tag_i;
-            control_bits_table[tail] <= 1'b0;
-        end
-        
-        // Table initial state
-        if(replay_valid_i) begin
-            for (integer j = 0; j <= PMRQ_NUM_ENTRIES; j++) begin
-                if (tag_table[j] == tag_next_i) begin
-                    control_bits_table[j] = 1'b1;
-                    instruction_table[j].instr.imm = replay_data_i;
-                end
+    // Table initial state
+    if(replay_valid_i) begin
+        for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
+            if (tag_table[j] == tag_next_i) begin
+                control_bits_table[j] <= 1'b1;
+                instruction_table[j].instr.imm <= replay_data_i;
             end
         end
     end
-
-`else
-
-`endif
+end
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin

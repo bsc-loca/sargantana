@@ -309,6 +309,11 @@ end
 
 //// Select source to DCACHE interface
 always_comb begin
+    req_cpu_dcache_o.data_rs1   = 64'h0;
+    req_cpu_dcache_o.instr_type = ADD;
+    req_cpu_dcache_o.mem_size   = 3'h0;
+    req_cpu_dcache_o.rd         = 5'h0;
+    req_cpu_dcache_o.imm        = 64'h0;
     case(source_dcache)
         NULL:         begin
             req_cpu_dcache_o.data_rs1   = 64'h0;
@@ -394,8 +399,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         xcpt_addr_s2_q       <= 'h0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <= 'h0;
-    end
-    if (reset_next_lsq) begin       // In case of miss flush the pipeline
+    end else if (reset_next_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <= 'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         io_s1_q              <= 1'b0;
@@ -410,8 +414,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         xcpt_addr_s2_q       <= 'h0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <= 'h0;
-    end
-    else begin          // Update the Pipeline    
+    end else begin          // Update the Pipeline    
         instruction_s1_q     <= instruction_s1_d;
         is_STORE_or_AMO_s1_q <= is_STORE_or_AMO_s0_d;
         xcpt_addr_s1_q       <= resp_dcache_cpu_i.addr;

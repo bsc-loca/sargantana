@@ -54,58 +54,54 @@ module icache_way (
 `else
     logic [127:0] RW0O_sram;
     logic [127:0]  write_data;
+    logic [ADDR_WIDHT-1:0] address;
     logic write_enable;
+    logic chip_enable;
     
     `ifdef INCISIVE_SIMULATION
-        assign #1 write_data = data_i;
-        assign #1 write_enable = ~we_i;
+        assign #0.3 write_data = data_i;
+        assign #0.3 write_enable = ~we_i;
+        assign #0.3 chip_enable = ~req_i;
+        assign #0.3 address = addr_i;
     `else
         assign write_data = data_i;
         assign write_enable = ~we_i;
+        assign chip_enable = ~req_i;
+        assign address = addr_i;
     `endif
-    
+ 
+    `ifdef MEMS_22NM 
+    IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
+        .CLK(clk_i),
+        .CEN(1'b0),
+        .RDWEN(~write_enable),
+        .AW(addr_i[7:1]), // Port-A address word line inputs
+        .AC(addr_i[0]), // POrt-A address column inputs
+        .D(write_data), // Data
+        .BW(~{128{1'b0}}), // Mask
+        .T_LOGIC(1'b0), // Test logic, active high? 
+        .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+        .MA_WL(1'b0),
+        .MA_WRAS(1'b0),
+        .MA_WRASD(1'b0),
+        .Q(RW0O_sram)
+	);
+    `else
     TS1N65LPHSA256X128M4F L1InstArray (
-        .A  (addr_i) ,
+        .A  (address) ,
         .D  (write_data) ,
         .BWEB  ({128{1'b0}}) ,
         .WEB  (write_enable) ,
-        .CEB  (~req_i) ,
+        .CEB  (chip_enable) ,
         .CLK  (clk_i) ,
-        .Q  (RW0O_sram)
+        .Q  (RW0O_sram),
+        .WTSEL(3'b000),
+        .RTSEL(2'b00),
+        .AWT(1'b0)
     ); 
+    `endif
     
     assign data_o = RW0O_sram;
 `endif
-//logic  [WAY_WIDHT-1:0] data_aux;
-//logic [ICACHE_N_SET-1:0] control;
-//
-//assign control[0] = !addr_i[1] && !addr_i[0] && req_i ; 
-//assign control[1] = !addr_i[1] &&  addr_i[0] && req_i ; 
-//assign control[2] =  addr_i[1] && !addr_i[0] && req_i ; 
-//assign control[3] =  addr_i[1] &&  addr_i[0] && req_i ; 
-//
-//
-//set_ram sram(
-//    .clk_i ( clk_i  ),
-//    .rstn_i( rstn_i ),
-//    .req_i ( req_i  ),
-//    .control_i(control),
-//    .we_i  ( we_i   ),
-//    .addr_i( addr_i[7:2] ),
-//    .data_i( data_i ),  
-//    .data_o( data_aux )
-//);
-//
-//
-//always_comb begin
-//    case(addr_i[1:0])
-//        2'b00:    data_o = data_aux [127:0];
-//        2'b01:    data_o = data_aux [255:128];
-//        2'b10:    data_o = data_aux [383:256];
-//        2'b11:    data_o = data_aux [511:384];
-//        default:  data_o = '0;
-//    endcase
-//end
-
 
 endmodule

@@ -72,7 +72,7 @@ typedef logic [4:0] gl_index_t;
 parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
 
 // Most significative bit from address used to index
-parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 11;
+parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 8;
 
 // Load Store Queue
 parameter LSQ_NUM_ENTRIES = 8;

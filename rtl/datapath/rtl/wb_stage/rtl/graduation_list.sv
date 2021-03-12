@@ -86,34 +86,32 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
                          (instruction_i.instr_type == AMO_SCW)   || (instruction_i.instr_type == AMO_SCD)     ||
                          (instruction_i.instr_type == AMO_LRW)   || (instruction_i.instr_type == AMO_LRD)     ;
 
-`ifndef SRAM_MEMORIES
-
 
     gl_instruction_t entries [0:NUM_ENTRIES-1];
 
-    always@(posedge clk_i, negedge rstn_i)
-    begin
-        if (~rstn_i) begin
-            for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
-                  valid_bit[i] = 1'b0;
+always@(posedge clk_i, negedge rstn_i)
+begin
+    if (~rstn_i) begin
+        for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
+                valid_bit[i] <= 1'b0;
+        end
+    end else begin
+        if (read_enable) begin
+            if ((num == 0) & (instruction_i.valid)) begin // Imposible case
+                instruction_o <= instruction_i;
+            end else begin
+                instruction_o <= entries[head];
+                commit_gl_entry_o <= head;
             end
         end else begin
-            if (read_enable) begin
-                if ((num == 0) & (instruction_i.valid)) begin // Imposible case
-                    instruction_o <= instruction_i;
-                end else begin
-                    instruction_o <= entries[head];
-                    commit_gl_entry_o <= head;
-                end;
-            end else begin
-                instruction_o.valid <= 1'b0;
-                instruction_o.instr_type <= ADD;
-                instruction_o.exception.valid <= 1'b0;
-                instruction_o.stall_csr_fence <= 1'b0;
-                instruction_o.old_prd <= 'b0;
-                commit_gl_entry_o <= 'b0;
-            end
+            instruction_o.valid <= 1'b0;
+            instruction_o.instr_type <= ADD;
+            instruction_o.exception.valid <= 1'b0;
+            instruction_o.stall_csr_fence <= 1'b0;
+            instruction_o.old_prd <= 'b0;
+            commit_gl_entry_o <= 'b0;
         end
+    
 
         if (write_enable) begin
             valid_bit[tail] <= is_store_or_amo;
@@ -121,7 +119,7 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
         end
 
         for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            if (rstn_i & instruction_writeback_enable_i[i]) begin
+            if (instruction_writeback_enable_i[i]) begin
                 valid_bit[instruction_writeback_i[i]] <= 1'b1;
                 entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
                 entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
@@ -129,9 +127,7 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
             end
         end
     end
-`else
-
-`endif
+end
 
 always@(posedge clk_i, negedge rstn_i)
 begin

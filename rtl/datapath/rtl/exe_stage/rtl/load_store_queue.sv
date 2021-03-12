@@ -63,23 +63,18 @@ assign read_enable = read_next_i & (num_to_exe > 0) & (~reset_next_i);
 // User can advance the head of the buffer if there is data stored in the queue
 assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
 
+// FIFO Memory structure
+rr_exe_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
 
-`ifndef SRAM_MEMORIES
-
-    // FIFO Memory structure
-    rr_exe_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
-    
-    always_ff @(posedge clk_i)
-    begin
-        // Write tail
-        if (write_enable) begin
-            control_table[tail] <= instruction_i;
-        end
+always_ff @(posedge clk_i)
+begin
+    // Write tail
+    if (write_enable) begin
+        control_table[tail] <= instruction_i;
     end
+end
 
-`else
 
-`endif
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin

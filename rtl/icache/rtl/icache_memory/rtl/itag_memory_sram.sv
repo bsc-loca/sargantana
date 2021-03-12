@@ -35,9 +35,11 @@ module itag_memory_sram64x80(
 logic [ICACHE_DEPTH-1:0] vbit_vec [0:ICACHE_N_WAY-1];
 
 //Tag array wires
-logic [79:0] q_sram;
+logic [95:0] q_sram;
 logic [79:0] write_mask, write_data, w_mask, w_data, mask;
 logic write_enable;
+logic chip_enable;
+logic [ADDR_WIDHT:0] address;
 
 //--VALID bit vector
 genvar i;
@@ -56,11 +58,11 @@ endgenerate
 
 // Tag array SRAM implementation
 
-assign mask[19:0] = 20'(req_i[0]);
-assign mask[39:20] = 20'(req_i[1]);
-assign mask[59:40] = 20'(req_i[2]);
-assign mask[79:60] = 20'(req_i[3]);
-assign w_mask = 20'(we_i) & mask;
+assign mask[19:0] = {20{req_i[0]}};
+assign mask[39:20] = {20{req_i[1]}};
+assign mask[59:40] = {20{req_i[2]}};
+assign mask[79:60] = {20{req_i[3]}};
+assign w_mask = {80{we_i}} & mask;
     
 assign w_data[19:0] = data_i;
 assign w_data[39:20] = data_i;
@@ -70,24 +72,79 @@ assign w_data[79:60] = data_i;
 
 
 `ifdef INCISIVE_SIMULATION
-  assign #1 write_mask = ~w_mask;
-  assign #1 write_data = w_data;
-  assign #1 write_enable = ~we_i;
+  assign #0.3 write_mask = ~w_mask;
+  assign #0.3 write_data = w_data;
+  assign #0.3 write_enable = ~we_i;
+  assign #0.3 address = {1'b0, addr_i};
+  assign #0.3 chip_enable = ~(|req_i);
 `else
   assign write_mask = ~w_mask;
   assign write_data = w_data;
   assign write_enable = ~we_i;
+  assign address = {1'b0, addr_i};
+  assign chip_enable = ~(|req_i);
 `endif
 
-TS1N65LPA64X80M4 IC_tag_array (
-    .A  (RW0A) ,
-    .D  (write_data) ,
-    .BWEB  (write_mask) ,
+`ifdef MEMS_22NM
+  IN22FDX_R1DH_NFHN_W00128B048M02C256 MDArray_tag_A_l1 (
+    .CLK(clk_i),
+    .CEN(1'b0), // chip_enable??
+    .RDWEN(write_enable),
+    .AW(address[6:1]), // Port-A address word line inputs 
+    .AC(address[0]), // POrt-A address column inputs 
+    .D(write_data[47:0]), // Data 
+    .BW(~write_mask[47:0]), // Mask 
+    .T_LOGIC(1'b0), // Test logic, active high? 
+    .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+    .MA_WL(1'b0),
+    .MA_WRAS(1'b0),
+    .MA_WRASD(1'b0),
+    .Q(q_sram[47:0])
+  );
+  
+  IN22FDX_R1DH_NFHN_W00128B048M02C256 MDArray_tag_B_l1 (
+    .CLK(clk_i),
+    .CEN(1'b0), // chip_enable??
+    .RDWEN(write_enable),
+    .AW(address[6:1]), // Port-A address word line inputs 
+    .AC(address[0]), // POrt-A address column inputs 
+    .D({16'b0,write_data[79:48]}), // Data 
+    .BW({16'b1, ~write_mask[79:48]}), // Mask 
+    .T_LOGIC(1'b0), // Test logic, active high? 
+    .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+    .MA_WL(1'b0),
+    .MA_WRAS(1'b0),
+    .MA_WRASD(1'b0),
+    .Q(q_sram[95:48])
+  );
+`else
+ // [47:0]
+  TS1N65LPHSA128X48M4F MDArray_tag_A_l1 (
+    .A  (address) ,
+    .D  (write_data[47:0]) ,
+    .BWEB  (write_mask[47:0]) ,
     .WEB  (write_enable) ,
-    .CEB  (~(|req_i)) ,
+    .CEB  (chip_enable) ,
     .CLK  (clk_i) ,
-    .Q  (q_sram)
-); 
+    .Q  (q_sram[47:0]),
+    .WTSEL(3'b000),
+    .RTSEL(2'b00),
+    .AWT(1'b0)
+  ); 
+// [87:48]
+  TS1N65LPHSA128X48M4F MDArray_tag_B_l1 (
+    .A  (address) ,
+    .D  ({16'b0,write_data[79:48]}) ,
+    .BWEB  ({16'b1, write_mask[79:48]}) ,
+    .WEB  (write_enable) ,
+    .CEB  (chip_enable) ,
+    .CLK  (clk_i) ,
+    .Q  (q_sram[95:48]),
+    .WTSEL(3'b000),
+    .RTSEL(2'b00),
+    .AWT(1'b0)
+  ); 
+`endif
 
 assign tag_way_o[0] = q_sram[19:0];
 assign tag_way_o[1] = q_sram[39:20];
@@ -95,8 +152,4 @@ assign tag_way_o[2] = q_sram[59:40];
 assign tag_way_o[3] = q_sram[79:60];
 
 endmodule
-
-
-
-
 

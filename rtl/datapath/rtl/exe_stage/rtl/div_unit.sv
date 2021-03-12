@@ -202,6 +202,27 @@ assign data_src2 = instruction_i.data_rs2;
                 ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);
 
     always_comb begin
+        instruction_o.valid           = 'h0;
+        instruction_o.pc              = 'h0;
+        instruction_o.bpred           = 'h0;
+        instruction_o.rs1             = 'h0;
+        instruction_o.rd              = 'h0;
+        instruction_o.change_pc_ena   = 'h0;
+        instruction_o.regfile_we      = 'h0;
+        instruction_o.instr_type      = 'h0;
+        instruction_o.stall_csr_fence = 'h0;
+        instruction_o.csr_addr        = 'h0;
+        instruction_o.prd             = 'h0;
+        instruction_o.checkpoint_done = 'h0;
+        instruction_o.chkp            = 'h0;
+        instruction_o.gl_index        = 'h0;
+        `ifdef VERILATOR
+        instruction_o.id              = 'h0;
+        `endif
+        instruction_o.branch_taken    = 'h0;
+        instruction_o.result_pc       = 'h0;
+        instruction_o.ex              = 'h0;
+        instruction_o.result          = 'h0;
         if (instruction_q[16].valid & op_32_q[16]) begin
             instruction_o.valid           = instruction_q[16].valid;
             instruction_o.pc              = instruction_q[16].pc;

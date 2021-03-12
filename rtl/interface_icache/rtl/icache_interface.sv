@@ -62,6 +62,8 @@ logic a_valid_resp ; //
 
 reg_addr_t old_pc_req_d, old_pc_req_q;
 
+logic tlb_resp_xcp_if_int;
+
 
 
 // Icache_interface can do request to icache
@@ -93,8 +95,10 @@ assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
         old_pc_req_q <= {ADDR_SIZE{1'b0}};
+        tlb_resp_xcp_if_int <= 1'b0;
     end else begin
         old_pc_req_q <= old_pc_req_d;
+        tlb_resp_xcp_if_int <= tlb_resp_xcp_if_i & do_request_int;
     end
 end
 // old pc is the pc of the last cycle
@@ -127,7 +131,7 @@ always_comb begin
     end
 end
 
-assign resp_icache_fetch_o.valid =  (tlb_resp_xcp_if_i & do_request_int) || icache_resp_valid_i;
+assign resp_icache_fetch_o.valid =  (tlb_resp_xcp_if_int) || icache_resp_valid_i;
 assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i;
 assign req_fetch_ready_o = icache_req_ready_i;
 

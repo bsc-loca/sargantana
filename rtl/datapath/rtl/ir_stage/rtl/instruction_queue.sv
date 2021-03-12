@@ -51,27 +51,19 @@ assign write_enable = instruction_i.valid & (num < INSTRUCTION_QUEUE_NUM_ENTRIES
 assign read_enable = read_head_i & (num > 0) ;
 
 
-`ifndef SRAM_MEMORIES
+instr_entry_t instruction_bufffer[0:INSTRUCTION_QUEUE_NUM_ENTRIES-1];
 
-    // FIFO Memory structure
-
-    instr_entry_t instruction_bufffer[0:INSTRUCTION_QUEUE_NUM_ENTRIES-1];
-
-    always_ff @(posedge clk_i, negedge rstn_i)
-    begin
-        if (~rstn_i) begin
-            stored_instruction_q <= 'h0;
-        end else begin          
-            // Write tail
-            if (write_enable) begin
-                instruction_bufffer[tail] <= instruction_i;
-            end
+always_ff @(posedge clk_i, negedge rstn_i)
+begin
+    if (~rstn_i) begin
+        stored_instruction_q <= 'h0;
+    end else begin          
+        // Write tail
+        if (write_enable) begin
+            instruction_bufffer[tail] <= instruction_i;
         end
     end
-
-`else
-
-`endif
+end
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
