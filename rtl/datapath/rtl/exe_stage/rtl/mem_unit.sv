@@ -494,7 +494,6 @@ always_comb begin
     end else if (instruction_s2_q.instr.valid & !is_STORE_s2_q) begin 
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq = instruction_s2_q;
-        flush_amo           = is_STORE_or_AMO_s2_q;
     end else if (instruction_s2_q.instr.valid & is_STORE_s2_q) begin
         advance_head_lsq    = 1'b1;
         flush_store         = 1'b1;
@@ -644,7 +643,7 @@ assign exception_mem_commit_o      = (exception_to_wb.valid & is_STORE_or_AMO_s2
 ///////////////////////////////////////////////////////////////////////////////
 
 //// Stall committing instruction because it is a store
-assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo);
+assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
 
 //// Kill the dcache interface instruction
 assign req_cpu_dcache_o.kill = kill_i;
