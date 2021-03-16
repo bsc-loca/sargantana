@@ -44,7 +44,7 @@ typedef struct packed {
 
 typedef struct packed {
     logic [31:27] rs3;
-    logic [26:25] func2;
+    logic [26:25] fmt;
     logic [24:20] rs2;
     logic [19:15] rs1;
     logic [14:12] rm;
@@ -54,13 +54,13 @@ typedef struct packed {
 
 typedef struct packed {
     logic [31:27] func5;
-    logic [26:25] func2;
+    logic [26:25] fmt;
     logic [24:20] rs2;
     logic [19:15] rs1;
     logic [14:12] rm;
     logic [11:7]  rd;
     logic [6:0]   opcode;
-} instruction_r4type_t;
+} instruction_fprtype_t;
 
 typedef struct packed {
     logic [31:20] imm;
@@ -428,7 +428,7 @@ typedef enum logic [4:0] {
     F5_FP_FCMP              = 5'b10100,
     F5_FP_FCVT_I2F          = 5'b11010,
     F5_FP_FMV_I2F           = 5'b11110,
-    F5_FP_FCVT_SD           = 5'b01000,
+    F5_FP_FCVT_SD           = 5'b01000
 } op_func7_fp_t;
 
 typedef enum logic [1:0] {
@@ -439,10 +439,10 @@ typedef enum logic [1:0] {
 } op_fmt_fp_t;
 
 typedef enum logic [2:0] {
-    F3_FFF  = 3'b000,
-    F3_FFF  = 3'b001,
-    F3_FLW  = 3'b010,
-    F3_FLD  = 3'b011
+    F3_UNIMP1 = 3'b000,
+    F3_UNIMP2 = 3'b001,
+    F3_FLW    = 3'b010,
+    F3_FLD    = 3'b011
 } op_func3_fp_t;
 
 // Rounding modes FP
@@ -466,11 +466,19 @@ typedef enum logic [1:0] {
 } op_riscv_fmt_t; 
 
 // Rounding modes FP
-typedef enum logic [0:0] {
+/*typedef enum logic [0:0] {
     FMT_S = 1'b0, // 32-bit single-precision
     FMT_D = 1'b1  // 64-bit double-precision
-} op_fmt_fp_drac_t; 
+} op_fmt_fp_drac_t; */
 
+// Status flags
+  typedef struct packed {
+    logic NV; // Invalid
+    logic DZ; // Divide by zero
+    logic OF; // Overflow
+    logic UF; // Underflow
+    logic NX; // Inexact
+  } fp_status_t;
 
 // By RISCV ISA, exceptions are 64 bits
 typedef enum logic[XLEN-1:0] {

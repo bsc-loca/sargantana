@@ -26,9 +26,9 @@ module rename_table_fp(
     input logic                                write_dst_i,         // Needs to write to old destination register
     input phreg_t                              new_dst_i,           // Wich register write to old destination register
 
-    input logic   [drac_pkg::NUM_SCALAR_WB-1:0]ready_i, // New register is ready
-    input reg_t   [drac_pkg::NUM_SCALAR_WB-1:0]vaddr_i, // New register is ready
-    input phreg_t [drac_pkg::NUM_SCALAR_WB-1:0]paddr_i, // New register is ready
+    input logic   [drac_pkg::NUM_FP_WB-1:0]ready_i, // New register is ready
+    input reg_t   [drac_pkg::NUM_FP_WB-1:0]vaddr_i, // New register is ready
+    input phreg_t [drac_pkg::NUM_FP_WB-1:0]paddr_i, // New register is ready
 
     input logic                                recover_commit_i,    // Copy commit table on register table
     input reg_t                                commit_old_dst_i,    // Read and write to old destination register at commit table
@@ -63,10 +63,10 @@ logic write_enable;
 logic read_enable;
 logic checkpoint_enable;
 logic commit_write_enable;
-logic [drac_pkg::NUM_SCALAR_WB-1:0] ready_enable;
-logic [drac_pkg::NUM_SCALAR_WB-1:0] rdy1;
-logic [drac_pkg::NUM_SCALAR_WB-1:0] rdy2;
-logic [drac_pkg::NUM_SCALAR_WB-1:0] rdy3;
+logic [drac_pkg::NUM_FP_WB-1:0] ready_enable;
+logic [drac_pkg::NUM_FP_WB-1:0] rdy1;
+logic [drac_pkg::NUM_FP_WB-1:0] rdy2;
+logic [drac_pkg::NUM_FP_WB-1:0] rdy3;
 
 // User can do checkpoints when there is at least one free copy of the free list
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
@@ -82,7 +82,7 @@ assign read_enable = (~do_recover_i) & (~recover_commit_i);
 
 // User can mark registers as ready if no recover action is being done
 always_comb begin
-    for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+    for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
         ready_enable[i] = ready_i[i] &  (~recover_commit_i); 
     end
 end
@@ -164,7 +164,7 @@ end
 
                 // Second register renaming
                 if (read_enable) begin
-                    for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+                    for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
                         rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
                         rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
                         rdy3[i] = ready_i[i] & (read_src3_i == vaddr_i[i]) & (register_table[read_src3_i][version_head] == paddr_i[i]);
@@ -192,7 +192,7 @@ end
             end
 
             // Write new ready register
-            for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+            for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
                 if (ready_enable[i]) begin
                     for(int j = 0; j<NUM_CHECKPOINTS; j++) begin
                         if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (j == version_head) )) 

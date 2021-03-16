@@ -3,10 +3,10 @@
 // All rights reserved
 // No part of this code can be used/copied/extended/modified or used in any other way for commercial or non-commercial use without prior written agreement with FER
 // Access to this source or any derivation of it should be given only to persons explicitly approved and under NDA/Confidentiality Agreement
-
+//import fpuv_pkg::*;
 package fpuv_wrapper_pkg;
 
-   localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
+  /* localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
       Width:         64,
       EnableVectors: 1'b0, // guillemlp do not do vectors i guess?
       EnableNanBox:  1'b0,
@@ -158,6 +158,6 @@ package fpuv_wrapper_pkg;
       OPVF_NCVT_XU2F       = 'b10010,     // Convert double-width unsigned integer to float.
       OPVF_NCVT_X2F        = 'b10011,     // Convert double-width signed integer to float.
       OPVF_NCVT_F2F        = 'b10100      // Convert double-width float to single-width float.
-   } opcode_unary_e;
+   } opcode_unary_e;*/
 
 endpackage

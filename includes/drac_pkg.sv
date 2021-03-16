@@ -29,7 +29,7 @@ parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
 parameter NUM_SCALAR_WB = 3;
-parameter NUM_SIMD_WB = 2;
+parameter NUM_FP_WB = 1;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -340,9 +340,9 @@ typedef struct packed {
     // FP instructions only
     reg_t rs3;                          // Register Source 3 for fused ops
     logic fmt;                          // FMT mode (0:S, 1:D)
-    logic fmr;                          // FP rounding mode
-    regfile_sel_t regfile_src;           // which refile get the sources
-    regfile_sel_t regfile_dst;           // which regfile to write
+    riscv_pkg::op_frm_fp_t frm;         // FP rounding mode
+    regfile_sel_t regfile_src;          // which refile get the sources
+    regfile_sel_t regfile_dst;          // which regfile to write
 
     logic use_imm;                      // Use Immediate later
     logic use_pc;                       // Use PC later
@@ -354,6 +354,7 @@ typedef struct packed {
     logic regfile_we;                   // Write to register file
     logic vregfile_we;                  // Write to vregister file
     logic use_mask;                     // Use vector mask
+    logic regfile_fp_we;               // Write to register file FPU
     instr_type_t instr_type;            // Type of instruction
     logic signed_op;                    // Signed Operation
     logic [3:0] mem_size;               // Memory operation size (Byte, Word, etc)
@@ -369,7 +370,9 @@ typedef struct packed {
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
-    logic   rdy2;                       // Ready register source 2
+    logic   rdy2;                       // Ready register source 2 
+    phreg_t prs3;                       // Physical register source 2
+    logic   rdy3;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
 
@@ -396,6 +399,7 @@ typedef struct packed {
     bus_simd_t data_vs2;                // Data vector operand 2
     bus_simd_t data_old_vd;             // Data vector old destination
     bus_mask_t data_vm;                 // Data vector mask
+    bus64_t data_rs3;                   // Data operand 3 FP
     // any interrupt
     logic       csr_interrupt;
     // save until the instruction then 
@@ -404,7 +408,9 @@ typedef struct packed {
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
-    logic   rdy2;                       // Ready register source 2    
+    logic   rdy2;                       // Ready register source 2
+    phreg_t prs3;                       // Physical register source 2
+    logic   rdy3;                       // Ready register source 3    
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
 
@@ -490,6 +496,7 @@ typedef struct packed {
     // save until the instruction then 
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
+    
     phvreg_t pvs1;                      // Physical register source 1
     logic   vrdy1;                      // Ready register source 1
     phvreg_t pvs2;                      // Physical register source 2
@@ -507,6 +514,32 @@ typedef struct packed {
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_simd_instr_t;
+
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
+    bus64_t data_rs1;                   // Data operand 1
+    bus64_t data_rs2;                   // Data operand 2
+    bus64_t data_rs3;                   // Data operand 2
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
+    phreg_t prs1;                       // Physical register source 1
+    logic   rdy1;                       // Ready register source 1
+    phreg_t prs2;                       // Physical register source 2
+    logic   rdy2;                       // Ready register source 2
+    phreg_t prs3;                       // Physical register source 3
+    logic   rdy3;                       // Ready register source 3
+    phreg_t prd;                        // Physical register destination 
+    phreg_t old_prd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
 
 typedef struct packed {
     logic valid;                        // Valid instruction
@@ -564,13 +597,40 @@ typedef struct packed {
     gl_index_t gl_index;                // Graduation List entry
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
 
+
 typedef struct packed {
-    logic    valid;                     // Valid instruction
-    bus64_t  data;                      // Result data
-    reg_t    rd;                        // Virtual register destination
-    phreg_t  prd;                       // Physical register destination
-    reg_t    vd;                        // Virtual vregister destination
-    phvreg_t pvd;                       // Physical vregister destination
+    logic valid;                        // Valid instruction
+    addrPC_t pc;                        // PC of the instruction
+    reg_t rs1;                          // Register Source 1
+    instr_type_t instr_type;            // Type of instruction
+    addrPC_t result_pc;                 // PC result
+    reg_t rd;                           // Destination Register
+    bus64_t result;                     // Result or immediate                  
+    logic branch_taken;                 // Branch taken
+    branch_pred_t bpred;                // Branch Prediciton
+    exception_t ex;                     // Exceptions
+    regfile_sel_t regfile_dst;          // which regfile to write
+    logic regfile_we;                   // Write to register file
+    logic change_pc_ena;                // Change PC
+    logic stall_csr_fence;              // CSR or fence
+    reg_csr_addr_t csr_addr;            // CSR Address
+    `ifdef VERILATOR
+    riscv_pkg::instruction_t inst;      // Bits of the instruction
+    bus64_t id;
+    `endif
+    phreg_t prd;                        // Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} exe_wb_fp_instr_t;       //  Execution Stage to FP Write Back
+
+typedef struct packed {
+    logic   valid;                      // Valid instruction
+    bus64_t data;                       // Result data
+    reg_t   rd;                         // Virtual register destination
+    phreg_t prd;                        // Physical register destination
 } wb_exe_instr_t;   // WB Stage to Execution
 
 // Control Unit signals
@@ -613,6 +673,7 @@ typedef struct packed {
     logic recover_commit;                  // Recover at Commit
     logic enable_commit_update;            // Enable update of Free List and Rename from commit
     logic simd_enable_commit_update;       // Enable update of SIMD Free List and Rename from commit
+    logic enable_commit_update_fp;         // Enable update of Free List and Rename from commit
 } cu_ir_t;      // Control Unit to Rename
 
 typedef struct packed {
@@ -620,6 +681,8 @@ typedef struct packed {
     logic [NUM_SIMD_WB-1:0]  vwrite_enable; // Enable write on vregister file
     logic [NUM_SCALAR_WB-1:0] snoop_enable; // Enable snoop to rr and exe stage
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable; // Enable snoop to rr and exe stage
+    logic [NUM_FP_WB-1:0] write_enable_fp; // Enable write on register file FP
+    logic [NUM_FP_WB-1:0] snoop_enable_fp; // Enable snoop to rr and exe stage
     logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -647,6 +710,9 @@ typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
     logic [NUM_SIMD_WB-1:0]  vwrite_enable;  // Write Enable to VRegister File
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable;  // Snoop Enable to rr and exe
+    logic [NUM_FP_WB-1:0] valid_fp;          // Valid Intruction
+    logic [NUM_FP_WB-1:0] write_enable_fp;   // Write Enable to Register File
+    logic [NUM_FP_WB-1:0] snoop_enable_fp; // Enable snoop to rr and exe stage
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
@@ -663,6 +729,8 @@ typedef struct packed {
     logic stall_commit;         // Stop commits
     logic regfile_we;           // Commit update enable
     logic vregfile_we;          // Commit update enable
+    logic write_enable_fp;      // Write Enable to Register File
+    logic regfile_we_fp;        // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
@@ -860,5 +928,34 @@ typedef struct packed {
     // write-back register file read data
     bus64_t         reg_read_data;
 } debug_out_t;
+
+
+
+localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
+      Width:         64,
+      EnableVectors: 1'b0, // guillemlp do not do vectors i guess?
+      EnableNanBox:  1'b0,
+      FpFmtMask:     5'b11000,
+      IntFmtMask:    4'b0011
+   };
+
+localparam fpuv_pkg::fpu_implementation_t EPI_INIT = '{
+    PipeRegs:   '{'{default: 5}, // ADDMUL
+                '{default: 5},   // DIVSQRT
+                '{default: 5},   // NONCOMP
+                '{default: 5}},  // CONV
+    UnitTypes:  '{'{default: fpuv_pkg::MERGED}, // ADDMUL
+                '{default: fpuv_pkg::MERGED},   // DIVSQRT
+                '{default: fpuv_pkg::PARALLEL}, // NONCOMP
+                '{default: fpuv_pkg::MERGED}},  // CONV
+    PipeConfig: fpuv_pkg::DISTRIBUTED
+};
+
+localparam int unsigned DIVSQRT_ITER = 1; //This parameter configure the number of iterations per cycle of the divsqrt unit.
+localparam int unsigned SEW_WIDTH = 3;
+typedef enum logic [SEW_WIDTH - 1 : 0] {
+    BINARY32 = 'b010,
+    BINARY64 = 'b011
+} std_element_width_e;
 
 endpackage

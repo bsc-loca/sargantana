@@ -67,7 +67,7 @@ module fpuv_top #(
   typedef struct packed {
     logic [WIDTH-1:0]   result;
     fpuv_pkg::status_t status;
-    TagType             tag;
+    TagType             tagt;
   } output_t;
 
   // Handshake signals for the blocks
@@ -146,7 +146,7 @@ module fpuv_top #(
       .result_o        ( opgrp_outputs[opgrp].result ),
       .status_o        ( opgrp_outputs[opgrp].status ),
       .extension_bit_o ( opgrp_ext[opgrp]            ),
-      .tag_o           ( opgrp_outputs[opgrp].tag    ),
+      .tag_o           ( opgrp_outputs[opgrp].tagt    ),
       .out_valid_o     ( opgrp_out_valid[opgrp]      ),
       .out_ready_i     ( opgrp_out_ready[opgrp]      ),
       .busy_o          ( opgrp_busy[opgrp]           )
@@ -180,7 +180,7 @@ module fpuv_top #(
   // Unpack output
   assign result_o        = arbiter_output.result;
   assign status_o        = arbiter_output.status;
-  assign tag_o           = arbiter_output.tag;
+  assign tag_o           = arbiter_output.tagt;
 
   assign busy_o = (| opgrp_busy);
 

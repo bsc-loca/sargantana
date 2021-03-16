@@ -51,7 +51,7 @@ module top_drac(
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
     input logic                 io_csr_csr_replay,
-    input [1:0]			csr_priv_lvl_i,
+    input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
 
 //------------------------------------------------------------------------------------

@@ -22,6 +22,7 @@ module decoder(
     input   logic            flush_i,
     input   logic            stall_i,
     input   if_id_stage_t    decode_i,
+    input   [2:0]            frm_i, // FP rounding Mode from CSR
     output  instr_entry_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
 );
@@ -76,6 +77,7 @@ module decoder(
         decode_instr_o.change_pc_ena = 1'b0;
         decode_instr_o.regfile_we    = 1'b0;
         decode_instr_o.vregfile_we   = 1'b0;
+        decode_instr_o.regfile_fp_we = 1'b0;
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
@@ -83,7 +85,7 @@ module decoder(
         // FP special
         decode_instr_o.rs3     = decode_i.inst.r4type.rs3;
         decode_instr_o.fmt     = FMT_S;
-        decode_instr_o.frm     = decode_i.inst.frtype.rm;
+        decode_instr_o.frm     = op_frm_fp_t'(decode_i.inst.fprtype.rm);
         check_frm              = 1'b0;
 
         // By default go to scalar regfile
@@ -329,7 +331,15 @@ module decoder(
                                 LR_D: begin
                                     if (decode_i.inst.rtype.rs2 != 'h0) begin
                                         xcpt_illegal_instruction_int = 1'b1;
-                                    end eeprdona e_instr_o.instr_type = AMO_SWAPD;
+                                    end else begin
+                                        decode_instr_o.instr_type = AMO_LRD;
+                                    end
+                                end
+                                SC_D: begin
+                                    decode_instr_o.instr_type = AMO_SCD;
+                                end
+                                AMOSWAP_D: begin
+                                    decode_instr_o.instr_type = AMO_SWAPD;
                                 end
                                 AMOADD_D: begin
                                     decode_instr_o.instr_type = AMO_ADDD;
@@ -1004,7 +1014,7 @@ module decoder(
                     endcase
                 end
                 OP_LOAD_FP: begin
-                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.regfile_fp_we = 1'b1;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
                     decode_instr_o.regfile_dst = FPU_RF;
@@ -1021,7 +1031,6 @@ module decoder(
                     endcase
                 end
                 OP_STORE_FP: begin
-                    decode_instr_o.regfile_we = 1'b0;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
                     decode_instr_o.regfile_src = FPU_RF;
@@ -1044,7 +1053,7 @@ module decoder(
                 OP_FNMADD: begin
                     // Fused Multiply Add
                     decode_instr_o.unit = UNIT_FPU;
-                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.regfile_fp_we = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
@@ -1080,28 +1089,28 @@ module decoder(
                 end
                 OP_FP: begin
                     decode_instr_o.unit = UNIT_FPU;
-                    decode_instr_o.regfile_we = 1'b1;
+                    decode_instr_o.regfile_fp_we = 1'b1;
                     decode_instr_o.use_imm = 1'b1;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
-                    case (decode_i.inst.rtype.func5)
-                        F7_FP_FADD: begin
+                    case (decode_i.inst.fprtype.func5)
+                        F5_FP_FADD: begin
                             decode_instr_o.instr_type = FADD;
                             check_frm = 1'b1;
                         end
-                        F7_FP_FSUB: begin
+                        F5_FP_FSUB: begin
                             decode_instr_o.instr_type = FSUB;
                             check_frm = 1'b1;
                         end
-                        F7_FP_FMUL: begin
+                        F5_FP_FMUL: begin
                             decode_instr_o.instr_type = FMUL;
                             check_frm = 1'b1;
                         end
-                        F7_FP_FDIV: begin
+                        F5_FP_FDIV: begin
                             decode_instr_o.instr_type = FDIV;
                             check_frm = 1'b1;
                         end
-                        F7_FP_FSQRT: begin
+                        F5_FP_FSQRT: begin
                             decode_instr_o.instr_type = FSQRT;
                             check_frm = 1'b1;
                             // TODO (guillemlp) not sure if the following is required
@@ -1109,14 +1118,14 @@ module decoder(
                                 xcpt_illegal_instruction_int = 1'b1;
                             end*/
                         end
-                        F7_FP_FSGNJ: begin
+                        F5_FP_FSGNJ: begin
                             decode_instr_o.instr_type = FSGNJ;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
-                        F7_FP_FMIN_MAX: begin
+                        F5_FP_FMIN_MAX: begin
                             decode_instr_o.instr_type = FMIN_MAX;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
@@ -1126,12 +1135,18 @@ module decoder(
                         F5_FP_FCVT_F2I: begin // FP to Integer
                             decode_instr_o.instr_type = FCVT_F2I;
                             check_frm = 1'b1;
+                            decode_instr_o.regfile_dst = SCALAR_RF;
+                            decode_instr_o.regfile_we = 1'b1;
+                            decode_instr_o.regfile_fp_we = 1'b0;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
                         F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
+                            decode_instr_o.regfile_dst = SCALAR_RF;
+                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.regfile_we = 1'b1;
                             case (decode_i.inst.fprtype.rm)
                                 3'b000: begin
                                     decode_instr_o.instr_type = FMV_F2X;
@@ -1152,6 +1167,7 @@ module decoder(
                             end
                         end
                         F5_FP_FCVT_I2F: begin
+                            decode_instr_o.regfile_src = SCALAR_RF;
                             decode_instr_o.instr_type = FCVT_I2F;
                             check_frm = 1'b1;
                             // Check through rounding modes if illegal instr
@@ -1161,7 +1177,8 @@ module decoder(
                         end
                         F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
                             decode_instr_o.instr_type = FMV_X2F;
-                            if (decode_i.inst.rtype.rm != 3'b000) begin
+                            decode_instr_o.regfile_src = SCALAR_RF;
+                            if (decode_i.inst.fprtype.rm != 3'b000) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
@@ -1194,7 +1211,7 @@ module decoder(
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                             FRM_DYN: begin // check dynamic one
-                                unique case (decode_i.frm_i) inside // FRM from CSR
+                                unique case (frm_i) inside // FRM from CSR
                                     FRM_INV_1,
                                     FRM_INV_2,
                                     FRM_DYN: begin

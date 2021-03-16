@@ -29,7 +29,7 @@ module divsqrt_top #(
    // Do not change
    localparam int unsigned WIDTH       = 64,
    localparam int unsigned NUM_FORMATS = fpuv_pkg::NUM_FP_FORMATS,
-   localparam int unsigned DIVSQRT_ITER = fpuv_wrapper_pkg::DIVSQRT_ITER
+   localparam int unsigned DIVSQRT_ITER = drac_pkg::DIVSQRT_ITER
 )(
    input  logic                        clk_i,
    input  logic                        rst_ni,

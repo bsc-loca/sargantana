@@ -73,7 +73,7 @@ module fpuv_opgroup_block #(
     logic [Width-1:0]  result;
     fpuv_pkg::status_t status;
     logic              ext_bit;
-    TagType            tag;
+    TagType            tagt;
   } output_t;
 
   // Handshake signals for the slices
@@ -128,7 +128,7 @@ module fpuv_opgroup_block #(
         .result_o        ( fmt_outputs[fmt].result  ),
         .status_o        ( fmt_outputs[fmt].status  ),
         .extension_bit_o ( fmt_outputs[fmt].ext_bit ),
-        .tag_o           ( fmt_outputs[fmt].tag     ),
+        .tag_o           ( fmt_outputs[fmt].tagt     ),
         .out_valid_o     ( fmt_out_valid[fmt]       ),
         .out_ready_i     ( fmt_out_ready[fmt]       ),
         .busy_o          ( fmt_busy[fmt]            )
@@ -146,7 +146,7 @@ module fpuv_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpuv_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpuv_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpuv_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpuv_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].tagt     = TagType'(fpuv_pkg::DONT_CARE);
 
     // Tie off disabled formats
     end else if (!FpFmtMask[fmt] || (FmtUnitTypes[fmt] == fpuv_pkg::DISABLED)) begin : disable_fmt
@@ -157,7 +157,7 @@ module fpuv_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpuv_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpuv_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpuv_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpuv_pkg::DONT_CARE);      
+      assign fmt_outputs[fmt].tagt     = TagType'(fpuv_pkg::DONT_CARE);      
     end
   end
 
@@ -204,7 +204,7 @@ module fpuv_opgroup_block #(
       .result_o        ( fmt_outputs[FMT].result  ),
       .status_o        ( fmt_outputs[FMT].status  ),
       .extension_bit_o ( fmt_outputs[FMT].ext_bit ),
-      .tag_o           ( fmt_outputs[FMT].tag     ),
+      .tag_o           ( fmt_outputs[FMT].tagt     ),
       .out_valid_o     ( fmt_out_valid[FMT]       ),
       .out_ready_i     ( fmt_out_ready[FMT]       ),
       .busy_o          ( fmt_busy[FMT]            )
@@ -240,7 +240,7 @@ module fpuv_opgroup_block #(
   assign result_o        = arbiter_output.result;
   assign status_o        = arbiter_output.status;
   assign extension_bit_o = arbiter_output.ext_bit;
-  assign tag_o           = arbiter_output.tag;
+  assign tag_o           = arbiter_output.tagt;
 
   assign busy_o = (| fmt_busy);
 

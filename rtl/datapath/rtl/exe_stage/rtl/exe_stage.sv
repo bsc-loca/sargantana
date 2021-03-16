@@ -12,6 +12,7 @@
 //`default_nettype none
 import drac_pkg::*;
 import riscv_pkg::*;
+import fpuv_wrapper_pkg::*;
 
 module exe_stage (
     input logic                         clk_i,
@@ -38,6 +39,7 @@ module exe_stage (
     output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
     output exe_wb_simd_instr_t          simd_to_simd_wb_o,
     output exe_wb_simd_instr_t          mem_to_simd_wb_o,
+    output exe_wb_fp_instr_t            fp_to_wb_o,
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
@@ -73,6 +75,9 @@ exe_wb_scalar_instr_t mem_to_scalar_wb;
 exe_wb_scalar_instr_t simd_to_scalar_wb;
 exe_wb_simd_instr_t mem_to_simd_wb;
 exe_wb_simd_instr_t simd_to_simd_wb;
+rr_exe_fpu_instr_t   fp_instr;
+
+exe_wb_fp_instr_t     fp_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
@@ -111,6 +116,8 @@ logic ready_div_unit;
             assert rs1_data_def==0;
         if(from_rr_i.prs2 == 0)
             assert rs2_data_def==0;
+        if(from_rr_i.prs3 == 0)
+            assert rs3_data_def==0; // TODO guillemlp what is this???
     end
 `endif
 
@@ -195,8 +202,25 @@ always_comb begin
         simd_instr.chkp                = from_rr_i.chkp;
         simd_instr.simd_chkp           = from_rr_i.simd_chkp;
         simd_instr.gl_index            = from_rr_i.gl_index;
+        fp_instr.instr               = from_rr_i.instr;
+        fp_instr.data_rs1            = rs1_data_def;
+        fp_instr.data_rs2            = rs2_data_def;
+        fp_instr.data_rs3            = from_rr_i.data_rs3;
+        fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        fp_instr.prs1                = from_rr_i.prs1;
+        fp_instr.rdy1                = from_rr_i.rdy1;
+        fp_instr.prs2                = from_rr_i.prs2;
+        fp_instr.rdy2                = from_rr_i.rdy2;
+        fp_instr.prs3                = from_rr_i.prs3;
+        fp_instr.rdy3                = from_rr_i.rdy3;
+        fp_instr.prd                 = from_rr_i.prd;
+        fp_instr.old_prd             = from_rr_i.old_prd;
+        fp_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        fp_instr.chkp                = from_rr_i.chkp;
+        fp_instr.gl_index            = from_rr_i.gl_index;
     end else begin
-        arith_instr.instr               = 1'b0;
+        arith_instr.instr               = '0;
         arith_instr.data_rs1            = rs1_data_def;
         arith_instr.data_rs2            = rs2_data_def;
         arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
@@ -211,7 +235,7 @@ always_comb begin
         arith_instr.chkp                = from_rr_i.chkp;
         arith_instr.gl_index            = from_rr_i.gl_index;
 
-        mem_instr.instr               = 1'b0;
+        mem_instr.instr               = '0;
         mem_instr.data_rs1            = rs1_data_def;
         mem_instr.data_rs2            = rs2_data_def;
         mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
@@ -248,6 +272,23 @@ always_comb begin
         simd_instr.chkp                = from_rr_i.chkp;
         simd_instr.simd_chkp           = from_rr_i.simd_chkp;
         simd_instr.gl_index            = from_rr_i.gl_index;
+        fp_instr.instr               = '0;
+        fp_instr.data_rs1            = rs1_data_def;
+        fp_instr.data_rs2            = rs2_data_def;
+        fp_instr.data_rs3            = from_rr_i.data_rs3;
+        fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        fp_instr.prs1                = from_rr_i.prs1;
+        fp_instr.rdy1                = from_rr_i.rdy1;
+        fp_instr.prs2                = from_rr_i.prs2;
+        fp_instr.rdy2                = from_rr_i.rdy2;
+        fp_instr.prs3                = from_rr_i.prs3;
+        fp_instr.rdy3                = from_rr_i.rdy3;
+        fp_instr.prd                 = from_rr_i.prd;
+        fp_instr.old_prd             = from_rr_i.old_prd;
+        fp_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        fp_instr.chkp                = from_rr_i.chkp;
+        fp_instr.gl_index            = from_rr_i.gl_index;
     end
 end
 
@@ -303,6 +344,14 @@ mem_unit mem_unit_inst(
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem),
     .pmu_load_after_store_o (pmu_load_after_store_o)
+);
+
+fpu_drac_wrapper fpu_drac_wrapper_inst (
+   .clk_i          (clk_i),
+   .rstn_i         (rstn_i),
+   .kill_i         (kill_i),
+   .instruction_i  (fp_instr),
+   .instruction_o  (fp_to_wb)
 );
 
 always_comb begin
@@ -362,6 +411,13 @@ always_comb begin
     end else begin
         simd_to_scalar_wb_o = 'h0;
         simd_to_simd_wb_o = 'h0;
+    end
+
+    // FP write-back struct
+    if (fp_to_wb.valid) begin
+        fp_to_wb_o  = fp_to_wb;
+    end else begin
+        fp_to_wb_o  = 'h0;
     end
 end
 
