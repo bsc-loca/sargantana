@@ -18,29 +18,30 @@ module div_unit (
     input  logic                 clk_i,          // Clock signal
     input  logic                 rstn_i,         // Negative reset  
     input  logic                 kill_div_i,     // Kill on fly instructions
+    input  logic                 div_unit_sel_i, // Select divider module
     input  rr_exe_arith_instr_t  instruction_i,  // New incoming instruction
     output exe_wb_scalar_instr_t instruction_o   // Output instruction
 );
 
 // Declarations
 bus64_t data_src1, data_src2;
-exe_wb_scalar_instr_t instruction_d[32:0];
-exe_wb_scalar_instr_t instruction_q[32:0];
-logic div_zero_d[32:0];
-logic div_zero_q[32:0];
-logic same_sign_d[32:0];
-logic same_sign_q[32:0];
-logic signed_op_q[32:0];
-logic signed_op_d[32:0];
-logic op_32_d[32:0];
-logic op_32_q[32:0];
+exe_wb_scalar_instr_t instruction_d[1:0];
+exe_wb_scalar_instr_t instruction_q[1:0];
+logic div_zero_d[1:0];
+logic div_zero_q[1:0];
+logic same_sign_d[1:0];
+logic same_sign_q[1:0];
+logic signed_op_q[1:0];
+logic signed_op_d[1:0];
+logic op_32_d[1:0];
+logic op_32_q[1:0];
 
-bus64_t remanent_out[32:0];
-bus64_t dividend_quotient_out[32:0];
-bus64_t divisor_out[32:0];
-bus64_t remanent_q[32:0];
-bus64_t dividend_quotient_q[32:0];
-bus64_t divisor_q[32:0];
+bus64_t remanent_out[1:0];
+bus64_t dividend_quotient_out[1:0];
+bus64_t divisor_out[1:0];
+bus64_t remanent_q[1:0];
+bus64_t dividend_quotient_q[1:0];
+bus64_t divisor_q[1:0];
 bus64_t dividend_d;
 bus64_t divisor_d;
     
@@ -48,11 +49,17 @@ bus64_t dividend_quotient_32;
 bus64_t dividend_quotient_64;
 bus64_t remanent_32;
 bus64_t remanent_64;
-
+/*
 bus64_t quo_32;
 bus64_t quo_64;
 bus64_t rmd_32;
-bus64_t rmd_64;
+bus64_t rmd_64;*/
+bus64_t quo0;
+bus64_t rmd0;
+bus64_t quo1;
+bus64_t rmd1;
+
+logic [5:0] cycles_counter[1:0];
 
 assign data_src1 = instruction_i.data_rs1;
 assign data_src2 = instruction_i.data_rs2;
@@ -62,45 +69,61 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
 
     always_comb begin
-        instruction_d[32].ex.cause  = INSTR_ADDR_MISALIGNED;
-        instruction_d[32].ex.origin = 0;
-        instruction_d[32].ex.valid  = 0;
+        if (instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV)) begin
+            instruction_d[div_unit_sel_i].ex.cause  = INSTR_ADDR_MISALIGNED;
+            instruction_d[div_unit_sel_i].ex.origin = 0;
+            instruction_d[div_unit_sel_i].ex.valid  = 0;
 
-        if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-            instruction_d[32].ex = instruction_i.instr.ex;
+            if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
+                instruction_d[div_unit_sel_i].ex = instruction_i.instr.ex;
+            end
+
+            instruction_d[div_unit_sel_i].valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV);
+            instruction_d[div_unit_sel_i].pc              = instruction_i.instr.pc;
+            instruction_d[div_unit_sel_i].bpred           = instruction_i.instr.bpred;
+            instruction_d[div_unit_sel_i].rs1             = instruction_i.instr.rs1;
+            instruction_d[div_unit_sel_i].rd              = instruction_i.instr.rd;
+            instruction_d[div_unit_sel_i].change_pc_ena   = instruction_i.instr.change_pc_ena;
+            instruction_d[div_unit_sel_i].regfile_we      = instruction_i.instr.regfile_we;
+            instruction_d[div_unit_sel_i].instr_type      = instruction_i.instr.instr_type;
+            instruction_d[div_unit_sel_i].stall_csr_fence = instruction_i.instr.stall_csr_fence;
+            instruction_d[div_unit_sel_i].csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
+            instruction_d[div_unit_sel_i].prd             = instruction_i.prd;
+            instruction_d[div_unit_sel_i].checkpoint_done = instruction_i.checkpoint_done;
+            instruction_d[div_unit_sel_i].chkp            = instruction_i.chkp;
+            instruction_d[div_unit_sel_i].gl_index        = instruction_i.gl_index;
+            instruction_d[div_unit_sel_i].branch_taken    = 1'b0;
+            instruction_d[div_unit_sel_i].result_pc       = data_src1;                 // Store dividend in result_pc
+            `ifdef VERILATOR
+            instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
+            `endif
+
+            instruction_d[~div_unit_sel_i] = instruction_q[~div_unit_sel_i];
+            div_zero_d[~div_unit_sel_i]    = div_zero_q[~div_unit_sel_i];
+            same_sign_d[~div_unit_sel_i]   = same_sign_q[~div_unit_sel_i];
+            op_32_d[~div_unit_sel_i]       = op_32_q[~div_unit_sel_i];
+            signed_op_d[~div_unit_sel_i]   = signed_op_q[~div_unit_sel_i]; 
+            /*
+            for (int i = 31; i >= 0; i--) begin
+                instruction_d[i] = instruction_q[i + 1];
+                div_zero_d[i]    = div_zero_q[i + 1];
+                same_sign_d[i]   = same_sign_q[i + 1];
+                op_32_d[i]       = op_32_q[i + 1];
+                signed_op_d[i]   = signed_op_q[i + 1]; 
+            end*/
+
+            div_zero_d[div_unit_sel_i]     = ~(|data_src2);
+            same_sign_d[div_unit_sel_i]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) :
+            ~(data_src2[63] ^ data_src1[63]);
+        end else begin
+            for (int i = 1; i >= 0; i--) begin
+                instruction_d[i] = instruction_q[i];
+                div_zero_d[i]    = div_zero_q[i];
+                same_sign_d[i]   = same_sign_q[i];
+                op_32_d[i]       = op_32_q[i];
+                signed_op_d[i]   = signed_op_q[i]; 
+            end
         end
-
-        instruction_d[32].valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV);
-        instruction_d[32].pc              = instruction_i.instr.pc;
-        instruction_d[32].bpred           = instruction_i.instr.bpred;
-        instruction_d[32].rs1             = instruction_i.instr.rs1;
-        instruction_d[32].rd              = instruction_i.instr.rd;
-        instruction_d[32].change_pc_ena   = instruction_i.instr.change_pc_ena;
-        instruction_d[32].regfile_we      = instruction_i.instr.regfile_we;
-        instruction_d[32].instr_type      = instruction_i.instr.instr_type;
-        instruction_d[32].stall_csr_fence = instruction_i.instr.stall_csr_fence;
-        instruction_d[32].csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
-        instruction_d[32].prd             = instruction_i.prd;
-        instruction_d[32].checkpoint_done = instruction_i.checkpoint_done;
-        instruction_d[32].chkp            = instruction_i.chkp;
-        instruction_d[32].gl_index        = instruction_i.gl_index;
-        instruction_d[32].branch_taken    = 1'b0;
-        instruction_d[32].result_pc       = data_src1;                 // Store dividend in result_pc
-        `ifdef VERILATOR
-        instruction_d[32].id              = instruction_i.instr.id;
-        `endif
-
-
-        for (int i = 31; i >= 0; i--) begin
-            instruction_d[i] = instruction_q[i + 1];
-            div_zero_d[i]    = div_zero_q[i + 1];
-            same_sign_d[i]   = same_sign_q[i + 1];
-            op_32_d[i]       = op_32_q[i + 1];
-            signed_op_d[i]   = signed_op_q[i + 1]; 
-        end
-
-        div_zero_d[32]     = ~(|data_src2);
-        same_sign_d[32]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) : ~(data_src2[63] ^ data_src1[63]);
     end
 
 
@@ -115,7 +138,7 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
 //----- PIPELINE -----------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-
+    /*
     genvar index;
     generate
     for (index = 32; index >= 1; index= index - 1)
@@ -129,13 +152,30 @@ assign data_src2 = instruction_i.data_rs2;
                 .divisor_o(divisor_out[index])
             );
         end
-    endgenerate
+    endgenerate*/
+    div_4bits div_4bits_int0 (
+        .remanent_i(remanent_q[0]),
+        .dividend_quotient_i(dividend_quotient_q[0]),
+        .divisor_i(divisor_q[0]),
+        .remanent_o(remanent_out[0]),
+        .dividend_quotient_o(dividend_quotient_out[0]),
+        .divisor_o(divisor_out[0])
+    );
+    
+    div_4bits div_4bits_int1 (
+        .remanent_i(remanent_q[1]),
+        .dividend_quotient_i(dividend_quotient_q[1]),
+        .divisor_i(divisor_q[1]),
+        .remanent_o(remanent_out[1]),
+        .dividend_quotient_o(dividend_quotient_out[1]),
+        .divisor_o(divisor_out[1])
+    );
 
 
     // Registers
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (~rstn_i) begin
-            for (int i = 0; i <= 32; i++) begin
+            for (int i = 0; i <= 1; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;
                 same_sign_q[i]          <= 1'b0;
@@ -144,9 +184,10 @@ assign data_src2 = instruction_i.data_rs2;
                 remanent_q[i]           <= 'h0;
                 dividend_quotient_q[i]  <= 'h0;
                 divisor_q[i]            <= 'h0;
+                cycles_counter[i]       <= 6'd0;
             end
         end else if (kill_div_i) begin
-            for (int i = 0; i <= 32; i++) begin
+            for (int i = 0; i <= 1; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;
                 same_sign_q[i]          <= 1'b0;
@@ -155,18 +196,35 @@ assign data_src2 = instruction_i.data_rs2;
                 remanent_q[i]           <= 'h0;
                 dividend_quotient_q[i]  <= 'h0;
                 divisor_q[i]            <= 'h0;
+                cycles_counter[i]       <= 6'd0;
             end       
-        end else begin
-            instruction_q[32]        <= instruction_d[32];
-            div_zero_q[32]           <= div_zero_d[32];
-            same_sign_q[32]          <= same_sign_d[32];
-            op_32_q[32]              <= instruction_i.instr.op_32;
-            signed_op_q[32]          <= instruction_i.instr.signed_op;
+        end else if (instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV)) begin
+            instruction_q[div_unit_sel_i]        <= instruction_d[div_unit_sel_i];
+            div_zero_q[div_unit_sel_i]           <= div_zero_d[div_unit_sel_i];
+            same_sign_q[div_unit_sel_i]          <= same_sign_d[div_unit_sel_i];
+            op_32_q[div_unit_sel_i]              <= instruction_i.instr.op_32;
+            signed_op_q[div_unit_sel_i]          <= instruction_i.instr.signed_op;
 
-            remanent_q[32]           <= 'h0;
-            dividend_quotient_q[32]  <= (instruction_i.instr.op_32) ? {dividend_d[31:0],32'b0} : dividend_d;
-            divisor_q[32]            <= (instruction_i.instr.op_32) ? {32'b0, divisor_d[31:0]} : divisor_d;
+            remanent_q[div_unit_sel_i]           <= 'h0;
+            dividend_quotient_q[div_unit_sel_i]  <= (instruction_i.instr.op_32) ? {dividend_d[31:0],32'b0} : dividend_d;
+            divisor_q[div_unit_sel_i]            <= (instruction_i.instr.op_32) ? {32'b0, divisor_d[31:0]} : divisor_d;
+            
+            cycles_counter[div_unit_sel_i]        <= (instruction_i.instr.op_32) ? 6'd17 : 6'd33;
+            
+            instruction_q[~div_unit_sel_i]        <= instruction_d[~div_unit_sel_i];
+            div_zero_q[~div_unit_sel_i]           <= div_zero_d[~div_unit_sel_i];
+            same_sign_q[~div_unit_sel_i]          <= same_sign_d[~div_unit_sel_i];
+            op_32_q[~div_unit_sel_i]              <= op_32_d[~div_unit_sel_i];
+            signed_op_q[~div_unit_sel_i]          <= signed_op_d[~div_unit_sel_i]; 
 
+            remanent_q[~div_unit_sel_i]           <= remanent_out[~div_unit_sel_i];
+            dividend_quotient_q[~div_unit_sel_i]  <= dividend_quotient_out[~div_unit_sel_i];
+            divisor_q[~div_unit_sel_i]            <= divisor_out[~div_unit_sel_i];
+            
+            if (cycles_counter[~div_unit_sel_i] != 6'd0) begin
+                cycles_counter[~div_unit_sel_i]   <= cycles_counter[~div_unit_sel_i] - 6'd1;
+            end
+            /*
             for (int i = 31; i >= 0; i--) begin
                 instruction_q[i]        <= instruction_d[i];
                 div_zero_q[i]           <= div_zero_d[i];
@@ -177,6 +235,22 @@ assign data_src2 = instruction_i.data_rs2;
                 remanent_q[i]           <= remanent_out[i + 1];
                 dividend_quotient_q[i]  <= dividend_quotient_out[i + 1];
                 divisor_q[i]            <= divisor_out[i + 1];
+            end*/
+        end else begin
+            for (int i = 1; i >= 0; i--) begin
+                instruction_q[i]        <= instruction_d[i];
+                div_zero_q[i]           <= div_zero_d[i];
+                same_sign_q[i]          <= same_sign_d[i];
+                op_32_q[i]              <= op_32_d[i];
+                signed_op_q[i]          <= signed_op_d[i]; 
+
+                remanent_q[i]           <= remanent_out[i];
+                dividend_quotient_q[i]  <= dividend_quotient_out[i];
+                divisor_q[i]            <= divisor_out[i];
+                
+                if (cycles_counter[i] != 6'd0) begin
+                    cycles_counter[i]   <= cycles_counter[i] - 6'd1;
+                end
             end
         end
     end
@@ -186,20 +260,33 @@ assign data_src2 = instruction_i.data_rs2;
 //----- OUTPUT INSTRUCTION -------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
+        /*assign quo_32 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
+                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
 
-    assign quo_32 = (div_zero_q[16]) ? 64'hFFFFFFFFFFFFFFFF :
-                    (signed_op_q[16] ? (same_sign_q[16] ? dividend_quotient_q[16] : ~dividend_quotient_q[16] + 64'b1) : dividend_quotient_q[16]);
+        assign quo_64 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
+                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
 
-    assign quo_64 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
-                    (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
+        assign rmd_32 = (div_zero_q[16]) ? instruction_q[16].result_pc : (signed_op_q[16] ?
+                    (((instruction_q[16].result_pc[63] &  !op_32_q[16]) | (instruction_q[16].result_pc[31] & op_32_q[16])) ?
+                    ~remanent_q[16] + 64'b1 : remanent_q[16]) : remanent_q[16]);
 
-    assign rmd_32 = (div_zero_q[16]) ? instruction_q[16].result_pc : (signed_op_q[16] ?
-                (((instruction_q[16].result_pc[63] &  !op_32_q[16]) | (instruction_q[16].result_pc[31] & op_32_q[16])) ?
-                ~remanent_q[16] + 64'b1 : remanent_q[16]) : remanent_q[16]);
-
-    assign rmd_64 = (div_zero_q[0]) ? instruction_q[0].result_pc : (signed_op_q[0] ?
-                (((instruction_q[0].result_pc[63] &  !op_32_q[0]) | (instruction_q[0].result_pc[31] & op_32_q[0])) ?
-                ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);
+        assign rmd_64 = (div_zero_q[0]) ? instruction_q[0].result_pc : (signed_op_q[0] ?
+                    (((instruction_q[0].result_pc[63] &  !op_32_q[0]) | (instruction_q[0].result_pc[31] & op_32_q[0])) ?
+                    ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);*/
+                    
+        assign quo0 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
+                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
+                        
+        assign quo1 = (div_zero_q[1]) ? 64'hFFFFFFFFFFFFFFFF :
+                        (signed_op_q[1] ? (same_sign_q[1] ? dividend_quotient_q[1] : ~dividend_quotient_q[1] + 64'b1) : dividend_quotient_q[1]);
+                    
+        assign rmd0 = (div_zero_q[0]) ? instruction_q[0].result_pc : (signed_op_q[0] ?
+                    (((instruction_q[0].result_pc[63] &  !op_32_q[0]) | (instruction_q[0].result_pc[31] & op_32_q[0])) ?
+                    ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);
+                
+        assign rmd1 = (div_zero_q[1]) ? instruction_q[1].result_pc : (signed_op_q[1] ?
+                    (((instruction_q[1].result_pc[63] &  !op_32_q[1]) | (instruction_q[1].result_pc[31] & op_32_q[1])) ?
+                    ~remanent_q[1] + 64'b1 : remanent_q[1]) : remanent_q[1]);
 
     always_comb begin
         instruction_o.valid           = 'h0;
@@ -223,37 +310,8 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.result_pc       = 'h0;
         instruction_o.ex              = 'h0;
         instruction_o.result          = 'h0;
-        if (instruction_q[16].valid & op_32_q[16]) begin
-            instruction_o.valid           = instruction_q[16].valid;
-            instruction_o.pc              = instruction_q[16].pc;
-            instruction_o.bpred           = instruction_q[16].bpred;
-            instruction_o.rs1             = instruction_q[16].rs1;
-            instruction_o.rd              = instruction_q[16].rd;
-            instruction_o.change_pc_ena   = instruction_q[16].change_pc_ena;
-            instruction_o.regfile_we      = instruction_q[16].regfile_we;
-            instruction_o.instr_type      = instruction_q[16].instr_type;
-            instruction_o.stall_csr_fence = instruction_q[16].stall_csr_fence;
-            instruction_o.csr_addr        = instruction_q[16].csr_addr;
-            instruction_o.prd             = instruction_q[16].prd;
-            instruction_o.checkpoint_done = instruction_q[16].checkpoint_done;
-            instruction_o.chkp            = instruction_q[16].chkp;
-            instruction_o.gl_index        = instruction_q[16].gl_index;
-            `ifdef VERILATOR
-            instruction_o.id              = instruction_q[16].id;
-            `endif
-            instruction_o.branch_taken    = 1'b0;
-            instruction_o.result_pc       = 0;
-            instruction_o.ex              = instruction_q[16].ex;
-            case(instruction_q[16].instr_type)
-                DIV,DIVU,DIVW,DIVUW: begin
-                    instruction_o.result = {{32{quo_32[31]}},quo_32[31:0]};
-                end
-                REM,REMU,REMW,REMUW: begin
-                    instruction_o.result = {{32{rmd_32[31]}},rmd_32[31:0]};
-                end
-            endcase
-        end 
-        else if (instruction_q[0].valid & (~op_32_q[0]) ) begin
+        if (cycles_counter[0] == 6'd1) begin
+        //if (instruction_q[16].valid & op_32_q[16]) begin
             instruction_o.valid           = instruction_q[0].valid;
             instruction_o.pc              = instruction_q[0].pc;
             instruction_o.bpred           = instruction_q[0].bpred;
@@ -276,10 +334,57 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.ex              = instruction_q[0].ex;
             case(instruction_q[0].instr_type)
                 DIV,DIVU,DIVW,DIVUW: begin
-                    instruction_o.result = quo_64;
+                    if (op_32_q[0]) begin
+                        instruction_o.result = {{32{quo0[31]}},quo0[31:0]};
+                    end else begin
+                        instruction_o.result = quo0;
+                    end
                 end
                 REM,REMU,REMW,REMUW: begin
-                    instruction_o.result = rmd_64;
+                    if (op_32_q[0]) begin
+                        instruction_o.result = {{32{rmd0[31]}},rmd0[31:0]};
+                    end else begin
+                        instruction_o.result = rmd0;
+                    end
+                end
+            endcase
+        end 
+        else if (cycles_counter[1] == 6'd1) begin
+        //else if (instruction_q[0].valid & (~op_32_q[0]) ) begin
+            instruction_o.valid           = instruction_q[1].valid;
+            instruction_o.pc              = instruction_q[1].pc;
+            instruction_o.bpred           = instruction_q[1].bpred;
+            instruction_o.rs1             = instruction_q[1].rs1;
+            instruction_o.rd              = instruction_q[1].rd;
+            instruction_o.change_pc_ena   = instruction_q[1].change_pc_ena;
+            instruction_o.regfile_we      = instruction_q[1].regfile_we;
+            instruction_o.instr_type      = instruction_q[1].instr_type;
+            instruction_o.stall_csr_fence = instruction_q[1].stall_csr_fence;
+            instruction_o.csr_addr        = instruction_q[1].csr_addr;
+            instruction_o.prd             = instruction_q[1].prd;
+            instruction_o.checkpoint_done = instruction_q[1].checkpoint_done;
+            instruction_o.chkp            = instruction_q[1].chkp;
+            instruction_o.gl_index        = instruction_q[1].gl_index;
+            `ifdef VERILATOR
+            instruction_o.id              = instruction_q[1].id;
+            `endif
+            instruction_o.branch_taken    = 1'b0;
+            instruction_o.result_pc       = 0;
+            instruction_o.ex              = instruction_q[1].ex;
+            case(instruction_q[1].instr_type)
+                DIV,DIVU,DIVW,DIVUW: begin
+                    if (op_32_q[1]) begin
+                        instruction_o.result = {{32{quo1[31]}},quo1[31:0]};
+                    end else begin
+                        instruction_o.result = quo1;
+                    end
+                end
+                REM,REMU,REMW,REMUW: begin
+                    if (op_32_q[1]) begin
+                        instruction_o.result = {{32{rmd1[31]}},rmd1[31:0]};
+                    end else begin
+                        instruction_o.result = rmd1;
+                    end
                 end
             endcase
         end else begin
