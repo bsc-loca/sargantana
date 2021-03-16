@@ -59,11 +59,13 @@ module score_board (
             mul[1] <= 1'b0;
             for(int i = 0; i >= 0; i--) begin
                 mul[i] <= mul[i + 1];
-                ocup_div_unit[i] <= ocup_div_unit[i] >> 1;
             end
             div[32] <= 1'b0;   
             for (int i = 31; i >= 0; i--) begin
                 div[i] <= div[i + 1];
+            end
+            for(int i = 1; i >= 0; i--) begin
+                ocup_div_unit[i] <= ocup_div_unit[i] >> 1;
             end
             if (set_mul_32_i) begin
                 mul[0]  <= 1'b1;
