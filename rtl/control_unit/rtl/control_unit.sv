@@ -29,7 +29,8 @@ module control_unit(
     input wb_cu_t           wb_cu_i,
     input commit_cu_t       commit_cu_i,
     input resp_csr_cpu_t    csr_cu_i,
-    input logic             correct_branch_pred_i,
+    input logic             correct_branch_pred_wb_i,
+    input logic             correct_branch_pred_exe_i,
     input logic             debug_halt_i,
     input logic             debug_change_pc_i,
     input logic             debug_wr_valid_i,
@@ -67,7 +68,7 @@ module control_unit(
     logic csr_enable_d, csr_enable_q;
     // jump enable logic
     always_comb begin
-        jump_enable_int =   (exe_cu_i.valid_1 && ~correct_branch_pred_i) ||   // branch at exe
+        jump_enable_int =   (wb_cu_i.valid[0] && ~correct_branch_pred_wb_i) ||   // branch at exe
                             (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || // invalid prediction
                             id_cu_i.valid_jal; // valid jal
     end
@@ -102,6 +103,23 @@ module control_unit(
                     cu_rr_o.write_enable[i] = 1'b1;
                 end else begin
                     cu_rr_o.write_enable[i] = 1'b0;
+                end
+            end
+        end
+        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+            if (i == 0) begin
+                // we don't allow regular reads/writes if not halted
+                if ( wb_cu_i.valid[i] && wb_cu_i.snoop_enable[i])
+                begin
+                    cu_rr_o.snoop_enable[i] = 1'b1;
+                end else begin
+                    cu_rr_o.snoop_enable[i] = 1'b0;
+                end
+            end else begin
+                if (wb_cu_i.valid[i] && wb_cu_i.snoop_enable[i]) begin
+                    cu_rr_o.snoop_enable[i] = 1'b1;
+                end else begin
+                    cu_rr_o.snoop_enable[i] = 1'b0;
                 end
             end
         end
@@ -140,7 +158,7 @@ module control_unit(
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (csr_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR_RW;
-        end else if (exe_cu_i.valid_1 && ~correct_branch_pred_i) begin
+        end else if (wb_cu_i.valid[0] && ~correct_branch_pred_wb_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
         end else if (debug_change_pc_i && debug_halt_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DEBUG;
@@ -166,11 +184,11 @@ module control_unit(
                                    ir_cu_i.valid &  ~(ir_cu_i.out_of_checkpoints) &
                                    ~(pipeline_flush_o.flush_ir) & ~(pipeline_ctrl_o.stall_ir);
 
-    assign cu_ir_o.do_recover = (~correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
+    assign cu_ir_o.do_recover = (~correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 
-    assign cu_ir_o.recover_checkpoint = exe_cu_i.chkp;
+    assign cu_ir_o.recover_checkpoint = wb_cu_i.chkp;
 
-    assign cu_ir_o.delete_checkpoint = (correct_branch_pred_i & exe_cu_i.checkpoint_done & exe_cu_i.valid_1);
+    assign cu_ir_o.delete_checkpoint = (correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 
     // Logic To Flush the frontend
     always_comb begin
@@ -183,7 +201,7 @@ module control_unit(
         end else if (csr_enable_q) begin
             pipeline_flush_o.flush_if       = 1'b1;
             pipeline_flush_o.flush_id       = 1'b1;
-        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
+        end else if (wb_cu_i.valid[0] & ~correct_branch_pred_wb_i) begin
                 pipeline_flush_o.flush_if  = 1'b1;
                 pipeline_flush_o.flush_id  = 1'b1;
         end else if ((id_cu_i.stall_csr_fence | 
@@ -214,7 +232,12 @@ module control_unit(
             pipeline_flush_o.flush_rr      = 1'b1;
             pipeline_flush_o.flush_exe     = 1'b1;
             flush_csr_fence                = 1'b1;
-        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_i) begin
+        end else if (wb_cu_i.valid[0] & ~correct_branch_pred_wb_i) begin
+            pipeline_flush_o.flush_ir  = 1'b1;
+            pipeline_flush_o.flush_rr  = 1'b1;
+            pipeline_flush_o.flush_exe = 1'b0;
+            flush_csr_fence            = 1'b1;
+        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_exe_i) begin
             if (exe_cu_i.stall) begin
                 pipeline_flush_o.flush_ir  = 1'b1;
                 pipeline_flush_o.flush_rr  = 1'b0;
@@ -312,9 +335,9 @@ module control_unit(
 
     // Logic to flush gl
     always_comb begin
-        if (~correct_branch_pred_i & exe_cu_i.valid_1) begin
+        if (~correct_branch_pred_wb_i & wb_cu_i.valid[0]) begin
             cu_wb_o.flush_gl = 1'b1;
-            cu_wb_o.flush_gl_index = exe_cu_i.gl_index;
+            cu_wb_o.flush_gl_index = wb_cu_i.gl_index;
         end else begin
             cu_wb_o.flush_gl = 1'b0;
             cu_wb_o.flush_gl_index = 'b0;

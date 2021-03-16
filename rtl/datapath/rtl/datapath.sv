@@ -172,6 +172,10 @@ module datapath(
     gl_index_t index_gl_commit;
     gl_index_t index_gl_commit_old_q;
 
+    //Br at WB
+    addrPC_t branch_addr_result_wb;
+    logic correct_branch_pred_wb;
+
     // CSR signals
     logic   csr_ena_int;
 
@@ -233,7 +237,8 @@ module datapath(
         .cu_if_o(cu_if_int),
         .invalidate_icache_o(invalidate_icache_int),
         .invalidate_buffer_o(invalidate_buffer_int),
-        .correct_branch_pred_i(correct_branch_pred),
+        .correct_branch_pred_exe_i(correct_branch_pred),
+        .correct_branch_pred_wb_i(correct_branch_pred_wb),
         .debug_halt_i(debug_i.halt_valid),
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
@@ -249,7 +254,7 @@ module datapath(
         if (control_int.sel_addr_if == SEL_JUMP_DEBUG) begin
             pc_jump_if_int = debug_i.change_pc_addr;
         end else if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
-            pc_jump_if_int = exe_if_branch_pred_int.branch_addr_result_exe;
+            pc_jump_if_int = branch_addr_result_wb;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = pc_evec_q;
             retry_fetch = 1'b1;
@@ -501,8 +506,8 @@ module datapath(
 
     always_comb begin
         for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            snoop_rr_rs1[i] = cu_rr_int.write_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1!= 0);
-            snoop_rr_rs2[i] = cu_rr_int.write_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2!= 0);
+            snoop_rr_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1!= 0);
+            snoop_rr_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2!= 0);
         end
         snoop_rr_rdy1 = |snoop_rr_rs1;
         snoop_rr_rdy2 = |snoop_rr_rs2;
@@ -590,8 +595,8 @@ module datapath(
         snoop_exe_data_rs2 = 64'b0;
 
         for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            snoop_exe_rs1[i] = cu_rr_int.write_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
-            snoop_exe_rs2[i] = cu_rr_int.write_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0);
+            snoop_exe_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
+            snoop_exe_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0);
             snoop_exe_data_rs1 |= snoop_exe_rs1[i] ? data_wb_to_exe[i] : 64'b0;
             snoop_exe_data_rs2 |= snoop_exe_rs2[i] ? data_wb_to_exe[i] : 64'b0;
         end
@@ -662,6 +667,18 @@ module datapath(
         .output_o(wb_scalar)
     );
 
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(!rstn_i) begin
+            branch_addr_result_wb <=  40'h0040000000;
+            correct_branch_pred_wb <=  1'b1;
+        end else if(!control_int.stall_exe) begin
+            branch_addr_result_wb <=  exe_if_branch_pred_int.branch_addr_result_exe;
+            correct_branch_pred_wb <=  correct_branch_pred;
+        end else begin 
+            branch_addr_result_wb <= branch_addr_result_wb;
+            correct_branch_pred_wb <= correct_branch_pred_wb;
+        end
+    end 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// WRITE BACK STAGE                                                                             /////////
@@ -682,25 +699,28 @@ module datapath(
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
                 if (debug_i.reg_write_valid && debug_i.halt_valid) begin
-                    data_wb_to_exe[i]          = debug_i.reg_write_data;
-                    write_paddr_exe[i]            = debug_i.reg_read_write_addr;
                     wb_cu_int.write_enable[i] = cu_rr_int.write_enable_dbg; //TODO: Check if this creates comb loops in cu
                 end else begin
-                    data_wb_to_exe[i] = wb_scalar[i].result;
-                    write_paddr_exe[i] = wb_scalar[i].prd;
                     wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
                 end
+                data_wb_to_exe[i] = wb_scalar[i].result;
+                write_paddr_exe[i] = wb_scalar[i].prd;
                 write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.rd :
                                   wb_scalar[i].rd;
+                wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
             end else begin
                 data_wb_to_exe[i] = wb_scalar[i].result;
                 write_paddr_exe[i]   = wb_scalar[i].prd;
                 write_vaddr[i]   = wb_scalar[i].rd;
                 wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
+                wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
             end
             wb_cu_int.valid[i]        = wb_scalar[i].valid;
         end
         wb_cu_int.change_pc_ena = wb_scalar[0].change_pc_ena;
+        wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;
+        wb_cu_int.chkp = wb_scalar[0].chkp;
+        wb_cu_int.gl_index = wb_scalar[0].gl_index;
     end
 
     // WB data to RR
@@ -709,7 +729,8 @@ module datapath(
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
                 if (debug_i.reg_write_valid && debug_i.halt_valid) begin
-                    data_wb_to_rr[i] = data_wb_to_exe[i];
+                    data_wb_to_rr[i] = debug_i.reg_write_data;
+                    write_paddr_rr[i] = debug_i.reg_read_write_addr;
                 end else begin
                     data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : data_wb_to_exe[i];
                     write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.prd : write_paddr_exe[i];

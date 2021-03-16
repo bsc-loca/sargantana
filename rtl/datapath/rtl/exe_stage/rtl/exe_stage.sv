@@ -159,8 +159,35 @@ always_comb begin
         mem_instr.chkp                = from_rr_i.chkp;
         mem_instr.gl_index            = from_rr_i.gl_index;
     end else begin
-        arith_instr = 'h0;
-        mem_instr   = 'h0;
+        arith_instr.instr               = 1'b0;
+        arith_instr.data_rs1            = rs1_data_def;
+        arith_instr.data_rs2            = rs2_data_def;
+        arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        arith_instr.prs1                = from_rr_i.prs1;
+        arith_instr.rdy1                = from_rr_i.rdy1;
+        arith_instr.prs2                = from_rr_i.prs2;
+        arith_instr.rdy2                = from_rr_i.rdy2;
+        arith_instr.prd                 = from_rr_i.prd;
+        arith_instr.old_prd             = from_rr_i.old_prd;
+        arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        arith_instr.chkp                = from_rr_i.chkp;
+        arith_instr.gl_index            = from_rr_i.gl_index;
+
+        mem_instr.instr               = 1'b0;
+        mem_instr.data_rs1            = rs1_data_def;
+        mem_instr.data_rs2            = rs2_data_def;
+        mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        mem_instr.prs1                = from_rr_i.prs1;
+        mem_instr.rdy1                = from_rr_i.rdy1;
+        mem_instr.prs2                = from_rr_i.prs2;
+        mem_instr.rdy2                = from_rr_i.rdy2;
+        mem_instr.prd                 = from_rr_i.prd;
+        mem_instr.old_prd             = from_rr_i.old_prd;
+        mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        mem_instr.chkp                = from_rr_i.chkp;
+        mem_instr.gl_index            = from_rr_i.gl_index;
     end
 end
 
@@ -336,10 +363,6 @@ assign exe_cu_o.valid_2 = mem_to_wb_o.valid;
 assign exe_cu_o.change_pc_ena_1 = arith_to_wb_o.change_pc_ena;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_wb_o.branch_taken;
-assign exe_cu_o.checkpoint_done = arith_to_wb_o.checkpoint_done;
-assign exe_cu_o.chkp = arith_to_wb_o.chkp;
-assign exe_cu_o.gl_index = arith_to_wb_o.gl_index;
-
 assign exe_cu_o.stall = stall_int;
 
 

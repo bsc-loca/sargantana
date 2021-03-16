@@ -129,7 +129,7 @@ assign data_src2 = instruction_i.data_rs2;
 assign flush_to_lsq = kill_i | flush_i;
 
 // Input instruction to LSQreplay_data_i
-assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM) ? instruction_i.instr : 'h0 ;
+assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM && instruction_i.instr.valid) ? instruction_i.instr : 'h0 ;
 assign instruction_to_lsq.data_rs1      = instruction_i.data_rs1;
 assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
 assign instruction_to_lsq.prd           = instruction_i.prd;

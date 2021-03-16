@@ -448,6 +448,7 @@ typedef struct packed {
 
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] write_enable; // Enable write on register file
+    logic [NUM_SCALAR_WB-1:0] snoop_enable; // Enable snoop to rr and exe stage
     logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -459,16 +460,17 @@ typedef struct packed {
     logic is_branch;              // There is a branch in the ALU
     logic branch_taken;           // Branch taken
     logic stall;                  // Execution unit stalled
-    logic checkpoint_done;        // It has a checkpoint
-    checkpoint_ptr  chkp;         // Label of the checkpoint
-    gl_index_t gl_index;          // Graduation List entry of ALU
 } exe_cu_t;
 
 // Control Unit signals
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] valid;         // Valid Intruction
     logic change_pc_ena;                     // Enable PC write
+    logic checkpoint_done;        // It has a checkpoint
+    checkpoint_ptr  chkp;         // Label of the checkpoint
+    gl_index_t gl_index;          // Graduation List entry of ALU
     logic [NUM_SCALAR_WB-1:0] write_enable;  // Write Enable to Register File
+    logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
