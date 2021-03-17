@@ -65,7 +65,7 @@ reg valid_bit [0:NUM_ENTRIES-1];
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES) & ~(flush_i) & (~flush_commit_i); 
+assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES-1) & ~(flush_i) & (~flush_commit_i); 
 
 // User can read the head of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
@@ -156,6 +156,6 @@ end
 
 assign assigned_gl_entry_o = tail;
 assign empty_o = (num == 0);
-assign full_o  = (int'(num) == NUM_ENTRIES);
+assign full_o  = (int'(num) == NUM_ENTRIES-1);
 
 endmodule
