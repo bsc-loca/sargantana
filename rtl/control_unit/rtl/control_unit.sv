@@ -291,27 +291,33 @@ module control_unit(
     
     // Logic to stall the Back End
     always_comb begin
+        pipeline_ctrl_o.stall_iq  = 1'b0;
         pipeline_ctrl_o.stall_ir  = 1'b0;
         pipeline_ctrl_o.stall_rr  = 1'b0;
         pipeline_ctrl_o.stall_exe = 1'b0;
         if (csr_cu_i.csr_stall) begin
+            pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b1;
         end else if (exe_cu_i.stall) begin
+            pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
         end else if (rr_cu_i.gl_full) begin
+            pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
         end else if (ir_cu_i.empty_free_list) begin
             pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
         end else if (ir_cu_i.out_of_checkpoints) begin
-            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_iq  = 1'b1;
+            pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
         end 

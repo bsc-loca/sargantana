@@ -383,7 +383,7 @@ module datapath(
         .rstn_i         (rstn_i),  
         .flush_i        (flush_int.flush_ir),  
         .instruction_i  (selection_id_ir), 
-        .read_head_i    (~control_int.stall_ir),
+        .read_head_i    (~control_int.stall_iq),
         .instruction_o  (stage_ir_rr_d.instr),
         .full_o         (ir_cu_int.full_iq),
         .empty_o        ()

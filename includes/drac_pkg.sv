@@ -505,6 +505,7 @@ typedef struct packed {
     logic stall_if_1;       // Stop Fetch 1
     logic stall_if_2;       // Stop Fetch 2
     logic stall_id;         // Stop Decode
+    logic stall_iq;         // Stop Instruction Queue
     logic stall_ir;         // Stop Rename
     logic stall_rr;         // Stop Read Register
     logic stall_exe;        // Stop Exe
