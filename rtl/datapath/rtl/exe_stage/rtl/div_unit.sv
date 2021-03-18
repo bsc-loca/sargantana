@@ -49,11 +49,7 @@ bus64_t dividend_quotient_32;
 bus64_t dividend_quotient_64;
 bus64_t remanent_32;
 bus64_t remanent_64;
-/*
-bus64_t quo_32;
-bus64_t quo_64;
-bus64_t rmd_32;
-bus64_t rmd_64;*/
+
 bus64_t quo0;
 bus64_t rmd0;
 bus64_t quo1;
@@ -103,14 +99,6 @@ assign data_src2 = instruction_i.data_rs2;
             same_sign_d[~div_unit_sel_i]   = same_sign_q[~div_unit_sel_i];
             op_32_d[~div_unit_sel_i]       = op_32_q[~div_unit_sel_i];
             signed_op_d[~div_unit_sel_i]   = signed_op_q[~div_unit_sel_i]; 
-            /*
-            for (int i = 31; i >= 0; i--) begin
-                instruction_d[i] = instruction_q[i + 1];
-                div_zero_d[i]    = div_zero_q[i + 1];
-                same_sign_d[i]   = same_sign_q[i + 1];
-                op_32_d[i]       = op_32_q[i + 1];
-                signed_op_d[i]   = signed_op_q[i + 1]; 
-            end*/
 
             div_zero_d[div_unit_sel_i]     = ~(|data_src2);
             same_sign_d[div_unit_sel_i]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) :
@@ -138,21 +126,7 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
 //----- PIPELINE -----------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-    /*
-    genvar index;
-    generate
-    for (index = 32; index >= 1; index= index - 1)
-        begin: gen_code_label
-            div_4bits div_4bits_ints (
-                .remanent_i(remanent_q[index]),
-                .dividend_quotient_i(dividend_quotient_q[index]),
-                .divisor_i(divisor_q[index]),
-                .remanent_o(remanent_out[index]),
-                .dividend_quotient_o(dividend_quotient_out[index]),
-                .divisor_o(divisor_out[index])
-            );
-        end
-    endgenerate*/
+
     div_4bits div_4bits_int0 (
         .remanent_i(remanent_q[0]),
         .dividend_quotient_i(dividend_quotient_q[0]),
@@ -224,18 +198,6 @@ assign data_src2 = instruction_i.data_rs2;
             if (cycles_counter[~div_unit_sel_i] != 6'd0) begin
                 cycles_counter[~div_unit_sel_i]   <= cycles_counter[~div_unit_sel_i] - 6'd1;
             end
-            /*
-            for (int i = 31; i >= 0; i--) begin
-                instruction_q[i]        <= instruction_d[i];
-                div_zero_q[i]           <= div_zero_d[i];
-                same_sign_q[i]          <= same_sign_d[i];
-                op_32_q[i]              <= op_32_d[i];
-                signed_op_q[i]          <= signed_op_d[i]; 
-
-                remanent_q[i]           <= remanent_out[i + 1];
-                dividend_quotient_q[i]  <= dividend_quotient_out[i + 1];
-                divisor_q[i]            <= divisor_out[i + 1];
-            end*/
         end else begin
             for (int i = 1; i >= 0; i--) begin
                 instruction_q[i]        <= instruction_d[i];
@@ -259,20 +221,6 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
 //----- OUTPUT INSTRUCTION -------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-
-        /*assign quo_32 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
-                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
-
-        assign quo_64 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
-                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
-
-        assign rmd_32 = (div_zero_q[16]) ? instruction_q[16].result_pc : (signed_op_q[16] ?
-                    (((instruction_q[16].result_pc[63] &  !op_32_q[16]) | (instruction_q[16].result_pc[31] & op_32_q[16])) ?
-                    ~remanent_q[16] + 64'b1 : remanent_q[16]) : remanent_q[16]);
-
-        assign rmd_64 = (div_zero_q[0]) ? instruction_q[0].result_pc : (signed_op_q[0] ?
-                    (((instruction_q[0].result_pc[63] &  !op_32_q[0]) | (instruction_q[0].result_pc[31] & op_32_q[0])) ?
-                    ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);*/
                     
         assign quo0 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
                         (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
@@ -311,7 +259,6 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.ex              = 'h0;
         instruction_o.result          = 'h0;
         if (cycles_counter[0] == 6'd1) begin
-        //if (instruction_q[16].valid & op_32_q[16]) begin
             instruction_o.valid           = instruction_q[0].valid;
             instruction_o.pc              = instruction_q[0].pc;
             instruction_o.bpred           = instruction_q[0].bpred;
@@ -350,7 +297,6 @@ assign data_src2 = instruction_i.data_rs2;
             endcase
         end 
         else if (cycles_counter[1] == 6'd1) begin
-        //else if (instruction_q[0].valid & (~op_32_q[0]) ) begin
             instruction_o.valid           = instruction_q[1].valid;
             instruction_o.pc              = instruction_q[1].pc;
             instruction_o.bpred           = instruction_q[1].bpred;
