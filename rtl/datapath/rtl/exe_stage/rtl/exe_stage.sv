@@ -96,6 +96,8 @@ logic ready_mul_32_inst;
 logic ready_mul_64_inst;
 logic ready_div_32_inst;
 
+logic div_unit_sel;
+logic ready_div_unit;
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -112,17 +114,19 @@ assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.da
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.data_rs2;
 
 score_board score_board_inst(
-    .clk_i          (clk_i),
-    .rstn_i         (rstn_i),
-    .kill_i         (kill_i),
-    .set_mul_32_i   (set_mul_32_inst),               
-    .set_mul_64_i   (set_mul_64_inst),               
-    .set_div_32_i   (set_div_32_inst),               
-    .set_div_64_i   (set_div_64_inst),
-    .ready_1cycle_o (ready_1cycle_inst),
-    .ready_mul_32_o (ready_mul_32_inst),
-    .ready_mul_64_o (ready_mul_64_inst),
-    .ready_div_32_o (ready_div_32_inst)
+    .clk_i            (clk_i),
+    .rstn_i           (rstn_i),
+    .kill_i           (kill_i),
+    .set_mul_32_i     (set_mul_32_inst),               
+    .set_mul_64_i     (set_mul_64_inst),               
+    .set_div_32_i     (set_div_32_inst),               
+    .set_div_64_i     (set_div_64_inst),
+    .ready_1cycle_o   (ready_1cycle_inst),
+    .ready_mul_32_o   (ready_mul_32_inst),
+    .ready_mul_64_o   (ready_mul_64_inst),
+    .ready_div_32_o   (ready_div_32_inst),
+    .div_unit_sel_o   (div_unit_sel),
+    .ready_div_unit_o (ready_div_unit)
 );
 
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
@@ -208,6 +212,7 @@ div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .kill_div_i     (kill_i),
+    .div_unit_sel_i (div_unit_sel),
     .instruction_i  (arith_instr),
     .instruction_o  (div_to_wb)
 );
@@ -286,14 +291,14 @@ always_comb begin
     pmu_stall_mem_o = 1'b0; 
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
-            stall_int = ~ready | ~ready_div_32_inst;
-            pmu_stall_div_o = ~ready | ~ready_div_32_inst;
-            set_div_32_inst = ready & ready_div_32_inst;
+            stall_int = ~ready | ~ready_div_32_inst | ~ready_div_unit;
+            pmu_stall_div_o = ~ready | ~ready_div_32_inst | ~ready_div_unit;
+            set_div_32_inst = ready & ready_div_32_inst & ready_div_unit;
         end
         else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
-            stall_int = ~ready;
-            pmu_stall_div_o = ~ready;
-            set_div_64_inst = ready;
+            stall_int = ~ready | ~ready_div_unit;
+            pmu_stall_div_o = ~ready | ~ready_div_unit;
+            set_div_64_inst = ready & ready_div_unit;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_32_inst;
