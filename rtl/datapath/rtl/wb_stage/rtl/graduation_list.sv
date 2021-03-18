@@ -32,6 +32,9 @@ module graduation_list #
     input gl_index_t       [NUM_SIMD_WB-1:0] instruction_simd_writeback_i,        // Mark instruction as finished
     input logic            [NUM_SIMD_WB-1:0] instruction_simd_writeback_enable_i, // Write enabled for finished
     input gl_instruction_t [NUM_SIMD_WB-1:0] instruction_simd_writeback_data_i,   // Data of the generated exception
+    input gl_index_t [drac_pkg::NUM_FP_WB-1:0]           instruction_fp_writeback_i,        // Mark instruction as finished
+    input logic [drac_pkg::NUM_FP_WB-1:0]                instruction_fp_writeback_enable_i, // Write enabled for finished
+    input gl_instruction_t [drac_pkg::NUM_FP_WB-1:0]     instruction_fp_writeback_data_i,   // Data of the generated exception
 
     input wire                                 flush_i,                           // Flush instructions from the graduation list
     input gl_index_t                           flush_index_i,                     // Index that selects the first correct instruction
@@ -79,6 +82,7 @@ assign read_enable = read_head_i & (num > 0) & (valid_bit[head]) & ~(flush_i) & 
 assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.instr_type == SW) ||
                          (instruction_i.instr_type == SH) || (instruction_i.instr_type == SB) ||
                          (instruction_i.instr_type == VSE) ||
+                         (instruction_i.instr_type == FSW) || (instruction_i.instr_type == FSD) ||
                          (instruction_i.instr_type == AMO_MAXWU) || (instruction_i.instr_type == AMO_MAXDU)   ||
                          (instruction_i.instr_type == AMO_MINWU) || (instruction_i.instr_type == AMO_MINDU)   ||
                          (instruction_i.instr_type == AMO_MAXW)  || (instruction_i.instr_type == AMO_MAXD)    ||
@@ -139,6 +143,15 @@ begin
                 entries[instruction_simd_writeback_i[i]].csr_addr  <= instruction_simd_writeback_data_i[i].csr_addr;
                 entries[instruction_simd_writeback_i[i]].exception <= instruction_simd_writeback_data_i[i].exception;
                 entries[instruction_simd_writeback_i[i]].result    <= instruction_simd_writeback_data_i[i].result;
+            end
+        end
+        
+        for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
+            if (rstn_i & instruction_fp_writeback_enable_i[i]) begin
+                valid_bit[instruction_fp_writeback_i[i]] <= 1'b1;
+                entries[instruction_fp_writeback_i[i]].csr_addr  <= instruction_fp_writeback_data_i[i].csr_addr;
+                entries[instruction_fp_writeback_i[i]].exception <= instruction_fp_writeback_data_i[i].exception;
+                entries[instruction_fp_writeback_i[i]].result    <= instruction_fp_writeback_data_i[i].result;
             end
         end
     end

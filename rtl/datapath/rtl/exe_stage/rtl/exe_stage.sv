@@ -39,6 +39,7 @@ module exe_stage (
     output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
     output exe_wb_simd_instr_t          simd_to_simd_wb_o,
     output exe_wb_simd_instr_t          mem_to_simd_wb_o,
+    output exe_wb_fp_instr_t            fp_mem_to_wb_o,
     output exe_wb_fp_instr_t            fp_to_wb_o,
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
@@ -76,12 +77,13 @@ exe_wb_scalar_instr_t simd_to_scalar_wb;
 exe_wb_simd_instr_t mem_to_simd_wb;
 exe_wb_simd_instr_t simd_to_simd_wb;
 rr_exe_fpu_instr_t   fp_instr;
-
+exe_wb_fp_instr_t     fp_mem_to_wb;
 exe_wb_fp_instr_t     fp_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
 logic stall_int;
+logic stall_fpu;
 logic empty_mem;
 
 logic ready_interface_mem;
@@ -116,8 +118,6 @@ logic ready_div_unit;
             assert rs1_data_def==0;
         if(from_rr_i.prs2 == 0)
             assert rs2_data_def==0;
-        if(from_rr_i.prs3 == 0)
-            assert rs3_data_def==0; // TODO guillemlp what is this???
     end
 `endif
 
@@ -141,7 +141,10 @@ score_board score_board_inst(
     .ready_div_unit_o (ready_div_unit)
 );
 
-assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) & (from_rr_i.vrdy1) & (from_rr_i.vrdy2) );
+assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
+                                     & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
+                                     & (from_rr_i.frdy1) & (from_rr_i.frdy2) 
+                                     & (from_rr_i.vrdy1) & (from_rr_i.vrdy2));
 
 always_comb begin
     if (~stall_int & ~flush_i) begin
@@ -176,6 +179,8 @@ always_comb begin
         mem_instr.pvd                 = from_rr_i.pvd;
         mem_instr.old_prd             = from_rr_i.old_prd;
         mem_instr.old_pvd             = from_rr_i.old_pvd;
+        mem_instr.fprd                = from_rr_i.fprd;
+        mem_instr.old_fprd            = from_rr_i.old_fprd;
         mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
         mem_instr.chkp                = from_rr_i.chkp;
         mem_instr.simd_chkp           = from_rr_i.simd_chkp;
@@ -208,14 +213,14 @@ always_comb begin
         fp_instr.data_rs3            = from_rr_i.data_rs3;
         fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
         fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        fp_instr.prs1                = from_rr_i.prs1;
-        fp_instr.rdy1                = from_rr_i.rdy1;
-        fp_instr.prs2                = from_rr_i.prs2;
-        fp_instr.rdy2                = from_rr_i.rdy2;
-        fp_instr.prs3                = from_rr_i.prs3;
-        fp_instr.rdy3                = from_rr_i.rdy3;
-        fp_instr.prd                 = from_rr_i.prd;
-        fp_instr.old_prd             = from_rr_i.old_prd;
+        fp_instr.fprs1                = from_rr_i.fprs1;
+        fp_instr.frdy1                = from_rr_i.frdy1;
+        fp_instr.fprs2                = from_rr_i.fprs2;
+        fp_instr.frdy2                = from_rr_i.frdy2;
+        fp_instr.fprs3                = from_rr_i.fprs3;
+        fp_instr.frdy3                = from_rr_i.frdy3;
+        fp_instr.fprd                = from_rr_i.fprd;
+        fp_instr.old_fprd            = from_rr_i.old_fprd;
         fp_instr.checkpoint_done     = from_rr_i.checkpoint_done;
         fp_instr.chkp                = from_rr_i.chkp;
         fp_instr.gl_index            = from_rr_i.gl_index;
@@ -337,6 +342,7 @@ mem_unit mem_unit_inst(
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_o          (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),
+    .fp_instruction_o       (fp_mem_to_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
     .mem_store_or_amo_o     (mem_store_or_amo_o),
@@ -351,16 +357,19 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
    .rstn_i         (rstn_i),
    .kill_i         (kill_i),
    .instruction_i  (fp_instr),
-   .instruction_o  (fp_to_wb)
+   .instruction_o  (fp_to_wb),
+   .stall_o        (stall_fpu)
 );
 
 always_comb begin
-    if (mem_to_scalar_wb.valid | mem_to_simd_wb.valid) begin
+    if (scalar_mem_to_wb.valid | fp_mem_to_wb.valid | mem_to_simd_wb.valid) begin
         mem_to_scalar_wb_o  = mem_to_scalar_wb;
         mem_to_simd_wb_o    = mem_to_simd_wb;
+        fp_mem_to_wb_o      = fp_mem_to_wb;
     end else begin
         mem_to_scalar_wb_o  = 'h0;
         mem_to_simd_wb_o    = 'h0;
+        fp_mem_to_wb_o      = 'h0;
     end
     
     if (alu_to_scalar_wb.valid) begin
@@ -416,6 +425,12 @@ always_comb begin
     // FP write-back struct
     if (fp_to_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
+        if (~fp_to_wb_o.ex.valid & empty_mem & csr_interrupt_i) begin
+            fp_to_wb_o.ex.valid = 1;
+            fp_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            fp_to_wb_o.ex.origin = 64'b0;
+        end
+
     end else begin
         fp_to_wb_o  = 'h0;
     end
@@ -450,6 +465,9 @@ always_comb begin
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
             pmu_stall_mem_o = stall_mem | (~ready);
+        end
+        else if (from_rr_i.instr.unit == UNIT_FPU) begin
+            stall_int = stall_fpu | (~ready);
         end
     end
 end
@@ -508,6 +526,8 @@ assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_3 = simd_to_simd_wb_o.valid;
 assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
+assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
+assign exe_cu_o.valid_fp_mem = fp_mem_to_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
 

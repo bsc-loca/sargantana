@@ -21,7 +21,8 @@ import fpuv_wrapper_pkg::*;
    input  logic                     rstn_i,
    input  logic                     kill_i,
    input  rr_exe_fpu_instr_t        instruction_i,
-   output exe_wb_fp_instr_t         instruction_o
+   output exe_wb_fp_instr_t         instruction_o,
+   output logic                     stall_o
 );
 
 logic [NUM_OPERANDS - 1 : 0][WIDTH - 1 : 0] operands;
@@ -326,7 +327,7 @@ assign instruction_o.regfile_we      = instruction_i.instr.regfile_we;
 assign instruction_o.instr_type      = instruction_i.instr.instr_type;
 assign instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
 assign instruction_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_o.prd             = instruction_i.prd;
+assign instruction_o.fprd            = instruction_i.fprd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;
 assign instruction_o.gl_index        = instruction_i.gl_index;
@@ -336,5 +337,6 @@ assign instruction_o.id            = instruction_i.instr.id;
 `endif
 assign instruction_o.branch_taken  = 1'b0;
 assign instruction_o.result_pc     = 0;
+assign stall_o = 1'b0;
 
 endmodule

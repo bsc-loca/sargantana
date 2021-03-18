@@ -29,7 +29,8 @@ parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
 parameter NUM_SCALAR_WB = 3;
-parameter NUM_FP_WB = 1;
+parameter NUM_FP_WB = 2;
+parameter NUM_SIMD_WB = 2;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -65,6 +66,7 @@ parameter INSTRUCTION_QUEUE_NUM_ENTRIES = 16;
 
 // Physical registers 
 parameter NUM_PHISICAL_REGISTERS = 64;
+parameter NUM_FP_PHISICAL_REGISTERS = 64;
 parameter PHISICAL_REGFILE_WIDTH = 6;
 typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
 
@@ -372,9 +374,17 @@ typedef struct packed {
     phreg_t prs2;                       // Physical register source 2
     logic   rdy2;                       // Ready register source 2 
     phreg_t prs3;                       // Physical register source 2
-    logic   rdy3;                       // Ready register source 2    
+    logic   rdy3;                       // Ready register source 2  
+    phreg_t fprs1;                       // Physical register source 1
+    logic   frdy1;                       // Ready register source 1
+    phreg_t fprs2;                       // Physical register source 2
+    logic   frdy2;                       // Ready register source 2 
+    phreg_t fprs3;                       // Physical register source 2
+    logic   frdy3;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
+    phreg_t fprd;                        // Physical register destination
+    phreg_t old_fprd;                    // Old Physical register destination
 
     phvreg_t pvs1;                      // Physical vregister source 1
     logic    vrdy1;                     // Ready vregister source 1
@@ -409,10 +419,16 @@ typedef struct packed {
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
     logic   rdy2;                       // Ready register source 2
-    phreg_t prs3;                       // Physical register source 2
-    logic   rdy3;                       // Ready register source 3    
+    phreg_t fprs1;                       // Physical register source 1
+    logic   frdy1;                       // Ready register source 1
+    phreg_t fprs2;                       // Physical register source 2
+    logic   frdy2;                       // Ready register source 2
+    phreg_t fprs3;                       // Physical register source 2
+    logic   frdy3;                       // Ready register source 3
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
+    phreg_t fprd;                        // Physical register destination
+    phreg_t old_fprd;                    // Old Physical register destination
 
     phvreg_t pvs1;                      // Physical vregister source 1
     logic    vrdy1;                     // Ready vregister source 1
@@ -475,6 +491,8 @@ typedef struct packed {
     phvreg_t pvd;                       // Physical vregister destination
     phreg_t old_prd;                    // Old Physical register destination
     phvreg_t old_pvd;                   // Old Physical register destination
+    phreg_t fprd;                       // Physical register destination
+    phreg_t old_fprd;                    // Old Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -526,14 +544,16 @@ typedef struct packed {
     // save until the instruction then 
     // give the interrupt cause as xcpt cause
     bus64_t     csr_interrupt_cause;
-    phreg_t prs1;                       // Physical register source 1
-    logic   rdy1;                       // Ready register source 1
-    phreg_t prs2;                       // Physical register source 2
-    logic   rdy2;                       // Ready register source 2
-    phreg_t prs3;                       // Physical register source 3
-    logic   rdy3;                       // Ready register source 3
-    phreg_t prd;                        // Physical register destination 
-    phreg_t old_prd;                    // Old Physical register destination
+    phreg_t fprs1;                       // Physical register source 1
+    logic   frdy1;                       // Ready register source 1
+    phreg_t fprs2;                       // Physical register source 2
+    logic   frdy2;                       // Ready register source 2
+    phreg_t fprs3;                       // Physical register source 3
+    logic   frdy3;                       // Ready register source 3
+    //phreg_t prd;                        // Physical register destination 
+    phreg_t old_fprd;                    // Old Physical register destination
+    phreg_t fprd;                        // Physical register destination
+    //phreg_t old_prd;                    // Old Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -618,7 +638,7 @@ typedef struct packed {
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     bus64_t id;
     `endif
-    phreg_t prd;                        // Physical register destination
+    phreg_t fprd;                        // Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -631,6 +651,7 @@ typedef struct packed {
     bus64_t data;                       // Result data
     reg_t   rd;                         // Virtual register destination
     phreg_t prd;                        // Physical register destination
+    phreg_t fprd;                        // Physical register destination
 } wb_exe_instr_t;   // WB Stage to Execution
 
 // Control Unit signals
@@ -691,6 +712,8 @@ typedef struct packed {
     logic valid_1;                // Valid Intruction ALU, MUL, DIV
     logic valid_2;                // Valid Intruction MEM
     logic valid_3;                // Valid Instruction SIMD
+    logic valid_fp;               // Valid Intruction FP
+    logic valid_fp_mem;           // Valid Intruction FP MEM
     logic change_pc_ena_1;        // Enable PC write
     logic is_branch;              // There is a branch in the ALU
     logic branch_taken;           // Branch taken
@@ -729,8 +752,8 @@ typedef struct packed {
     logic stall_commit;         // Stop commits
     logic regfile_we;           // Commit update enable
     logic vregfile_we;          // Commit update enable
-    logic write_enable_fp;      // Write Enable to Register File
-    logic regfile_we_fp;        // Commit update enable
+    logic fp_write_enable;      // Write Enable to Register File
+    logic fp_regfile_we;        // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
@@ -892,10 +915,13 @@ typedef struct packed {
     logic           stall_csr_fence;        // CSR or fence
     logic           regfile_we;             // Write to register file
     logic           vregfile_we;            // Write to vregister file
-    phreg_t         prd;                    // Physical register destination to write      
-    phreg_t         old_prd;                // Old Physical register destination
     phreg_t         pvd;                    // Physical vregister destination to write      
     phreg_t         old_pvd;                // Old Physical vregister destination
+    logic           fp_regfile_we;          // Write to register file
+    phreg_t         prd;                    // Physical register destination to write 
+    phreg_t         fprd;                    // Physical register destination to write      
+    phreg_t         old_prd;                // Old Physical register destination
+    phreg_t         old_fprd;                // Old Physical register destination
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;          // Bits of the instruction
     `endif

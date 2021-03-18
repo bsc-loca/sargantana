@@ -140,10 +140,10 @@ module control_unit(
         end
     // logic enable write FP register file at commit
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            if (wb_cu_i.valid[i] && wb_cu_i.write_enable_fp[i]) begin
-                cu_rr_o.write_enable_fp[i] = 1'b1;
+            if (wb_cu_i.fp_valid[i] && wb_cu_i.fp_write_enable[i]) begin
+                cu_rr_o.fp_write_enable[i] = 1'b1;
             end else begin
-                cu_rr_o.write_enable_fp[i] = 1'b0;
+                cu_rr_o.fp_write_enable[i] = 1'b0;
             end
         end
 
@@ -350,7 +350,7 @@ module control_unit(
     // Enable Update of Free List and Rename from Commit
     assign cu_ir_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
     assign cu_ir_o.simd_enable_commit_update = commit_cu_i.valid & commit_cu_i.vregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
-    assign cu_ir_o.enable_commit_update_fp = commit_cu_i.valid & commit_cu_i.regfile_we_fp & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+    assign cu_ir_o.enable_commit_update_fp = commit_cu_i.valid & commit_cu_i.fp_regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
 
     // Recover checkpoint of Commit stage in Rename and Free List
     assign cu_ir_o.recover_commit = exception_enable_q;

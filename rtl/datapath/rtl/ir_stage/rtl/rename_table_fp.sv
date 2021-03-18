@@ -16,7 +16,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module rename_table_fp(
-    input logic                                 clk_i,               // Clock Singal
+    input logic                                 clk_i,               // Clock Signal
     input logic                                 rstn_i,              // Negated Reset Signal
 
     input reg_t                                read_src1_i,         // Read source register 1 mapping
@@ -26,9 +26,9 @@ module rename_table_fp(
     input logic                                write_dst_i,         // Needs to write to old destination register
     input phreg_t                              new_dst_i,           // Wich register write to old destination register
 
-    input logic   [drac_pkg::NUM_FP_WB-1:0]ready_i, // New register is ready
-    input reg_t   [drac_pkg::NUM_FP_WB-1:0]vaddr_i, // New register is ready
-    input phreg_t [drac_pkg::NUM_FP_WB-1:0]paddr_i, // New register is ready
+    input logic   [drac_pkg::NUM_FP_WB-1:0]    ready_i, // New register is ready
+    input reg_t   [drac_pkg::NUM_FP_WB-1:0]    vaddr_i, // New register is ready
+    input phreg_t [drac_pkg::NUM_FP_WB-1:0]    paddr_i, // New register is ready
 
     input logic                                recover_commit_i,    // Copy commit table on register table
     input reg_t                                commit_old_dst_i,    // Read and write to old destination register at commit table
@@ -72,10 +72,10 @@ logic [drac_pkg::NUM_FP_WB-1:0] rdy3;
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
 
 // User can write to table to add new destination register
-assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
+assign write_enable = write_dst_i & (~do_recover_i) & (~recover_commit_i);
 
 // User can wirte to commit table to add new destination register
-assign commit_write_enable = commit_write_dst_i & (commit_old_dst_i != 5'h0) & (~recover_commit_i);
+assign commit_write_enable = commit_write_dst_i & (~recover_commit_i);
 
 // User can read the table if no recover action is being done
 assign read_enable = (~do_recover_i) & (~recover_commit_i);

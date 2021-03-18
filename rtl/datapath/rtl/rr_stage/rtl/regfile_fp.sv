@@ -24,9 +24,9 @@ import riscv_pkg::*;
 module regfile_fp (
     input   logic                                 clk_i,
     // write port input
-    input   logic   [drac_pkg::NUM_FP_WB-1:0] write_enable_i,
-    input   phreg_t [drac_pkg::NUM_FP_WB-1:0] write_addr_i,
-    input   bus64_t [drac_pkg::NUM_FP_WB-1:0] write_data_i,
+    input   logic   [drac_pkg::NUM_FP_WB-1:0]     write_enable_i,
+    input   phreg_t [drac_pkg::NUM_FP_WB-1:0]     write_addr_i,
+    input   bus64_t [drac_pkg::NUM_FP_WB-1:0]     write_data_i,
 
     // read ports input
     input   phreg_t                               read_addr1_i,
@@ -39,7 +39,7 @@ module regfile_fp (
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [1:NUM_PHISICAL_REGISTERS-1];
+reg64_t registers [0:NUM_FP_PHISICAL_REGISTERS-1];
 bus64_t bypass_data1;
 bus64_t bypass_data2;
 bus64_t bypass_data3;
@@ -81,25 +81,19 @@ always_comb begin
         end
     end
 
-    if (read_addr1_i == 0) begin
-        read_data1_o = 64'b0;
-    end else if (|bypass1) begin
+    if (|bypass1) begin
         read_data1_o = bypass_data1;
     end else begin
         read_data1_o = registers[read_addr1_i];
     end
 
-    if (read_addr2_i == 0) begin
-        read_data2_o = 64'b0;
-    end else if (|bypass2) begin
+    if (|bypass2) begin
         read_data2_o = bypass_data2;
     end else begin
         read_data2_o = registers[read_addr2_i];
     end
 
-    if (read_addr3_i == 0) begin
-        read_data3_o = 64'b0;
-    end else if (|bypass2) begin
+    if (|bypass2) begin
         read_data3_o = bypass_data3;
     end else begin
         read_data3_o = registers[read_addr3_i];
@@ -108,7 +102,7 @@ end
 
 always_ff @(posedge clk_i)  begin
     for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-        if (write_enable_i[i] && (write_addr_i[i] > 0)) begin
+        if (write_enable_i[i]) begin
             registers[write_addr_i[i]] <= write_data_i[i];
         end
     end
