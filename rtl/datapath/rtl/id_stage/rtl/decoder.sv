@@ -1054,7 +1054,7 @@ module decoder(
                     // Fused Multiply Add
                     decode_instr_o.unit = UNIT_FPU;
                     decode_instr_o.regfile_fp_we = 1'b1;
-                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
                     // Select the instruction
@@ -1090,7 +1090,7 @@ module decoder(
                 OP_FP: begin
                     decode_instr_o.unit = UNIT_FPU;
                     decode_instr_o.regfile_fp_we = 1'b1;
-                    decode_instr_o.use_imm = 1'b1;
+                    decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
                     case (decode_i.inst.fprtype.func5)

@@ -23,6 +23,7 @@ import riscv_pkg::*;
 
 module regfile_fp (
     input   logic                                 clk_i,
+    input   logic                                 rstn_i,
     // write port input
     input   logic   [drac_pkg::NUM_FP_WB-1:0]     write_enable_i,
     input   phreg_t [drac_pkg::NUM_FP_WB-1:0]     write_addr_i,
@@ -93,7 +94,7 @@ always_comb begin
         read_data2_o = registers[read_addr2_i];
     end
 
-    if (|bypass2) begin
+    if (|bypass3) begin
         read_data3_o = bypass_data3;
     end else begin
         read_data3_o = registers[read_addr3_i];
@@ -101,9 +102,15 @@ always_comb begin
 end
 
 always_ff @(posedge clk_i)  begin
-    for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-        if (write_enable_i[i]) begin
-            registers[write_addr_i[i]] <= write_data_i[i];
+    if (~rstn_i) begin
+        registers[0] = 64'h00;
+        registers[1] = 64'h01;
+        registers[2] = 64'h02;
+    end else begin
+        for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
+            if (write_enable_i[i]) begin
+                registers[write_addr_i[i]] <= write_data_i[i];
+            end
         end
     end
 end

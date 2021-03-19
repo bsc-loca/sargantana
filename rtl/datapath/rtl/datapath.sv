@@ -828,14 +828,15 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     // RR Stage
     regfile_fp regfile_fp_inst(
         .clk_i(clk_i),
+        .rstn_i(rstn_i),
 
         .write_enable_i(cu_rr_int.fp_write_enable),
         .write_addr_i(fp_write_paddr),
         .write_data_i(fp_data_wb_to_rr),
         
-        .read_addr1_i(reg_prd1_addr),
-        .read_addr2_i(stage_ir_rr_q.prs2),
-        .read_addr3_i(stage_ir_rr_q.prs3),
+        .read_addr1_i(stage_ir_rr_q.fprs1),
+        .read_addr2_i(stage_ir_rr_q.fprs2),
+        .read_addr3_i(stage_ir_rr_q.fprs3),
         .read_data1_o(rr_data_fp_src1),
         .read_data2_o(rr_data_fp_src2),
         .read_data3_o(stage_rr_exe_d.data_rs3)

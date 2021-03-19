@@ -34,12 +34,19 @@ fp_format_e  src_fmt;
 fp_format_e  add_fmt;
 fp_format_e  dst_fmt;
 int_format_e int_fmt;
-logic        vectorial_op;
 // verilator lint_off BLKANDNBLK
 assign operands[0] = instruction_i.data_rs1;
 assign operands[1] = instruction_i.data_rs2;
 assign operands[2] = instruction_i.data_rs3;
 
+
+always_comb begin : decide_FMT
+   if (instruction_i.instr.fmt) begin
+      src_fmt = FP64;
+   end else begin
+      src_fmt = FP32;
+   end
+end
 // Operation decoding
 always_comb begin
    rnd_mode_sel    = 0;
@@ -309,11 +316,11 @@ fpuv_top #(
    .in_valid_i     ( instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU )),
    .out_ready_i    ( 1'b1 ), // are we always ready???
    // Outputs
-   .in_ready_o     ( instruction_o.valid ),
+   .in_ready_o     ( stall_o ),
    .result_o       ( instruction_o.result ),
    .status_o       ( status_o ),
    .tag_o          ( /* unused */ ),
-   .out_valid_o    ( result_valid_o ),
+   .out_valid_o    ( instruction_o.valid ),
    .busy_o         ( /* unused */ )
 );
 
@@ -337,6 +344,6 @@ assign instruction_o.id            = instruction_i.instr.id;
 `endif
 assign instruction_o.branch_taken  = 1'b0;
 assign instruction_o.result_pc     = 0;
-assign stall_o = 1'b0;
+//assign stall_o = 1'b0;
 
 endmodule

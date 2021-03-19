@@ -373,14 +373,12 @@ typedef struct packed {
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
     logic   rdy2;                       // Ready register source 2 
-    phreg_t prs3;                       // Physical register source 2
-    logic   rdy3;                       // Ready register source 2  
-    phreg_t fprs1;                       // Physical register source 1
-    logic   frdy1;                       // Ready register source 1
-    phreg_t fprs2;                       // Physical register source 2
-    logic   frdy2;                       // Ready register source 2 
-    phreg_t fprs3;                       // Physical register source 2
-    logic   frdy3;                       // Ready register source 2    
+    phreg_t fprs1;                       // FP Physical register source 1
+    logic   frdy1;                       // FP Ready register source 1
+    phreg_t fprs2;                       // FP Physical register source 2
+    logic   frdy2;                       // FP Ready register source 2
+    phreg_t fprs3;                       // FP Physical register source 3
+    logic   frdy3;                       // FP Ready register source 3    
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
     phreg_t fprd;                        // Physical register destination
@@ -629,7 +627,6 @@ typedef struct packed {
     logic branch_taken;                 // Branch taken
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
-    regfile_sel_t regfile_dst;          // which regfile to write
     logic regfile_we;                   // Write to register file
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
