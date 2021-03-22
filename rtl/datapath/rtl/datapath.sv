@@ -864,7 +864,7 @@ module datapath(
             if (commit_cu_int.write_enable) begin
                 commit_data = resp_csr_cpu_i.csr_rw_rdata;
             end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
-                commit_data = data_wb_to_rr[1];
+                commit_data = exe_to_wb_scalar[1].result;
             end else begin
                 commit_data = instruction_to_commit.result;
             end
