@@ -17,21 +17,21 @@ import drac_pkg::*;
 typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
 
 module pending_mem_req_queue(
-    input logic            clk_i,            // Clock Singal
-    input logic            rstn_i,           // Negated Reset Signal
+    input logic                 clk_i,            // Clock Singal
+    input logic                 rstn_i,           // Negated Reset Signal
 
-    input rr_exe_instr_t   instruction_i,    // All instruction input signals
-    input reg_t            tag_i,            // Tag of the incoming instruction
+    input rr_exe_mem_instr_t    instruction_i,    // All instruction input signals
+    input reg_t                 tag_i,            // Tag of the incoming instruction
 
-    input logic            replay_valid_i,   // A replay is being executed
-    input reg_t            tag_next_i,       // Instruction that finishes
-    input bus64_t          replay_data_i,    // Replay asociated data
-    input logic            flush_i,          // Flush all entries
-    input logic            advance_head_i,   // Advance head pointer one position
+    input logic                 replay_valid_i,   // A replay is being executed
+    input reg_t                 tag_next_i,       // Instruction that finishes
+    input bus64_t               replay_data_i,    // Replay asociated data
+    input logic                 flush_i,          // Flush all entries
+    input logic                 advance_head_i,   // Advance head pointer one position
 
-    output rr_exe_instr_t  finish_instr_o,   // Next Instruction to Write Back
+    output rr_exe_mem_instr_t   finish_instr_o,   // Next Instruction to Write Back
        
-    output logic           full_o            // pmrq is full
+    output logic                full_o            // pmrq is full
 
 );
 
@@ -62,7 +62,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 
 // FIFO Memory structure
-rr_exe_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
+rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
 reg_t          tag_table            [0:PMRQ_NUM_ENTRIES-1];
 logic          control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
 

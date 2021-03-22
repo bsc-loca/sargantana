@@ -20,14 +20,14 @@ module load_store_queue(
     input logic            clk_i,            // Clock Singal
     input logic            rstn_i,           // Negated Reset Signal
 
-    input rr_exe_instr_t   instruction_i,    // All instruction input signals
+    input rr_exe_mem_instr_t   instruction_i,    // All instruction input signals
      
     input logic            flush_i,          // Flush all entries
     input logic            read_next_i,      // Read next instruction of the ciruclar buffer
     input logic            reset_next_i,     // Reset next instruction to the exec pointer
     input logic            advance_head_i,   // Advance head pointer one position
 
-    output rr_exe_instr_t  next_instr_exe_o, // Next Instruction to be executed 
+    output rr_exe_mem_instr_t  next_instr_exe_o, // Next Instruction to be executed 
        
     output logic           full_o,           // Lsq is full
     output logic           empty_o           // Lsq is empty
@@ -64,7 +64,7 @@ assign read_enable = read_next_i & (num_to_exe > 0) & (~reset_next_i);
 assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
 
 // FIFO Memory structure
-rr_exe_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
+rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
 
 always_ff @(posedge clk_i)
 begin

@@ -96,15 +96,11 @@ module score_board (
     assign ready_1cycle_o = (~mul[0]) & (~div[0]);
     assign ready_mul_32_o = (~mul[1]) & (~div[1]);
     assign ready_mul_64_o = (~div[2]);
-<<<<<<< HEAD
     assign ready_div_32_o = (~div[16]);
     assign div_unit_sel_o = ~free_div_unit[0]; // reg?
     assign ready_div_unit_o = free_div_unit[0] | free_div_unit[1];
     assign free_div_unit[0] = ~(|ocup_div_unit[0]);
     assign free_div_unit[1] = ~(|ocup_div_unit[1]);
-=======
-    assign ready_div_32_o = (~div[17]);
->>>>>>> Fix in scoreboard, wrong ready_div32bits
 
 endmodule
 

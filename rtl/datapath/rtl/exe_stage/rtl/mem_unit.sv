@@ -72,13 +72,13 @@ logic advance_exec_lsq;
 logic advance_head_lsq;
 
 // Instruction to LSQ and pipline
-rr_exe_instr_t instruction_to_lsq;
-rr_exe_instr_t instruction_to_dcache;
-rr_exe_instr_t stored_instr_to_dcache;
-rr_exe_instr_t instruction_to_wb;
-rr_exe_instr_t instruction_s1_d;
-rr_exe_instr_t instruction_s1_q;
-rr_exe_instr_t instruction_s2_q;
+rr_exe_mem_instr_t instruction_to_lsq;
+rr_exe_mem_instr_t instruction_to_dcache;
+rr_exe_mem_instr_t stored_instr_to_dcache;
+rr_exe_mem_instr_t instruction_to_wb;
+rr_exe_mem_instr_t instruction_s1_d;
+rr_exe_mem_instr_t instruction_s1_q;
+rr_exe_mem_instr_t instruction_s2_q;
 
 // Input/Output Pipeline
 logic io_s1_q;
@@ -102,8 +102,8 @@ bus64_t xcpt_addr_s2_q;
 exception_t exception_to_wb;
 
 
-rr_exe_instr_t instruction_to_pmrq;
-rr_exe_instr_t instruction_from_pmrq;
+rr_exe_mem_instr_t instruction_to_pmrq;
+rr_exe_mem_instr_t instruction_from_pmrq;
 
 // PMRQ control signals
 logic advance_head_prmq;
