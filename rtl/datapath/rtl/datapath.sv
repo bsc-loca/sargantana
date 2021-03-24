@@ -334,6 +334,8 @@ module datapath(
 
     // ID Stage
     decoder id_decode_inst(
+        .clk_i          (clk_i),
+        .rstn_i         (rstn_i),
         .decode_i       (stage_if_2_id_q),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)

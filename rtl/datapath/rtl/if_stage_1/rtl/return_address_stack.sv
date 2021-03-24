@@ -6,6 +6,10 @@
  * Email(s)       : david.alvarez@bsc.es
  * References     :
  * -----------------------------------------------
+ *  Revision History
+ *  Revision   | Author   | Description
+ * -----------------------------------------------
+ * v0.2        | Max D.   | modifications in the pop push conditions and to the output pc
  */
 
 import drac_pkg::*;
@@ -53,16 +57,15 @@ module return_address_stack(
             return_address <= 0;
             head_pointer <= 0;
         end else if (push_i && pop_i) begin
-            return_address <= pc_execution_i;
+            address_stack[head_pointer] <= pc_execution_i;
         end else if(push_i) begin
-            address_stack[(head_pointer + 1)%_NUM_RAS_ENTRIES_] <= pc_execution_i;
+            address_stack[head_pointer] <= pc_execution_i;
             head_pointer <= head_pointer + 1;
         end else if(pop_i) begin
-            return_address <= address_stack[head_pointer];
             head_pointer <= head_pointer - 1;
         end
     end
 
-    assign return_address_o = return_address;
+    assign return_address_o = address_stack[head_pointer - 1];
 
 endmodule

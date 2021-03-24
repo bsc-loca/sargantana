@@ -17,6 +17,8 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module decoder(
+    input   logic            clk_i,
+    input   logic            rstn_i,
     input   if_id_stage_t    decode_i,
     output  instr_entry_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
@@ -25,6 +27,11 @@ module decoder(
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
     logic xcpt_addr_misaligned_int;
+    addrPC_t ras_pc_int;
+    logic ras_push_int;
+    logic ras_pop_int;
+    logic ras_link_rd_int;
+    logic ras_link_rs1_int;
 
     immediate immediate_inst(
         .instr_i(decode_i.inst),
@@ -43,6 +50,13 @@ module decoder(
         decode_instr_o.rs1 = decode_i.inst.common.rs1;
         decode_instr_o.rs2 = decode_i.inst.common.rs2;
         decode_instr_o.rd  = decode_i.inst.common.rd;
+
+        // Information for the ras performance
+        ras_link_rd_int = decode_instr_o.rd == 5'h1 || decode_instr_o.rd == 5'h5;
+        ras_link_rs1_int = decode_instr_o.rs1 == 5'h1 || decode_instr_o.rs1 == 5'h5;
+        ras_push_int = 1'b0; //default value
+        ras_pop_int = 1'b0; //default value
+
         // By default all enables to zero
         decode_instr_o.change_pc_ena = 1'b0;
         decode_instr_o.regfile_we    = 1'b0;
@@ -53,7 +67,7 @@ module decoder(
 
         decode_instr_o.instr_type = ADD;
         `ifdef VERILATOR
-        assign decode_instr_o.id = decode_i.id;
+            decode_instr_o.id = decode_i.id;
         `endif
 
         
@@ -106,6 +120,9 @@ module decoder(
                     jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
                                         !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
                                         (decode_i.bpred.decision == PRED_TAKEN));
+                    if (!xcpt_addr_misaligned_int && decode_i.valid && ras_link_rd_int) begin
+                        ras_push_int = 1'b1;
+                    end
                     
                 end
                 OP_JALR: begin
@@ -119,6 +136,27 @@ module decoder(
                     if (decode_i.inst.itype.func3 != 'h0) begin
                         xcpt_illegal_instruction_int = 1'b1;
                     end
+                    if (!xcpt_addr_misaligned_int && decode_i.valid) begin
+                        if (!ras_link_rd_int && ras_link_rs1_int) begin
+                            ras_pop_int = 1'b1;
+                        end else if (ras_link_rd_int && !ras_link_rs1_int) begin
+                            ras_push_int = 1'b1;
+                        end else if (ras_link_rd_int && ras_link_rs1_int && decode_instr_o.rs1 == decode_instr_o.rd) begin
+                            ras_push_int = 1'b1;
+                        end else if (ras_link_rd_int && ras_link_rs1_int) begin
+                            ras_pop_int = 1'b1;
+                            ras_push_int = 1'b1;
+                        end
+                    end
+                    jal_id_if_o.jump_addr = ras_pc_int; 
+                    jal_id_if_o.valid = ras_pop_int && !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
+                                        (decode_i.bpred.decision == PRED_TAKEN));
+
+                    decode_instr_o.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
+                    decode_instr_o.bpred.decision = (jal_id_if_o.valid || decode_i.bpred.decision == PRED_TAKEN) 
+                                                    ? PRED_TAKEN : PRED_NOT_TAKEN;
+                    decode_instr_o.bpred.is_branch = 1'b1;
+
                 end
                 OP_BRANCH: begin
                     decode_instr_o.regfile_we = 1'b0;
@@ -686,6 +724,14 @@ module decoder(
             decode_instr_o.ex = decode_i.ex;
         end
     end
+
+    return_address_stack return_address_stack_inst(
+        .rstn_i(rstn_i),
+        .clk_i(clk_i),
+        .pc_execution_i(decode_instr_o.pc + 64'h4),
+        .push_i(ras_push_int),
+        .pop_i(ras_pop_int),
+        .return_address_o(ras_pc_int));
 
 endmodule
 //`default_nettype wire
