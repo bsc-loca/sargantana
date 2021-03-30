@@ -165,7 +165,12 @@ module top_drac(
     output logic                io_core_pmu_buffer_miss     ,           
     output logic                io_core_pmu_imiss_kill      ,           
     output logic                io_core_pmu_icache_bussy    ,
-    output logic                io_core_pmu_imiss_time      
+    output logic                io_core_pmu_imiss_time      ,
+    output logic                io_core_pmu_load_store      ,
+    output logic                io_core_pmu_data_depend     ,
+    output logic                io_core_pmu_struct_depend   ,
+    output logic                io_core_pmu_grad_list_full  ,
+    output logic                io_core_pmu_free_list_empty 
 
 );
 
@@ -301,6 +306,11 @@ assign io_core_pmu_stall_wb         = pmu_flags.stall_wb                    ;
 assign io_core_pmu_branch_miss      = pmu_flags.branch_miss                 ; 
 assign io_core_pmu_is_branch        = pmu_flags.is_branch                   ; 
 assign io_core_pmu_branch_taken     = pmu_flags.branch_taken                ; 
+assign io_core_pmu_load_store       = pmu_flags.load_store                  ;
+assign io_core_pmu_data_depend      = pmu_flags.data_depend                 ;
+assign io_core_pmu_struct_depend    = pmu_flags.struct_depend               ;
+assign io_core_pmu_grad_list_full   = pmu_flags.grad_list_full              ;
+assign io_core_pmu_free_list_empty  = pmu_flags.free_list_empty             ;
 assign io_core_pmu_new_instruction  = req_datapath_csr_interface.csr_retire ;
 assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
 assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;

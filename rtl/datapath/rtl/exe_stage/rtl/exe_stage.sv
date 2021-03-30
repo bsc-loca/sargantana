@@ -46,10 +46,10 @@ module exe_stage (
     //--PMU
     output logic                        pmu_is_branch_o,
     output logic                        pmu_branch_taken_o,                    
-    output logic                        pmu_miss_prediction_o,
     output logic                        pmu_stall_mul_o,
-    output logic                        pmu_stall_div_o,
-    output logic                        pmu_stall_mem_o       
+    output logic                        pmu_stall_mem_o,
+    output logic                        pmu_data_depend_stall_o,
+    output logic                        pmu_struct_depend_stall_o
 );
 
 // Declarations
@@ -287,17 +287,14 @@ always_comb begin
     set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
     pmu_stall_mul_o = 1'b0;
-    pmu_stall_div_o = 1'b0;
     pmu_stall_mem_o = 1'b0; 
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_32_inst | ~ready_div_unit;
-            pmu_stall_div_o = ~ready | ~ready_div_32_inst | ~ready_div_unit;
             set_div_32_inst = ready & ready_div_32_inst & ready_div_unit;
         end
         else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_unit;
-            pmu_stall_div_o = ~ready | ~ready_div_unit;
             set_div_64_inst = ready & ready_div_unit;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
@@ -382,6 +379,9 @@ assign pmu_is_branch_o       = from_rr_i.instr.bpred.is_branch && from_rr_i.inst
 assign pmu_branch_taken_o    = from_rr_i.instr.bpred.is_branch && from_rr_i.instr.bpred.decision && 
                                from_rr_i.instr.valid;
                                
-assign pmu_miss_prediction_o = !correct_branch_pred_o;
+//assign pmu_miss_prediction_o = !correct_branch_pred_o;
+
+assign pmu_data_depend_stall_o = ~ready;
+assign pmu_struct_depend_stall_o = ready && stall_int;
 
 endmodule
