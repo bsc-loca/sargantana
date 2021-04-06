@@ -48,7 +48,7 @@ module exe_stage (
     output logic                        pmu_branch_taken_o,                    
     output logic                        pmu_stall_mul_o,
     output logic                        pmu_stall_mem_o,
-    output logic                        pmu_data_depend_stall_o,
+    output logic                        pmu_exe_ready_o,
     output logic                        pmu_struct_depend_stall_o
 );
 
@@ -381,7 +381,7 @@ assign pmu_branch_taken_o    = from_rr_i.instr.bpred.is_branch && from_rr_i.inst
                                
 //assign pmu_miss_prediction_o = !correct_branch_pred_o;
 
-assign pmu_data_depend_stall_o = ~ready;
+assign pmu_exe_ready_o = ready;
 assign pmu_struct_depend_stall_o = ready && stall_int;
 
 endmodule

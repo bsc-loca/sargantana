@@ -140,6 +140,7 @@ module datapath(
     logic   [drac_pkg::NUM_SCALAR_WB-1:0] snoop_exe_rs2;
     logic snoop_exe_rdy1;
     logic snoop_exe_rdy2;
+    logic pmu_exe_ready;
 
     bus64_t exe_data_rs1;
     bus64_t exe_data_rs2;
@@ -662,7 +663,7 @@ module datapath(
         .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
         .pmu_stall_mul_o          (pmu_flags_o.stall_rr),
         .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
-        .pmu_data_depend_stall_o  (pmu_flags_o.data_depend),
+        .pmu_exe_ready_o          (pmu_exe_ready),
         .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend)
     );
 
@@ -984,7 +985,7 @@ module datapath(
     assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.valid;
-    assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid; //(this is already in exe_stage:ready);
+    assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
     assign pmu_flags_o.load_store      = commit_store_or_amo_int || instruction_to_commit.instr_type == LB  || 
                                                                  instruction_to_commit.instr_type == LH  ||
                                                                  instruction_to_commit.instr_type == LW  ||
@@ -992,6 +993,7 @@ module datapath(
                                                                  instruction_to_commit.instr_type == LBU ||
                                                                  instruction_to_commit.instr_type == LHU ||
                                                                  instruction_to_commit.instr_type == LWU;
+    assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
 endmodule
