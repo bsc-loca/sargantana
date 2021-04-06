@@ -19,6 +19,8 @@ import riscv_pkg::*;
 module decoder(
     input   logic            clk_i,
     input   logic            rstn_i,
+    input   logic            flush_i,
+    input   logic            stall_i,
     input   if_id_stage_t    decode_i,
     output  instr_entry_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
@@ -150,7 +152,7 @@ module decoder(
                     end
                     jal_id_if_o.jump_addr = ras_pc_int; 
                     jal_id_if_o.valid = ras_pop_int && !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
-                                        (decode_i.bpred.decision == PRED_TAKEN));
+                                        (decode_i.bpred.decision == PRED_TAKEN) && !flush_i && !stall_i);
 
                     decode_instr_o.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
                     decode_instr_o.bpred.decision = (jal_id_if_o.valid || decode_i.bpred.decision == PRED_TAKEN) 

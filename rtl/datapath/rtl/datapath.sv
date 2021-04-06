@@ -336,6 +336,8 @@ module datapath(
     decoder id_decode_inst(
         .clk_i          (clk_i),
         .rstn_i         (rstn_i),
+        .stall_i        (control_int.stall_id),
+        .flush_i        (flush_int.flush_id),
         .decode_i       (stage_if_2_id_q),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)

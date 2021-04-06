@@ -16,7 +16,7 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 // log_2 of the number of entries in the RAS.
-localparam _LENGTH_RAS_  = 2;
+localparam _LENGTH_RAS_  = 4;
 
 // Number of entries of the RAS.
 localparam _NUM_RAS_ENTRIES_ = 2 ** _LENGTH_RAS_;
