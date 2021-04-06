@@ -155,7 +155,7 @@ module if_stage_1(
         .rstn_i(rstn_i),
         .pc_fetch_i(pc),
         .pc_execution_i(exe_if_branch_pred_i.pc_execution),
-        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
+        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_target_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
         .branch_predict_is_branch_o(branch_predict_is_branch),
