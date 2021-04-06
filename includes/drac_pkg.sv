@@ -699,8 +699,8 @@ typedef struct packed {
     logic [NUM_SIMD_WB-1:0]  vwrite_enable; // Enable write on vregister file
     logic [NUM_SCALAR_WB-1:0] snoop_enable; // Enable snoop to rr and exe stage
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable; // Enable snoop to rr and exe stage
-    logic [NUM_FP_WB-1:0] write_enable_fp; // Enable write on register file FP
-    logic [NUM_FP_WB-1:0] snoop_enable_fp; // Enable snoop to rr and exe stage
+    logic [NUM_FP_WB-1:0] fp_write_enable; // Enable write on register file FP
+    logic [NUM_FP_WB-1:0] fp_snoop_enable; // Enable snoop to rr and exe stage
     logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -730,9 +730,9 @@ typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
     logic [NUM_SIMD_WB-1:0]  vwrite_enable;  // Write Enable to VRegister File
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable;  // Snoop Enable to rr and exe
-    logic [NUM_FP_WB-1:0] valid_fp;          // Valid Intruction
-    logic [NUM_FP_WB-1:0] write_enable_fp;   // Write Enable to Register File
-    logic [NUM_FP_WB-1:0] snoop_enable_fp; // Enable snoop to rr and exe stage
+    logic [NUM_FP_WB-1:0] fp_valid;          // Valid Intruction
+    logic [NUM_FP_WB-1:0] fp_write_enable;   // Write Enable to Register File
+    logic [NUM_FP_WB-1:0] fp_snoop_enable; // Enable snoop to rr and exe stage
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
