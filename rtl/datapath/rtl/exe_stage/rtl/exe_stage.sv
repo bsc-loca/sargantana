@@ -46,10 +46,10 @@ module exe_stage (
     //--PMU
     output logic                        pmu_is_branch_o,
     output logic                        pmu_branch_taken_o,                    
-    output logic                        pmu_stall_mul_o,
     output logic                        pmu_stall_mem_o,
     output logic                        pmu_exe_ready_o,
-    output logic                        pmu_struct_depend_stall_o
+    output logic                        pmu_struct_depend_stall_o,
+    output logic                        pmu_load_after_store_o
 );
 
 // Declarations
@@ -237,7 +237,8 @@ mem_unit mem_unit_inst(
     .mem_commit_stall_o     (mem_commit_stall_o),
     .mem_gl_index_o         (mem_gl_index_o),
     .lock_o                 (stall_mem),
-    .empty_o                (empty_mem)
+    .empty_o                (empty_mem),
+    .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
 always_comb begin
@@ -286,7 +287,6 @@ always_comb begin
     set_div_64_inst = 1'b0;
     set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
-    pmu_stall_mul_o = 1'b0;
     pmu_stall_mem_o = 1'b0; 
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
@@ -299,12 +299,10 @@ always_comb begin
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_32_inst;
-            pmu_stall_mul_o = ~ready | ~ready_mul_32_inst;
             set_mul_32_inst = ready & ready_mul_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_64_inst;
-            pmu_stall_mul_o = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))

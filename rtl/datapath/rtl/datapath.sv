@@ -661,10 +661,10 @@ module datapath(
         //PMU Neiel-Leyva
         .pmu_is_branch_o          (pmu_flags_o.is_branch),      
         .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
-        .pmu_stall_mul_o          (pmu_flags_o.stall_rr),
         .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
-        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend)
+        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
+        .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
     );
 
     register #($bits(exe_wb_scalar_instr_t) + $bits(exe_wb_scalar_instr_t)) reg_exe_inst(
@@ -953,6 +953,7 @@ module datapath(
             .exe_id(stage_rr_exe_q.instr.id),
             .exe_stall(control_int.stall_exe),
             .exe_flush(flush_int.flush_exe),
+            .exe_unit(reg_to_exe.instr.unit),
 
             .wb1_valid(wb_scalar[0].valid),
             .wb1_id(wb_scalar[0].id),

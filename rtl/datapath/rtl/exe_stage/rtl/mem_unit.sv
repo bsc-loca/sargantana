@@ -32,7 +32,9 @@ module mem_unit (
     output logic                 mem_commit_stall_o,     // Stall commit stage
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
-    output logic                 empty_o                 // Mem unit has no pending Ops
+    output logic                 empty_o,                // Mem unit has no pending Ops
+    
+    output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
 // Enum to select instruction to DCache interface
@@ -654,5 +656,14 @@ assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 //// Block incoming Mem instructions
 assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
+
+assign pmu_load_after_store_o = is_STORE_or_AMO_s0_d && instruction_to_dcache.instr.valid && 
+                                (instruction_to_dcache.instr.instr_type == LB  || 
+                                    instruction_to_dcache.instr.instr_type == LH  ||
+                                    instruction_to_dcache.instr.instr_type == LW  ||
+                                    instruction_to_dcache.instr.instr_type == LD  ||
+                                    instruction_to_dcache.instr.instr_type == LBU ||
+                                    instruction_to_dcache.instr.instr_type == LHU ||
+                                    instruction_to_dcache.instr.instr_type == LWU);
 
 endmodule
