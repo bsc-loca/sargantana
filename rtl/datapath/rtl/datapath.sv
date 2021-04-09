@@ -189,6 +189,7 @@ module datapath(
     cu_commit_t cu_commit_int;
     logic commit_xcpt;
     logic commit_store_or_amo_int;
+    logic mem_commit_store_or_amo_int;
     
     gl_instruction_t instruction_gl_commit_old_q;
     gl_instruction_t instruction_to_commit;
@@ -849,11 +850,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .simd_to_simd_wb_o(exe_to_wb_simd[0]),
         .mem_to_simd_wb_o(exe_to_wb_simd[1]),
         .exe_cu_o(exe_cu_int),
-    
+
         .mem_commit_stall_o(mem_commit_stall_int),
+        .mem_store_or_amo_o(mem_commit_store_or_amo_int),
         .mem_gl_index_o(mem_gl_index_int),
         .exception_mem_commit_o(exception_mem_commit_int),
-    
+
         .req_cpu_dcache_o(req_cpu_dcache_o),
     
         //PMU Neiel-Leyva
@@ -1077,7 +1079,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
                                      (instruction_to_commit.instr_type == AMO_LRW)     ||
                                      (instruction_to_commit.instr_type == AMO_LRD)     ;
 
-    assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & (commit_cu_int.gl_index != mem_gl_index_int));
+    assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// DEBUG SIGNALS                                                                                /////////

@@ -31,6 +31,7 @@ module mem_unit (
     output exe_wb_simd_instr_t   instruction_simd_o,     // Output instruction     
     output exception_t           exception_mem_commit_o, // Exception of the commit instruction
     output logic                 mem_commit_stall_o,     // Stall commit stage
+    output logic 		 mem_store_or_amo_o,     // Instruction is a Store or Commit
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
     output logic                 empty_o                 // Mem unit has no pending Ops
@@ -183,7 +184,7 @@ always_comb begin
     if (kill_i) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
         source_dcache               = NULL;     
-        read_next_lsq               = 1'b1;     // No Advance LSQ 
+        read_next_lsq               = 1'b1;     // No Advance LSQ
         mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
         instruction_s1_d            = 'h0;      // No Instruction to next stage
         next_state                  = ReadHead; // Next state Read Head
@@ -669,6 +670,8 @@ assign exception_mem_commit_o      = (exception_to_wb.valid & is_STORE_or_AMO_s2
 ///////////////////////////////////////////////////////////////////////////////
 ///// Outputs for the execution module or Dcache interface
 ///////////////////////////////////////////////////////////////////////////////
+
+assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 
 //// Stall committing instruction because it is a store
 assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);

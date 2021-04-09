@@ -41,7 +41,8 @@ module exe_stage (
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
-    output gl_index_t                   mem_gl_index_o,
+    output logic                        mem_store_or_amo_o,     // Inst at mem to do request is a Store or AMO
+    output gl_index_t                   mem_gl_index_o,         // Index of the mem inst to do request
 
     output req_cpu_dcache_t             req_cpu_dcache_o,       // Request to dcache interface 
     output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
@@ -297,6 +298,7 @@ mem_unit mem_unit_inst(
     .instruction_simd_o     (mem_to_simd_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
+    .mem_store_or_amo_o     (mem_store_or_amo_o),
     .mem_gl_index_o         (mem_gl_index_o),
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem)
