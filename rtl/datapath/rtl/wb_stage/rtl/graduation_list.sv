@@ -15,35 +15,39 @@ module graduation_list #
         parameter integer NUM_ENTRIES  = 32
     )
     (
-    input wire                                           clk_i,             // Clock Singal
-    input wire                                           rstn_i,            // Negated Reset Signal
+    input wire                                 clk_i,                             // Clock Singal
+    input wire                                 rstn_i,                            // Negated Reset Signal
 
-    // Input Signals of instruction from Read Register
-    input gl_instruction_t                               instruction_i,
+    // Input Signals of instruction from Read R
+    input gl_instruction_t                     instruction_i,
 
     // Read Entry Interface
-    input wire                                           read_head_i,      // Read oldest instruction
+    input wire                                 read_head_i,                       // Read oldest instruction
 
     // Write Back Interface
-    input gl_index_t [drac_pkg::NUM_SCALAR_WB-1:0]       instruction_writeback_i,        // Mark instruction as finished
-    input logic [drac_pkg::NUM_SCALAR_WB-1:0]            instruction_writeback_enable_i, // Write enabled for finished
-    input gl_instruction_t [drac_pkg::NUM_SCALAR_WB-1:0] instruction_writeback_data_i,   // Data of the generated exception
+    input gl_index_t       [NUM_SCALAR_WB-1:0] instruction_writeback_i,           // Mark instruction as finished
+    input logic            [NUM_SCALAR_WB-1:0] instruction_writeback_enable_i,    // Write enabled for finished
+    input gl_instruction_t [NUM_SCALAR_WB-1:0] instruction_writeback_data_i,      // Data of the generated exception
 
-    input wire                                           flush_i,          // Flush instructions from the graduation list
-    input gl_index_t                                     flush_index_i,    // Index that selects the first correct instruction
+    input gl_index_t       [NUM_SIMD_WB-1:0] instruction_simd_writeback_i,        // Mark instruction as finished
+    input logic            [NUM_SIMD_WB-1:0] instruction_simd_writeback_enable_i, // Write enabled for finished
+    input gl_instruction_t [NUM_SIMD_WB-1:0] instruction_simd_writeback_data_i,   // Data of the generated exception
 
-    input wire                                           flush_commit_i,   // Flush all instructions
+    input wire                                 flush_i,                           // Flush instructions from the graduation list
+    input gl_index_t                           flush_index_i,                     // Index that selects the first correct instruction
+
+    input wire                                 flush_commit_i,                    // Flush all instructions
 
     // Output Signal of instruction to Read Register 
-    output gl_index_t                                    assigned_gl_entry_o,
+    output gl_index_t                          assigned_gl_entry_o,
 
     // Output Signal of first finished instruction
-    output gl_instruction_t                              instruction_o,
-    output gl_index_t                                    commit_gl_entry_o,
+    output gl_instruction_t                    instruction_o,
+    output gl_index_t                          commit_gl_entry_o,
 
     // Output Control Signals 
-    output logic                                         full_o,           // GL has no free entries
-    output logic                                         empty_o           // GL has no filled entries
+    output logic                               full_o,                            // GL has no free entries
+    output logic                               empty_o                            // GL has no filled entries
 );
 
 
@@ -74,6 +78,7 @@ assign read_enable = read_head_i & (num > 0) & (valid_bit[head]) & ~(flush_i) & 
 
 assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.instr_type == SW) ||
                          (instruction_i.instr_type == SH) || (instruction_i.instr_type == SB) ||
+                         (instruction_i.instr_type == VSE) ||
                          (instruction_i.instr_type == AMO_MAXWU) || (instruction_i.instr_type == AMO_MAXDU)   ||
                          (instruction_i.instr_type == AMO_MINWU) || (instruction_i.instr_type == AMO_MINDU)   ||
                          (instruction_i.instr_type == AMO_MAXW)  || (instruction_i.instr_type == AMO_MAXD)    ||
@@ -87,7 +92,7 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
                          (instruction_i.instr_type == AMO_LRW)   || (instruction_i.instr_type == AMO_LRD)     ;
 
 
-    gl_instruction_t entries [0:NUM_ENTRIES-1];
+gl_instruction_t entries [0:NUM_ENTRIES-1];
 
 always@(posedge clk_i, negedge rstn_i)
 begin
@@ -109,6 +114,7 @@ begin
             instruction_o.exception.valid <= 1'b0;
             instruction_o.stall_csr_fence <= 1'b0;
             instruction_o.old_prd <= 'b0;
+            instruction_o.old_pvd <= 'b0;
             commit_gl_entry_o <= 'b0;
         end
     
@@ -118,12 +124,21 @@ begin
             entries[tail] <= instruction_i;
         end
 
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            if (instruction_writeback_enable_i[i]) begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
+            if (rstn_i & instruction_writeback_enable_i[i]) begin
                 valid_bit[instruction_writeback_i[i]] <= 1'b1;
                 entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
                 entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
                 entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
+            end
+        end
+
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            if (rstn_i & instruction_simd_writeback_enable_i[i]) begin
+                valid_bit[instruction_simd_writeback_i[i]] <= 1'b1;
+                entries[instruction_simd_writeback_i[i]].csr_addr  <= instruction_simd_writeback_data_i[i].csr_addr;
+                entries[instruction_simd_writeback_i[i]].exception <= instruction_simd_writeback_data_i[i].exception;
+                entries[instruction_simd_writeback_i[i]].result    <= instruction_simd_writeback_data_i[i].result;
             end
         end
     end

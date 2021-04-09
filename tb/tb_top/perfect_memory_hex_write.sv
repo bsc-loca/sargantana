@@ -18,7 +18,7 @@ import drac_pkg::*;
 // this is a specific module to read hexdumps of riscv tests 
 module perfect_memory_hex_write #(
     parameter SIZE = 32*1024 * 8,
-    parameter LINE_SIZE = 64,
+    parameter LINE_SIZE = 128,
     parameter ADDR_SIZE = 32,
     parameter DELAY = 2,
     localparam HEX_LOAD_ADDR = 'h0F0
@@ -30,7 +30,7 @@ module perfect_memory_hex_write #(
     input logic                     valid_i,
     input logic [7:0]               tag_i,
     input logic                     wr_ena_i,
-    input bus64_t                   wr_data_i,
+    input bus_simd_t                wr_data_i,
     input logic [3:0]               word_size_i,
     output logic [LINE_SIZE-1:0]    line_o,
     output logic                    ready_o,
@@ -220,10 +220,10 @@ module perfect_memory_hex_write #(
                         4'b0011: begin
                             case (addr_i[3])
                                 1'b0: begin
-                                    line_d = memory[addr_int][63:0];
+                                    line_d = {{64{memory[addr_int][63]}},memory[addr_int][63:0]};
                                 end
                                 1'b1: begin
-                                    line_d = memory[addr_int][127:64];
+                                    line_d = {{64{memory[addr_int][127]}},memory[addr_int][127:64]};
                                 end
                             endcase 
                         end
@@ -322,6 +322,19 @@ module perfect_memory_hex_write #(
                                     line_d = {32'b0,memory[addr_int][127:96]};
                                 end
                             endcase 
+                        end
+                        4'b0111: begin
+                            case (addr_i[3])
+                                1'b0: begin
+                                    line_d = {64'b0,memory[addr_int][63:0]};
+                                end
+                                1'b1: begin
+                                    line_d = {64'b0,memory[addr_int][127:64]};
+                                end
+                            endcase 
+                        end
+                        4'b1000: begin
+                            line_d = memory[addr_int][127:0];
                         end
                         default: begin
                             line_d = 0;
@@ -472,16 +485,19 @@ module perfect_memory_hex_write #(
                 4'b0011: begin
                     case (addr_q[3])
                         1'b0: begin
-                            memory[addr_int_q][63:0] = wr_data_i;
+                            memory[addr_int_q][63:0] = wr_data_i[63:0];
                         end
                         1'b1: begin
-                            memory[addr_int_q][127:64] = wr_data_i;
+                            memory[addr_int_q][127:64] = wr_data_i[63:0];
                         end
                     endcase
+                end
+                4'b1000: begin
+                    memory[addr_int_q][127:0] = wr_data_i;
                 end
                 default: begin
                 end
             endcase
         end
     end
-endmodule : perfect_memory_hex_write
+endmodule

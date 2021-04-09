@@ -28,6 +28,7 @@ module mem_unit (
 
     output req_cpu_dcache_t      req_cpu_dcache_o,       // Request to dcache
     output exe_wb_scalar_instr_t instruction_o,          // Output instruction     
+    output exe_wb_simd_instr_t   instruction_simd_o,     // Output instruction     
     output exception_t           exception_mem_commit_o, // Exception of the commit instruction
     output logic                 mem_commit_stall_o,     // Stall commit stage
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
@@ -38,11 +39,12 @@ module mem_unit (
 // Enum to select instruction to DCache interface
 typedef enum logic[1:0] {
     NULL        = 2'b00,
-    READ        = 3'b01,
-    STORED      = 3'b10
+    READ        = 2'b01,
+    STORED      = 2'b10
 } source_lsq_t;               
 
-bus64_t data_src1, data_src2;
+bus64_t data_src1;
+bus_simd_t data_src2;
 
 source_lsq_t source_dcache;
 
@@ -110,7 +112,7 @@ logic advance_head_prmq;
 logic full_pmrq;
 
 // Select data source
-bus64_t data_to_wb;
+bus_simd_t data_to_wb;
 
 // State machine variables
 logic [1:0] state;
@@ -137,6 +139,7 @@ assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM && instr
 assign instruction_to_lsq.data_rs1      = instruction_i.data_rs1;
 assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
 assign instruction_to_lsq.prd           = instruction_i.prd;
+assign instruction_to_lsq.pvd           = instruction_i.pvd;
 assign instruction_to_lsq.gl_index      = instruction_i.gl_index;
 
 // LSQ
@@ -347,6 +350,7 @@ assign is_STORE_or_AMO_s0_d = (req_cpu_dcache_o.instr_type == SD)          ||
                               (req_cpu_dcache_o.instr_type == SW)          ||
                               (req_cpu_dcache_o.instr_type == SH)          ||
                               (req_cpu_dcache_o.instr_type == SB)          ||
+                              (req_cpu_dcache_o.instr_type == VSE)         ||
                               (req_cpu_dcache_o.instr_type == AMO_MAXWU)   ||
                               (req_cpu_dcache_o.instr_type == AMO_MAXDU)   ||
                               (req_cpu_dcache_o.instr_type == AMO_MINWU)   ||
@@ -530,7 +534,7 @@ always_comb begin
                    ( !(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )) &&
                    instruction_s2_q.instr.valid) begin // invalid address
         case(instruction_s2_q.instr.instr_type)
-            SD, SW, SH, SB, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
+            SD, SW, SH, SB, VSE, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
             AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
             AMO_MAXWU, AMO_MINW, AMO_MINWU, AMO_SWAPD, AMO_ADDD,
             AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU: begin
@@ -630,11 +634,35 @@ assign instruction_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1
 assign instruction_o.prd           = instruction_to_wb.prd;
 assign instruction_o.checkpoint_done = instruction_to_wb.checkpoint_done;
 assign instruction_o.chkp          = instruction_to_wb.chkp;
+assign instruction_o.simd_chkp     = instruction_to_wb.simd_chkp;
 assign instruction_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_o.branch_taken  = 1'b0;
 assign instruction_o.result_pc     = 0;
-assign instruction_o.result        = data_to_wb;
+assign instruction_o.result        = data_to_wb[63:0];
 assign instruction_o.ex            = exception_to_wb;
+
+assign instruction_simd_o.valid           = instruction_to_wb.instr.valid;
+assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;
+assign instruction_simd_o.bpred           = instruction_to_wb.instr.bpred;
+assign instruction_simd_o.rs1             = instruction_to_wb.instr.rs1;
+assign instruction_simd_o.vd              = instruction_to_wb.instr.vd;
+assign instruction_simd_o.change_pc_ena   = instruction_to_wb.instr.change_pc_ena;
+assign instruction_simd_o.vregfile_we     = instruction_to_wb.instr.vregfile_we;
+assign instruction_simd_o.instr_type      = instruction_to_wb.instr.instr_type;
+`ifdef VERILATOR
+assign instruction_simd_o.id	          = instruction_to_wb.instr.id;
+`endif
+assign instruction_simd_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
+assign instruction_simd_o.csr_addr        = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_simd_o.pvd             = instruction_to_wb.pvd;
+assign instruction_simd_o.checkpoint_done = instruction_to_wb.checkpoint_done;
+assign instruction_simd_o.chkp            = instruction_to_wb.chkp;
+assign instruction_simd_o.simd_chkp       = instruction_to_wb.simd_chkp;
+assign instruction_simd_o.gl_index        = instruction_to_wb.gl_index;
+assign instruction_simd_o.branch_taken    = 1'b0;
+assign instruction_simd_o.result_pc       = 0;
+assign instruction_simd_o.vresult         = data_to_wb;
+assign instruction_simd_o.ex              = exception_to_wb;
 
 assign exception_mem_commit_o      = (exception_to_wb.valid & is_STORE_or_AMO_s2_q) ? exception_to_wb : 'h0;
 

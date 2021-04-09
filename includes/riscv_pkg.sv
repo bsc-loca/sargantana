@@ -14,9 +14,12 @@
 package riscv_pkg;
 
 parameter XLEN = 64; 
+parameter VLEN = 128;
+parameter MLEN = VLEN/8;
 parameter OPCODE_WIDTH = 6;
 parameter REG_WIDTH = 5;
 parameter NUM_ISA_REGISTERS = 32;
+parameter NUM_ISA_VREGISTERS = 32;
 parameter INST_SIZE = 32;
 
 
@@ -82,6 +85,40 @@ typedef struct packed {
     logic [6:0]   opcode;
 } instruction_jtype_t;
 
+typedef struct packed {
+    logic [31:26] func6;
+    logic [25:25] vm;
+    logic [24:20] vs2;
+    logic [19:15] vs1;
+    logic [14:12] func3;
+    logic [11:7]  vd;
+    logic [6:0]   opcode;
+} instruction_vtype_t;
+
+typedef struct packed {
+    logic [31:29] nf;
+    logic [28:28] mew;
+    logic [27:26] mop;
+    logic [25:25] vm;
+    logic [24:20] lumop;
+    logic [19:15] rs1;
+    logic [14:12] width;
+    logic [11:7]  vd;
+    logic [6:0]   opcode;
+} instruction_vltype_t;
+
+typedef struct packed {
+    logic [31:29] nf;
+    logic [28:28] mew;
+    logic [27:26] mop;
+    logic [25:25] vm;
+    logic [24:20] sumop;
+    logic [19:15] rs1;
+    logic [14:12] width;
+    logic [11:7]  vs3;
+    logic [6:0]   opcode;
+} instruction_vstype_t;
+
 // RISCV Instruction types
 typedef union packed {
     logic [INST_SIZE-1:0] bits;
@@ -92,6 +129,9 @@ typedef union packed {
     instruction_btype_t   btype;
     instruction_utype_t   utype;
     instruction_jtype_t   jtype;
+    instruction_vtype_t   vtype;
+    instruction_vltype_t  vltype;
+    instruction_vstype_t  vstype;
 } instruction_t;
 
 
@@ -114,7 +154,8 @@ typedef enum logic [6:0] {
     OP_ATOMICS   = 7'b0101111,
     OP_LOAD_FP   = 7'b0000111,
     OP_STORE_FP  = 7'b0100111,
-    OP_FP        = 7'b1010011
+    OP_FP        = 7'b1010011,
+    OP_V         = 7'b1010111
 } op_inst_t;
 
 typedef enum logic [2:0] {
@@ -222,6 +263,73 @@ typedef enum logic [2:0] {
     F3_ATOMICS      = 3'b010,
     F3_ATOMICS_64   = 3'b011
 } op_func3_atomics_t;
+
+typedef enum logic [2:0] {
+    F3_OPIVV = 3'b000,
+    F3_OPFVV = 3'b001,
+    F3_OPMVV = 3'b010,
+    F3_OPIVI = 3'b011,
+    F3_OPIVX = 3'b100,
+    F3_OPFVF = 3'b101,
+    F3_OPMVX = 3'b110,
+    F3_OPCFG = 3'b111
+} op_func3_vector_t;
+
+typedef enum logic [5:0] {
+    F6_VADD   = 6'b000000,
+    F6_VSUB   = 6'b000010,
+    F6_VMINU  = 6'b000100,
+    F6_VMIN   = 6'b000101,
+    F6_VMAXU  = 6'b000110,
+    F6_VMAX   = 6'b000111,
+    F6_VAND   = 6'b001001,
+    F6_VOR    = 6'b001010,
+    F6_VXOR   = 6'b001011,
+    F6_VMV    = 6'b010111,
+    F6_VMSEQ  = 6'b011000,
+    F6_VSLL   = 6'b100101,
+    F6_VSRL   = 6'b101000,
+    F6_VSRA   = 6'b101001
+} op_func6_vector_opi_t;
+
+typedef enum logic [5:0] {
+    F6_VCNT      = 6'b000000, //Custom instruction, for now we use vredsum encoding
+    F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
+    F6_VWXUNARY0 = 6'b010000,
+    F6_VMUNARY0  = 6'b010110  //This encoding changes on v1.0 of specs. For now we keep it like this
+} op_func6_vector_opm_t;
+
+typedef enum logic [5:0] {
+    F6_VFADD = 6'b000000,
+    F6_VFSUB = 6'b000010,
+    F6_VFMIN = 6'b000100,
+    F6_VFMAX = 6'b000110,
+    F6_VFMV  = 6'b001101
+} op_func6_vector_opf_t;
+
+typedef enum logic [4:0] {
+    VS1_VMV_X_S = 5'b00000,
+    VS1_VID     = 5'b10001
+} op_vs1_vector_t;
+
+typedef enum logic [1:0] {
+    MOP_UNIT_STRIDE = 2'b00
+} mop_t;
+
+typedef enum logic [4:0] {
+    LUMOP_UNIT_STRIDE = 5'b00000
+} lumop_t;
+
+typedef enum logic [4:0] {
+    SUMOP_UNIT_STRIDE = 5'b00000
+} sumop_t;
+
+typedef enum logic [2:0] {
+    WIDTH_VECTOR_BYTE = 3'b000,
+    WIDTH_VECTOR_HALF = 3'b101,
+    WIDTH_VECTOR_WORD = 3'b110,
+    WIDTH_VECTOR_ELEM = 3'b111
+} width_t;
 
 typedef enum logic [4:0] {
     LR_W        = 5'b00010,

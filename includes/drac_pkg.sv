@@ -16,26 +16,34 @@ import riscv_pkg::*;
 package drac_pkg;
 
 //parameter XLEN = 64; 
+//parameter VLEN = 256;
 parameter ICACHELINE_SIZE = 127;
 parameter ADDR_SIZE = 40;
 parameter DATA_SIZE = 64;
+parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
 //parameter INST_SIZE = 32;
 parameter REGFILE_WIDTH = 5;
+parameter VREGFILE_WIDTH = 5;
 parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
-parameter NUM_SCALAR_WB = 2;
+parameter NUM_SCALAR_WB = 3;
+parameter NUM_SIMD_WB = 2;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
 
-typedef reg   [63:0] reg64_t;
+typedef reg   [riscv_pkg::VLEN-1:0] reg_simd_t;
+typedef reg   [63:0]  reg64_t;
+typedef logic [riscv_pkg::VLEN-1:0] bus_simd_t;
+typedef logic [(riscv_pkg::VLEN/8)-1:0] bus_mask_t;
 typedef logic [127:0] bus128_t;
-typedef logic [63:0] bus64_t;
-typedef logic [31:0] bus32_t;
+typedef logic [63:0]  bus64_t;
+typedef logic [31:0]  bus32_t;
 
 typedef logic [REGFILE_WIDTH-1:0] reg_t;
+typedef logic [VREGFILE_WIDTH-1:0] vreg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
 typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
 typedef logic [ADDR_SIZE-1:0] addr_t;
@@ -60,6 +68,11 @@ parameter NUM_PHISICAL_REGISTERS = 64;
 parameter PHISICAL_REGFILE_WIDTH = 6;
 typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
 
+// Physical vector registers
+parameter NUM_PHISICAL_VREGISTERS = 64;
+parameter PHISICAL_VREGFILE_WIDTH = 6;
+typedef logic [PHISICAL_VREGFILE_WIDTH-1:0] phvreg_t;
+
 // Register checkpointing
 parameter NUM_CHECKPOINTS = 4;
 typedef logic [$clog2(NUM_CHECKPOINTS)-1:0] checkpoint_ptr;
@@ -79,6 +92,9 @@ parameter LSQ_NUM_ENTRIES = 8;
 
 // Pending Mem Request Queue
 parameter PMRQ_NUM_ENTRIES = 16;
+
+// SIMD
+typedef logic [1:0] fu_id_t;
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
@@ -106,6 +122,13 @@ typedef enum logic {
     PRED_NOT_TAKEN,
     PRED_TAKEN
 } branch_pred_decision_t;   // Enum Branch Prediction resolution
+
+typedef enum logic[1:0] {
+    SEW_8  = 2'b00,
+    SEW_16 = 2'b01,
+    SEW_32 = 2'b10,
+    SEW_64 = 2'b11
+} sew_t;
 
 typedef struct packed {
     logic is_branch;                    // Was predicted to be branch
@@ -158,6 +181,7 @@ typedef enum logic [2:0]{
     UNIT_MUL,                   // Select MULTIPLICATION
     UNIT_BRANCH,                // Select Branch computation
     UNIT_MEM,                   // Select Memory unit
+    UNIT_SIMD,                  // Select SIMD
     UNIT_CONTROL,               // Select CONTROL
     UNIT_SYSTEM                 // Select CSR
 } functional_unit_t;   // Selection of funtional unit in exe stage 
@@ -169,7 +193,7 @@ typedef enum logic [1:0]{
     SEL_FROM_CONTROL            // Select source from control
 } reg_sel_t;          // Selection of the result from functional unit 
 
-typedef enum logic [6:0] { 
+typedef enum logic [7:0] { 
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
    // logic operations
@@ -199,7 +223,15 @@ typedef enum logic [6:0] {
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
-   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D
+   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
+   // Vectorial Instructions
+   VADD, VSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VSADD, VSADDU, VSSUB, VSSUBU, VSLL, VSRA, VSRL, VMV, VEXT, VID, VMV_X_S,
+   // Vectorial FP instructions
+   VFADD, VFMV,
+   // Vectorial memory operations
+   VLE, VSE,
+   // Vectorial custom instructions
+   VCNT
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {
@@ -220,7 +252,7 @@ typedef struct packed {
     logic      replay;      // Replay instruction
     logic       ready;      // Ready to accept requests
     logic        nack;      // Request not accepted
-    bus64_t      data;      // Data from load
+    bus_simd_t   data;      // Data from load
     reg_t          rd;      // Tag of the mem access
     logic  xcpt_ma_st;      // Misaligned store exception
     logic  xcpt_ma_ld;      // Misaligned load exception
@@ -235,9 +267,9 @@ typedef struct packed {
     logic                valid;        // New memory request
     logic                 kill;        // Exception detected at Commit
     bus64_t           data_rs1;        // Data operand 1
-    bus64_t           data_rs2;        // Data operand 2
+    bus_simd_t        data_rs2;        // Data operand 2
     instr_type_t    instr_type;        // Type of instruction
-    logic [2:0]       mem_size;        // Granularity of mem. access
+    logic [3:0]       mem_size;        // Granularity of mem. access
     reg_t                   rd;        // Destination register. Used for identify a pending Miss
     bus64_t                imm;        // Inmmediate 
     addr_t        io_base_addr;        // Address Base Pointer of INPUT/OUPUT
@@ -275,6 +307,17 @@ typedef struct packed {
     reg_t rs1;                          // Register Source 1
     reg_t rs2;                          // Register Source 2
     reg_t rd;                           // Destination register
+    logic use_rs1;                      // Instruction uses register source 1
+    logic use_rs2;                      // Instruction uses register source 2
+
+    vreg_t vs1;                         // VRegister Source 1
+    vreg_t vs2;                         // VRegister Source 2
+    vreg_t vd;                          // Destination vregister
+    logic  use_vs1;                     // Instruction uses vregister source 1
+    logic  use_vs2;                     // Instruction uses vregister source 2
+    logic  is_opvx;                     // Instruction uses rs1 instead of vs1
+    logic  is_opvi;                     // Instruciton uses imm instead of vs1
+
     bus64_t imm;                        // Instruction immediate
     
     logic use_imm;                      // Use Immediate later
@@ -285,9 +328,11 @@ typedef struct packed {
     // Control bits
     logic change_pc_ena;                // Change PC 
     logic regfile_we;                   // Write to register file
+    logic vregfile_we;                  // Write to vregister file
+    logic use_mask;                     // Use vector mask
     instr_type_t instr_type;            // Type of instruction
     logic signed_op;                    // Signed Operation
-    logic [2:0] mem_size;               // Memory operation size (Byte, Word)
+    logic [3:0] mem_size;               // Memory operation size (Byte, Word, etc)
     logic stall_csr_fence;              // CSR or fence
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst; 
@@ -300,18 +345,33 @@ typedef struct packed {
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
-    logic   rdy2;                       // Ready register source 2    
+    logic   rdy2;                       // Ready register source 2
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
 
+    phvreg_t pvs1;                      // Physical vregister source 1
+    logic    vrdy1;                     // Ready vregister source 1
+    phvreg_t pvs2;                      // Physical vregister source 2
+    logic    vrdy2;                     // Ready vregister source 2
+    phvreg_t pvm;                       // Physical vregister source mask
+    logic    vrdym;                     // Ready vregister source mask
+    phvreg_t pvd;                       // Physical vregister destination
+    phvreg_t old_pvd;                   // Old Physical vregister destination
+    logic    vrdy_old_vd;               // Ready vregister old vd
+
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch  
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 } ir_rr_stage_t;
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
     bus64_t data_rs2;                   // Data operand 2
+    bus_simd_t data_vs1;                // Data vector operand 1
+    bus_simd_t data_vs2;                // Data vector operand 2
+    bus_simd_t data_old_vd;             // Data vector old destination
+    bus_mask_t data_vm;                 // Data vector mask
     // any interrupt
     logic       csr_interrupt;
     // save until the instruction then 
@@ -324,8 +384,20 @@ typedef struct packed {
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
 
+    phvreg_t pvs1;                      // Physical vregister source 1
+    logic    vrdy1;                     // Ready vregister source 1
+    phvreg_t pvs2;                      // Physical vregister source 2
+    logic    vrdy2;                     // Ready vregister source 2
+    phvreg_t pvm;                       // Physical vregister mask
+    logic    vrdym;                     // Ready vregister mask
+    logic    use_mask;                  // Does the instruction use a mask?
+    phvreg_t pvd;                       // Physical vregister destination
+    phvreg_t old_pvd;                   // Old Physical vregister destination
+    logic    vrdy_old_vd;               // Ready vregister old vd
+
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -345,9 +417,11 @@ typedef struct packed {
     logic   rdy2;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination 
     phreg_t old_prd;                    // Old Physical register destination
+    phvreg_t old_pvd;                   // Old Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_arith_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -355,7 +429,8 @@ typedef struct packed {
 typedef struct packed {
     instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
-    bus64_t data_rs2;                   // Data operand 2
+    bus_simd_t data_rs2;                // Data operand 2
+    bus_mask_t data_vm;                 // Data simd mask
     bus64_t imm;                        // Immediate
     // any interrupt
     logic       csr_interrupt;
@@ -367,13 +442,47 @@ typedef struct packed {
     phreg_t prs2;                       // Physical register source 2
     logic   rdy2;                       // Ready register source 2    
     phreg_t prd;                        // Physical register destination 
+    phvreg_t pvd;                       // Physical vregister destination
     phreg_t old_prd;                    // Old Physical register destination
+    phvreg_t old_pvd;                   // Old Physical register destination
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
+    bus64_t data_rs1;                   // Data scalar operand 1
+    bus_simd_t data_vs1;                // Data simd operand 1
+    bus_simd_t data_vs2;                // Data simd operand 2
+    bus_simd_t data_old_vd;             // Data simd old destination
+    bus_mask_t data_vm;                 // Data simd mask
+    sew_t      sew;                     // Element width
+    // any interrupt
+    logic       csr_interrupt;
+    // save until the instruction then 
+    // give the interrupt cause as xcpt cause
+    bus64_t     csr_interrupt_cause;
+    phvreg_t pvs1;                      // Physical register source 1
+    logic   vrdy1;                      // Ready register source 1
+    phvreg_t pvs2;                      // Physical register source 2
+    logic   vrdy2;                      // Ready register source 2    
+    
+    phreg_t prd;                         // Physical register destination
+    phvreg_t pvd;                       // Physical register destination 
+    phreg_t old_prd;                    // Old Physical register destination
+    phvreg_t old_pvd;                   // Old Physical register destination
+    logic vrdy_old_vd;                  // Ready register old vd
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_simd_instr_t;
 
 typedef struct packed {
     logic valid;                        // Valid instruction
@@ -382,7 +491,7 @@ typedef struct packed {
     instr_type_t instr_type;            // Type of instruction
     addrPC_t result_pc;                 // PC result
     reg_t rd;                           // Destination Register
-    bus64_t result;                     // Result or immediate                  
+    bus64_t result;                     // Result or immediate  
     logic branch_taken;                 // Branch taken
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
@@ -398,15 +507,46 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } exe_wb_scalar_instr_t;       //  Execution Stage to scalar Write Back
 
 typedef struct packed {
-    logic   valid;                      // Valid instruction
-    bus64_t data;                       // Result data
-    reg_t   rd;                         // Virtual register destination
-    phreg_t prd;                        // Physical register destination
+    logic valid;                        // Valid instruction
+    addrPC_t pc;                        // PC of the instruction
+    reg_t rs1;                          // Register Source 1
+    instr_type_t instr_type;            // Type of instruction
+    addrPC_t result_pc;                 // PC result
+    vreg_t vd;                          // Destination VRegister
+    bus_simd_t vresult;                 // VResult    
+    logic branch_taken;                 // Branch taken
+    branch_pred_t bpred;                // Branch Prediciton
+    exception_t ex;                     // Exceptions
+    logic vregfile_we;                  // Write to vregister file
+    logic change_pc_ena;                // Change PC
+    logic stall_csr_fence;              // CSR or fence
+    reg_csr_addr_t csr_addr;            // CSR Address
+    `ifdef VERILATOR
+    riscv_pkg::instruction_t inst;      // Bits of the instruction
+    bus64_t id;
+    `endif
+    phvreg_t pvd;                       // Physical vregister destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
+
+typedef struct packed {
+    logic    valid;                     // Valid instruction
+    bus64_t  data;                      // Result data
+    reg_t    rd;                        // Virtual register destination
+    phreg_t  prd;                       // Physical register destination
+    reg_t    vd;                        // Virtual vregister destination
+    phvreg_t pvd;                       // Physical vregister destination
 } wb_exe_instr_t;   // WB Stage to Execution
 
 // Control Unit signals
@@ -426,7 +566,9 @@ typedef struct packed {
     logic valid;                        // Valid instruction
     logic full_iq;                      // Instruction Queue full
     logic out_of_checkpoints;           // Rename out of checkpoints
+    logic simd_out_of_checkpoints;      // SIMD Rename out of checkpoints
     logic empty_free_list;              // Free list out of registers
+    logic simd_empty_free_list;         // SIMD Free list out of registers
     logic is_branch;                    // Rename instruction is a branch
 } ir_cu_t;      // Rename to Control Unit
 
@@ -439,17 +581,21 @@ typedef struct packed {
 } cu_if_t;      // Control Unit to Fetch
 
 typedef struct packed {
-    logic do_checkpoint;                // Invalidate ICache content
-    logic delete_checkpoint;            // Delete last checkpoint
-    logic do_recover;                   // Recover checkpoint
-    checkpoint_ptr recover_checkpoint;  // Label of the checkpoint to recover   
-    logic recover_commit;               // Recover at Commit
-    logic enable_commit_update;         // Enable update of Free List and Rename from commit
+    logic do_checkpoint;                   // Invalidate ICache content
+    logic delete_checkpoint;               // Delete last checkpoint
+    logic do_recover;                      // Recover checkpoint
+    checkpoint_ptr recover_checkpoint;     // Label of the checkpoint to recover   
+    checkpoint_ptr simd_recover_checkpoint;// Label of the simd checkpoint to recover
+    logic recover_commit;                  // Recover at Commit
+    logic enable_commit_update;            // Enable update of Free List and Rename from commit
+    logic simd_enable_commit_update;       // Enable update of SIMD Free List and Rename from commit
 } cu_ir_t;      // Control Unit to Rename
 
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] write_enable; // Enable write on register file
+    logic [NUM_SIMD_WB-1:0]  vwrite_enable; // Enable write on vregister file
     logic [NUM_SCALAR_WB-1:0] snoop_enable; // Enable snoop to rr and exe stage
+    logic [NUM_SIMD_WB-1:0]  vsnoop_enable; // Enable snoop to rr and exe stage
     logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -457,6 +603,7 @@ typedef struct packed {
 typedef struct packed {
     logic valid_1;                // Valid Intruction ALU, MUL, DIV
     logic valid_2;                // Valid Intruction MEM
+    logic valid_3;                // Valid Instruction SIMD
     logic change_pc_ena_1;        // Enable PC write
     logic is_branch;              // There is a branch in the ALU
     logic branch_taken;           // Branch taken
@@ -466,12 +613,16 @@ typedef struct packed {
 // Control Unit signals
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] valid;         // Valid Intruction
+    logic [NUM_SIMD_WB-1:0]  vvalid;         // Valid SIMD Instruction
     logic change_pc_ena;                     // Enable PC write
     logic checkpoint_done;        // It has a checkpoint
     checkpoint_ptr  chkp;         // Label of the checkpoint
+    checkpoint_ptr  simd_chkp;    // Label of the checkpoint
     gl_index_t gl_index;          // Graduation List entry of ALU
     logic [NUM_SCALAR_WB-1:0] write_enable;  // Write Enable to Register File
     logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
+    logic [NUM_SIMD_WB-1:0]  vwrite_enable;  // Write Enable to VRegister File
+    logic [NUM_SIMD_WB-1:0]  vsnoop_enable;  // Snoop Enable to rr and exe
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
@@ -484,8 +635,10 @@ typedef struct packed {
     logic fence;                // Is fence
     logic fence_i;              // Is fence i
     logic write_enable;         // Write Enable to Register File
+    logic write_enable_v;       // Write Enable to VRegister File
     logic stall_commit;         // Stop commits
     logic regfile_we;           // Commit update enable
+    logic vregfile_we;          // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
@@ -623,7 +776,7 @@ typedef struct packed {
     regPC_t          addr;           // Address        
     bus64_t          data;           // Data 
     instr_type_t     instr_type;     // Type of instruction
-    logic [2:0]      mem_size;       // Granularity of mem. access
+    logic [3:0]      mem_size;       // Granularity of mem. access
     reg_t            rd;             // Destination register. Used for identify a pending Miss
 } lsq_interface_t;
 
@@ -634,13 +787,18 @@ typedef struct packed {
     instr_type_t    instr_type;             // Type of instruction
     reg_t           rd;                     // Destination Register
     reg_t           rs1;                    // Source register 1
+    vreg_t          vd;                     // Destination VRegister
+    vreg_t          vs1;                    // Source vregister 1
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
-    bus64_t         result;                 // Result or immediate
+    bus_simd_t      result;                 // Result or immediate
     logic           stall_csr_fence;        // CSR or fence
     logic           regfile_we;             // Write to register file
+    logic           vregfile_we;            // Write to vregister file
     phreg_t         prd;                    // Physical register destination to write      
     phreg_t         old_prd;                // Old Physical register destination
+    phreg_t         pvd;                    // Physical vregister destination to write      
+    phreg_t         old_pvd;                // Old Physical vregister destination
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;          // Bits of the instruction
     `endif
@@ -675,4 +833,3 @@ typedef struct packed {
 } debug_out_t;
 
 endpackage
-

@@ -25,6 +25,7 @@ module exe_stage (
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
+    input sew_t                         sew_i,                  // SEW from vl CSR
 
     // I/O base space pointer to dcache interface
     input addr_t                        io_base_addr_i,
@@ -32,8 +33,11 @@ module exe_stage (
     input wire                          commit_store_or_amo_i, // Signal to execute stores and atomics in commit
 
     // OUTPUTS
-    output exe_wb_scalar_instr_t        arith_to_wb_o,
-    output exe_wb_scalar_instr_t        mem_to_wb_o,
+    output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
+    output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
+    output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
+    output exe_wb_simd_instr_t          simd_to_simd_wb_o,
+    output exe_wb_simd_instr_t          mem_to_simd_wb_o,
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
@@ -54,20 +58,20 @@ module exe_stage (
 
 // Declarations
 bus64_t rs1_data_def;
-bus64_t rs2_data_def;
+bus_simd_t rs2_data_def;
 
 rr_exe_arith_instr_t arith_instr;
-rr_exe_mem_instr_t mem_instr;
+rr_exe_mem_instr_t   mem_instr;
+rr_exe_simd_instr_t  simd_instr;
 
-exe_wb_scalar_instr_t alu_to_wb;
-
-exe_wb_scalar_instr_t mul_to_wb;
-
-exe_wb_scalar_instr_t div_to_wb;
-
-exe_wb_scalar_instr_t branch_to_wb;
-
-exe_wb_scalar_instr_t mem_to_wb;
+exe_wb_scalar_instr_t alu_to_scalar_wb;
+exe_wb_scalar_instr_t mul_to_scalar_wb;
+exe_wb_scalar_instr_t div_to_scalar_wb;
+exe_wb_scalar_instr_t branch_to_scalar_wb;
+exe_wb_scalar_instr_t mem_to_scalar_wb;
+exe_wb_scalar_instr_t simd_to_scalar_wb;
+exe_wb_simd_instr_t mem_to_simd_wb;
+exe_wb_simd_instr_t simd_to_simd_wb;
 
 bus64_t result_mem;
 logic stall_mem;
@@ -111,7 +115,7 @@ logic ready_div_unit;
 
 // Select rs2 from imm to avoid bypasses
 assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
-assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.data_rs2;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
 
 score_board score_board_inst(
     .clk_i            (clk_i),
@@ -129,7 +133,7 @@ score_board score_board_inst(
     .ready_div_unit_o (ready_div_unit)
 );
 
-assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) );
+assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) & (from_rr_i.vrdy1) & (from_rr_i.vrdy2) );
 
 always_comb begin
     if (~stall_int & ~flush_i) begin
@@ -144,13 +148,16 @@ always_comb begin
         arith_instr.rdy2                = from_rr_i.rdy2;
         arith_instr.prd                 = from_rr_i.prd;
         arith_instr.old_prd             = from_rr_i.old_prd;
+        arith_instr.old_pvd             = from_rr_i.old_pvd;
         arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
         arith_instr.chkp                = from_rr_i.chkp;
+        arith_instr.simd_chkp           = from_rr_i.simd_chkp;
         arith_instr.gl_index            = from_rr_i.gl_index;
 
         mem_instr.instr               = from_rr_i.instr;
         mem_instr.data_rs1            = rs1_data_def;
         mem_instr.data_rs2            = rs2_data_def;
+        mem_instr.data_vm             = from_rr_i.data_vm;
         mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
         mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
         mem_instr.prs1                = from_rr_i.prs1;
@@ -158,10 +165,35 @@ always_comb begin
         mem_instr.prs2                = from_rr_i.prs2;
         mem_instr.rdy2                = from_rr_i.rdy2;
         mem_instr.prd                 = from_rr_i.prd;
+        mem_instr.pvd                 = from_rr_i.pvd;
         mem_instr.old_prd             = from_rr_i.old_prd;
+        mem_instr.old_pvd             = from_rr_i.old_pvd;
         mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
         mem_instr.chkp                = from_rr_i.chkp;
+        mem_instr.simd_chkp           = from_rr_i.simd_chkp;
         mem_instr.gl_index            = from_rr_i.gl_index;
+
+        simd_instr.instr               = from_rr_i.instr;
+        simd_instr.data_rs1            = from_rr_i.data_rs1;
+        simd_instr.data_vs1            = from_rr_i.data_vs1;
+        simd_instr.data_vs2            = from_rr_i.data_vs2;
+        simd_instr.data_old_vd         = from_rr_i.data_old_vd;
+        simd_instr.data_vm             = from_rr_i.data_vm;
+        simd_instr.sew                 = sew_i;
+        simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        simd_instr.pvs1                = from_rr_i.pvs1;
+        simd_instr.vrdy1               = from_rr_i.vrdy1;
+        simd_instr.pvs2                = from_rr_i.pvs2;
+        simd_instr.vrdy2               = from_rr_i.vrdy2;
+        simd_instr.prd                 = from_rr_i.prd;
+        simd_instr.pvd                 = from_rr_i.pvd;
+        simd_instr.old_prd             = from_rr_i.old_prd;
+        simd_instr.old_pvd             = from_rr_i.old_pvd;
+        simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        simd_instr.chkp                = from_rr_i.chkp;
+        simd_instr.simd_chkp           = from_rr_i.simd_chkp;
+        simd_instr.gl_index            = from_rr_i.gl_index;
     end else begin
         arith_instr.instr               = 1'b0;
         arith_instr.data_rs1            = rs1_data_def;
@@ -192,12 +224,35 @@ always_comb begin
         mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
         mem_instr.chkp                = from_rr_i.chkp;
         mem_instr.gl_index            = from_rr_i.gl_index;
+
+        simd_instr.instr               = 1'b0;
+        simd_instr.data_rs1            = from_rr_i.data_rs1;
+        simd_instr.data_vs1            = from_rr_i.data_vs1;
+        simd_instr.data_vs2            = from_rr_i.data_vs2;
+        simd_instr.data_old_vd         = from_rr_i.data_old_vd;
+        simd_instr.data_vm             = from_rr_i.data_vm;
+        simd_instr.sew                 = sew_i;
+        simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+        simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+        simd_instr.pvs1                = from_rr_i.pvs1;
+        simd_instr.vrdy1               = from_rr_i.vrdy1;
+        simd_instr.pvs2                = from_rr_i.pvs2;
+        simd_instr.vrdy2               = from_rr_i.vrdy2;
+        simd_instr.prd                 = from_rr_i.prd;
+        simd_instr.pvd                 = from_rr_i.pvd;
+        simd_instr.old_prd             = from_rr_i.old_prd;
+        simd_instr.old_pvd             = from_rr_i.old_pvd;
+        simd_instr.vrdy_old_vd         = from_rr_i.vrdy_old_vd;
+        simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+        simd_instr.chkp                = from_rr_i.chkp;
+        simd_instr.simd_chkp           = from_rr_i.simd_chkp;
+        simd_instr.gl_index            = from_rr_i.gl_index;
     end
 end
 
 alu alu_inst (
     .instruction_i  (arith_instr),
-    .instruction_o  (alu_to_wb)
+    .instruction_o  (alu_to_scalar_wb)
 );
 
 mul_unit mul_unit_inst (
@@ -205,7 +260,7 @@ mul_unit mul_unit_inst (
     .rstn_i         (rstn_i),
     .kill_mul_i     (kill_i),
     .instruction_i  (arith_instr),
-    .instruction_o  (mul_to_wb)
+    .instruction_o  (mul_to_scalar_wb)
 );
 
 div_unit div_unit_inst (
@@ -214,12 +269,18 @@ div_unit div_unit_inst (
     .kill_div_i     (kill_i),
     .div_unit_sel_i (div_unit_sel),
     .instruction_i  (arith_instr),
-    .instruction_o  (div_to_wb)
+    .instruction_o  (div_to_scalar_wb)
 );
 
 branch_unit branch_unit_inst (
     .instruction_i      (arith_instr),
-    .instruction_o      (branch_to_wb)
+    .instruction_o      (branch_to_scalar_wb)
+);
+
+simd_unit simd_unit_inst (
+    .instruction_i  (simd_instr),
+    .instruction_scalar_o (simd_to_scalar_wb),
+    .instruction_simd_o  (simd_to_simd_wb)
 );
 
 mem_unit mem_unit_inst(
@@ -232,7 +293,8 @@ mem_unit mem_unit_inst(
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
-    .instruction_o          (mem_to_wb),
+    .instruction_o          (mem_to_scalar_wb),
+    .instruction_simd_o     (mem_to_simd_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
     .mem_gl_index_o         (mem_gl_index_o),
@@ -241,42 +303,62 @@ mem_unit mem_unit_inst(
 );
 
 always_comb begin
-    if (mem_to_wb.valid) begin
-        mem_to_wb_o  = mem_to_wb;
+    if (mem_to_scalar_wb.valid | mem_to_simd_wb.valid) begin
+        mem_to_scalar_wb_o  = mem_to_scalar_wb;
+        mem_to_simd_wb_o    = mem_to_simd_wb;
     end else begin
-        mem_to_wb_o  = 'h0;
+        mem_to_scalar_wb_o  = 'h0;
+        mem_to_simd_wb_o    = 'h0;
     end
     
-    if (alu_to_wb.valid) begin
-        arith_to_wb_o = alu_to_wb;
-        if (~alu_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_wb_o.ex.valid = 1;
-            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_wb_o.ex.origin = 64'b0;
+    if (alu_to_scalar_wb.valid) begin
+        arith_to_scalar_wb_o = alu_to_scalar_wb;
+        if (~alu_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            arith_to_scalar_wb_o.ex.valid = 1;
+            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
-    end else if (mul_to_wb.valid) begin
-        arith_to_wb_o = mul_to_wb;
-        if (~mul_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_wb_o.ex.valid = 1;
-            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_wb_o.ex.origin = 64'b0;
+    end else if (mul_to_scalar_wb.valid) begin
+        arith_to_scalar_wb_o = mul_to_scalar_wb;
+        if (~mul_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            arith_to_scalar_wb_o.ex.valid = 1;
+            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
-    end else if (div_to_wb.valid) begin
-        arith_to_wb_o = div_to_wb;
-        if (~div_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_wb_o.ex.valid = 1;
-            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_wb_o.ex.origin = 64'b0;
+    end else if (div_to_scalar_wb.valid) begin
+        arith_to_scalar_wb_o = div_to_scalar_wb;
+        if (~div_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            arith_to_scalar_wb_o.ex.valid = 1;
+            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
-    end else if (branch_to_wb.valid) begin
-        arith_to_wb_o = branch_to_wb;
-        if (~branch_to_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_wb_o.ex.valid = 1;
-            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_wb_o.ex.origin = 64'b0;
+    end else if (branch_to_scalar_wb.valid) begin
+        arith_to_scalar_wb_o = branch_to_scalar_wb;
+        if (~branch_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            arith_to_scalar_wb_o.ex.valid = 1;
+            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
     end else begin
-        arith_to_wb_o = 'h0;
+        arith_to_scalar_wb_o = 'h0;
+    end
+
+    if (simd_to_scalar_wb.valid | simd_to_simd_wb.valid) begin
+        simd_to_scalar_wb_o = simd_to_scalar_wb;
+        simd_to_simd_wb_o = simd_to_simd_wb;
+        if (~simd_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            simd_to_scalar_wb_o.ex.valid = 1;
+            simd_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            simd_to_scalar_wb_o.ex.origin = 64'b0;
+        end
+        if (~simd_to_simd_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            simd_to_simd_wb_o.ex.valid = 1;
+            simd_to_simd_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            simd_to_simd_wb_o.ex.origin = 64'b0;
+        end
+    end else begin
+        simd_to_scalar_wb_o = 'h0;
+        simd_to_simd_wb_o = 'h0;
     end
 end
 
@@ -310,7 +392,7 @@ always_comb begin
             pmu_stall_mul_o = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
-        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM))
+        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM | from_rr_i.instr.unit == UNIT_SIMD))
             stall_int = ~ready | ~ready_1cycle_inst;
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
@@ -323,7 +405,7 @@ end
 
 // Correct prediction
 always_comb begin
-    if(branch_to_wb.valid)begin
+    if(branch_to_scalar_wb.valid)begin
         if (from_rr_i.instr.instr_type == JAL)begin
             correct_branch_pred_o = 1'b1;
         end else   
@@ -334,11 +416,11 @@ always_comb begin
             correct_branch_pred_o = 1'b1; // Correct because Decode and Control Unit Already fixed the missprediciton
         end else begin
             if (from_rr_i.instr.bpred.is_branch) begin
-                correct_branch_pred_o = (from_rr_i.instr.bpred.decision == branch_to_wb.branch_taken) &&
+                correct_branch_pred_o = (from_rr_i.instr.bpred.decision == branch_to_scalar_wb.branch_taken) &&
                                         (from_rr_i.instr.bpred.decision == PRED_NOT_TAKEN ||
-                                        from_rr_i.instr.bpred.pred_addr == branch_to_wb.result_pc);
+                                        from_rr_i.instr.bpred.pred_addr == branch_to_scalar_wb.result_pc);
             end else begin
-                correct_branch_pred_o = ~branch_to_wb.branch_taken;
+                correct_branch_pred_o = ~branch_to_scalar_wb.branch_taken;
             end
         end
     end else begin
@@ -351,11 +433,11 @@ end
 // Program counter at Execution Stage
 assign exe_if_branch_pred_o.pc_execution = from_rr_i.instr.pc; 
 // Final address generated by branch in Execution Stage
-assign exe_if_branch_pred_o.branch_addr_result_exe = (branch_to_wb.branch_taken == PRED_TAKEN) ? branch_to_wb.result_pc : branch_to_wb.result;
+assign exe_if_branch_pred_o.branch_addr_result_exe = (branch_to_scalar_wb.branch_taken == PRED_TAKEN) ? branch_to_scalar_wb.result_pc : branch_to_scalar_wb.result;
 // Target Address generated by branch in Execution Stage 
-assign exe_if_branch_pred_o.branch_addr_target_exe = branch_to_wb.result_pc;
+assign exe_if_branch_pred_o.branch_addr_target_exe = branch_to_scalar_wb.result_pc;
 // Taken or not taken branch result in Execution Stage
-assign exe_if_branch_pred_o.branch_taken_result_exe = branch_to_wb.branch_taken == PRED_TAKEN;   
+assign exe_if_branch_pred_o.branch_taken_result_exe = branch_to_scalar_wb.branch_taken == PRED_TAKEN;   
 // The instruction in the Execution Stage is a branch
 assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  |
                                              from_rr_i.instr.instr_type == BLTU |
@@ -369,11 +451,13 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              
 
 // Data for the Control Unit
-assign exe_cu_o.valid_1 = arith_to_wb_o.valid;
-assign exe_cu_o.valid_2 = mem_to_wb_o.valid;
-assign exe_cu_o.change_pc_ena_1 = arith_to_wb_o.change_pc_ena;
+assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
+assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
+assign exe_cu_o.valid_3 = simd_to_simd_wb_o.valid;
+assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
-assign exe_cu_o.branch_taken = arith_to_wb_o.branch_taken;
+assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
+
 assign exe_cu_o.stall = stall_int;
 
 
