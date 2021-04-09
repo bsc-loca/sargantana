@@ -27,6 +27,7 @@ module datapath(
     input debug_in_t        debug_i,
     input [1:0]             csr_priv_lvl_i,
     input logic             req_icache_ready_i,
+    input sew_t             sew_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
@@ -36,9 +37,9 @@ module datapath(
     output to_PMU_t         pmu_flags_o
 );
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////// SIGNAL DECLARATION                                                                           /////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////// SIGNAL DECLARATION                                                                           /////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifdef VERILATOR
     // Stages: if -- id -- rr -- ex -- wb
@@ -90,17 +91,19 @@ module datapath(
     logic delete_checkpoint;
     logic out_of_checkpoints_rename;
     logic out_of_checkpoints_free_list;
-
-    logic free_a_register;
-    phreg_t freed_register;
+    logic simd_out_of_checkpoints_rename;
+    logic simd_out_of_checkpoints_free_list;
 
     logic free_list_empty;
+    logic simd_free_list_empty;
 
     phreg_t free_register_to_rename;
+    phvreg_t simd_free_register_to_rename;
 
-    checkpoint_ptr recover_checkpoint;
     checkpoint_ptr checkpoint_free_list;
     checkpoint_ptr checkpoint_rename;
+    checkpoint_ptr simd_checkpoint_free_list;
+    checkpoint_ptr simd_checkpoint_rename;
 
     logic src_select_ir_rr_q;
 
@@ -111,10 +114,12 @@ module datapath(
     rr_exe_instr_t stage_rr_exe_d;
     rr_exe_instr_t stage_rr_exe_q;
 
-    logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs1;
-    logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs2;
     logic snoop_rr_rdy1;
     logic snoop_rr_rdy2;
+    logic snoop_rr_vrdy1;
+    logic snoop_rr_vrdy2;
+    logic snoop_rr_vrdy_old_vd;
+    logic snoop_rr_vrdym;
 
     rr_cu_t rr_cu_int;
     cu_rr_t cu_rr_int;
@@ -122,27 +127,48 @@ module datapath(
     // Graduation List
 
     gl_instruction_t instruction_decode_gl;
-    gl_instruction_t [drac_pkg::NUM_SCALAR_WB-1:0] instruction_writeback_gl;
-    gl_index_t       [drac_pkg::NUM_SCALAR_WB-1:0] gl_index;
-    logic            [drac_pkg::NUM_SCALAR_WB-1:0] gl_valid;
+    gl_instruction_t [NUM_SCALAR_WB-1:0] instruction_writeback_gl;
+    gl_index_t       [NUM_SCALAR_WB-1:0] gl_index;
+    logic            [NUM_SCALAR_WB-1:0] gl_valid;
+    gl_instruction_t [NUM_SIMD_WB-1:0]   instruction_simd_writeback_gl;
+    gl_index_t       [NUM_SIMD_WB-1:0]   gl_index_simd;
+    logic            [NUM_SIMD_WB-1:0]   gl_valid_simd;
     gl_instruction_t instruction_gl_commit; 
     
     // Exe
     rr_exe_instr_t selection_rr_exe_d;
 
     exe_cu_t exe_cu_int;
-    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
-    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] wb_scalar;
+    exe_wb_scalar_instr_t [NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
+    exe_wb_scalar_instr_t [NUM_SCALAR_WB-1:0] wb_scalar;
+    exe_wb_simd_instr_t [NUM_SIMD_WB-1:0] exe_to_wb_simd;
+    exe_wb_simd_instr_t [NUM_SIMD_WB-1:0] wb_simd;
 
     bus64_t snoop_exe_data_rs1;
     bus64_t snoop_exe_data_rs2;
-    logic   [drac_pkg::NUM_SCALAR_WB-1:0] snoop_exe_rs1;
-    logic   [drac_pkg::NUM_SCALAR_WB-1:0] snoop_exe_rs2;
+    logic   [NUM_SCALAR_WB-1:0] snoop_exe_rs1;
+    logic   [NUM_SCALAR_WB-1:0] snoop_exe_rs2;
     logic snoop_exe_rdy1;
     logic snoop_exe_rdy2;
+    bus_simd_t snoop_exe_data_vs1;
+    bus_simd_t snoop_exe_data_vs2;
+    bus_simd_t snoop_exe_data_old_vd;
+    bus_mask_t snoop_exe_data_vm;
+    logic   [NUM_SIMD_WB-1:0] snoop_exe_vs1;
+    logic   [NUM_SIMD_WB-1:0] snoop_exe_vs2;
+    logic   [NUM_SIMD_WB-1:0] snoop_exe_old_vd;
+    logic   [NUM_SIMD_WB-1:0] snoop_exe_vm;
+    logic snoop_exe_vrdy1;
+    logic snoop_exe_vrdy2;
+    logic snoop_exe_vrdy_old_vd;
+    logic snoop_exe_vrdym;
 
     bus64_t exe_data_rs1;
     bus64_t exe_data_rs2;
+    bus_simd_t exe_data_vs1;
+    bus_simd_t exe_data_vs2;
+    bus_simd_t exe_data_old_vd;
+    bus_mask_t exe_data_vm;
     rr_exe_instr_t reg_to_exe;
 
     // This addresses are fixed from lowrisc
@@ -180,11 +206,17 @@ module datapath(
     logic   csr_ena_int;
 
     // Data to write to RR from WB or CSR
-    bus64_t [drac_pkg::NUM_SCALAR_WB-1:0] data_wb_to_rr;
-    bus64_t [drac_pkg::NUM_SCALAR_WB-1:0] data_wb_to_exe;
-    phreg_t [drac_pkg::NUM_SCALAR_WB-1:0] write_paddr_rr;
-    phreg_t [drac_pkg::NUM_SCALAR_WB-1:0] write_paddr_exe;
-    reg_t   [drac_pkg::NUM_SCALAR_WB-1:0] write_vaddr;
+    bus64_t [NUM_SCALAR_WB-1:0] data_wb_to_rr;
+    bus64_t [NUM_SCALAR_WB-1:0] data_wb_to_exe;
+    phreg_t [NUM_SCALAR_WB-1:0] write_paddr_rr;
+    phreg_t [NUM_SCALAR_WB-1:0] write_paddr_exe;
+    reg_t   [NUM_SCALAR_WB-1:0] write_vaddr;
+
+    bus_simd_t [NUM_SIMD_WB-1:0] simd_data_wb_to_rr;
+    bus_simd_t [NUM_SIMD_WB-1:0] simd_data_wb_to_exe;
+    phvreg_t   [NUM_SIMD_WB-1:0] simd_write_paddr_rr;
+    phvreg_t   [NUM_SIMD_WB-1:0] simd_write_paddr_exe;
+    vreg_t     [NUM_SIMD_WB-1:0] simd_write_vaddr;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// IO ADDRESS SPACE                                                                             /////////
@@ -192,9 +224,11 @@ module datapath(
 
 
     // Debug signals
-    bus64_t  reg_wr_data;
-    phreg_t reg_wr_addr;
-    phreg_t reg_prd1_addr;
+    bus64_t    reg_wr_data;
+    phreg_t    reg_wr_addr;
+    bus_simd_t vreg_wr_data;
+    phvreg_t   vreg_wr_addr;
+    phreg_t    reg_prd1_addr;
     // stall IF
     logic stall_if;
     logic miss_icache;
@@ -323,9 +357,9 @@ module datapath(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
-        .load_i(!control_int.stall_if_2),
-        .input_i(stage_if_2_id_d),
-        .output_o(stage_if_2_id_q)
+    .load_i(!control_int.stall_if_2),
+    .input_i(stage_if_2_id_d),
+    .output_o(stage_if_2_id_q)
     );
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -362,7 +396,7 @@ module datapath(
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
     // Register ID to IR when stall
     register #($bits(instr_entry_t)) reg_id_inst(
@@ -378,7 +412,7 @@ module datapath(
     always @(posedge clk_i) begin
         src_select_id_ir_q <= !control_int.stall_id;
     end
-    
+
     assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
     // Instruction Queue 
@@ -411,6 +445,23 @@ module datapath(
         .empty_o                (free_list_empty)
     );
 
+    simd_free_list simd_free_list_inst(
+        .clk_i                  (clk_i),
+        .rstn_i                 (rstn_i),
+        .read_head_i            (stage_ir_rr_d.instr.vregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
+        .add_free_register_i    (cu_ir_int.simd_enable_commit_update),
+        .free_register_i        (instruction_to_commit.old_pvd),
+        .do_checkpoint_i        (cu_ir_int.do_checkpoint),
+        .do_recover_i           (cu_ir_int.do_recover),
+        .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i   (cu_ir_int.simd_recover_checkpoint),
+        .commit_roll_back_i     (cu_ir_int.recover_commit),
+        .new_register_o         (simd_free_register_to_rename),
+        .checkpoint_o           (simd_checkpoint_free_list),
+        .out_of_checkpoints_o   (simd_out_of_checkpoints_free_list),
+        .empty_o                (simd_free_list_empty)
+    );
+
     // Rename Table
     rename_table rename_table_inst(
         .clk_i(clk_i),
@@ -420,6 +471,8 @@ module datapath(
         .old_dst_i(stage_ir_rr_d.instr.rd),
         .write_dst_i(stage_ir_rr_d.instr.regfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .new_dst_i(free_register_to_rename),
+        .use_rs1_i(stage_ir_rr_d.instr.use_rs1),
+        .use_rs2_i(stage_ir_rr_d.instr.use_rs2),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
         .paddr_i(write_paddr_rr),
@@ -440,16 +493,54 @@ module datapath(
         .out_of_checkpoints_o(out_of_checkpoints_rename)
     );
 
+    simd_rename_table simd_rename_table_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .read_src1_i(stage_ir_rr_d.instr.vs1),
+        .read_src2_i(stage_ir_rr_d.instr.vs2),
+        .old_dst_i(stage_ir_rr_d.instr.vd),
+        .write_dst_i(stage_ir_rr_d.instr.vregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
+        .new_dst_i(simd_free_register_to_rename),
+        .use_vs1_i(stage_ir_rr_d.instr.use_vs1),
+        .use_vs2_i(stage_ir_rr_d.instr.use_vs2),
+        .use_mask_i(stage_ir_rr_d.instr.use_mask),
+        .ready_i(cu_rr_int.vwrite_enable),
+        .vaddr_i(simd_write_vaddr),
+        .paddr_i(simd_write_paddr_rr),
+        .do_checkpoint_i(cu_ir_int.do_checkpoint),
+        .do_recover_i(cu_ir_int.do_recover),
+        .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i(cu_ir_int.simd_recover_checkpoint),
+        .recover_commit_i(cu_ir_int.recover_commit), 
+        .commit_old_dst_i(instruction_to_commit.vd),    
+        .commit_write_dst_i(cu_ir_int.simd_enable_commit_update),  
+        .commit_new_dst_i(instruction_to_commit.pvd),
+        .src1_o(stage_no_stall_rr_q.pvs1),
+        .rdy1_o(stage_no_stall_rr_q.vrdy1),
+        .src2_o(stage_no_stall_rr_q.pvs2),
+        .rdy2_o(stage_no_stall_rr_q.vrdy2),
+        .srcm_o(stage_no_stall_rr_q.pvm),
+        .rdym_o(stage_no_stall_rr_q.vrdym),
+        .old_dst_o(stage_no_stall_rr_q.old_pvd),
+        .rdy_old_dst_o(stage_no_stall_rr_q.vrdy_old_vd),
+        .checkpoint_o(simd_checkpoint_rename),
+        .out_of_checkpoints_o(simd_out_of_checkpoints_rename)
+    );
+
     // Check two structures output the same
     always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
+    always @(posedge clk_i) assert (simd_out_of_checkpoints_rename == simd_out_of_checkpoints_free_list);
+    always @(posedge clk_i) assert (simd_checkpoint_rename == simd_checkpoint_free_list);
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
+    assign stage_no_stall_rr_q.simd_chkp = simd_checkpoint_rename;
 
     // Signals for Control Unit
     assign ir_cu_int.valid              = stage_ir_rr_d.instr.valid;
     assign ir_cu_int.empty_free_list    = free_list_empty;
     assign ir_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
+    assign ir_cu_int.simd_out_of_checkpoints = simd_out_of_checkpoints_rename;
     assign ir_cu_int.is_branch          = (stage_ir_rr_d.instr.instr_type == BLT)  ||
                                           (stage_ir_rr_d.instr.instr_type == BLTU) ||
                                           (stage_ir_rr_d.instr.instr_type == BGE)  ||
@@ -458,15 +549,14 @@ module datapath(
                                           (stage_ir_rr_d.instr.instr_type == BNE)  ||
                                           (stage_ir_rr_d.instr.instr_type == JALR);
 
-
     // Register IR to RR
-    register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
+    register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(phvreg_t) + $bits(logic)) reg_ir_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_ir),
         .load_i(!control_int.stall_ir),
-        .input_i({stage_ir_rr_d.instr,free_register_to_rename,cu_ir_int.do_checkpoint}),
-        .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd,stage_no_stall_rr_q.checkpoint_done})
+        .input_i({stage_ir_rr_d.instr,free_register_to_rename,simd_free_register_to_rename,cu_ir_int.do_checkpoint}),
+        .output_o({stage_no_stall_rr_q.instr,stage_no_stall_rr_q.prd,stage_no_stall_rr_q.pvd,stage_no_stall_rr_q.checkpoint_done})
     );
 
     // Second IR to RR. To store rename in case of stall
@@ -483,40 +573,50 @@ module datapath(
     always @(posedge clk_i) begin
         src_select_ir_rr_q <= !control_int.stall_ir;
     end
-
     always_comb begin
         if (src_select_ir_rr_q) begin
             stage_ir_rr_q.instr = stage_no_stall_rr_q.instr;
             stage_ir_rr_q.prd = stage_no_stall_rr_q.prd;
+            stage_ir_rr_q.pvd = stage_no_stall_rr_q.pvd;
             stage_ir_rr_q.prs1 = stage_no_stall_rr_q.prs1;
+            stage_ir_rr_q.pvs1 = stage_no_stall_rr_q.pvs1;
             stage_ir_rr_q.prs2 = stage_no_stall_rr_q.prs2;
+            stage_ir_rr_q.pvs2 = stage_no_stall_rr_q.pvs2;
+            stage_ir_rr_q.pvm  = stage_no_stall_rr_q.pvm;
             stage_ir_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rr_rdy1;
+            stage_ir_rr_q.vrdy1 = stage_no_stall_rr_q.vrdy1 | snoop_rr_vrdy1;
             stage_ir_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rr_rdy2;
+            stage_ir_rr_q.vrdy2 = stage_no_stall_rr_q.vrdy2 | snoop_rr_vrdy2;
+            stage_ir_rr_q.vrdym = stage_no_stall_rr_q.vrdym | snoop_rr_vrdym;
             stage_ir_rr_q.old_prd = stage_no_stall_rr_q.old_prd;
+            stage_ir_rr_q.old_pvd = stage_no_stall_rr_q.old_pvd;
+            stage_ir_rr_q.vrdy_old_vd = stage_no_stall_rr_q.vrdy_old_vd | snoop_rr_vrdy_old_vd;
             stage_ir_rr_q.chkp = stage_no_stall_rr_q.chkp;
+            stage_ir_rr_q.simd_chkp = stage_no_stall_rr_q.simd_chkp;
             stage_ir_rr_q.checkpoint_done = stage_no_stall_rr_q.checkpoint_done;
         end else begin
             stage_ir_rr_q.instr = stage_stall_rr_q.instr;
             stage_ir_rr_q.prd = stage_stall_rr_q.prd;
+            stage_ir_rr_q.pvd = stage_stall_rr_q.pvd;
             stage_ir_rr_q.prs1 = stage_stall_rr_q.prs1;
+            stage_ir_rr_q.pvs1 = stage_stall_rr_q.pvs1;
             stage_ir_rr_q.prs2 = stage_stall_rr_q.prs2;
+            stage_ir_rr_q.pvs2 = stage_stall_rr_q.pvs2;
+            stage_ir_rr_q.pvm  = stage_stall_rr_q.pvm;
             stage_ir_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rr_rdy1;
+            stage_ir_rr_q.vrdy1 = stage_stall_rr_q.vrdy1 | snoop_rr_vrdy1;
             stage_ir_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rr_rdy2;
+            stage_ir_rr_q.vrdy2 = stage_stall_rr_q.vrdy2 | snoop_rr_vrdy2;
+            stage_ir_rr_q.vrdym = stage_stall_rr_q.vrdym | snoop_rr_vrdym;
             stage_ir_rr_q.old_prd = stage_stall_rr_q.old_prd;
+            stage_ir_rr_q.old_pvd = stage_stall_rr_q.old_pvd;
+            stage_ir_rr_q.vrdy_old_vd = stage_stall_rr_q.vrdy_old_vd | snoop_rr_vrdy_old_vd;
             stage_ir_rr_q.chkp = stage_stall_rr_q.chkp;
+            stage_ir_rr_q.simd_chkp = stage_stall_rr_q.chkp;
             stage_ir_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
         end
     end
 
-    always_comb begin
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            snoop_rr_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1!= 0);
-            snoop_rr_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2!= 0);
-        end
-        snoop_rr_rdy1 = |snoop_rr_rs1;
-        snoop_rr_rdy2 = |snoop_rr_rs2;
-    end
-    
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// GRADUATION LIST AND READ REGISTER  STAGE                                                     /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -525,12 +625,17 @@ module datapath(
     assign instruction_decode_gl.instr_type             = stage_ir_rr_q.instr.instr_type;
     assign instruction_decode_gl.rd                     = stage_ir_rr_q.instr.rd;
     assign instruction_decode_gl.rs1                    = stage_ir_rr_q.instr.rs1;
+    assign instruction_decode_gl.vd                     = stage_ir_rr_q.instr.vd;
+    assign instruction_decode_gl.vs1                    = stage_ir_rr_q.instr.vs1;
     assign instruction_decode_gl.pc                     = stage_ir_rr_q.instr.pc;
     assign instruction_decode_gl.exception              = stage_ir_rr_q.instr.ex;
     assign instruction_decode_gl.stall_csr_fence        = stage_ir_rr_q.instr.stall_csr_fence;
     assign instruction_decode_gl.old_prd                = stage_ir_rr_q.old_prd;
     assign instruction_decode_gl.prd                    = stage_ir_rr_q.prd;
+    assign instruction_decode_gl.old_pvd                = stage_ir_rr_q.old_pvd;
+    assign instruction_decode_gl.pvd                    = stage_ir_rr_q.pvd;
     assign instruction_decode_gl.regfile_we             = stage_ir_rr_q.instr.regfile_we;
+    assign instruction_decode_gl.vregfile_we            = stage_ir_rr_q.instr.vregfile_we;
     `ifdef VERILATOR
         assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
     `endif
@@ -543,6 +648,9 @@ module datapath(
         .instruction_writeback_i(gl_index),
         .instruction_writeback_enable_i(gl_valid),
         .instruction_writeback_data_i(instruction_writeback_gl),
+        .instruction_simd_writeback_i(gl_index_simd),
+        .instruction_simd_writeback_enable_i(gl_valid_simd),
+        .instruction_simd_writeback_data_i(instruction_simd_writeback_gl),
         .flush_i(cu_wb_int.flush_gl),
         .flush_index_i(cu_wb_int.flush_gl_index),
         .flush_commit_i(cu_commit_int.flush_gl_commit),
@@ -553,12 +661,31 @@ module datapath(
         .empty_o()
     );
 
-    assign reg_prd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_ir_rr_q.prs1;
-    
-    // RR Stage
-    regfile regfile(
-        .clk_i(clk_i),
+    always_comb begin
+        snoop_rr_rdy1 = 1'b0;
+        snoop_rr_rdy2 = 1'b0;
+        snoop_rr_vrdy1 = 1'b0;
+        snoop_rr_vrdy2 = 1'b0;
+        snoop_rr_vrdy_old_vd = 1'b0;
+        snoop_rr_vrdym = 1'b0;
 
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
+            snoop_rr_rdy1 |= cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1!= 0);
+            snoop_rr_rdy2 |= cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs2) & (stage_ir_rr_q.instr.rs2!= 0);
+        end
+
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            snoop_rr_vrdy1 |= cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_ir_rr_q.pvs1);
+            snoop_rr_vrdy2 |= cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_ir_rr_q.pvs2);
+            snoop_rr_vrdy_old_vd |= cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_ir_rr_q.old_pvd);
+            snoop_rr_vrdym |= cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_ir_rr_q.pvm) & stage_ir_rr_q.instr.use_mask;
+        end
+    end
+
+    assign reg_prd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_ir_rr_q.prs1;
+
+    regfile regfile(
+        .clk_i (clk_i),
         .write_enable_i(cu_rr_int.write_enable),
         .write_addr_i(write_paddr_rr),
         .write_data_i(data_wb_to_rr),
@@ -567,6 +694,22 @@ module datapath(
         .read_addr2_i(stage_ir_rr_q.prs2),
         .read_data1_o(stage_rr_exe_d.data_rs1),
         .read_data2_o(stage_rr_exe_d.data_rs2)
+    );
+
+    vregfile vregfile(
+        .clk_i (clk_i),
+        .write_enable_i(cu_rr_int.vwrite_enable),
+        .write_addr_i(simd_write_paddr_rr),
+        .write_data_i(simd_data_wb_to_rr),
+        .read_addr1_i(stage_ir_rr_q.pvs1),
+        .read_addr2_i(stage_ir_rr_q.pvs2),
+        .read_addr_old_vd_i(stage_ir_rr_q.old_pvd),
+        .read_addrm_i(stage_ir_rr_q.pvm),
+        .use_mask_i(stage_ir_rr_q.instr.use_mask),
+        .read_data1_o(stage_rr_exe_d.data_vs1),
+        .read_data2_o(stage_rr_exe_d.data_vs2),
+        .read_data_old_vd_o(stage_rr_exe_d.data_old_vd),
+        .read_mask_o(stage_rr_exe_d.data_vm)
     );
 
     assign stage_rr_exe_d.instr = stage_ir_rr_q.instr;
@@ -578,8 +721,19 @@ module datapath(
     assign stage_rr_exe_d.rdy1 = stage_ir_rr_q.rdy1;
     assign stage_rr_exe_d.rdy2 = stage_ir_rr_q.rdy2;
     assign stage_rr_exe_d.old_prd = stage_ir_rr_q.old_prd;
+    assign stage_rr_exe_d.pvd = stage_ir_rr_q.pvd;
+    assign stage_rr_exe_d.pvs1 = stage_ir_rr_q.pvs1;
+    assign stage_rr_exe_d.pvs2 = stage_ir_rr_q.pvs2;
+    assign stage_rr_exe_d.pvm  = stage_ir_rr_q.pvm;
+    assign stage_rr_exe_d.vrdy1 = stage_ir_rr_q.vrdy1;
+    assign stage_rr_exe_d.vrdy2 = stage_ir_rr_q.vrdy2;
+    assign stage_rr_exe_d.vrdym = stage_ir_rr_q.vrdym;
+    assign stage_rr_exe_d.old_pvd = stage_ir_rr_q.old_pvd;
+    assign stage_rr_exe_d.vrdy_old_vd = stage_ir_rr_q.vrdy_old_vd;
     assign stage_rr_exe_d.chkp = stage_ir_rr_q.chkp;
+    assign stage_rr_exe_d.simd_chkp = stage_ir_rr_q.simd_chkp;
     assign stage_rr_exe_d.checkpoint_done = stage_ir_rr_q.checkpoint_done;
+
 
     assign selection_rr_exe_d = (control_int.stall_rr) ? reg_to_exe : stage_rr_exe_d;
 
@@ -600,22 +754,54 @@ module datapath(
     always_comb begin
         snoop_exe_data_rs1 = 64'b0;
         snoop_exe_data_rs2 = 64'b0;
+        snoop_exe_data_vs1 = 'h0;
+        snoop_exe_data_vs2 = 'h0;
+        snoop_exe_data_old_vd = 'h0;
+        snoop_exe_data_vm  = 'h0;
 
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             snoop_exe_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs1) & (stage_rr_exe_q.instr.rs1 != 0);
             snoop_exe_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q.prs2) & (stage_rr_exe_q.instr.rs2 != 0);
             snoop_exe_data_rs1 |= snoop_exe_rs1[i] ? data_wb_to_exe[i] : 64'b0;
             snoop_exe_data_rs2 |= snoop_exe_rs2[i] ? data_wb_to_exe[i] : 64'b0;
         end
 
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            snoop_exe_vs1[i] = cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_rr_exe_q.pvs1);
+            snoop_exe_vs2[i] = cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_rr_exe_q.pvs2);
+            snoop_exe_old_vd[i] = cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_rr_exe_q.old_pvd);
+            snoop_exe_vm[i]  = cu_rr_int.vsnoop_enable[i] & (simd_write_paddr_exe[i] == stage_rr_exe_q.pvm) & stage_rr_exe_q.instr.use_mask;
+            snoop_exe_data_vs1 |= snoop_exe_vs1[i] ? simd_data_wb_to_exe[i] : 'h0;
+            snoop_exe_data_vs2 |= snoop_exe_vs2[i] ? simd_data_wb_to_exe[i] : 'h0;
+            snoop_exe_data_old_vd |= snoop_exe_old_vd[i] ? simd_data_wb_to_exe[i] : 'h0;
+            for (int j = 0; j<VLEN/8; ++j) begin
+                snoop_exe_data_vm[j]  |= snoop_exe_vm[i]  ? simd_data_wb_to_exe[i][j*8] : 'h0; //LSB of every byte
+            end
+        end
+
         snoop_exe_rdy1 = |snoop_exe_rs1;
         snoop_exe_rdy2 = |snoop_exe_rs2;
         exe_data_rs1 = snoop_exe_rdy1 ? (snoop_exe_data_rs1) : stage_rr_exe_q.data_rs1;
         exe_data_rs2 = snoop_exe_rdy2 ? (snoop_exe_data_rs2) : stage_rr_exe_q.data_rs2;
+
+        snoop_exe_vrdy1 = |snoop_exe_vs1;
+        snoop_exe_vrdy2 = |snoop_exe_vs2;
+        snoop_exe_vrdy_old_vd = |snoop_exe_old_vd;
+        snoop_exe_vrdym = |snoop_exe_vm;
+
+        exe_data_vs1 = snoop_exe_vrdy1 ? (snoop_exe_data_vs1) : stage_rr_exe_q.data_vs1;
+        exe_data_vs2 = snoop_exe_vrdy2 ? (snoop_exe_data_vs2) : stage_rr_exe_q.data_vs2;
+        exe_data_old_vd = snoop_exe_old_vd ? (snoop_exe_data_old_vd) : stage_rr_exe_q.data_old_vd;
+        exe_data_vm  = snoop_exe_vrdym ? (snoop_exe_data_vm)  : stage_rr_exe_q.data_vm;
     end
+
     assign reg_to_exe.instr = stage_rr_exe_q.instr;
     assign reg_to_exe.data_rs1 = exe_data_rs1;
+    assign reg_to_exe.data_vs1 = exe_data_vs1;
     assign reg_to_exe.data_rs2 = exe_data_rs2;
+    assign reg_to_exe.data_vs2 = exe_data_vs2;
+    assign reg_to_exe.data_old_vd = exe_data_old_vd;
+    assign reg_to_exe.data_vm  = exe_data_vm;
     assign reg_to_exe.csr_interrupt = stage_rr_exe_q.csr_interrupt;
     assign reg_to_exe.csr_interrupt_cause = stage_rr_exe_q.csr_interrupt_cause;
     assign reg_to_exe.prs1 = stage_rr_exe_q.prs1;
@@ -624,8 +810,18 @@ module datapath(
     assign reg_to_exe.rdy2 = snoop_exe_rdy2 | stage_rr_exe_q.rdy2;
     assign reg_to_exe.prd = stage_rr_exe_q.prd;
     assign reg_to_exe.old_prd = stage_rr_exe_q.old_prd;
+    assign reg_to_exe.pvs1 = stage_rr_exe_q.pvs1;
+    assign reg_to_exe.vrdy1 = snoop_exe_vrdy1 | stage_rr_exe_q.vrdy1;
+    assign reg_to_exe.pvs2 = stage_rr_exe_q.pvs2;
+    assign reg_to_exe.vrdy2 = snoop_exe_vrdy2 | stage_rr_exe_q.vrdy2;
+    assign reg_to_exe.pvm = stage_rr_exe_q.pvm;
+    assign reg_to_exe.vrdym = snoop_exe_vrdym | stage_rr_exe_q.vrdym;
+    assign reg_to_exe.pvd = stage_rr_exe_q.pvd;
+    assign reg_to_exe.old_pvd = stage_rr_exe_q.old_pvd;
+    assign reg_to_exe.vrdy_old_vd = snoop_exe_vrdy_old_vd | stage_rr_exe_q.vrdy_old_vd;
     assign reg_to_exe.checkpoint_done = stage_rr_exe_q.checkpoint_done;
     assign reg_to_exe.chkp = stage_rr_exe_q.chkp;
+    assign reg_to_exe.simd_chkp = stage_rr_exe_q.simd_chkp;
     assign reg_to_exe.gl_index = stage_rr_exe_q.gl_index;
 
     exe_stage exe_stage_inst(
@@ -637,25 +833,29 @@ module datapath(
         .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 
         .from_rr_i(reg_to_exe),
-
+        .sew_i(sew_i),
+        
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .io_base_addr_i(io_base_addr),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
-
+    
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
         .correct_branch_pred_o(correct_branch_pred),
-
-        .arith_to_wb_o(exe_to_wb_scalar[0]),
-        .mem_to_wb_o(exe_to_wb_scalar[1]),
+    
+        .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
+        .mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        .simd_to_scalar_wb_o(exe_to_wb_scalar[2]),
+        .simd_to_simd_wb_o(exe_to_wb_simd[0]),
+        .mem_to_simd_wb_o(exe_to_wb_simd[1]),
         .exe_cu_o(exe_cu_int),
-
+    
         .mem_commit_stall_o(mem_commit_stall_int),
         .mem_gl_index_o(mem_gl_index_int),
         .exception_mem_commit_o(exception_mem_commit_int),
-
+    
         .req_cpu_dcache_o(req_cpu_dcache_o),
-
+    
         //PMU Neiel-Leyva
         .pmu_is_branch_o        (pmu_flags_o.is_branch),      
         .pmu_branch_taken_o     (pmu_flags_o.branch_taken),   
@@ -665,13 +865,13 @@ module datapath(
         .pmu_stall_mem_o        (pmu_flags_o.stall_wb)
     );
 
-    register #($bits(exe_wb_scalar_instr_t) + $bits(exe_wb_scalar_instr_t)) reg_exe_inst(
+    register #(NUM_SCALAR_WB * $bits(exe_wb_scalar_instr_t) + NUM_SIMD_WB * $bits(exe_wb_simd_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i(exe_to_wb_scalar),
-        .output_o(wb_scalar)
+        .input_i({exe_to_wb_scalar, exe_to_wb_simd}),
+        .output_o({wb_scalar, wb_simd})
     );
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -693,7 +893,7 @@ module datapath(
 
     //WB data for the bypasses (the CSRs should not be bypassed)
     always_comb begin
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             //Graduation list writeback arrays
             gl_valid[i] = wb_scalar[i].valid;
             gl_index[i] = wb_scalar[i].gl_index;
@@ -716,38 +916,61 @@ module datapath(
                                   wb_scalar[i].rd;
                 wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
             end else begin
-                data_wb_to_exe[i] = wb_scalar[i].result;
-                write_paddr_exe[i]   = wb_scalar[i].prd;
-                write_vaddr[i]   = wb_scalar[i].rd;
+                data_wb_to_exe[i]  = wb_scalar[i].result;
+                write_paddr_exe[i] = wb_scalar[i].prd;
+                write_vaddr[i]     = wb_scalar[i].rd;
                 wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
                 wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
             end
             wb_cu_int.valid[i]        = wb_scalar[i].valid;
         end
         wb_cu_int.change_pc_ena = wb_scalar[0].change_pc_ena;
+
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            //Graduation list writeback arrays
+            gl_valid_simd[i] = wb_simd[i].valid;
+            gl_index_simd[i] = wb_simd[i].gl_index;
+            instruction_simd_writeback_gl[i].csr_addr  = wb_simd[i].csr_addr;
+            instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
+            instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
+            simd_data_wb_to_exe[i]  = wb_simd[i].vresult;
+            simd_write_paddr_exe[i] = wb_simd[i].pvd;
+            simd_write_vaddr[i]     = wb_simd[i].vd;
+            wb_cu_int.vwrite_enable[i] = wb_simd[i].vregfile_we;
+            wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
+            wb_cu_int.vvalid[i]        = wb_simd[i].valid;
+        end
         wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;
         wb_cu_int.chkp = wb_scalar[0].chkp;
+        wb_cu_int.simd_chkp = wb_scalar[0].simd_chkp;
         wb_cu_int.gl_index = wb_scalar[0].gl_index;
     end
 
+
     // WB data to RR
     always_comb begin
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
                 if (debug_i.reg_write_valid && debug_i.halt_valid) begin
                     data_wb_to_rr[i] = debug_i.reg_write_data;
                     write_paddr_rr[i] = debug_i.reg_read_write_addr;
                 end else begin
-                    data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : data_wb_to_exe[i];
-                    write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.prd : write_paddr_exe[i];
+                    data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : wb_scalar[i].result;
+                    write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.prd : wb_scalar[i].prd;
                 end
             end else begin
-                data_wb_to_rr[i] = data_wb_to_exe[i];
-                write_paddr_rr[i] = write_paddr_exe[i];
+                data_wb_to_rr[i] = wb_scalar[i].result;
+                write_paddr_rr[i] = wb_scalar[i].prd;
             end
         end
+
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            simd_data_wb_to_rr[i] = wb_simd[i].vresult;
+            simd_write_paddr_rr[i] = wb_simd[i].pvd;
+        end
     end
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// COMMIT STAGE                                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -799,6 +1022,7 @@ module datapath(
     // Control Unit From Commit
     assign commit_cu_int.valid = instruction_to_commit.valid;
     assign commit_cu_int.regfile_we = instruction_to_commit.regfile_we;
+    assign commit_cu_int.vregfile_we = instruction_to_commit.vregfile_we;
     assign commit_cu_int.csr_enable = csr_ena_int;
     assign commit_cu_int.stall_csr_fence = instruction_to_commit.stall_csr_fence && instruction_to_commit.valid;
     assign commit_cu_int.xcpt = commit_xcpt;
@@ -829,6 +1053,7 @@ module datapath(
                                      (instruction_to_commit.instr_type == SW)          ||
                                      (instruction_to_commit.instr_type == SH)          ||
                                      (instruction_to_commit.instr_type == SB)          ||
+                                     (instruction_to_commit.instr_type == VSE)         ||
                                      (instruction_to_commit.instr_type == AMO_MAXWU)   ||
                                      (instruction_to_commit.instr_type == AMO_MAXDU)   ||
                                      (instruction_to_commit.instr_type == AMO_MINWU)   ||

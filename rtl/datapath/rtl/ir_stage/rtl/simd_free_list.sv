@@ -1,24 +1,25 @@
 /* -----------------------------------------------
  * Project Name   : DRAC
- * File           : free_list.v
+ * File           : simd_free_list.v
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Víctor Soria Pardos
- * Email(s)       : victor.soria@bsc.es
+ * Author(s)      : Gerard Candón Arenas
+ * Email(s)       : gcandon@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author      | Description
- *  0.1        | Victor.SP   |  
+ *  0.1        | Gerard.CA   |  
  * -----------------------------------------------
  */
 
 import drac_pkg::*;
 import riscv_pkg::*;
-module free_list(
+
+module simd_free_list(
     input wire             clk_i,               // Clock Singal
     input wire             rstn_i,              // Negated Reset Signal
     input wire             read_head_i,         // Read head of the circular buffer
     input wire             add_free_register_i, // Add new free register
-    input phreg_t          free_register_i,     // Register to be freed
+    input phvreg_t         free_register_i,     // Register to be freed
 
     input wire             do_checkpoint_i,     // After renaming do a checkpoint
     input wire             do_recover_i,        // Recover a checkpoint
@@ -26,20 +27,20 @@ module free_list(
     input checkpoint_ptr   recover_checkpoint_i,// Label of the checkpoint to recover or the checkpoint of the freed register
     input wire             commit_roll_back_i,  // Free on fly register because of exception
 
-    output phreg_t         new_register_o,      // First free register
+    output phvreg_t        new_register_o,      // First free register
     output checkpoint_ptr  checkpoint_o,        // Label of the checkpoint done. Use in case of recovery.
     output logic           out_of_checkpoints_o,// Indicates if user is able to do more checkpoints.
     output logic           empty_o              // Free list is empty
 );
 
-localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
+localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_VREGISTERS - NUM_ISA_VREGISTERS; // Number of entries in circular buffer
 
 // Free list Pointer
-typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
+typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] vreg_free_list_entry;
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
-reg_free_list_entry head [0:NUM_CHECKPOINTS-1];
-reg_free_list_entry tail;
+vreg_free_list_entry head [0:NUM_CHECKPOINTS-1];
+vreg_free_list_entry tail;
 
 // Point to the actual version of free list
 checkpoint_ptr version_head;
@@ -64,8 +65,7 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // User can write to the free list a new free register
 // Freed register should be written to all checkpoints
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
-// It cannot free register 0
-assign write_enable = (add_free_register_i) & (free_register_i != 6'h0) & (~commit_roll_back_i);
+assign write_enable = (add_free_register_i) & (~commit_roll_back_i);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
@@ -73,7 +73,7 @@ assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_en
 
 
 // FIFO Memory structure
-phreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1];    // SRAM used to store the free registers. Read syncronous.
+phvreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1];    // SRAM used to store the free registers. Read syncronous.
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin

@@ -25,6 +25,7 @@ module immediate(
     bus32_t imm_utype;
     bus32_t imm_jtype;
     bus64_t imm_uitype;
+    bus64_t imm_vtype;
     bus64_t imm_shamt, imm_shamt_big;
     bus32_t sign_extended;
 
@@ -44,6 +45,7 @@ module immediate(
                                          instr_i.jtype.imm11,
                                          instr_i.jtype.imm1, 1'b0};
     
+    assign imm_vtype = {{58{instr_i[19]}}, instr_i.vtype.vs1};
     // No sign extended
     assign imm_uitype = {{59{1'b0}}, instr_i.common.rs1};
     assign sign_extended = {32{instr_i[31]}}; 
@@ -88,6 +90,9 @@ module immediate(
             end
             riscv_pkg::OP_STORE: begin
                 imm_o = {sign_extended,imm_stype};
+            end
+            riscv_pkg::OP_V: begin
+                imm_o = imm_vtype;
             end
             riscv_pkg::OP_SYSTEM: begin
                 // we could filter here for only the important CSR

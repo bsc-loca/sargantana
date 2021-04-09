@@ -25,14 +25,13 @@ module pending_mem_req_queue(
 
     input logic                 replay_valid_i,   // A replay is being executed
     input reg_t                 tag_next_i,       // Instruction that finishes
-    input bus64_t               replay_data_i,    // Replay asociated data
+    input bus_simd_t               replay_data_i,    // Replay asociated data
     input logic                 flush_i,          // Flush all entries
     input logic                 advance_head_i,   // Advance head pointer one position
 
     output rr_exe_mem_instr_t   finish_instr_o,   // Next Instruction to Write Back
        
     output logic                full_o            // pmrq is full
-
 );
 
 // Points to the next available entry

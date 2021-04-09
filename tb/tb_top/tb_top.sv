@@ -63,7 +63,7 @@ module tb_top();
 
     phreg_t pr;
 
-    bus64_t tb_dmem_resp_data_i;
+    bus_simd_t tb_dmem_resp_data_i;
     logic tb_dmem_resp_valid_i;
     logic [7:0] tb_dmem_resp_tag_i;
 
@@ -72,7 +72,7 @@ module tb_top();
     logic [4:0] tb_dmem_req_cmd_o;
     addr_t  tb_dmem_req_addr_o;
     logic [3:0] tb_dmem_op_type_o;
-    bus64_t tb_dmem_req_data_o;
+    bus_simd_t tb_dmem_req_data_o;
     logic [7:0] tb_dmem_req_tag_o;
     
     logic [27:0] l1_vpn_request;
@@ -111,6 +111,7 @@ module tb_top();
         .CSR_EVEC(tb_csr_evec),
         .CSR_INTERRUPT(tb_csr_interrupt),
         .CSR_INTERRUPT_CAUSE(tb_csr_interrupt_cause),
+        .CSR_SEW(SEW_16),
 
         .PTWINVALIDATE(1'b0),
         .TLB_RESP_MISS(1'b0),
@@ -182,7 +183,6 @@ module tb_top();
         .io_core_pmu_EXE_STORE(),
         .io_core_pmu_EXE_LOAD(),
         .io_core_pmu_new_instruction()
-
 );
 
 

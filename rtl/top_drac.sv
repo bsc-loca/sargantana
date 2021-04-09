@@ -51,7 +51,8 @@ module top_drac(
     input logic                 CSR_INTERRUPT,
     input bus64_t               CSR_INTERRUPT_CAUSE,
     input logic                 io_csr_csr_replay,
-    input [1:0]			        csr_priv_lvl_i,
+    input [1:0]			csr_priv_lvl_i,
+    input sew_t                 CSR_SEW,
 
 //------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -74,7 +75,7 @@ module top_drac(
 // D-CACHE  INTERFACE
 //----------------------------------------------------------------------------------
     input logic                 DMEM_REQ_READY,
-    input bus64_t               DMEM_RESP_BITS_DATA_SUBW,
+    input bus_simd_t            DMEM_RESP_BITS_DATA_SUBW,
     input logic                 DMEM_RESP_BITS_NACK,
     input logic                 DMEM_RESP_BITS_REPLAY,
     input logic                 DMEM_RESP_VALID,
@@ -120,7 +121,7 @@ module top_drac(
     output logic                DMEM_REQ_VALID,  
     output logic   [3:0]        DMEM_OP_TYPE,
     output logic   [4:0]        DMEM_REQ_CMD,
-    output bus64_t              DMEM_REQ_BITS_DATA,
+    output bus_simd_t           DMEM_REQ_BITS_DATA,
     output addr_t               DMEM_REQ_BITS_ADDR,
     output logic   [7:0]        DMEM_REQ_BITS_TAG,
     output logic                DMEM_REQ_INVALIDATE_LR,
@@ -316,6 +317,7 @@ datapath datapath_inst(
     .resp_icache_cpu_i(resp_icache_interface_datapath), 
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
+    .sew_i(CSR_SEW),
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
     // Output datapath

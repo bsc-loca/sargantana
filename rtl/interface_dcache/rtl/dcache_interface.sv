@@ -26,7 +26,7 @@ module dcache_interface (
 
     // DCACHE Answer
     input  logic        dmem_resp_replay_i,  // Miss ready
-    input  bus64_t      dmem_resp_data_i,    // Readed data from Cache
+    input  bus_simd_t   dmem_resp_data_i,    // Readed data from Cache
     input  logic        dmem_req_ready_i,    // Dcache ready to accept request
     input  logic        dmem_resp_valid_i,   // Response is valid
     input  logic [7:0]  dmem_resp_tag_i,     // Tag 
@@ -42,7 +42,7 @@ module dcache_interface (
     output logic [4:0]  dmem_req_cmd_o,      // Type of memory access
     output addr_t       dmem_req_addr_o,     // Address of memory access
     output logic [3:0]  dmem_op_type_o,      // Granularity of memory access
-    output bus64_t      dmem_req_data_o,     // Data to store
+    output bus_simd_t   dmem_req_data_o,     // Data to store
     output logic [7:0]  dmem_req_tag_o,      // Tag for the MSHR
     output logic        dmem_req_invalidate_lr_o, // Reset load-reserved/store-conditional
     output logic        dmem_req_kill_o,     // Kill actual memory access
@@ -157,7 +157,7 @@ always_comb begin
                                     dmem_req_cmd_o = 5'b00000; // Load
                                     type_of_op = MEM_LOAD;
         end
-        SD,SW,SH,SB:             begin
+        SD,SW,SH,SB,VSE:         begin
                                     dmem_req_cmd_o = 5'b00001; // Store
                                     type_of_op = MEM_STORE;
         end
@@ -174,8 +174,8 @@ end
 assign dmem_req_addr_64 = (type_of_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
 assign dmem_req_addr_o = dmem_req_addr_64[39:0];
 
-// Granularity of mem. access. (BYTE, HALFWORD, WORD)
-assign dmem_op_type_o = {1'b0,req_cpu_dcache_i.mem_size};
+// Granularity of mem. access. (BYTE, HALFWORD, WORD, DOUBLEWORD, QUADWORD)
+assign dmem_op_type_o = req_cpu_dcache_i.mem_size;
 
 // Data to store if needed
 assign dmem_req_data_o = req_cpu_dcache_i.data_rs2;

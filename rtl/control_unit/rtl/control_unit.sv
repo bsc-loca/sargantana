@@ -87,7 +87,7 @@ module control_unit(
 
     // logic enable write register file at commit
     always_comb begin
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (i == 0) begin
                 // we don't allow regular reads/writes if not halted
                 if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
@@ -121,6 +121,19 @@ module control_unit(
                 end else begin
                     cu_rr_o.snoop_enable[i] = 1'b0;
                 end
+            end
+        end
+
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            if (wb_cu_i.vvalid[i] && wb_cu_i.vwrite_enable[i]) begin
+                cu_rr_o.vwrite_enable[i] = 1'b1;
+            end else begin
+                cu_rr_o.vwrite_enable[i] = 1'b0;
+            end
+            if (wb_cu_i.vvalid[i] && wb_cu_i.vsnoop_enable[i]) begin
+                cu_rr_o.vsnoop_enable[i] = 1'b1;
+            end else begin
+                cu_rr_o.vsnoop_enable[i] = 1'b0;
             end
         end
 
@@ -187,6 +200,7 @@ module control_unit(
     assign cu_ir_o.do_recover = (~correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 
     assign cu_ir_o.recover_checkpoint = wb_cu_i.chkp;
+    assign cu_ir_o.simd_recover_checkpoint = wb_cu_i.simd_chkp;
 
     assign cu_ir_o.delete_checkpoint = (correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 
@@ -325,6 +339,7 @@ module control_unit(
 
     // Enable Update of Free List and Rename from Commit
     assign cu_ir_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+    assign cu_ir_o.simd_enable_commit_update = commit_cu_i.valid & commit_cu_i.vregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
 
     // Recover checkpoint of Commit stage in Rename and Free List
     assign cu_ir_o.recover_commit = exception_enable_q;

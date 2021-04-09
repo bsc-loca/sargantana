@@ -244,12 +244,13 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.rd              = 'h0;
         instruction_o.change_pc_ena   = 'h0;
         instruction_o.regfile_we      = 'h0;
-        instruction_o.instr_type      = 'h0;
+        instruction_o.instr_type      = ADD;
         instruction_o.stall_csr_fence = 'h0;
         instruction_o.csr_addr        = 'h0;
         instruction_o.prd             = 'h0;
         instruction_o.checkpoint_done = 'h0;
         instruction_o.chkp            = 'h0;
+        instruction_o.simd_chkp       = 'h0;
         instruction_o.gl_index        = 'h0;
         `ifdef VERILATOR
         instruction_o.id              = 'h0;
@@ -272,6 +273,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.prd             = instruction_q[0].prd;
             instruction_o.checkpoint_done = instruction_q[0].checkpoint_done;
             instruction_o.chkp            = instruction_q[0].chkp;
+            instruction_o.simd_chkp       = instruction_q[0].simd_chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[0].id;
