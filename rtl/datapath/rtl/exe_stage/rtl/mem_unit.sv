@@ -388,7 +388,9 @@ assign is_STORE_or_AMO_s0_d = (req_cpu_dcache_o.instr_type == SD)          ||
                               (req_cpu_dcache_o.instr_type == AMO_LRD)     ;
 
 //// Detect if instruction to Dcache is store or AMO
-assign is_STORE_s0_d = (req_cpu_dcache_o.instr_type == SD)          || 
+assign is_STORE_s0_d = (req_cpu_dcache_o.instr_type == SD)          ||
+                       (req_cpu_dcache_o.instr_type == FSD)         ||
+                       (req_cpu_dcache_o.instr_type == FSW)         || 
                        (req_cpu_dcache_o.instr_type == SW)          ||
                        (req_cpu_dcache_o.instr_type == SH)          ||
                        (req_cpu_dcache_o.instr_type == SB)          ;
@@ -674,7 +676,7 @@ assign fp_instruction_o.chkp          = instruction_to_wb.chkp;
 assign fp_instruction_o.gl_index      = instruction_to_wb.gl_index;
 assign fp_instruction_o.branch_taken  = 1'b0;
 assign fp_instruction_o.result_pc     = 0;
-assign fp_instruction_o.result        = data_to_wb;
+assign fp_instruction_o.result        = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
 assign fp_instruction_o.ex            = exception_to_wb;
 
 assign instruction_simd_o.valid           = instruction_to_wb.instr.valid & instruction_to_wb.instr.vregfile_we;

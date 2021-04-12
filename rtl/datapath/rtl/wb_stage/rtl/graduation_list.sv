@@ -152,6 +152,7 @@ begin
                 entries[instruction_fp_writeback_i[i]].csr_addr  <= instruction_fp_writeback_data_i[i].csr_addr;
                 entries[instruction_fp_writeback_i[i]].exception <= instruction_fp_writeback_data_i[i].exception;
                 entries[instruction_fp_writeback_i[i]].result    <= instruction_fp_writeback_data_i[i].result;
+                entries[instruction_fp_writeback_i[i]].fp_status <= instruction_fp_writeback_data_i[i].fp_status;
             end
         end
     end

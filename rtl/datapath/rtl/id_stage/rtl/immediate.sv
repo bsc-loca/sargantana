@@ -60,6 +60,7 @@ module immediate(
                 imm_o = {sign_extended,imm_jtype};
             end
             riscv_pkg::OP_JALR,
+            riscv_pkg::OP_LOAD_FP,
             riscv_pkg::OP_LOAD: begin
                 imm_o = {sign_extended,imm_itype};
             end
@@ -88,6 +89,7 @@ module immediate(
             riscv_pkg::OP_BRANCH: begin
                 imm_o = {sign_extended,imm_btype};
             end
+            riscv_pkg::OP_STORE_FP,
             riscv_pkg::OP_STORE: begin
                 imm_o = {sign_extended,imm_stype};
             end

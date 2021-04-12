@@ -72,7 +72,7 @@ module fpuv_opgroup_multifmt_slice #(
 
   localparam int unsigned MAX_FP_WIDTH   = fpuv_pkg::max_fp_width(FpFmtConfig);
   localparam int unsigned MAX_INT_WIDTH  = fpuv_pkg::max_int_width(IntFmtConfig);
-  localparam int unsigned NUM_LANES = fpuv_pkg::max_num_lanes(Width, FpFmtConfig, 1'b1);
+  localparam int unsigned NUM_LANES = fpuv_pkg::max_num_lanes(Width, FpFmtConfig, EnableVectors);
   localparam int unsigned NUM_INT_FORMATS = fpuv_pkg::NUM_INT_FORMATS;
   // We will send the format information along with the data
   localparam int unsigned FMT_BITS =

@@ -103,9 +103,9 @@ end
 
 always_ff @(posedge clk_i)  begin
     if (~rstn_i) begin
-        registers[0] = 64'h00;
-        registers[1] = 64'h01;
-        registers[2] = 64'h02;
+        registers[0] <= 64'h00;
+        registers[1] <= 64'h01;
+        registers[2] <= 64'h02;
     end else begin
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
             if (write_enable_i[i]) begin

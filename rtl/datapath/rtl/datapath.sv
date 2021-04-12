@@ -756,6 +756,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
     `endif
     assign instruction_decode_gl.fp_regfile_we          = stage_ir_rr_q.instr.regfile_fp_we;
+    assign instruction_decode_gl.fp_status              = '0;
 
     graduation_list graduation_list_inst(
         .clk_i(clk_i),
@@ -987,8 +988,8 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign reg_to_exe.data_vs2 = exe_data_vs2;
     assign reg_to_exe.data_old_vd = exe_data_old_vd;
     assign reg_to_exe.data_vm  = exe_data_vm;
-    assign reg_to_exe.data_rs1 = (stage_ir_rr_q.instr.regfile_src == FPU_RF) ? exe_data_frs1 : exe_data_rs1;
-    assign reg_to_exe.data_rs2 = (stage_ir_rr_q.instr.regfile_src == FPU_RF) ? exe_data_frs2 : exe_data_rs2;
+    assign reg_to_exe.data_rs1 = (stage_rr_exe_q.instr.regfile_src == FPU_RF) ? exe_data_frs1 : exe_data_rs1;
+    assign reg_to_exe.data_rs2 = (stage_rr_exe_q.instr.regfile_src == FPU_RF) ? exe_data_frs2 : exe_data_rs2;
     assign reg_to_exe.data_rs3 = exe_data_frs3;
     assign reg_to_exe.csr_interrupt = stage_rr_exe_q.csr_interrupt;
     assign reg_to_exe.csr_interrupt_cause = stage_rr_exe_q.csr_interrupt_cause;
@@ -1184,6 +1185,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             instruction_fp_writeback_gl[i].csr_addr  = wb_fp[i].csr_addr;
             instruction_fp_writeback_gl[i].exception = wb_fp[i].ex;
             instruction_fp_writeback_gl[i].result    = wb_fp[i].result;
+            instruction_fp_writeback_gl[i].fp_status = wb_fp[i].fp_status;
             fp_data_wb_to_rr[i] = wb_fp[i].result;
             fp_write_paddr[i]   = wb_fp[i].fprd;
             fp_write_vaddr[i]   = wb_fp[i].rd;

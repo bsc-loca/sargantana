@@ -635,12 +635,13 @@ typedef struct packed {
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     bus64_t id;
     `endif
-    phreg_t fprd;                        // Physical register destination
+    phreg_t fprd;                       // Physical register destination
+    fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
 
-    gl_index_t gl_index;                // Graduation List entry
+    gl_index_t gl_index;                // Graduation List entry  
 } exe_wb_fp_instr_t;       //  Execution Stage to FP Write Back
 
 typedef struct packed {
@@ -831,7 +832,8 @@ typedef struct packed {
     // exception cause
     bus64_t     csr_xcpt_cause;
     // xcpt pc 
-    bus64_t     csr_pc; 
+    bus64_t     csr_pc;
+    logic [4:0] fp_status;       // FP status of the executed instruction 
 } req_cpu_csr_t;
 
 // CSR input
@@ -922,6 +924,7 @@ typedef struct packed {
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;          // Bits of the instruction
     `endif
+    fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
 } gl_instruction_t;
 
 
@@ -957,7 +960,7 @@ typedef struct packed {
 localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
       Width:         64,
       EnableVectors: 1'b0, // guillemlp do not do vectors i guess?
-      EnableNanBox:  1'b0,
+      EnableNanBox:  1'b1,
       FpFmtMask:     5'b11000,
       IntFmtMask:    4'b0011
    };

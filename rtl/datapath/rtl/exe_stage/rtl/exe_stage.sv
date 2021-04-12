@@ -77,12 +77,14 @@ exe_wb_scalar_instr_t simd_to_scalar_wb;
 exe_wb_simd_instr_t mem_to_simd_wb;
 exe_wb_simd_instr_t simd_to_simd_wb;
 rr_exe_fpu_instr_t   fp_instr;
+exe_wb_scalar_instr_t fp_to_scalar_wb;
 exe_wb_fp_instr_t     fp_mem_to_wb;
 exe_wb_fp_instr_t     fp_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
 logic stall_int;
+logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
 
@@ -147,153 +149,90 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2));
 
 always_comb begin
-    if (~stall_int & ~flush_i) begin
-        arith_instr.instr               = from_rr_i.instr;
-        arith_instr.data_rs1            = rs1_data_def;
-        arith_instr.data_rs2            = rs2_data_def;
-        arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        arith_instr.prs1                = from_rr_i.prs1;
-        arith_instr.rdy1                = from_rr_i.rdy1;
-        arith_instr.prs2                = from_rr_i.prs2;
-        arith_instr.rdy2                = from_rr_i.rdy2;
-        arith_instr.prd                 = from_rr_i.prd;
-        arith_instr.old_prd             = from_rr_i.old_prd;
-        arith_instr.old_pvd             = from_rr_i.old_pvd;
-        arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        arith_instr.chkp                = from_rr_i.chkp;
-        arith_instr.simd_chkp           = from_rr_i.simd_chkp;
-        arith_instr.gl_index            = from_rr_i.gl_index;
+    arith_instr.data_rs1            = rs1_data_def;
+    arith_instr.data_rs2            = rs2_data_def;
+    arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+    arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+    arith_instr.prs1                = from_rr_i.prs1;
+    arith_instr.rdy1                = from_rr_i.rdy1;
+    arith_instr.prs2                = from_rr_i.prs2;
+    arith_instr.rdy2                = from_rr_i.rdy2;
+    arith_instr.prd                 = from_rr_i.prd;
+    arith_instr.old_prd             = from_rr_i.old_prd;
+    arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+    arith_instr.chkp                = from_rr_i.chkp;
+    arith_instr.gl_index            = from_rr_i.gl_index;
 
-        mem_instr.instr               = from_rr_i.instr;
-        mem_instr.data_rs1            = rs1_data_def;
-        mem_instr.data_rs2            = rs2_data_def;
-        mem_instr.data_vm             = from_rr_i.data_vm;
-        mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        mem_instr.prs1                = from_rr_i.prs1;
-        mem_instr.rdy1                = from_rr_i.rdy1;
-        mem_instr.prs2                = from_rr_i.prs2;
-        mem_instr.rdy2                = from_rr_i.rdy2;
-        mem_instr.prd                 = from_rr_i.prd;
-        mem_instr.pvd                 = from_rr_i.pvd;
-        mem_instr.old_prd             = from_rr_i.old_prd;
-        mem_instr.old_pvd             = from_rr_i.old_pvd;
-        mem_instr.fprd                = from_rr_i.fprd;
-        mem_instr.old_fprd            = from_rr_i.old_fprd;
-        mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        mem_instr.chkp                = from_rr_i.chkp;
-        mem_instr.simd_chkp           = from_rr_i.simd_chkp;
-        mem_instr.gl_index            = from_rr_i.gl_index;
+    mem_instr.data_rs1            = rs1_data_def;
+    mem_instr.data_rs2            = rs2_data_def;
+    mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+    mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+    mem_instr.prs1                = from_rr_i.prs1;
+    mem_instr.rdy1                = from_rr_i.rdy1;
+    mem_instr.prs2                = from_rr_i.prs2;
+    mem_instr.rdy2                = from_rr_i.rdy2;
+    mem_instr.prd                 = from_rr_i.prd;
+    mem_instr.old_prd             = from_rr_i.old_prd;
+    mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+    mem_instr.chkp                = from_rr_i.chkp;
+    mem_instr.gl_index            = from_rr_i.gl_index;
+    mem_instr.fprd                = from_rr_i.fprd;
+    mem_instr.old_prd             = from_rr_i.old_prd;
+    mem_instr.old_fprd            = from_rr_i.old_fprd;
 
-        simd_instr.instr               = from_rr_i.instr;
-        simd_instr.data_rs1            = from_rr_i.data_rs1;
-        simd_instr.data_vs1            = from_rr_i.data_vs1;
-        simd_instr.data_vs2            = from_rr_i.data_vs2;
-        simd_instr.data_old_vd         = from_rr_i.data_old_vd;
-        simd_instr.data_vm             = from_rr_i.data_vm;
-        simd_instr.sew                 = sew_i;
-        simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        simd_instr.pvs1                = from_rr_i.pvs1;
-        simd_instr.vrdy1               = from_rr_i.vrdy1;
-        simd_instr.pvs2                = from_rr_i.pvs2;
-        simd_instr.vrdy2               = from_rr_i.vrdy2;
-        simd_instr.prd                 = from_rr_i.prd;
-        simd_instr.pvd                 = from_rr_i.pvd;
-        simd_instr.old_prd             = from_rr_i.old_prd;
-        simd_instr.old_pvd             = from_rr_i.old_pvd;
-        simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        simd_instr.chkp                = from_rr_i.chkp;
-        simd_instr.simd_chkp           = from_rr_i.simd_chkp;
-        simd_instr.gl_index            = from_rr_i.gl_index;
-        fp_instr.instr               = from_rr_i.instr;
-        fp_instr.data_rs1            = rs1_data_def;
-        fp_instr.data_rs2            = rs2_data_def;
-        fp_instr.data_rs3            = from_rr_i.data_rs3;
-        fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        fp_instr.fprs1                = from_rr_i.fprs1;
-        fp_instr.frdy1                = from_rr_i.frdy1;
-        fp_instr.fprs2                = from_rr_i.fprs2;
-        fp_instr.frdy2                = from_rr_i.frdy2;
-        fp_instr.fprs3                = from_rr_i.fprs3;
-        fp_instr.frdy3                = from_rr_i.frdy3;
-        fp_instr.fprd                = from_rr_i.fprd;
-        fp_instr.old_fprd            = from_rr_i.old_fprd;
-        fp_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        fp_instr.chkp                = from_rr_i.chkp;
-        fp_instr.gl_index            = from_rr_i.gl_index;
+
+    fp_instr.data_rs1            = rs1_data_def;
+    fp_instr.data_rs2            = rs2_data_def;
+    fp_instr.data_rs3            = from_rr_i.data_rs3;
+    fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+    fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+    fp_instr.fprs1                = from_rr_i.fprs1;
+    fp_instr.frdy1                = from_rr_i.frdy1;
+    fp_instr.fprs2                = from_rr_i.fprs2;
+    fp_instr.frdy2                = from_rr_i.frdy2;
+    fp_instr.fprs3                = from_rr_i.fprs3;
+    fp_instr.frdy3                = from_rr_i.frdy3;
+    fp_instr.fprd                 = from_rr_i.instr.regfile_dst == SCALAR_RF ? from_rr_i.prd : from_rr_i.fprd;
+    fp_instr.old_fprd             = from_rr_i.old_fprd;
+    fp_instr.checkpoint_done      = from_rr_i.checkpoint_done;
+    fp_instr.chkp                 = from_rr_i.chkp;
+    fp_instr.gl_index             = from_rr_i.gl_index;
+
+    simd_instr.data_rs1            = from_rr_i.data_rs1;
+    simd_instr.data_vs1            = from_rr_i.data_vs1;
+    simd_instr.data_vs2            = from_rr_i.data_vs2;
+    simd_instr.data_old_vd         = from_rr_i.data_old_vd;
+    simd_instr.data_vm             = from_rr_i.data_vm;
+    simd_instr.sew                 = sew_i;
+    simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
+    simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
+    simd_instr.pvs1                = from_rr_i.pvs1;
+    simd_instr.vrdy1               = from_rr_i.vrdy1;
+    simd_instr.pvs2                = from_rr_i.pvs2;
+    simd_instr.vrdy2               = from_rr_i.vrdy2;
+    simd_instr.prd                 = from_rr_i.prd;
+    simd_instr.pvd                 = from_rr_i.pvd;
+    simd_instr.old_prd             = from_rr_i.old_prd;
+    simd_instr.old_pvd             = from_rr_i.old_pvd;
+    simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
+    simd_instr.chkp                = from_rr_i.chkp;
+    simd_instr.simd_chkp           = from_rr_i.simd_chkp;
+    simd_instr.gl_index            = from_rr_i.gl_index;
+    if (stall_int || flush_i) begin
+        arith_instr.instr   = '0;
+        mem_instr.instr     = '0;
+        fp_instr.instr      = '0;
+        simd_instr.instr    = '0;
+    end else if (stall_fpu_int) begin
+        arith_instr.instr   = '0;
+        mem_instr.instr     = '0;
+        fp_instr.instr      = from_rr_i.instr;
+        simd_instr.instr    = '0;
     end else begin
-        arith_instr.instr               = '0;
-        arith_instr.data_rs1            = rs1_data_def;
-        arith_instr.data_rs2            = rs2_data_def;
-        arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        arith_instr.prs1                = from_rr_i.prs1;
-        arith_instr.rdy1                = from_rr_i.rdy1;
-        arith_instr.prs2                = from_rr_i.prs2;
-        arith_instr.rdy2                = from_rr_i.rdy2;
-        arith_instr.prd                 = from_rr_i.prd;
-        arith_instr.old_prd             = from_rr_i.old_prd;
-        arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        arith_instr.chkp                = from_rr_i.chkp;
-        arith_instr.gl_index            = from_rr_i.gl_index;
-
-        mem_instr.instr               = '0;
-        mem_instr.data_rs1            = rs1_data_def;
-        mem_instr.data_rs2            = rs2_data_def;
-        mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        mem_instr.prs1                = from_rr_i.prs1;
-        mem_instr.rdy1                = from_rr_i.rdy1;
-        mem_instr.prs2                = from_rr_i.prs2;
-        mem_instr.rdy2                = from_rr_i.rdy2;
-        mem_instr.prd                 = from_rr_i.prd;
-        mem_instr.old_prd             = from_rr_i.old_prd;
-        mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        mem_instr.chkp                = from_rr_i.chkp;
-        mem_instr.gl_index            = from_rr_i.gl_index;
-
-        simd_instr.instr               = 1'b0;
-        simd_instr.data_rs1            = from_rr_i.data_rs1;
-        simd_instr.data_vs1            = from_rr_i.data_vs1;
-        simd_instr.data_vs2            = from_rr_i.data_vs2;
-        simd_instr.data_old_vd         = from_rr_i.data_old_vd;
-        simd_instr.data_vm             = from_rr_i.data_vm;
-        simd_instr.sew                 = sew_i;
-        simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        simd_instr.pvs1                = from_rr_i.pvs1;
-        simd_instr.vrdy1               = from_rr_i.vrdy1;
-        simd_instr.pvs2                = from_rr_i.pvs2;
-        simd_instr.vrdy2               = from_rr_i.vrdy2;
-        simd_instr.prd                 = from_rr_i.prd;
-        simd_instr.pvd                 = from_rr_i.pvd;
-        simd_instr.old_prd             = from_rr_i.old_prd;
-        simd_instr.old_pvd             = from_rr_i.old_pvd;
-        simd_instr.vrdy_old_vd         = from_rr_i.vrdy_old_vd;
-        simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        simd_instr.chkp                = from_rr_i.chkp;
-        simd_instr.simd_chkp           = from_rr_i.simd_chkp;
-        simd_instr.gl_index            = from_rr_i.gl_index;
-        fp_instr.instr               = '0;
-        fp_instr.data_rs1            = rs1_data_def;
-        fp_instr.data_rs2            = rs2_data_def;
-        fp_instr.data_rs3            = from_rr_i.data_rs3;
-        fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-        fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
-        fp_instr.fprs1                = from_rr_i.fprs1;
-        fp_instr.frdy1                = from_rr_i.frdy1;
-        fp_instr.fprs2                = from_rr_i.fprs2;
-        fp_instr.frdy2                = from_rr_i.frdy2;
-        fp_instr.fprs3                = from_rr_i.fprs3;
-        fp_instr.frdy3                = from_rr_i.frdy3;
-        fp_instr.fprd                 = from_rr_i.fprd;
-        fp_instr.old_fprd             = from_rr_i.old_fprd;
-        fp_instr.checkpoint_done     = from_rr_i.checkpoint_done;
-        fp_instr.chkp                = from_rr_i.chkp;
-        fp_instr.gl_index            = from_rr_i.gl_index;
+        arith_instr.instr   = from_rr_i.instr;
+        mem_instr.instr     = from_rr_i.instr;
+        fp_instr.instr      = from_rr_i.instr;
+        simd_instr.instr    = from_rr_i.instr;
     end
 end
 
@@ -353,12 +292,13 @@ mem_unit mem_unit_inst(
 );
 
 fpu_drac_wrapper fpu_drac_wrapper_inst (
-   .clk_i          (clk_i),
-   .rstn_i         (rstn_i),
-   .kill_i         (kill_i),
-   .instruction_i  (fp_instr),
-   .instruction_o  (fp_to_wb),
-   .stall_o        (stall_fpu)
+   .clk_i                   (clk_i),
+   .rstn_i                  (rstn_i),
+   .kill_i                  (kill_i),
+   .instruction_i           (fp_instr),
+   .instruction_o           (fp_to_wb),
+   .instruction_scalar_o    (fp_to_scalar_wb),
+   .stall_o                 (stall_fpu)
 );
 
 always_comb begin
@@ -399,6 +339,13 @@ always_comb begin
             arith_to_scalar_wb_o.ex.valid = 1;
             arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             arith_to_scalar_wb_o.ex.origin = 64'b0;
+        end
+    end else if (fp_to_scalar_wb.valid) begin
+        arith_to_wb_o = fp_to_scalar_wb;
+        if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            arith_to_wb_o.ex.valid = 1;
+            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_wb_o.ex.origin = 64'b0;
         end
     end else begin
         arith_to_scalar_wb_o = 'h0;
@@ -443,6 +390,7 @@ always_comb begin
     set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
     pmu_stall_mem_o = 1'b0; 
+    stall_fpu_int   = 1'b0;
     if (from_rr_i.instr.valid) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_32_inst | ~ready_div_unit;
@@ -467,7 +415,8 @@ always_comb begin
             pmu_stall_mem_o = stall_mem | (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_FPU) begin
-            stall_int = stall_fpu | (~ready);
+            stall_fpu_int = stall_fpu | (~ready_1cycle_inst && from_rr_i.instr.instr_type == FMV_F2X);
+            stall_int = (~ready);
         end
     end
 end
@@ -530,8 +479,7 @@ assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
 assign exe_cu_o.valid_fp_mem = fp_mem_to_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
-
-assign exe_cu_o.stall = stall_int;
+assign exe_cu_o.stall = stall_int || stall_fpu_int;
 
 
 //-PMU 

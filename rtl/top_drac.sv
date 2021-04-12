@@ -96,6 +96,8 @@ module top_drac(
     output logic                CSR_RETIRE,
     output bus64_t              CSR_CAUSE,
     output addr_t               CSR_PC,
+    output logic [4:0]          csr_fp_status_o,
+    output logic                csr_fp_status_valid_o,
 
 //-----------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
@@ -268,6 +270,8 @@ assign CSR_EXCEPTION    = req_datapath_csr_interface.csr_exception;
 assign CSR_RETIRE       = req_datapath_csr_interface.csr_retire;
 assign CSR_CAUSE        = req_datapath_csr_interface.csr_xcpt_cause;
 assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
+assign csr_fp_status_o  = req_datapath_csr_interface.fp_status;
+assign csr_fp_status_valid_o  = req_datapath_csr_interface.csr_retire;
 
 
 //L2 Network conection - response
