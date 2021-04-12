@@ -45,7 +45,9 @@ module control_unit(
     output cu_ir_t          cu_ir_o,
     output cu_rr_t          cu_rr_o,
     output cu_wb_t          cu_wb_o,
-    output cu_commit_t      cu_commit_o
+    output cu_commit_t      cu_commit_o,
+    
+    output logic            pmu_jump_misspred_o
 
 );
     reg csr_fence_in_pipeline;
@@ -375,5 +377,7 @@ module control_unit(
             csr_enable_q <= csr_enable_d;
         end
     end
+    
+    assign pmu_jump_misspred_o = (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || ~correct_branch_pred_wb_i;
 
 endmodule

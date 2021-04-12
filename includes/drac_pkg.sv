@@ -688,14 +688,19 @@ typedef struct packed {
 //PMU flags
 typedef struct packed {
     logic stall_if   ;         // Stop Fetch
-    logic stall_id   ;         // Stop Decode
+    logic stall_id   ;         // Stop Decode -
     logic stall_ir   ;         // Stop Rename
     logic stall_rr   ;         // Stop Read Register
-    logic stall_exe  ;         // Stop Exe
+    logic stall_exe  ;         // Stop Exe -
     logic stall_wb   ;         // Stop Write Back
-    logic branch_miss;         // Stop Write Back
+    logic branch_miss;         // Stop Write Back -
     logic is_branch  ;         // Stop Write Back
     logic branch_taken;         // Stop Write Back
+    logic load_store;           // load or store inst in WB
+    logic data_depend;          // stall due to data dependency
+    logic struct_depend;        // stall due to structural risk
+    logic grad_list_full;       // stall due to graduation list full
+    logic free_list_empty;      // stall due to free list empty
 } to_PMU_t;  // Control signals to PMU counters
 
 // CSR output

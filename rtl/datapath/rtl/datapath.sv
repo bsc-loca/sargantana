@@ -162,6 +162,7 @@ module datapath(
     logic snoop_exe_vrdy2;
     logic snoop_exe_vrdy_old_vd;
     logic snoop_exe_vrdym;
+    logic pmu_exe_ready;
 
     bus64_t exe_data_rs1;
     bus64_t exe_data_rs2;
@@ -278,7 +279,8 @@ module datapath(
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
         .commit_cu_i(commit_cu_int),
-        .cu_commit_o(cu_commit_int)
+        .cu_commit_o(cu_commit_int),
+        .pmu_jump_misspred_o(pmu_flags_o.branch_miss)
     );
 
     // Combinational logic select the jump addr
@@ -859,12 +861,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .req_cpu_dcache_o(req_cpu_dcache_o),
     
         //PMU Neiel-Leyva
-        .pmu_is_branch_o        (pmu_flags_o.is_branch),      
-        .pmu_branch_taken_o     (pmu_flags_o.branch_taken),   
-        .pmu_miss_prediction_o  (pmu_flags_o.branch_miss),
-        .pmu_stall_mul_o        (pmu_flags_o.stall_rr),
-        .pmu_stall_div_o        (pmu_flags_o.stall_exe),
-        .pmu_stall_mem_o        (pmu_flags_o.stall_wb)
+        .pmu_is_branch_o          (pmu_flags_o.is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
+        .pmu_exe_ready_o          (pmu_exe_ready),
+        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
+        .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
     );
 
     register #(NUM_SCALAR_WB * $bits(exe_wb_scalar_instr_t) + NUM_SIMD_WB * $bits(exe_wb_simd_instr_t)) reg_exe_inst(
@@ -1178,6 +1180,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             .exe_id(stage_rr_exe_q.instr.id),
             .exe_stall(control_int.stall_exe),
             .exe_flush(flush_int.flush_exe),
+            .exe_unit(reg_to_exe.instr.unit),
 
             .wb1_valid(wb_scalar[0].valid),
             .wb1_id(wb_scalar[0].id),
@@ -1207,7 +1210,18 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
 
 
     //PMU
-    assign pmu_flags_o.stall_if     = resp_csr_cpu_i.csr_stall ; 
-    assign pmu_flags_o.stall_id     = exe_cu_int.stall ; 
-
+    assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;
+    
+    assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.valid;
+    assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
+    assign pmu_flags_o.load_store      = commit_store_or_amo_int || instruction_to_commit.instr_type == LB  || 
+                                                                 instruction_to_commit.instr_type == LH  ||
+                                                                 instruction_to_commit.instr_type == LW  ||
+                                                                 instruction_to_commit.instr_type == LD  ||
+                                                                 instruction_to_commit.instr_type == LBU ||
+                                                                 instruction_to_commit.instr_type == LHU ||
+                                                                 instruction_to_commit.instr_type == LWU;
+    assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
+    assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
+    assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
 endmodule

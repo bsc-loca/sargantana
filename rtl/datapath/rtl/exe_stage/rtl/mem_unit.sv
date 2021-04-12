@@ -34,7 +34,9 @@ module mem_unit (
     output logic 		 mem_store_or_amo_o,     // Instruction is a Store or Commit
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
-    output logic                 empty_o                 // Mem unit has no pending Ops
+    output logic                 empty_o,                // Mem unit has no pending Ops
+    
+    output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
 // Enum to select instruction to DCache interface
@@ -154,7 +156,8 @@ load_store_queue load_store_queue_inst (
     .advance_head_i     (advance_head_lsq),
     .next_instr_exe_o   (instruction_to_dcache),
     .full_o             (full_lsq),
-    .empty_o            (empty_lsq)
+    .empty_o            (empty_lsq),
+    .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
 ///////////////////////////////////////////////////////////////////////////////

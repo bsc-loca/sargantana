@@ -30,7 +30,9 @@ module load_store_queue(
     output rr_exe_mem_instr_t  next_instr_exe_o, // Next Instruction to be executed 
        
     output logic               full_o,           // Lsq is full
-    output logic               empty_o           // Lsq is empty
+    output logic               empty_o,          // Lsq is empty
+    
+    output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
 // Points to the next available entry
@@ -117,6 +119,41 @@ assign next_instr_exe_o = (~read_enable)? 'h0 : control_table[next];
 
 assign empty_o = (num_to_exe == 0);
 assign full_o  = ((num == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
+
+assign pmu_load_after_store_o = ~read_enable && num_to_exe > 0 && 
+                                (control_table[next].instr.instr_type == LB || 
+                                control_table[next].instr.instr_type == LH  ||
+                                control_table[next].instr.instr_type == LW  ||
+                                control_table[next].instr.instr_type == LD  ||
+                                control_table[next].instr.instr_type == LBU ||
+                                control_table[next].instr.instr_type == LHU ||
+                                control_table[next].instr.instr_type == LWU) &&  
+                                (control_table[next-1].instr.instr_type == SD       || 
+                                control_table[next-1].instr.instr_type == SW        ||
+                                control_table[next-1].instr.instr_type == SH        ||
+                                control_table[next-1].instr.instr_type == SB        ||
+                                control_table[next-1].instr.instr_type == AMO_MAXWU ||
+                                control_table[next-1].instr.instr_type == AMO_MAXDU ||
+                                control_table[next-1].instr.instr_type == AMO_MINWU ||
+                                control_table[next-1].instr.instr_type == AMO_MINDU ||
+                                control_table[next-1].instr.instr_type == AMO_MAXW  ||
+                                control_table[next-1].instr.instr_type == AMO_MAXD  ||
+                                control_table[next-1].instr.instr_type == AMO_MINW  ||
+                                control_table[next-1].instr.instr_type == AMO_MIND  ||
+                                control_table[next-1].instr.instr_type == AMO_ORW   ||
+                                control_table[next-1].instr.instr_type == AMO_ORD   ||
+                                control_table[next-1].instr.instr_type == AMO_ANDW  ||
+                                control_table[next-1].instr.instr_type == AMO_ANDD  ||
+                                control_table[next-1].instr.instr_type == AMO_XORW  ||
+                                control_table[next-1].instr.instr_type == AMO_XORD  ||
+                                control_table[next-1].instr.instr_type == AMO_ADDW  ||
+                                control_table[next-1].instr.instr_type == AMO_ADDD  ||
+                                control_table[next-1].instr.instr_type == AMO_SWAPW ||
+                                control_table[next-1].instr.instr_type == AMO_SWAPD ||
+                                control_table[next-1].instr.instr_type == AMO_SCW   ||
+                                control_table[next-1].instr.instr_type == AMO_SCD   ||
+                                control_table[next-1].instr.instr_type == AMO_LRW   ||
+                                control_table[next-1].instr.instr_type == AMO_LRD);
 
 endmodule
 
