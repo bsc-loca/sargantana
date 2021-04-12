@@ -194,6 +194,8 @@ end
                     end
                     if((checkpoint_enable & register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
                         ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1;
+                    end else begin
+                        ready_table[vaddr_i[i]][version_head + 2'b1] <= ready_table[vaddr_i[i]][version_head];
                     end
                 end
             end
