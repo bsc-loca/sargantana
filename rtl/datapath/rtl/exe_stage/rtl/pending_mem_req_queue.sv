@@ -106,7 +106,7 @@ end
 
 assign finish_instr_o = ((num > 0) & control_bits_table[head]) ? instruction_table[head] : 'h0;
 
-assign full_o  = ((num == (PMRQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
+assign full_o  = ((num >= (PMRQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
 
 endmodule
 
