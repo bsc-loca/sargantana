@@ -1180,7 +1180,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             .exe_id(stage_rr_exe_q.instr.id),
             .exe_stall(control_int.stall_exe),
             .exe_flush(flush_int.flush_exe),
-            .exe_unit(reg_to_exe.instr.unit),
+            //.exe_unit(reg_to_exe.instr.unit),
 
             .wb1_valid(wb_scalar[0].valid),
             .wb1_id(wb_scalar[0].id),
