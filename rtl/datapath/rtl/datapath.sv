@@ -43,9 +43,10 @@ module datapath(
 
 `ifdef VERILATOR
     // Stages: if -- id -- rr -- ex -- wb
-    bus64_t commit_pc, commit_data;
-    logic commit_valid, commit_reg_we;
-    logic [4:0] commit_addr_reg;
+    bus64_t commit_pc;
+    bus_simd_t commit_data;
+    logic commit_valid, commit_reg_we, commit_vreg_we;
+    logic [4:0] commit_addr_reg, commit_addr_vreg;
 `endif
 
     bus64_t pc_if1, pc_if2, pc_id, pc_rr, pc_exe, pc_wb;
@@ -1107,7 +1108,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     end
 
     assign commit_addr_reg  = instruction_to_commit.rd;
+    assign commit_addr_vreg  = instruction_to_commit.vd;
     assign commit_reg_we    = instruction_to_commit.regfile_we && commit_valid;
+    assign commit_vreg_we    = instruction_to_commit.vregfile_we;
 
     // PC
     assign pc_if1  = stage_if_1_if_2_d.pc_inst;
@@ -1133,10 +1136,13 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             .rst(rstn_i),
             .commit_valid(commit_valid),
             .reg_wr_valid(commit_reg_we && (commit_addr_reg != 5'b0)),
+            .vreg_wr_valid(commit_vreg_we),
             .pc(commit_pc),
             .inst(instruction_to_commit.inst),
             .reg_dst(commit_addr_reg),
+            .vreg_dst(commit_addr_vreg),
             .data(commit_data),
+            .sew(sew_i),
             .xcpt(commit_xcpt),
             .xcpt_cause(instruction_to_commit.exception.cause),
             .csr_priv_lvl(csr_priv_lvl_i),

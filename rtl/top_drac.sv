@@ -327,7 +327,7 @@ datapath datapath_inst(
     .resp_icache_cpu_i(resp_icache_interface_datapath), 
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
-    .sew_i(CSR_SEW),
+    .sew_i(SEW_16),//.sew_i(CSR_SEW),
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
     // Output datapath
