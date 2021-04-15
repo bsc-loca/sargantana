@@ -40,11 +40,6 @@ fpuv_pkg::status_t fp_status;
 
 exe_wb_fp_instr_t instruction_d, instruction_q;
 
-assign operands[0] = instruction_i.data_rs1;
-assign operands[1] = instruction_i.data_rs2;
-assign operands[2] = instruction_i.data_rs3;
-
-
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
       src_fmt = FP64;
@@ -59,6 +54,10 @@ always_comb begin
    add_fmt         = src_fmt;
    dst_fmt         = src_fmt;
    int_fmt         = src_fmt == FP32 ? INT32 : INT64;
+
+   operands[0] = instruction_i.data_rs2;
+   operands[1] = instruction_i.data_rs1;
+   operands[2] = instruction_i.data_rs3;
 
 
    case (instruction_i.instr.instr_type)
@@ -77,30 +76,51 @@ always_comb begin
       drac_pkg::FADD: begin // addition
          op     = fpuv_pkg::ADD;
          op_mod = 0;
+         operands[0] = '0;
+         operands[1] = instruction_i.data_rs1;
+         operands[2] = instruction_i.data_rs2;
       end  
       drac_pkg::FSUB: begin // subtraction
          op     = fpuv_pkg::ADD; 
          op_mod = 1;
+         operands[0] = '0;
+         operands[1] = instruction_i.data_rs1;
+         operands[2] = instruction_i.data_rs2;
       end
       drac_pkg::FMUL: begin // multiplication
          op     = fpuv_pkg::MUL;
          op_mod = 0;
+         operands[0] = instruction_i.data_rs2;
+         operands[1] = instruction_i.data_rs1;
+         operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FMADD: begin // fused multiply-add
          op     = fpuv_pkg::FMADD;
          op_mod = 0;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FMSUB: begin // fused multiply-subtract
          op     = fpuv_pkg::FMADD;
          op_mod = 1;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FNMSUB: begin // negated fused multiply-subtract 
          op     = fpuv_pkg::FNMSUB;
          op_mod = 0;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FNMADD: begin // negated fused multiply-add
          op     = fpuv_pkg::FNMSUB;
          op_mod = 1;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = instruction_i.data_rs3;
       end 
       // -------------------------------------------
       //                 DIV
@@ -108,6 +128,16 @@ always_comb begin
       drac_pkg::FDIV: begin
          op     = fpuv_pkg::DIV;
          op_mod = 0;
+         operands[0] = instruction_i.data_rs2;
+         operands[1] = instruction_i.data_rs1;
+         operands[2] = instruction_i.data_rs3;
+      end
+      drac_pkg::FSQRT: begin
+         op     = fpuv_pkg::SQRT;
+         op_mod = 0;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = '0;
+         operands[2] = '0;
       end
       // -------------------------------------------
       //                 NONCOMP
