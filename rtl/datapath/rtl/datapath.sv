@@ -1220,13 +1220,13 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.valid;
     assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
-    assign pmu_flags_o.load_store      = commit_store_or_amo_int || instruction_to_commit.instr_type == LB  || 
+    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int || instruction_to_commit.instr_type == LB  || 
                                                                  instruction_to_commit.instr_type == LH  ||
                                                                  instruction_to_commit.instr_type == LW  ||
                                                                  instruction_to_commit.instr_type == LD  ||
                                                                  instruction_to_commit.instr_type == LBU ||
                                                                  instruction_to_commit.instr_type == LHU ||
-                                                                 instruction_to_commit.instr_type == LWU;
+                                                                 instruction_to_commit.instr_type == LWU);
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
