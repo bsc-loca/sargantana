@@ -31,7 +31,7 @@ module mem_unit (
     output exe_wb_simd_instr_t   instruction_simd_o,     // Output instruction     
     output exception_t           exception_mem_commit_o, // Exception of the commit instruction
     output logic                 mem_commit_stall_o,     // Stall commit stage
-    output logic 		 mem_store_or_amo_o,     // Instruction is a Store or Commit
+    output logic 		         mem_store_or_amo_o,     // Instruction is a Store or Commit
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
     output logic                 empty_o,                // Mem unit has no pending Ops
@@ -645,7 +645,7 @@ assign instruction_o.result_pc     = 0;
 assign instruction_o.result        = data_to_wb[63:0];
 assign instruction_o.ex            = exception_to_wb;
 
-assign instruction_simd_o.valid           = instruction_to_wb.instr.valid;
+assign instruction_simd_o.valid           = instruction_to_wb.instr.valid & instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;
 assign instruction_simd_o.bpred           = instruction_to_wb.instr.bpred;
 assign instruction_simd_o.rs1             = instruction_to_wb.instr.rs1;
