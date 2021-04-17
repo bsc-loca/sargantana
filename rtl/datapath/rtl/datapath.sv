@@ -140,6 +140,7 @@ module datapath(
     rr_exe_instr_t selection_rr_exe_d;
 
     exe_cu_t exe_cu_int;
+    logic wb_amo_int;
     exe_wb_scalar_instr_t [NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
     exe_wb_scalar_instr_t [NUM_SCALAR_WB-1:0] wb_scalar;
     exe_wb_simd_instr_t [NUM_SIMD_WB-1:0] exe_to_wb_simd;
@@ -896,15 +897,47 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     //////// WRITE BACK STAGE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+    assign wb_amo_int = (wb_scalar[1].instr_type == AMO_MAXWU)   ||
+                        (wb_scalar[1].instr_type == AMO_MAXDU)   ||
+                        (wb_scalar[1].instr_type == AMO_MINWU)   ||
+                        (wb_scalar[1].instr_type == AMO_MINDU)   ||
+                        (wb_scalar[1].instr_type == AMO_MAXW)    ||
+                        (wb_scalar[1].instr_type == AMO_MAXD)    ||
+                        (wb_scalar[1].instr_type == AMO_MINW)    ||
+                        (wb_scalar[1].instr_type == AMO_MIND)    ||
+                        (wb_scalar[1].instr_type == AMO_ORW)     ||
+                        (wb_scalar[1].instr_type == AMO_ORD)     ||
+                        (wb_scalar[1].instr_type == AMO_ANDW)    ||
+                        (wb_scalar[1].instr_type == AMO_ANDD)    ||
+                        (wb_scalar[1].instr_type == AMO_XORW)    ||
+                        (wb_scalar[1].instr_type == AMO_XORD)    ||
+                        (wb_scalar[1].instr_type == AMO_ADDW)    ||
+                        (wb_scalar[1].instr_type == AMO_ADDD)    ||
+                        (wb_scalar[1].instr_type == AMO_SWAPW)   ||
+                        (wb_scalar[1].instr_type == AMO_SWAPD)   ||
+                        (wb_scalar[1].instr_type == AMO_SCW)     ||
+                        (wb_scalar[1].instr_type == AMO_SCD)     ||
+                        (wb_scalar[1].instr_type == AMO_LRW)     ||
+                        (wb_scalar[1].instr_type == AMO_LRD)     ;
+
     //WB data for the bypasses (the CSRs should not be bypassed)
     always_comb begin
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             //Graduation list writeback arrays
-            gl_valid[i] = wb_scalar[i].valid;
-            gl_index[i] = wb_scalar[i].gl_index;
-            instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
-            instruction_writeback_gl[i].exception = wb_scalar[i].ex;
-            instruction_writeback_gl[i].result   = wb_scalar[i].result;
+            if (i == 1) begin
+                gl_valid[i] = wb_scalar[i].valid & ~wb_amo_int;
+                gl_index[i] = wb_scalar[i].gl_index;
+                instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
+                instruction_writeback_gl[i].exception = wb_scalar[i].ex;
+                instruction_writeback_gl[i].result   = wb_scalar[i].result;
+            end else begin
+                gl_valid[i] = wb_scalar[i].valid;
+                gl_index[i] = wb_scalar[i].gl_index;
+                instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
+                instruction_writeback_gl[i].exception = wb_scalar[i].ex;
+                instruction_writeback_gl[i].result   = wb_scalar[i].result;
+            end
 
             // Write data regfile from WB or from Commit (CSR)
             // CSR are exclusive with the rest of instrucitons. Therefor, there are no conflicts
