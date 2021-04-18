@@ -327,7 +327,7 @@ module control_unit(
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
         end else if (ir_cu_i.empty_free_list) begin
-            pipeline_ctrl_o.stall_ir  = 1'b1;
+            pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
