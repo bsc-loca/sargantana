@@ -28,8 +28,8 @@ module mem_unit (
 
     output req_cpu_dcache_t      req_cpu_dcache_o,       // Request to dcache
     output exe_wb_simd_instr_t   instruction_simd_o,     // Output instruction     
-    output exe_wb_scalar_instr_t scalar_instruction_o,   // Output instruction
-    output exe_wb_fp_instr_t     fp_instruction_o,       // Output instruction     
+    output exe_wb_scalar_instr_t instruction_scalar_o,   // Output instruction
+    output exe_wb_fp_instr_t     instruction_fp_o,       // Output instruction     
     output exception_t           exception_mem_commit_o, // Exception of the commit instruction
     output logic                 mem_commit_stall_o,     // Stall commit stage
     output logic 		         mem_store_or_amo_o,     // Instruction is a Store or Commit
@@ -634,50 +634,50 @@ always_comb begin
 end
 
 // Output Instruction
-assign scalar_instruction_o.valid         = instruction_to_wb.instr.valid && !fp_instr;;//  && instruction_to_wb.instr.regfile_we;
-assign scalar_instruction_o.pc            = instruction_to_wb.instr.pc;
-assign scalar_instruction_o.bpred         = instruction_to_wb.instr.bpred;
-assign scalar_instruction_o.rs1           = instruction_to_wb.instr.rs1;
-assign scalar_instruction_o.rd            = instruction_to_wb.instr.rd;
-assign scalar_instruction_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
-assign scalar_instruction_o.regfile_we    = instruction_to_wb.instr.regfile_we;
-assign scalar_instruction_o.instr_type    = instruction_to_wb.instr.instr_type;
+assign instruction_scalar_o.valid         = instruction_to_wb.instr.valid && !fp_instr;;//  && instruction_to_wb.instr.regfile_we;
+assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
+assign instruction_scalar_o.bpred         = instruction_to_wb.instr.bpred;
+assign instruction_scalar_o.rs1           = instruction_to_wb.instr.rs1;
+assign instruction_scalar_o.rd            = instruction_to_wb.instr.rd;
+assign instruction_scalar_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
+assign instruction_scalar_o.regfile_we    = instruction_to_wb.instr.regfile_we;
+assign instruction_scalar_o.instr_type    = instruction_to_wb.instr.instr_type;
 `ifdef VERILATOR
-assign scalar_instruction_o.id	           = instruction_to_wb.instr.id;
+assign instruction_scalar_o.id	           = instruction_to_wb.instr.id;
 `endif
-assign scalar_instruction_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
-assign scalar_instruction_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
-assign scalar_instruction_o.prd           = instruction_to_wb.prd;
-assign scalar_instruction_o.checkpoint_done = instruction_to_wb.checkpoint_done;
-assign scalar_instruction_o.chkp          = instruction_to_wb.chkp;
-assign scalar_instruction_o.gl_index      = instruction_to_wb.gl_index;
-assign scalar_instruction_o.branch_taken  = 1'b0;
-assign scalar_instruction_o.result_pc     = 0;
-assign scalar_instruction_o.result        = data_to_wb;
-assign scalar_instruction_o.ex            = exception_to_wb;
+assign instruction_scalar_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
+assign instruction_scalar_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_scalar_o.prd           = instruction_to_wb.prd;
+assign instruction_scalar_o.checkpoint_done = instruction_to_wb.checkpoint_done;
+assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
+assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
+assign instruction_scalar_o.branch_taken  = 1'b0;
+assign instruction_scalar_o.result_pc     = 0;
+assign instruction_scalar_o.result        = data_to_wb;
+assign instruction_scalar_o.ex            = exception_to_wb;
 
 // Output Instruction
-assign fp_instruction_o.valid         = instruction_to_wb.instr.valid && fp_instr;
-assign fp_instruction_o.pc            = instruction_to_wb.instr.pc;
-assign fp_instruction_o.bpred         = instruction_to_wb.instr.bpred;
-assign fp_instruction_o.rs1           = instruction_to_wb.instr.rs1;
-assign fp_instruction_o.rd            = instruction_to_wb.instr.rd;
-assign fp_instruction_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
-assign fp_instruction_o.regfile_we    = instruction_to_wb.instr.regfile_fp_we;
-assign fp_instruction_o.instr_type    = instruction_to_wb.instr.instr_type;
+assign instruction_fp_o.valid         = instruction_to_wb.instr.valid && fp_instr;
+assign instruction_fp_o.pc            = instruction_to_wb.instr.pc;
+assign instruction_fp_o.bpred         = instruction_to_wb.instr.bpred;
+assign instruction_fp_o.rs1           = instruction_to_wb.instr.rs1;
+assign instruction_fp_o.rd            = instruction_to_wb.instr.rd;
+assign instruction_fp_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
+assign instruction_fp_o.regfile_we    = instruction_to_wb.instr.regfile_fp_we;
+assign instruction_fp_o.instr_type    = instruction_to_wb.instr.instr_type;
 `ifdef VERILATOR
-assign fp_instruction_o.id	           = instruction_to_wb.instr.id;
+assign instruction_fp_o.id	           = instruction_to_wb.instr.id;
 `endif
-assign fp_instruction_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
-assign fp_instruction_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
-assign fp_instruction_o.fprd          = instruction_to_wb.fprd;
-assign fp_instruction_o.checkpoint_done = instruction_to_wb.checkpoint_done;
-assign fp_instruction_o.chkp          = instruction_to_wb.chkp;
-assign fp_instruction_o.gl_index      = instruction_to_wb.gl_index;
-assign fp_instruction_o.branch_taken  = 1'b0;
-assign fp_instruction_o.result_pc     = 0;
-assign fp_instruction_o.result        = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
-assign fp_instruction_o.ex            = exception_to_wb;
+assign instruction_fp_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
+assign instruction_fp_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_fp_o.fprd          = instruction_to_wb.fprd;
+assign instruction_fp_o.checkpoint_done = instruction_to_wb.checkpoint_done;
+assign instruction_fp_o.chkp          = instruction_to_wb.chkp;
+assign instruction_fp_o.gl_index      = instruction_to_wb.gl_index;
+assign instruction_fp_o.branch_taken  = 1'b0;
+assign instruction_fp_o.result_pc     = 0;
+assign instruction_fp_o.result        = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
+assign instruction_fp_o.ex            = exception_to_wb;
 
 assign instruction_simd_o.valid           = instruction_to_wb.instr.valid & instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;

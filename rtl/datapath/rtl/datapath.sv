@@ -677,13 +677,11 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             stage_ir_rr_q.prs2 = stage_no_stall_rr_q.prs2;
             stage_ir_rr_q.pvs2 = stage_no_stall_rr_q.pvs2;
             stage_ir_rr_q.pvm  = stage_no_stall_rr_q.pvm;
-            stage_ir_rr_q.prs3 = stage_no_stall_rr_q.prs3;
             stage_ir_rr_q.rdy1 = stage_no_stall_rr_q.rdy1 | snoop_rr_rdy1;
             stage_ir_rr_q.vrdy1 = stage_no_stall_rr_q.vrdy1 | snoop_rr_vrdy1;
             stage_ir_rr_q.rdy2 = stage_no_stall_rr_q.rdy2 | snoop_rr_rdy2;
             stage_ir_rr_q.vrdy2 = stage_no_stall_rr_q.vrdy2 | snoop_rr_vrdy2;
             stage_ir_rr_q.vrdym = stage_no_stall_rr_q.vrdym | snoop_rr_vrdym;
-            stage_ir_rr_q.rdy3 = stage_no_stall_rr_q.rdy3;
             stage_ir_rr_q.old_prd = stage_no_stall_rr_q.old_prd;
             stage_ir_rr_q.old_pvd = stage_no_stall_rr_q.old_pvd;
             stage_ir_rr_q.vrdy_old_vd = stage_no_stall_rr_q.vrdy_old_vd | snoop_rr_vrdy_old_vd;
@@ -707,13 +705,11 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             stage_ir_rr_q.prs2 = stage_stall_rr_q.prs2;
             stage_ir_rr_q.pvs2 = stage_stall_rr_q.pvs2;
             stage_ir_rr_q.pvm  = stage_stall_rr_q.pvm;
-            stage_ir_rr_q.prs3 = stage_stall_rr_q.prs3;
             stage_ir_rr_q.rdy1 = stage_stall_rr_q.rdy1 | snoop_rr_rdy1;
             stage_ir_rr_q.vrdy1 = stage_stall_rr_q.vrdy1 | snoop_rr_vrdy1;
             stage_ir_rr_q.rdy2 = stage_stall_rr_q.rdy2 | snoop_rr_rdy2;
             stage_ir_rr_q.vrdy2 = stage_stall_rr_q.vrdy2 | snoop_rr_vrdy2;
             stage_ir_rr_q.vrdym = stage_stall_rr_q.vrdym | snoop_rr_vrdym;
-            stage_ir_rr_q.rdy3 = stage_stall_rr_q.rdy3;
             stage_ir_rr_q.old_prd = stage_stall_rr_q.old_prd;
             stage_ir_rr_q.old_pvd = stage_stall_rr_q.old_pvd;
             stage_ir_rr_q.vrdy_old_vd = stage_stall_rr_q.vrdy_old_vd | snoop_rr_vrdy_old_vd;
@@ -789,6 +785,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         snoop_rr_vrdy2 = 1'b0;
         snoop_rr_vrdy_old_vd = 1'b0;
         snoop_rr_vrdym = 1'b0;
+        snoop_rr_frdy1 = 1'b0;
+        snoop_rr_frdy2 = 1'b0;
+        snoop_rr_frdy3 = 1'b0;
 
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             snoop_rr_rdy1 |= cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q.prs1) & (stage_ir_rr_q.instr.rs1!= 0);
@@ -813,9 +812,8 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     
     // RR Stage
     regfile regfile_inst(
-        .clk_i(clk_i),
-    regfile regfile(
         .clk_i (clk_i),
+
         .write_enable_i(cu_rr_int.write_enable),
         .write_addr_i(write_paddr_rr),
         .write_data_i(data_wb_to_rr),
@@ -1046,7 +1044,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .simd_to_simd_wb_o(exe_to_wb_simd[0]),
         .mem_to_simd_wb_o(exe_to_wb_simd[1]),
 
-        .fp_mem_to_wb_o(exe_to_wb_fp[1]),
+        .mem_to_fp_wb_o(exe_to_wb_fp[1]),
         .fp_to_wb_o(exe_to_wb_fp[0]),
         .exe_cu_o(exe_cu_int),
 

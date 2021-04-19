@@ -39,7 +39,7 @@ module exe_stage (
     output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
     output exe_wb_simd_instr_t          simd_to_simd_wb_o,
     output exe_wb_simd_instr_t          mem_to_simd_wb_o,
-    output exe_wb_fp_instr_t            fp_mem_to_wb_o,
+    output exe_wb_fp_instr_t            mem_to_fp_wb_o,
     output exe_wb_fp_instr_t            fp_to_wb_o,
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
@@ -78,7 +78,7 @@ exe_wb_simd_instr_t mem_to_simd_wb;
 exe_wb_simd_instr_t simd_to_simd_wb;
 rr_exe_fpu_instr_t   fp_instr;
 exe_wb_scalar_instr_t fp_to_scalar_wb;
-exe_wb_fp_instr_t     fp_mem_to_wb;
+exe_wb_fp_instr_t     mem_to_fp_wb;
 exe_wb_fp_instr_t     fp_to_wb;
 
 bus64_t result_mem;
@@ -279,9 +279,9 @@ mem_unit mem_unit_inst(
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
-    .instruction_o          (mem_to_scalar_wb),
+    .instruction_scalar_o   (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),
-    .fp_instruction_o       (fp_mem_to_wb),
+    .instruction_fp_o       (mem_to_fp_wb),
     .exception_mem_commit_o (exception_mem_commit_o),
     .mem_commit_stall_o     (mem_commit_stall_o),
     .mem_store_or_amo_o     (mem_store_or_amo_o),
@@ -302,14 +302,14 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
 );
 
 always_comb begin
-    if (scalar_mem_to_wb.valid | fp_mem_to_wb.valid | mem_to_simd_wb.valid) begin
+    if (mem_to_scalar_wb.valid | mem_to_fp_wb.valid | mem_to_simd_wb.valid) begin
         mem_to_scalar_wb_o  = mem_to_scalar_wb;
         mem_to_simd_wb_o    = mem_to_simd_wb;
-        fp_mem_to_wb_o      = fp_mem_to_wb;
+        mem_to_fp_wb_o      = mem_to_fp_wb;
     end else begin
         mem_to_scalar_wb_o  = 'h0;
         mem_to_simd_wb_o    = 'h0;
-        fp_mem_to_wb_o      = 'h0;
+        mem_to_fp_wb_o      = 'h0;
     end
     
     if (alu_to_scalar_wb.valid) begin
@@ -341,11 +341,11 @@ always_comb begin
             arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
     end else if (fp_to_scalar_wb.valid) begin
-        arith_to_wb_o = fp_to_scalar_wb;
+        arith_to_scalar_wb_o = fp_to_scalar_wb;
         if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_wb_o.ex.valid = 1;
-            arith_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_wb_o.ex.origin = 64'b0;
+            arith_to_scalar_wb_o.ex.valid = 1;
+            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
     end else begin
         arith_to_scalar_wb_o = 'h0;
@@ -476,7 +476,7 @@ assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_3 = simd_to_simd_wb_o.valid;
 assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
 assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
-assign exe_cu_o.valid_fp_mem = fp_mem_to_wb_o.valid;
+assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
 assign exe_cu_o.stall = stall_int || stall_fpu_int;

@@ -177,7 +177,7 @@ typedef enum logic [6:0] {
     OP_LOAD_FP   = 7'b0000111,
     OP_STORE_FP  = 7'b0100111,
     OP_FP        = 7'b1010011,
-    OP_V         = 7'b1010111
+    OP_V         = 7'b1010111,
     OP_FMADD     = 7'b1000011,
     OP_FMSUB     = 7'b1000111,
     OP_FNMSUB    = 7'b1001011,
@@ -442,7 +442,8 @@ typedef enum logic [2:0] {
     F3_UNIMP1 = 3'b000,
     F3_UNIMP2 = 3'b001,
     F3_FLW    = 3'b010,
-    F3_FLD    = 3'b011
+    F3_FLD    = 3'b011,
+    F3_VSEW   = 3'b111
 } op_func3_fp_t;
 
 // Rounding modes FP

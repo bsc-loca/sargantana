@@ -177,7 +177,7 @@ typedef enum logic [2:0] {
     SEL_BYPASS                  // Select bypass from previous stage
 } alu_sel_t;        // ALU Source Selection
 
-typedef enum logic [2:0]{
+typedef enum logic [3:0]{
     UNIT_ALU,                   // Select ALU
     UNIT_DIV,                   // Select DIVISION
     UNIT_MUL,                   // Select MULTIPLICATION
@@ -373,16 +373,16 @@ typedef struct packed {
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
     logic   rdy2;                       // Ready register source 2 
-    phreg_t fprs1;                       // FP Physical register source 1
-    logic   frdy1;                       // FP Ready register source 1
-    phreg_t fprs2;                       // FP Physical register source 2
-    logic   frdy2;                       // FP Ready register source 2
-    phreg_t fprs3;                       // FP Physical register source 3
-    logic   frdy3;                       // FP Ready register source 3    
+    phreg_t fprs1;                      // FP Physical register source 1
+    logic   frdy1;                      // FP Ready register source 1
+    phreg_t fprs2;                      // FP Physical register source 2
+    logic   frdy2;                      // FP Ready register source 2
+    phreg_t fprs3;                      // FP Physical register source 3
+    logic   frdy3;                      // FP Ready register source 3    
     phreg_t prd;                        // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
-    phreg_t fprd;                        // Physical register destination
-    phreg_t old_fprd;                    // Old Physical register destination
+    phreg_t fprd;                       // Physical register destination
+    phreg_t old_fprd;                   // Old Physical register destination
 
     phvreg_t pvs1;                      // Physical vregister source 1
     logic    vrdy1;                     // Ready vregister source 1
