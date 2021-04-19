@@ -966,7 +966,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
 
         for (int i = 0; i<NUM_SIMD_WB; ++i) begin
             //Graduation list writeback arrays
-            gl_valid_simd[i] = wb_simd[i].valid;
+            gl_valid_simd[i] = wb_simd[i].valid & wb_simd[i].vregfile_we;
             gl_index_simd[i] = wb_simd[i].gl_index;
             instruction_simd_writeback_gl[i].csr_addr  = wb_simd[i].csr_addr;
             instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
@@ -1085,7 +1085,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
                                          instruction_to_commit.instr_type == CSRRC  ||
                                          instruction_to_commit.instr_type == CSRRWI ||
                                          instruction_to_commit.instr_type == CSRRSI ||
-                                         instruction_to_commit.instr_type == CSRRCI );
+                                         instruction_to_commit.instr_type == CSRRCI ||
+                                         instruction_to_commit.instr_type == VSETVL ||
+                                         instruction_to_commit.instr_type == VSETVLI);
 
     assign commit_store_or_amo_int = (instruction_to_commit.instr_type == SD)          || 
                                      (instruction_to_commit.instr_type == SW)          ||

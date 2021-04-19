@@ -207,7 +207,7 @@ typedef enum logic [7:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA,
+   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA, VSETVL, VSETVLI,
    // Old ISA CSR functions
    ERET, MRTS, MRTH, HRTS,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
@@ -241,7 +241,7 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_CLEAR   = 3'b011,
     CSR_CMD_SYS     = 3'b100,
     CSR_CMD_READ    = 3'b101,
-    CSR_CMD_N1      = 3'b110,
+    CSR_CMD_VSELVL  = 3'b110,
     CSR_CMD_N2      = 3'b111
 } csr_cmd_t;                // Comands to lowrisc CSR
 

@@ -52,7 +52,7 @@ module top_drac(
     input bus64_t               CSR_INTERRUPT_CAUSE,
     input logic                 io_csr_csr_replay,
     input [1:0]			csr_priv_lvl_i,
-    input sew_t                 CSR_SEW,
+    input [39:0]                csr_vpu_data_i,
 
 //------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -318,6 +318,9 @@ assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
 assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
 assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
 
+logic [1:0] sew;
+assign sew = csr_vpu_data_i[37:36];
+
 datapath datapath_inst(
     .clk_i(CLK),
     .rstn_i(RST),
@@ -327,7 +330,7 @@ datapath datapath_inst(
     .resp_icache_cpu_i(resp_icache_interface_datapath), 
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
-    .sew_i(SEW_16),//.sew_i(CSR_SEW),
+    .sew_i(sew),//.sew_i(CSR_SEW),
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
     // Output datapath
