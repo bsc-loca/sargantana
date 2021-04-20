@@ -54,7 +54,7 @@ always_comb begin
     bypass_mask  = 'h0;
     bypass1 = 1'b0;
     bypass2 = 1'b0;
-    bypass_data_old_vd = 1'b0;
+    bypass_old_vd = 1'b0;
     bypassm = 1'b0;
 
     for (int i = 0; i<NUM_SIMD_WB; ++i) begin

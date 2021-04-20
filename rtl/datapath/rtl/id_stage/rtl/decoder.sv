@@ -673,6 +673,9 @@ module decoder(
                                 F6_VSRA: begin
                                     decode_instr_o.instr_type = VSRA;
                                 end
+                                F6_VMV: begin
+                                    decode_instr_o.instr_type = VMV;
+                                end
                                 default: begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
@@ -821,6 +824,21 @@ module decoder(
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             endcase
+                        end
+                        F3_OPCFG: begin
+                            decode_instr_o.regfile_we = 1'b1;
+                            decode_instr_o.vregfile_we = 1'b0;
+                            decode_instr_o.unit = UNIT_SYSTEM;
+                            decode_instr_o.use_mask = 1'b0;
+                            decode_instr_o.use_rs1 = 1'b1;
+                            decode_instr_o.stall_csr_fence = 1'b1;
+                            if (decode_i.inst[31]) begin
+                                decode_instr_o.instr_type = VSETVL;
+                                decode_instr_o.use_rs2 = 1'b1;
+                            end else begin
+                                decode_instr_o.instr_type = VSETVLI;
+                                decode_instr_o.use_imm = 1'b1;
+                            end
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

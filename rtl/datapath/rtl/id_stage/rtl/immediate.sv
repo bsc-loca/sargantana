@@ -92,7 +92,14 @@ module immediate(
                 imm_o = {sign_extended,imm_stype};
             end
             riscv_pkg::OP_V: begin
-                imm_o = imm_vtype;
+                case (instr_i.itype.func3)
+                    F3_OPCFG: begin
+                        imm_o = imm_itype;
+                    end
+                    default: begin
+                        imm_o = imm_vtype;
+                    end
+                endcase
             end
             riscv_pkg::OP_SYSTEM: begin
                 // we could filter here for only the important CSR
@@ -104,7 +111,7 @@ module immediate(
                     F3_CSRRSI,
                     F3_CSRRCI,
                     F3_ECALL_EBREAK_ERET : begin
-                        imm_o = {sign_extended,imm_itype};        
+                        imm_o = {sign_extended,imm_itype};
                     end
                     default: begin
                         imm_o = 64'b0;

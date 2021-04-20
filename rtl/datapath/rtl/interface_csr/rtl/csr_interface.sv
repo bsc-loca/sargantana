@@ -83,6 +83,12 @@ always_comb begin
                 csr_rw_data_int = 64'b0;
                 csr_ena_int = 1'b1;
             end
+            VSETVLI,
+            VSETVL: begin
+                csr_cmd_int = CSR_CMD_VSELVL; //TODO: vsetvl with x0 implies infinite vl
+                csr_rw_data_int = instruction_to_commit_i.result;
+                csr_ena_int = 1'b1;
+            end
             default: begin
                 `ifdef ASSERTIONS
                    assert (1 == 0);

@@ -22,6 +22,7 @@ module vcomp (
     output bus64_t              data_vd_o
 );
 
+logic [7:0] use_sign_bit;
 logic is_signed;
 logic is_max;
 logic is_min;
@@ -37,8 +38,8 @@ assign is_seq = instr_type_i == VMSEQ || instr_type_i == VCNT ? 1'b1 : 1'b0;
 
 always_comb begin
     for (int i = 0; i<8; ++i) begin
-        is_greater[i] = $signed({is_signed & data_vs1_i[(i*8)+7], data_vs1_i[(i*8)+:8]}) >
-                        $signed({is_signed & data_vs2_i[(i*8)+7], data_vs2_i[(i*8)+:8]});
+        is_greater[i] = $signed({is_signed & use_sign_bit[i] & data_vs1_i[(i*8)+7], data_vs1_i[(i*8)+:8]}) >
+                        $signed({is_signed & use_sign_bit[i] & data_vs2_i[(i*8)+7], data_vs2_i[(i*8)+:8]});
         is_equal[i] = data_vs1_i[(i*8)+:8] == data_vs2_i[(i*8)+:8];
     end
 
@@ -53,6 +54,7 @@ always_comb begin
     case (sew_i)
         SEW_8: begin
             for (int i = 0; i<8; ++i) begin
+                use_sign_bit[i] = 1'b1;
                 if (is_seq) begin
                     data_vd_o[(i*8)+:8] = {7'b0, is_equal[i]};
                 end else if (is_greater[i]) begin
@@ -64,6 +66,8 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i<4; ++i) begin
+                use_sign_bit[i*2] = 1'b0;
+                use_sign_bit[(i*2)+1] = 1'b1;
                 if (is_seq) begin
                     data_vd_o[(i*16)+:16] = {15'b0, &(is_equal[(2*i)+:2])};
                 end else if (is_greater[(2*i)+1] |
@@ -76,6 +80,10 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i<2; ++i) begin
+                use_sign_bit[i*4] = 1'b0;
+                use_sign_bit[(i*4)+1] = 1'b0;
+                use_sign_bit[(i*4)+2] = 1'b0;
+                use_sign_bit[(i*4)+3] = 1'b1;
                 if (is_seq) begin
                     data_vd_o[(i*32)+:32] = {31'b0, &(is_equal[(4*i)+:4])};
                 end else if (is_greater[(4*i)+3] |
@@ -89,6 +97,8 @@ always_comb begin
             end
         end
         SEW_64: begin
+            use_sign_bit[6:0] = 7'b0;
+            use_sign_bit[7] = 1'b1;
             if (is_seq) begin
                data_vd_o = {63'b0, &(is_equal)};
             end else if (is_greater[7] |
