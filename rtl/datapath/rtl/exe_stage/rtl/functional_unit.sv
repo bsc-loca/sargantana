@@ -95,26 +95,7 @@ always_comb begin
             endcase
         end
         VMV: begin
-            case (instruction_i.sew)
-                SEW_8: begin
-                    for (int i = 0; i<8; ++i) begin
-                        data_vd_o[(i*8)+:8] = data_vs1_i[7:0];
-                    end
-                end
-                SEW_16: begin
-                    for (int i = 0; i<4; ++i) begin
-                        data_vd_o[(i*16)+:16] = data_vs1_i[15:0];
-                    end
-                end
-                SEW_32: begin
-                    for (int i = 0; i<2; ++i) begin
-                        data_vd_o[(i*32)+:32] = data_vs1_i[31:0];
-                    end
-                end
-                SEW_64: begin
-                    data_vd_o = data_vs1_i;
-                end
-            endcase
+            data_vd_o = data_vs1_i;
         end
         default: begin
             data_vd_o = 64'b0;

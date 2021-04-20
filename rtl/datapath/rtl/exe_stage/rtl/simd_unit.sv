@@ -105,7 +105,11 @@ always_comb begin
     end else if (instruction_i.instr.instr_type == VEXT) begin
         case (instruction_i.sew)
             SEW_8: begin
-                ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*8)-1:0]/8)];
+                if (instruction_i.data_rs1 >= VELEMENTS*8) begin
+                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+                end else begin
+                    ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*8)-1:0]/8)];
+                end
                 case(instruction_i.data_rs1[$clog2(VELEMENTS*8)-1:0]%8)
                     4'b000: data_rd = {55'h0,ext_element[7:0]};
                     4'b001: data_rd = {55'h0,ext_element[15:8]};
@@ -118,7 +122,11 @@ always_comb begin
                 endcase
             end
             SEW_16: begin
-                ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*4)-1:0]/4)];
+                if (instruction_i.data_rs1 >= VELEMENTS*4) begin
+                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+                end else begin
+                    ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*4)-1:0]/4)];
+                end
                 case(instruction_i.data_rs1[$clog2(VELEMENTS*4)-1:0]%4)
                     2'b00: data_rd = {48'h0,ext_element[15:0]};
                     2'b01: data_rd = {48'h0,ext_element[31:16]};
@@ -127,14 +135,22 @@ always_comb begin
                 endcase
             end
             SEW_32: begin
-                ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*2)-1:0]/2)];
+                if (instruction_i.data_rs1 >= VELEMENTS*2) begin
+                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+                end else begin
+                    ext_element = vs2_elements[(instruction_i.data_rs1[$clog2(VELEMENTS*2)-1:0]/2)];
+                end
                 case(instruction_i.data_rs1[$clog2(VELEMENTS*2)-1:0]%2)
                     1'b0: data_rd = {32'h0,ext_element[31:0]};
                     1'b1: data_rd = {32'h0,ext_element[63:32]};
                 endcase
             end
             SEW_64: begin
-                data_rd = vs2_elements[instruction_i.data_rs1[$clog2(VELEMENTS)-1:0]];
+                if (instruction_i.data_rs1 >= VELEMENTS) begin
+                    data_rd = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+                end else begin
+                    data_rd = vs2_elements[instruction_i.data_rs1[$clog2(VELEMENTS)-1:0]];
+                end
             end
         endcase
     end else if (instruction_i.instr.instr_type == VCNT) begin
