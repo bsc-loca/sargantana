@@ -66,6 +66,9 @@ module decoder(
         decode_instr_o.use_mask = 1'b0;
         decode_instr_o.is_opvx = 1'b0;
         decode_instr_o.is_opvi = 1'b0;
+        decode_instr_o.use_fs1 = 1'b0;
+        decode_instr_o.use_fs2 = 1'b0;
+        decode_instr_o.use_fs3 = 1'b0;
 
         // Information for the ras performance
         ras_link_rd_int = decode_instr_o.rd == 5'h1 || decode_instr_o.rd == 5'h5;
@@ -588,6 +591,7 @@ module decoder(
                 OP_LOAD_FP: begin
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
+                    decode_instr_o.use_rs1    = 1'b1;
                     case (decode_i.inst.itype.func3)
                         F3_FLW: begin
                             decode_instr_o.instr_type = FLW;
@@ -607,7 +611,6 @@ module decoder(
                                         case (decode_i.inst.vltype.lumop)
                                             LUMOP_UNIT_STRIDE: begin
                                                 decode_instr_o.vregfile_we = 1'b1;
-                                                decode_instr_o.use_rs1 = 1'b1;
                                                 decode_instr_o.instr_type = VLE;
                                                 decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
                                             end
@@ -632,14 +635,17 @@ module decoder(
                 OP_STORE_FP: begin
                     decode_instr_o.unit = UNIT_MEM;
                     decode_instr_o.use_imm = 1'b0;
+                    decode_instr_o.use_rs1 = 1'b1;
                     case (decode_i.inst.stype.func3)
                         F3_FLW: begin
-                            decode_instr_o.regfile_src = FPU_RF;
+                            //decode_instr_o.regfile_src = FPU_RF;
                             decode_instr_o.instr_type = FSW;
+                            decode_instr_o.use_fs2    = 1'b1;
                         end
                         F3_FLD: begin
-                            decode_instr_o.regfile_src = FPU_RF;
+                            //decode_instr_o.regfile_src = FPU_RF;
                             decode_instr_o.instr_type = FSD;
+                            decode_instr_o.use_fs2    = 1'b1;
                         end
                         F3_VSEW: begin
                             decode_instr_o.use_mask = ~decode_i.inst.vstype.vm;
@@ -648,7 +654,7 @@ module decoder(
                                     MOP_UNIT_STRIDE: begin
                                         case (decode_i.inst.vstype.sumop)
                                             SUMOP_UNIT_STRIDE: begin
-                                                decode_instr_o.use_rs1 = 1'b1;
+                                                
                                                 decode_instr_o.use_vs2 = 1'b1;
                                                 decode_instr_o.instr_type = VSE;
                                                 decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
@@ -1047,7 +1053,6 @@ module decoder(
                         end
                     endcase
                 end
-                // TODO: (guillemlp) when to use the use imm signal?????
                 OP_FMADD,
                 OP_FMSUB,
                 OP_FNMSUB,
@@ -1058,6 +1063,9 @@ module decoder(
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
+                    decode_instr_o.use_fs1 = 1'b1;
+                    decode_instr_o.use_fs2 = 1'b1;
+                    decode_instr_o.use_fs3 = 1'b1;
                     // Select the instruction
                     unique case (decode_i.inst.r4type.opcode) 
                         OP_FMADD: begin
@@ -1094,6 +1102,8 @@ module decoder(
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
+                    decode_instr_o.use_fs1 = 1'b1;
+                    decode_instr_o.use_fs2 = 1'b1;
                     case (decode_i.inst.fprtype.func5)
                         F5_FP_FADD: begin
                             decode_instr_o.instr_type = FADD;
@@ -1114,6 +1124,7 @@ module decoder(
                         F5_FP_FSQRT: begin
                             decode_instr_o.instr_type = FSQRT;
                             check_frm = 1'b1;
+                            decode_instr_o.use_fs2 = 1'b0;
                             // TODO (guillemlp) not sure if the following is required
                             /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -1148,6 +1159,7 @@ module decoder(
                             decode_instr_o.regfile_dst = SCALAR_RF;
                             decode_instr_o.regfile_fp_we = 1'b0;
                             decode_instr_o.regfile_we = 1'b1;
+                            decode_instr_o.use_fs2 = 1'b0;
                             case (decode_i.inst.fprtype.rm)
                                 3'b000: begin
                                     decode_instr_o.instr_type = FMV_F2X;
@@ -1179,6 +1191,7 @@ module decoder(
                         F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
                             decode_instr_o.instr_type = FMV_X2F;
                             decode_instr_o.regfile_src = SCALAR_RF;
+                            decode_instr_o.use_fs2 = 1'b0;
                             if (decode_i.inst.fprtype.rm != 3'b000) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end

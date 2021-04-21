@@ -342,6 +342,9 @@ typedef struct packed {
     // FP instructions only
     reg_t rs3;                          // Register Source 3 for fused ops
     logic fmt;                          // FMT mode (0:S, 1:D)
+    logic use_fs1;                      // Instruction uses fregister source 1
+    logic use_fs2;                      // Instruction uses fregister source 2
+    logic use_fs3;                      // Instruction uses fregister source 2
     riscv_pkg::op_frm_fp_t frm;         // FP rounding mode
     regfile_sel_t regfile_src;          // which refile get the sources
     regfile_sel_t regfile_dst;          // which regfile to write

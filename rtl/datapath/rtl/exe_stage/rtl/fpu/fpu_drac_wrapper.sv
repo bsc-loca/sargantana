@@ -90,9 +90,9 @@ always_comb begin
       drac_pkg::FMUL: begin // multiplication
          op     = fpuv_pkg::MUL;
          op_mod = 0;
-         operands[0] = instruction_i.data_rs2;
-         operands[1] = instruction_i.data_rs1;
-         operands[2] = instruction_i.data_rs3;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = '0;//instruction_i.data_rs3;
       end
       drac_pkg::FMADD: begin // fused multiply-add
          op     = fpuv_pkg::FMADD;
@@ -128,9 +128,9 @@ always_comb begin
       drac_pkg::FDIV: begin
          op     = fpuv_pkg::DIV;
          op_mod = 0;
-         operands[0] = instruction_i.data_rs2;
-         operands[1] = instruction_i.data_rs1;
-         operands[2] = instruction_i.data_rs3;
+         operands[0] = instruction_i.data_rs1;
+         operands[1] = instruction_i.data_rs2;
+         operands[2] = '0;//instruction_i.data_rs3;
       end
       drac_pkg::FSQRT: begin
          op     = fpuv_pkg::SQRT;

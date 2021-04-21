@@ -46,7 +46,7 @@ module datapath(
     // Stages: if -- id -- rr -- ex -- wb
     bus64_t commit_pc;
     bus_simd_t commit_data;
-    logic commit_valid, commit_reg_we, commit_vreg_we;
+    logic commit_valid, commit_reg_we, commit_vreg_we, commit_freg_we;
     logic [4:0] commit_addr_reg, commit_addr_vreg;
 `endif
 
@@ -273,7 +273,9 @@ module datapath(
 
     // Data to write to RR from WB or CSR
     bus64_t [drac_pkg::NUM_FP_WB-1:0] fp_data_wb_to_rr;
-    phreg_t [drac_pkg::NUM_FP_WB-1:0] fp_write_paddr;
+    bus64_t [drac_pkg::NUM_FP_WB-1:0] fp_data_wb_to_exe;
+    phreg_t [drac_pkg::NUM_FP_WB-1:0] fp_write_paddr_rr;
+    phreg_t [drac_pkg::NUM_FP_WB-1:0] fp_write_paddr_exe;
     reg_t   [drac_pkg::NUM_FP_WB-1:0] fp_write_vaddr;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -599,9 +601,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .old_dst_i(stage_ir_rr_d.instr.rd),
         .write_dst_i(stage_ir_rr_d.instr.regfile_fp_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .new_dst_i(fp_free_register_to_rename), // We don't do rename
+        .use_fs1_i(stage_ir_rr_d.instr.use_fs1),
+        .use_fs2_i(stage_ir_rr_d.instr.use_fs2),
+        .use_fs3_i(stage_ir_rr_d.instr.use_fs3),
         .ready_i(cu_rr_int.fp_write_enable),
         .vaddr_i(fp_write_vaddr), // WB
-        .paddr_i(fp_write_paddr), // WB
+        .paddr_i(fp_write_paddr_rr), // WB
         .do_checkpoint_i('h0),//cu_ir_int.do_checkpoint),
         .do_recover_i('h0),//cu_ir_int.do_recover),
         .delete_checkpoint_i('h0),//cu_ir_int.delete_checkpoint),
@@ -802,9 +807,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            snoop_rr_frdy1 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_ir_rr_q.fprs1);
-            snoop_rr_frdy2 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_ir_rr_q.fprs2);
-            snoop_rr_frdy3 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_ir_rr_q.fprs3);
+            snoop_rr_frdy1 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs1);
+            snoop_rr_frdy2 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs2);
+            snoop_rr_frdy3 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs3);
         end
     end
 
@@ -830,7 +835,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .rstn_i(rstn_i),
 
         .write_enable_i(cu_rr_int.fp_write_enable),
-        .write_addr_i(fp_write_paddr),
+        .write_addr_i(fp_write_paddr_rr),
         .write_data_i(fp_data_wb_to_rr),
         
         .read_addr1_i(stage_ir_rr_q.fprs1),
@@ -858,7 +863,17 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     );
     // Decide from which Regfile to Read
     always_comb begin : read_src
-        unique case(stage_ir_rr_q.instr.regfile_src)
+        if (stage_ir_rr_q.instr.use_fs1) begin
+            stage_rr_exe_d.data_rs1 = rr_data_fp_src1;
+        end else begin
+            stage_rr_exe_d.data_rs1 = rr_data_scalar_src1;
+        end
+        if (stage_ir_rr_q.instr.use_fs2) begin
+            stage_rr_exe_d.data_rs2 = rr_data_fp_src2;
+        end else begin
+            stage_rr_exe_d.data_rs2 = rr_data_scalar_src2;
+        end
+        /*unique case(stage_ir_rr_q.instr.regfile_src)
                 FPU_RF: begin
                     stage_rr_exe_d.data_rs1 = rr_data_fp_src1;
                     stage_rr_exe_d.data_rs2 = rr_data_fp_src2;
@@ -867,7 +882,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
                     stage_rr_exe_d.data_rs1 = rr_data_scalar_src1;
                     stage_rr_exe_d.data_rs2 = rr_data_scalar_src2;
                 end
-        endcase
+        endcase*/
     end
 
     assign stage_rr_exe_d.instr = stage_ir_rr_q.instr;
@@ -949,12 +964,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            snoop_exe_frs1[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_rr_exe_q.fprs1);
-            snoop_exe_frs2[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_rr_exe_q.fprs2);
-            snoop_exe_frs3[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr[i] == stage_rr_exe_q.fprs3);
-            snoop_exe_data_frs1 |= snoop_exe_frs1[i] ? fp_data_wb_to_rr[i] : 64'b0;
-            snoop_exe_data_frs2 |= snoop_exe_frs2[i] ? fp_data_wb_to_rr[i] : 64'b0;
-            snoop_exe_data_frs3 |= snoop_exe_frs3[i] ? fp_data_wb_to_rr[i] : 64'b0;
+            snoop_exe_frs1[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs1);
+            snoop_exe_frs2[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs2);
+            snoop_exe_frs3[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs3);
+            snoop_exe_data_frs1 |= snoop_exe_frs1[i] ? fp_data_wb_to_exe[i] : 64'b0;
+            snoop_exe_data_frs2 |= snoop_exe_frs2[i] ? fp_data_wb_to_exe[i] : 64'b0;
+            snoop_exe_data_frs3 |= snoop_exe_frs3[i] ? fp_data_wb_to_exe[i] : 64'b0;
         end
 
         snoop_exe_rdy1 = |snoop_exe_rs1;
@@ -986,8 +1001,8 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign reg_to_exe.data_vs2 = exe_data_vs2;
     assign reg_to_exe.data_old_vd = exe_data_old_vd;
     assign reg_to_exe.data_vm  = exe_data_vm;
-    assign reg_to_exe.data_rs1 = (stage_rr_exe_q.instr.regfile_src == FPU_RF) ? exe_data_frs1 : exe_data_rs1;
-    assign reg_to_exe.data_rs2 = (stage_rr_exe_q.instr.regfile_src == FPU_RF) ? exe_data_frs2 : exe_data_rs2;
+    assign reg_to_exe.data_rs1 = (stage_rr_exe_q.instr.use_fs1) ? exe_data_frs1 : exe_data_rs1;
+    assign reg_to_exe.data_rs2 = (stage_rr_exe_q.instr.use_fs2) ? exe_data_frs2 : exe_data_rs2;
     assign reg_to_exe.data_rs3 = exe_data_frs3;
     assign reg_to_exe.csr_interrupt = stage_rr_exe_q.csr_interrupt;
     assign reg_to_exe.csr_interrupt_cause = stage_rr_exe_q.csr_interrupt_cause;
@@ -1184,9 +1199,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             instruction_fp_writeback_gl[i].exception = wb_fp[i].ex;
             instruction_fp_writeback_gl[i].result    = wb_fp[i].result;
             instruction_fp_writeback_gl[i].fp_status = wb_fp[i].fp_status;
-            fp_data_wb_to_rr[i] = wb_fp[i].result;
-            fp_write_paddr[i]   = wb_fp[i].fprd;
-            fp_write_vaddr[i]   = wb_fp[i].rd;
+            fp_data_wb_to_exe[i]  = wb_fp[i].result;
+            fp_write_paddr_exe[i] = wb_fp[i].fprd;
+            fp_write_vaddr[i]     = wb_fp[i].rd;
             //TODO: FP bypasses to exe
             wb_cu_int.fp_write_enable[i] = wb_fp[i].regfile_we;
             wb_cu_int.fp_valid[i]        = wb_fp[i].valid;
@@ -1216,6 +1231,11 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         for (int i = 0; i<NUM_SIMD_WB; ++i) begin
             simd_data_wb_to_rr[i] = wb_simd[i].vresult;
             simd_write_paddr_rr[i] = wb_simd[i].pvd;
+        end
+
+        for (int i = 0; i<NUM_FP_WB; ++i) begin
+            fp_data_wb_to_rr[i]  = wb_fp[i].result;
+            fp_write_paddr_rr[i] = wb_fp[i].fprd;
         end
     end
 
@@ -1359,8 +1379,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign commit_addr_vreg  = instruction_to_commit.vd;
     assign commit_reg_we    = instruction_to_commit.regfile_we && commit_valid;
     assign commit_vreg_we    = instruction_to_commit.vregfile_we;
+    assign commit_freg_we    = instruction_to_commit.fp_regfile_we && commit_valid;
 
-    // PC
+    // PCcommit_freg_we
     assign pc_if1  = stage_if_1_if_2_d.pc_inst;
     assign pc_if2  = stage_if_2_id_d.pc_inst;
     assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;

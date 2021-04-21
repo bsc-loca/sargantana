@@ -145,7 +145,7 @@ score_board score_board_inst(
 
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
                                      & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
-                                     & (from_rr_i.frdy1) & (from_rr_i.frdy2) 
+                                     & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3) 
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2));
 
 always_comb begin

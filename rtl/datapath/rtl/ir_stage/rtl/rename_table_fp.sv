@@ -1,13 +1,13 @@
 /* -----------------------------------------------
  * Project Name   : DRAC
- * File           : rename.v
+ * File           : rename_fp.sv
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Víctor Soria Pardos
- * Email(s)       : victor.soria@bsc.es
+ * Author(s)      : Guillem Lopez Paradis
+ * Email(s)       : guillem.lopez@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author      | Description
- *  0.1        | Victor.SP   |  
+ *  0.1        | Guillem.LP   |  
  * -----------------------------------------------
  */
 
@@ -21,11 +21,15 @@ module rename_table_fp(
 
     input reg_t                                read_src1_i,         // Read source register 1 mapping
     input reg_t                                read_src2_i,         // Read source register 2 mapping
-    input reg_t                                read_src3_i,         // Read source register 2 mapping
+    input reg_t                                read_src3_i,         // Read source register 3 mapping
     input reg_t                                old_dst_i,           // Read and write to old destination register
     input logic                                write_dst_i,         // Needs to write to old destination register
     input phreg_t                              new_dst_i,           // Wich register write to old destination register
 
+    input logic                       use_fs1_i,           // Instruction uses source fregister 1
+    input logic                       use_fs2_i,           // Instruction uses source fregister 2
+    input logic                       use_fs3_i,           // Instruction uses source fregister 3
+    
     input logic   [drac_pkg::NUM_FP_WB-1:0]    ready_i, // New register is ready
     input reg_t   [drac_pkg::NUM_FP_WB-1:0]    vaddr_i, // New register is ready
     input phreg_t [drac_pkg::NUM_FP_WB-1:0]    paddr_i, // New register is ready
@@ -100,9 +104,9 @@ end
 
             // Table initial state
             for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
-                register_table[j][0] = j[5:0];
-                ready_table[j][0] = 1'b1;
-                commit_table[j] = j[5:0];
+                register_table[j][0] <= j[5:0];
+                ready_table[j][0] <= 1'b1;
+                commit_table[j] <= j[5:0];
             end
             // Checkpoint signals
             version_head <= 2'b0;       // Current table, 0
@@ -112,12 +116,13 @@ end
             // Output signals
             src1_o <= 0;
             src2_o <= 0;
+	    src3_o <= 0;
             old_dst_o <= 0;                              
         end 
         else if (recover_commit_i) begin // Recover commit table because exception
             for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
-                register_table[j][0] = commit_table[j];
-                ready_table[j][0] = 1'b1;
+                register_table[j][0] <= commit_table[j];
+                ready_table[j][0] <= 1'b1;
             end
             version_head <= 2'b0;       // Current table, 0
             num_checkpoints <= 3'b00;   // No checkpoints
@@ -126,6 +131,7 @@ end
             // Output signals
             src1_o <= 0;
             src2_o <= 0;
+            src3_o <= 0;
             old_dst_o <= 0;  
             checkpoint_o <= 0;
         end 
@@ -171,11 +177,11 @@ end
                     end
 
                     src1_o <= register_table[read_src1_i][version_head];
-                    rdy1_o <= ready_table[read_src1_i][version_head] | (|rdy1);
+                    rdy1_o <= ready_table[read_src1_i][version_head] | (|rdy1) | (~use_fs1_i);
                     src2_o <= register_table[read_src2_i][version_head];
-                    rdy2_o <= ready_table[read_src2_i][version_head] | (|rdy2);
+                    rdy2_o <= ready_table[read_src2_i][version_head] | (|rdy2) | (~use_fs2_i);
                     src3_o <= register_table[read_src3_i][version_head];
-                    rdy3_o <= ready_table[read_src3_i][version_head] | (|rdy3);
+                    rdy3_o <= ready_table[read_src3_i][version_head] | (|rdy3) | (~use_fs3_i);
                     old_dst_o <= register_table[old_dst_i][version_head];
                 end
 

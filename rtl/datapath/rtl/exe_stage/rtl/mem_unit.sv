@@ -122,16 +122,11 @@ bus_simd_t data_to_wb;
 logic [1:0] state;
 logic [1:0] next_state;
 
-logic fp_instr;
-
 // Possible states of the control automata
 parameter ResetState  = 2'b00,
           ReadHead = 2'b01,
           WaitReady = 2'b10,
           WaitCommit = 2'b11;
-
-assign fp_instr = (instruction_to_wb.instr.instr_type == FLD || instruction_to_wb.instr.instr_type == FLW ||
-                   instruction_to_wb.instr.instr_type == FSD || instruction_to_wb.instr.instr_type == FSW );
 
 assign data_src1 = instruction_i.data_rs1;
 assign data_src2 = instruction_i.data_rs2;
@@ -635,7 +630,7 @@ always_comb begin
 end
 
 // Output Instruction
-assign instruction_scalar_o.valid         = instruction_to_wb.instr.valid && !fp_instr;;//  && instruction_to_wb.instr.regfile_we;
+assign instruction_scalar_o.valid         = instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we;
 assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
 assign instruction_scalar_o.bpred         = instruction_to_wb.instr.bpred;
 assign instruction_scalar_o.rs1           = instruction_to_wb.instr.rs1;
@@ -658,7 +653,7 @@ assign instruction_scalar_o.result        = data_to_wb;
 assign instruction_scalar_o.ex            = exception_to_wb;
 
 // Output Instruction
-assign instruction_fp_o.valid         = instruction_to_wb.instr.valid && fp_instr;
+assign instruction_fp_o.valid         = instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_fp_we; //fp_instr;
 assign instruction_fp_o.pc            = instruction_to_wb.instr.pc;
 assign instruction_fp_o.bpred         = instruction_to_wb.instr.bpred;
 assign instruction_fp_o.rs1           = instruction_to_wb.instr.rs1;
