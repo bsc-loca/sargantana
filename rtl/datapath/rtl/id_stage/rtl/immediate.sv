@@ -59,8 +59,18 @@ module immediate(
             riscv_pkg::OP_JAL: begin
                 imm_o = {sign_extended,imm_jtype};
             end
+            riscv_pkg::OP_LOAD_FP: begin
+                case (instr_i.stype.func3)
+                    F3_FLW,
+                    F3_FLD: begin
+                        imm_o = {sign_extended,imm_stype};
+                    end
+                    default: begin
+                        imm_o = '0;
+                    end
+                endcase
+            end
             riscv_pkg::OP_JALR,
-            riscv_pkg::OP_LOAD_FP,
             riscv_pkg::OP_LOAD: begin
                 imm_o = {sign_extended,imm_itype};
             end
@@ -89,7 +99,17 @@ module immediate(
             riscv_pkg::OP_BRANCH: begin
                 imm_o = {sign_extended,imm_btype};
             end
-            riscv_pkg::OP_STORE_FP,
+            riscv_pkg::OP_STORE_FP: begin
+                case (instr_i.stype.func3)
+                    F3_FLW,
+                    F3_FLD: begin
+                        imm_o = {sign_extended,imm_stype};
+                    end
+                    default: begin
+                        imm_o = '0;
+                    end
+                endcase
+            end
             riscv_pkg::OP_STORE: begin
                 imm_o = {sign_extended,imm_stype};
             end

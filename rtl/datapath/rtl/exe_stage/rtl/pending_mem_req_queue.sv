@@ -79,7 +79,7 @@ begin
         for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
             if (tag_table[j] == tag_next_i) begin
                 control_bits_table[j] <= 1'b1;
-                instruction_table[j].instr.imm <= replay_data_i;
+                instruction_table[j].data_rs2 <= replay_data_i;
             end
         end
     end

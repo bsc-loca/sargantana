@@ -599,7 +599,7 @@ module decoder(
                             decode_instr_o.regfile_dst = FPU_RF;
                             decode_instr_o.regfile_fp_we = 1'b1;
                         end
-                        F3_FLD: begin
+                        F3_VSEW: begin
                             decode_instr_o.use_mask = ~decode_i.inst.vltype.vm;
                             if (decode_i.inst.vltype.nf == 0) begin
                                 case (decode_i.inst.vltype.mop)
@@ -609,7 +609,7 @@ module decoder(
                                                 decode_instr_o.vregfile_we = 1'b1;
                                                 decode_instr_o.use_rs1 = 1'b1;
                                                 decode_instr_o.instr_type = VLE;
-                                                decode_instr_o.mem_size = 4'b1000; //TODO: Fix this hardcoding
+                                                decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
                                             end
                                             default: begin
                                                 xcpt_illegal_instruction_int = 1'b1;
@@ -651,7 +651,7 @@ module decoder(
                                                 decode_instr_o.use_rs1 = 1'b1;
                                                 decode_instr_o.use_vs2 = 1'b1;
                                                 decode_instr_o.instr_type = VSE;
-                                                decode_instr_o.mem_size = 4'b1000; //TODO: Fix this hardcoding
+                                                decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
                                                 decode_instr_o.vs2 = decode_i.inst.vstype.vs3;
                                             end
                                             default: begin

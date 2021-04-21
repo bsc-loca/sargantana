@@ -393,6 +393,7 @@ assign is_STORE_s0_d = (req_cpu_dcache_o.instr_type == SD)          ||
                        (req_cpu_dcache_o.instr_type == FSW)         || 
                        (req_cpu_dcache_o.instr_type == SW)          ||
                        (req_cpu_dcache_o.instr_type == SH)          ||
+                       (req_cpu_dcache_o.instr_type == VSE)         ||
                        (req_cpu_dcache_o.instr_type == SB)          ;
 
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store
@@ -607,7 +608,7 @@ always_comb begin
     else if(instruction_from_pmrq.instr.valid) begin
         instruction_to_wb      = instruction_from_pmrq;
         advance_head_prmq      = 1'b1;
-        data_to_wb             = instruction_from_pmrq.instr.imm;
+        data_to_wb             = instruction_from_pmrq.data_rs2;
         flush_amo_prmq         = (instruction_from_pmrq.instr.instr_type == AMO_MAXWU)   ||
                                  (instruction_from_pmrq.instr.instr_type == AMO_MAXDU)   ||
                                  (instruction_from_pmrq.instr.instr_type == AMO_MINWU)   ||
