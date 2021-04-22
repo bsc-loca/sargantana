@@ -146,7 +146,8 @@ score_board score_board_inst(
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
                                      & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
                                      & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3) 
-                                     & (from_rr_i.vrdy1) & (from_rr_i.vrdy2));
+                                     & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
+                                     & (from_rr_i.vrdy_old_vd));
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -172,12 +173,13 @@ always_comb begin
     mem_instr.prs2                = from_rr_i.prs2;
     mem_instr.rdy2                = from_rr_i.rdy2;
     mem_instr.prd                 = from_rr_i.prd;
-    mem_instr.old_prd             = from_rr_i.old_prd;
+    mem_instr.pvd                 = from_rr_i.pvd;
     mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     mem_instr.chkp                = from_rr_i.chkp;
     mem_instr.gl_index            = from_rr_i.gl_index;
     mem_instr.fprd                = from_rr_i.fprd;
     mem_instr.old_prd             = from_rr_i.old_prd;
+    mem_instr.old_pvd             = from_rr_i.old_pvd;
     mem_instr.old_fprd            = from_rr_i.old_fprd;
 
 

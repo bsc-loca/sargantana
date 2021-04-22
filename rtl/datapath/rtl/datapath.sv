@@ -567,6 +567,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .use_vs1_i(stage_ir_rr_d.instr.use_vs1),
         .use_vs2_i(stage_ir_rr_d.instr.use_vs2),
         .use_mask_i(stage_ir_rr_d.instr.use_mask),
+        .use_old_vd_i(stage_ir_rr_d.instr.vregfile_we & stage_ir_rr_d.instr.use_mask),
         .ready_i(cu_rr_int.vwrite_enable),
         .vaddr_i(simd_write_vaddr),
         .paddr_i(simd_write_paddr_rr),

@@ -28,6 +28,7 @@ module simd_rename_table(
     input logic                       use_vs1_i,           // Instruction uses source vregister 1
     input logic                       use_vs2_i,           // Instruction uses source vregister 2
     input logic                       use_mask_i,          // Instruction uses source mask
+    input logic                       use_old_vd_i,        // Instruction uses source old vd for masking
 
     input logic   [NUM_SIMD_WB-1:0]   ready_i,             // New register is ready
     input reg_t   [NUM_SIMD_WB-1:0]   vaddr_i,             // New register is ready
@@ -88,9 +89,10 @@ assign commit_write_enable = commit_write_dst_i & (~recover_commit_i);
 assign read_enable = (~do_recover_i) & (~recover_commit_i);
 
 // User can mark registers as ready if no recover action is being done
+// Multiple registers can be marked as ready
 always_comb begin
     for (int i = 0; i<NUM_SIMD_WB; ++i) begin
-        ready_enable[i] = ready_i[i] &  (~recover_commit_i); 
+        ready_enable[i] = ready_i[i] &  (~recover_commit_i);
     end
 end
 
@@ -185,7 +187,7 @@ end
                     srcm_o <= register_table[0][version_head];
                     rdym_o <= ready_table[0][version_head] | (|rdym) | (~use_mask_i);
                     old_dst_o <= register_table[old_dst_i][version_head];
-                    rdy_old_dst_o <= register_table[old_dst_i][version_head] | (|rdy_old_dst);
+                    rdy_old_dst_o <= ready_table[old_dst_i][version_head] | (|rdy_old_dst) | (~use_old_vd_i);
                 end
 
                 // Third write new destination register
@@ -204,11 +206,12 @@ end
             for (int i = 0; i<NUM_SIMD_WB; ++i) begin
                 if (ready_enable[i]) begin
                     for(int j = 0; j<NUM_CHECKPOINTS; j++) begin
-                        if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (j == version_head) )) 
-                           ready_table[vaddr_i[i]][j] <= 1'b1;
-                    end
-                    if((checkpoint_enable & register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
-                        ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1;
+                        if (~checkpoint_enable | (checkpoint_ptr'(j) != (version_head + 2'b1))) begin
+                            if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (checkpoint_ptr'(j) == version_head) )) 
+                                ready_table[vaddr_i[i]][j] <= 1'b1;
+                        end else if((checkpoint_enable & register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
+                            ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1;
+                        end
                     end
                 end
             end
