@@ -38,6 +38,7 @@ int_format_e int_fmt;
 logic ready_fpu;
 fpuv_pkg::status_t fp_status;
 
+logic sign_extend_int, sign_extend_q;
 logic result_valid_int;
 bus64_t result_int;
 
@@ -57,6 +58,7 @@ always_comb begin
    add_fmt         = src_fmt;
    dst_fmt         = src_fmt;
    int_fmt         = src_fmt == FP32 ? INT32 : INT64;
+   sign_extend_int = 0;
 
    operands[0] = instruction_i.data_rs1;
    operands[1] = instruction_i.data_rs2;
@@ -166,11 +168,14 @@ always_comb begin
       drac_pkg::FCVT_F2I: begin
          op          = F2I;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
+         int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
+         sign_extend_int = (int_fmt == INT32);
       end
       // I to FP
       drac_pkg::FCVT_I2F: begin
          op          = I2F;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
+         int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
       end
       // FP to FP
       drac_pkg::FCVT_F2F: begin
@@ -246,13 +251,17 @@ assign instruction_d = instruction_i;
 always_ff @(posedge clk_i, negedge rstn_i) begin
    if (~rstn_i) begin
       instruction_q <= '0;
+      sign_extend_q <= '0;
    end else begin
       if (instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
          instruction_q <= instruction_d;
+         sign_extend_q <= sign_extend_int;
       end else if (result_valid_int ) begin
          instruction_q <= instruction_d;
+         sign_extend_q <= sign_extend_int;
       end else begin
          instruction_q <= instruction_q;
+         sign_extend_q <= sign_extend_q;
       end
    end   
 end
@@ -316,7 +325,7 @@ assign stall_o = (!ready_fpu || (instruction_q.instr.valid && !result_valid_int)
 
 // Output FPU scalar
 assign instruction_scalar_o.valid           = result_valid_int && (instruction_q.instr.regfile_we);
-assign instruction_scalar_o.result          = result_int;
+assign instruction_scalar_o.result          = sign_extend_q ? {{32{result_int[31]}},result_int[31:0]} : result_int;
 assign instruction_scalar_o.pc              = instruction_q.instr.pc;
 assign instruction_scalar_o.bpred           = instruction_q.instr.bpred;
 assign instruction_scalar_o.rs1             = instruction_q.instr.rs1;

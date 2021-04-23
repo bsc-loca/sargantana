@@ -1173,14 +1173,13 @@ module decoder(
                         F5_FP_FCVT_F2I: begin // FP to Integer
                             decode_instr_o.instr_type = FCVT_F2I;
                             check_frm = 1'b1;
-                            decode_instr_o.regfile_dst = SCALAR_RF;
-                            decode_instr_o.regfile_we = 1'b1;
-                            decode_instr_o.regfile_fp_we = 1'b0;
                             decode_instr_o.use_fs2 = 1'b0;
+                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.regfile_we = 1'b1;
                             // Check through rounding modes if illegal instr
-                            if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
+                            /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
-                            end
+                            end*/
                         end
                         F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
                             decode_instr_o.regfile_dst = SCALAR_RF;
@@ -1205,7 +1204,7 @@ module decoder(
                                     decode_instr_o.regfile_src   = FPU_RF;
                                     decode_instr_o.regfile_dst   = SCALAR_RF;
                                     decode_instr_o.use_rs1       = 1'b0;
-                                    decode_instr_o.use_rs2       = 1'b1;
+                                    decode_instr_o.use_rs2       = 1'b1; // hack to sum with 0
                                     decode_instr_o.use_fs1       = 1'b1;
                                     decode_instr_o.use_fs2       = 1'b0;
                                 end
@@ -1228,17 +1227,17 @@ module decoder(
                             end
                         end
                         F5_FP_FCVT_I2F: begin
-                            decode_instr_o.regfile_src = SCALAR_RF;
-                            decode_instr_o.instr_type = FCVT_I2F;
-                            decode_instr_o.use_rs1       = 1'b1;
-                            decode_instr_o.use_rs2       = 1'b0;
-                            decode_instr_o.use_fs2 = 1'b0;
+                            decode_instr_o.instr_type    = FCVT_I2F;
                             decode_instr_o.use_fs1 = 1'b0;
+                            decode_instr_o.use_fs2 = 1'b0;
+                            decode_instr_o.use_rs1 = 1'b1;
+                            decode_instr_o.regfile_fp_we = 1'b1;
+                            decode_instr_o.regfile_we = 1'b0;
                             check_frm = 1'b1;
                             // Check through rounding modes if illegal instr
-                            if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
+                            /*if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
-                            end
+                            end*/
                         end
                         F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
                             decode_instr_o.instr_type = FMV_X2F;
