@@ -63,7 +63,7 @@ module immediate(
                 case (instr_i.stype.func3)
                     F3_FLW,
                     F3_FLD: begin
-                        imm_o = {sign_extended,imm_stype};
+                        imm_o = {sign_extended,imm_itype};
                     end
                     default: begin
                         imm_o = '0;

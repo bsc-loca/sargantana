@@ -134,6 +134,7 @@ begin
                 entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
                 entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
                 entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
+                entries[instruction_writeback_i[i]].fp_status <= instruction_writeback_data_i[i].fp_status;
             end
         end
 

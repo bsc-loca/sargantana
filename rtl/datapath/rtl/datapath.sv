@@ -176,6 +176,7 @@ module datapath(
 
     exe_cu_t exe_cu_int;
     exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
+    exe_wb_scalar_instr_t [1:0] exe_to_wb_scalar_simd_fp;
     exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] wb_scalar;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] exe_to_wb_simd;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] wb_simd;
@@ -1056,7 +1057,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     
         .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
         .mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
-        .simd_to_scalar_wb_o(exe_to_wb_scalar[2]),
+
+        .simd_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[0]),
+        .fp_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[1]),
         .simd_to_simd_wb_o(exe_to_wb_simd[0]),
         .mem_to_simd_wb_o(exe_to_wb_simd[1]),
 
@@ -1079,6 +1082,14 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
         .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
     );
+    always_comb begin 
+        // We assign FP over SIMD by default if valid
+        if (exe_to_wb_scalar_simd_fp[1].valid) begin
+            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[1];
+        end else begin
+            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[0];
+        end
+    end
 
     register #(NUM_SCALAR_WB * $bits(exe_wb_scalar_instr_t) + NUM_SIMD_WB * $bits(exe_wb_simd_instr_t) + NUM_FP_WB * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
@@ -1140,12 +1151,14 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
                 instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
+                instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
             end else begin
                 gl_valid[i] = wb_scalar[i].valid;
                 gl_index[i] = wb_scalar[i].gl_index;
                 instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
+                instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
             end
 
             // Write data regfile from WB or from Commit (CSR)

@@ -587,6 +587,8 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
     checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
 
+    fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
+
     gl_index_t gl_index;                // Graduation List entry
 } exe_wb_scalar_instr_t;       //  Execution Stage to scalar Write Back
 

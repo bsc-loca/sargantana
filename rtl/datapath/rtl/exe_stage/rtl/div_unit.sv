@@ -259,6 +259,7 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.result_pc       = 'h0;
         instruction_o.ex              = 'h0;
         instruction_o.result          = 'h0;
+        instruction_o.fp_status       = 'h0;
         if (cycles_counter[0] == 6'd1) begin
             instruction_o.valid           = instruction_q[0].valid;
             instruction_o.pc              = instruction_q[0].pc;
@@ -280,6 +281,7 @@ assign data_src2 = instruction_i.data_rs2;
             `endif
             instruction_o.branch_taken    = 1'b0;
             instruction_o.result_pc       = 0;
+            instruction_o.fp_status       = 'h0;
             instruction_o.ex              = instruction_q[0].ex;
             case(instruction_q[0].instr_type)
                 DIV,DIVU,DIVW,DIVUW: begin
@@ -316,6 +318,7 @@ assign data_src2 = instruction_i.data_rs2;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[1].id;
             `endif
+            instruction_o.fp_status       = 'h0;
             instruction_o.branch_taken    = 1'b0;
             instruction_o.result_pc       = 0;
             instruction_o.ex              = instruction_q[1].ex;

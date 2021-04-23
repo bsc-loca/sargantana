@@ -169,6 +169,7 @@ assign instruction_s1.ex            = instruction_0_q.ex;
 `ifdef VERILATOR
 assign instruction_s1.id            = instruction_0_q.id;
 `endif
+assign instruction_s1.fp_status     = 'h0;
 
 //--------------------------------------------------------------------------------------------------
 //----- SECOND STAGE  ------------------------------------------------------------------------------
@@ -246,6 +247,7 @@ assign instruction_s2.ex            = instruction_1_q.ex;
 `ifdef VERILATOR
 assign instruction_s2.id            = instruction_1_q.id;
 `endif 
+assign instruction_s2.fp_status     = 'h0;
 
 //--------------------------------------------------------------------------------------------------
 //----- MUX SELECTS OUTPUT -------------------------------------------------------------------------

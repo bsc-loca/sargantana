@@ -505,7 +505,7 @@ module decoder(
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.use_imm    = 1'b1;
                     decode_instr_o.use_rs1    = 1'b1;
-                    decode_instr_o.op_32 = 1'b1;
+                    decode_instr_o.op_32      = 1'b1;
 
                     case (decode_i.inst.itype.func3)
                         F3_64_ADDIW: begin
@@ -1066,6 +1066,7 @@ module decoder(
                     decode_instr_o.use_fs1 = 1'b1;
                     decode_instr_o.use_fs2 = 1'b1;
                     decode_instr_o.use_fs3 = 1'b1;
+                    check_frm = 1'b1;
                     // Select the instruction
                     unique case (decode_i.inst.r4type.opcode) 
                         OP_FMADD: begin
@@ -1081,7 +1082,6 @@ module decoder(
                             decode_instr_o.instr_type = FNMADD;
                         end
                     endcase
-                    // Do we need to select the fmt? mode?
                     // func2 is the fmt
                     // we only support the first two modes (S,D)
                     case (decode_i.inst.r4type.fmt)
@@ -1095,6 +1095,32 @@ module decoder(
                             xcpt_illegal_instruction_int = 1'b1;
                         end
                     endcase
+
+                    if (check_frm) begin
+                        unique case (decode_i.inst.fprtype.rm)
+                            // Illegal modes
+                            FRM_INV_1,
+                            FRM_INV_2: begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                            FRM_DYN: begin // check dynamic one
+                                unique case (frm_i) inside // FRM from CSR
+                                    FRM_INV_1,
+                                    FRM_INV_2,
+                                    FRM_DYN: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    default: begin
+                                        //xcpt_illegal_instruction_int = 1'b0;
+                                        decode_instr_o.frm = op_frm_fp_t'(frm_i);
+                                    end 
+                                endcase
+                            end
+                            default: begin
+                                //xcpt_illegal_instruction_int = 1'b0;
+                            end
+                        endcase
+                    end
                 end
                 OP_FP: begin
                     decode_instr_o.unit = UNIT_FPU;
@@ -1150,6 +1176,7 @@ module decoder(
                             decode_instr_o.regfile_dst = SCALAR_RF;
                             decode_instr_o.regfile_we = 1'b1;
                             decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.use_fs2 = 1'b0;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -1162,7 +1189,25 @@ module decoder(
                             decode_instr_o.use_fs2 = 1'b0;
                             case (decode_i.inst.fprtype.rm)
                                 3'b000: begin
-                                    decode_instr_o.instr_type = FMV_F2X;
+                                    if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                        decode_instr_o.instr_type    = ADDW;
+                                        decode_instr_o.op_32         = 1'b1;
+                                    end else begin
+                                        decode_instr_o.instr_type    = ADD;
+                                        decode_instr_o.op_32         = 1'b0;
+                                    end
+                                    decode_instr_o.regfile_we    = 1'b1;
+                                    decode_instr_o.use_imm       = 1'b0;
+                                    decode_instr_o.unit          = UNIT_ALU;
+                                    decode_instr_o.rs2           = 'h0;
+                                    decode_instr_o.regfile_fp_we = 1'b0;
+                                    decode_instr_o.use_imm       = 1'b0;
+                                    decode_instr_o.regfile_src   = FPU_RF;
+                                    decode_instr_o.regfile_dst   = SCALAR_RF;
+                                    decode_instr_o.use_rs1       = 1'b0;
+                                    decode_instr_o.use_rs2       = 1'b1;
+                                    decode_instr_o.use_fs1       = 1'b1;
+                                    decode_instr_o.use_fs2       = 1'b0;
                                 end
                                 3'b001: begin
                                     decode_instr_o.instr_type = FCLASS;
@@ -1174,6 +1219,9 @@ module decoder(
                         end
                         F5_FP_FCMP: begin // FP comp
                             decode_instr_o.instr_type = FCMP;
+                            decode_instr_o.regfile_dst = SCALAR_RF;
+                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.regfile_we = 1'b1;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -1182,6 +1230,10 @@ module decoder(
                         F5_FP_FCVT_I2F: begin
                             decode_instr_o.regfile_src = SCALAR_RF;
                             decode_instr_o.instr_type = FCVT_I2F;
+                            decode_instr_o.use_rs1       = 1'b1;
+                            decode_instr_o.use_rs2       = 1'b0;
+                            decode_instr_o.use_fs2 = 1'b0;
+                            decode_instr_o.use_fs1 = 1'b0;
                             check_frm = 1'b1;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
@@ -1191,7 +1243,10 @@ module decoder(
                         F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
                             decode_instr_o.instr_type = FMV_X2F;
                             decode_instr_o.regfile_src = SCALAR_RF;
+                            decode_instr_o.use_fs1 = 1'b0;
                             decode_instr_o.use_fs2 = 1'b0;
+                            decode_instr_o.use_rs1 = 1'b1;
+                            decode_instr_o.use_rs2 = 1'b0;
                             if (decode_i.inst.fprtype.rm != 3'b000) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
@@ -1199,6 +1254,7 @@ module decoder(
                         // D2S & S2D specific 
                         F5_FP_FCVT_SD: begin
                             decode_instr_o.instr_type = FCVT_F2F;
+                            decode_instr_o.use_fs2 = 1'b0;
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
@@ -1233,6 +1289,7 @@ module decoder(
                                     end
                                     default: begin
                                         //xcpt_illegal_instruction_int = 1'b0;
+                                        decode_instr_o.frm = op_frm_fp_t'(frm_i);
                                     end 
                                 endcase
                             end

@@ -651,6 +651,7 @@ assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
 assign instruction_scalar_o.result        = data_to_wb;
 assign instruction_scalar_o.ex            = exception_to_wb;
+assign instruction_scalar_o.fp_status     = 'h0;
 
 // Output Instruction
 assign instruction_fp_o.valid         = instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_fp_we; //fp_instr;
@@ -674,6 +675,7 @@ assign instruction_fp_o.branch_taken  = 1'b0;
 assign instruction_fp_o.result_pc     = 0;
 assign instruction_fp_o.result        = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
 assign instruction_fp_o.ex            = exception_to_wb;
+assign instruction_fp_o.fp_status     = 'h0;
 
 assign instruction_simd_o.valid           = instruction_to_wb.instr.valid & instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;

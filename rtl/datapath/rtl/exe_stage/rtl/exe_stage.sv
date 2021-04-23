@@ -37,6 +37,7 @@ module exe_stage (
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
+    output exe_wb_scalar_instr_t        fp_to_scalar_wb_o,
     output exe_wb_simd_instr_t          simd_to_simd_wb_o,
     output exe_wb_simd_instr_t          mem_to_simd_wb_o,
     output exe_wb_fp_instr_t            mem_to_fp_wb_o,
@@ -194,7 +195,7 @@ always_comb begin
     fp_instr.frdy2                = from_rr_i.frdy2;
     fp_instr.fprs3                = from_rr_i.fprs3;
     fp_instr.frdy3                = from_rr_i.frdy3;
-    fp_instr.fprd                 = from_rr_i.instr.regfile_dst == SCALAR_RF ? from_rr_i.prd : from_rr_i.fprd;
+    fp_instr.fprd                 = from_rr_i.instr.regfile_we ? from_rr_i.prd : from_rr_i.fprd;
     fp_instr.old_fprd             = from_rr_i.old_fprd;
     fp_instr.checkpoint_done      = from_rr_i.checkpoint_done;
     fp_instr.chkp                 = from_rr_i.chkp;
@@ -342,13 +343,14 @@ always_comb begin
             arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
-    end else if (fp_to_scalar_wb.valid) begin
+    /*end else if (fp_to_scalar_wb.valid) begin
         arith_to_scalar_wb_o = fp_to_scalar_wb;
         if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
             arith_to_scalar_wb_o.ex.valid = 1;
             arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             arith_to_scalar_wb_o.ex.origin = 64'b0;
         end
+    end*/ 
     end else begin
         arith_to_scalar_wb_o = 'h0;
     end
@@ -372,16 +374,22 @@ always_comb begin
     end
 
     // FP write-back struct
-    if (fp_to_wb.valid) begin
+    if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
+        fp_to_scalar_wb_o = fp_to_scalar_wb;
+        if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            fp_to_scalar_wb_o.ex.valid = 1;
+            fp_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            fp_to_scalar_wb_o.ex.origin = 64'b0;
+        end
         if (~fp_to_wb_o.ex.valid & empty_mem & csr_interrupt_i) begin
             fp_to_wb_o.ex.valid = 1;
             fp_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             fp_to_wb_o.ex.origin = 64'b0;
         end
-
     end else begin
         fp_to_wb_o  = 'h0;
+        fp_to_scalar_wb_o = 'h0;
     end
 end
 

@@ -110,6 +110,7 @@ assign instruction_o.result_pc       = 0;
 `ifdef VERILATOR
 assign instruction_o.id              = instruction_i.instr.id;
 `endif
+assign instruction_o.fp_status     = 'h0;
 // Exceptions
 
 always_comb begin

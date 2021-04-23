@@ -38,7 +38,10 @@ int_format_e int_fmt;
 logic ready_fpu;
 fpuv_pkg::status_t fp_status;
 
-exe_wb_fp_instr_t instruction_d, instruction_q;
+logic result_valid_int;
+bus64_t result_int;
+
+rr_exe_fpu_instr_t instruction_d, instruction_q;
 
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
@@ -55,8 +58,8 @@ always_comb begin
    dst_fmt         = src_fmt;
    int_fmt         = src_fmt == FP32 ? INT32 : INT64;
 
-   operands[0] = instruction_i.data_rs2;
-   operands[1] = instruction_i.data_rs1;
+   operands[0] = instruction_i.data_rs1;
+   operands[1] = instruction_i.data_rs2;
    operands[2] = instruction_i.data_rs3;
 
 
@@ -142,169 +145,47 @@ always_comb begin
       // -------------------------------------------
       //                 NONCOMP
       // -------------------------------------------
-      /*FMIN_MAX: begin 
-         op              = MINMAX;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RNE; 
+      drac_pkg::FMIN_MAX: begin 
+         op          = fpuv_pkg::MINMAX;
+         op_mod      = 0;
       end 
-      OP_VFMAX, OP_VFREDMAX: begin  
-         op              = MINMAX;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RTZ; 
+      drac_pkg::FCMP: begin
+         op          = fpuv_pkg::CMP;
+         op_mod      = 0;
       end
-      OP_VFSGNJ: begin 
-         op              = SGNJ;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RNE; 
+      drac_pkg::FCLASS: begin
+         op          = fpuv_pkg::CLASSIFY;
+         op_mod      = 0;
+      end   
+      drac_pkg::FSGNJ: begin
+         op          = SGNJ;
+         op_mod      = 0;
       end
-      OP_VFSGNJN: begin 
-         op              = SGNJ;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RTZ; 
+      // FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
+      // FP to I
+      drac_pkg::FCVT_F2I: begin
+         op          = F2I;
+         op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
       end
-      OP_VFSGNJX: begin 
-         op              = SGNJ;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RDN; 
+      // I to FP
+      drac_pkg::FCVT_I2F: begin
+         op          = I2F;
+         op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
       end
-      OP_VMFEQ: begin 
-         op              = CMP;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RDN; 
-      end
-      OP_VMFLE: begin 
-         op              = CMP;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RNE; 
-      end
-      OP_VMFLT: begin 
-         op              = CMP;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RTZ; 
-      end
-      OP_VMFNE: begin 
-         op              = CMP;
+      // FP to FP
+      drac_pkg::FCVT_F2F: begin
+         op              = F2F;
          op_mod          = 1;
+         //rnd_mode_sel    = 1;
+         //opcode_rnd_mode = RTZ;
+      end
+      // FP to 
+      /*drac_pkg::FMV_X2F: begin
+         op              = I2F;
+         op_mod          = 0;
          rnd_mode_sel    = 1;
-         opcode_rnd_mode = RDN; 
-      end
-      OP_VMFGT: begin 
-         op              = CMP;
-         op_mod          = 1;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RNE; 
-      end
-      OP_VMFGE: begin 
-         op              = CMP;
-         op_mod          = 1;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RTZ; 
-      end
-      // -------------------------------------------
-      //                 UNARY0 - CONV
-      // -------------------------------------------
-      OP_VFUNARY0: begin 
-         case (opcode_vs1_i)
-            OPVF_CVT_F2XU_SQRT: begin // float to unsigned integer
-               op     = F2I;
-               op_mod = 1;
-            end
-            OPVF_CVT_F2X: begin // float to signed integer
-               op     = F2I;
-               op_mod = 0;
-            end
-            OPVF_CVT_XU2F: begin // unsigned integer to float
-               op     = I2F;
-               op_mod = 1;
-            end
-            OPVF_CVT_X2F: begin // signed integer to float
-               op     = I2F;
-               op_mod = 0;
-            end
-            OPVF_WCVT_F2XU: begin // float to double-width unsigned integer
-               op      = F2I;
-               op_mod  = 1;
-               int_fmt = INT64;
-            end
-            OPVF_WCVT_F2X: begin // float to double-width signed integer
-               op      = F2I;
-               op_mod  = 0;
-               int_fmt = INT64;
-            end
-            OPVF_WCVT_XU2F: begin // unsigned integer to double-width float
-               op      = I2F;
-               op_mod  = 1;
-               dst_fmt = FP64;
-            end
-            OPVF_WCVT_X2F: begin // signed integer to double-width float
-               op      = I2F;
-               op_mod  = 0;
-               dst_fmt = FP64;
-            end
-            OPVF_WCVT_F2F: begin // single-width float to double-width float
-               op      = F2F;
-               op_mod  = 0;
-               dst_fmt = FP64;
-            end
-            OPVF_NCVT_F2XU_CLASS: begin // double-width float to unsigned integer
-               op      = F2I;
-               op_mod  = 1;
-               int_fmt = INT32;
-            end
-            OPVF_NCVT_F2X: begin // double-width float to signed integer
-               op      = F2I;
-               op_mod  = 0;
-               int_fmt = INT32;
-            end 
-            OPVF_NCVT_XU2F: begin // double-width unsigned integer to float
-               op      = I2F;
-               op_mod  = 1;
-               dst_fmt = FP32;
-            end
-            OPVF_NCVT_X2F: begin // double-width signed integer to float
-               op      = I2F;
-               op_mod  = 0;
-               dst_fmt = FP32;
-            end 
-            OPVF_NCVT_F2F: begin // double-width float to single-width float
-               op      = F2F;
-               op_mod  = 0;
-               dst_fmt = FP32;
-            end
-            default: begin 
-               op     = operation_e'('1); // don't care
-               op_mod = DONT_CARE;        // don't care
-            end 
-         endcase
-      end
-      // -------------------------------------------
-      //                 UNARY1 - SQRT, CLASS
-      // -------------------------------------------
-      /*OP_VFUNARY1: begin 
-         case (opcode_vs1_i)
-            OPVF_CVT_F2XU_SQRT: begin 
-               op     = SQRT;
-               op_mod = 0;
-            end 
-            OPVF_NCVT_F2XU_CLASS: begin 
-               op     = CLASSIFY;
-               op_mod = 0;
-            end
-            default: begin 
-               op     = operation_e'('1); // don't care
-               op_mod = DONT_CARE;        // don't care
-            end 
-         endcase
-      end 
-      */
+         opcode_rnd_mode = RNE;
+      end*/
       default: begin 
          op     = operation_e'('1); // don't care
          op_mod = DONT_CARE;        // don't care
@@ -336,7 +217,7 @@ fpuv_top #(
    .flush_i        ( kill_i ),
    // Input
    .operands_i     ( operands ),
-   .rnd_mode_i     ( opcode_rnd_mode ),
+   .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : instruction_i.instr.frm),
    .op_i           ( op ), /// ---???????
    .op_mod_i       ( op_mod ), /// ??????
    .src_fmt_i      ( src_fmt ), // FMT mode
@@ -348,48 +229,27 @@ fpuv_top #(
    .inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( 'h0 ),
    .tag_i          ( 1'b0 ),
-   .in_valid_i     ( instruction_i.instr.valid && !(instruction_i.instr.instr_type == FMV_F2X) & (instruction_i.instr.unit == UNIT_FPU) && (!instruction_q.valid || instruction_o.valid)),
+   .in_valid_i     ( instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) && (!instruction_q.instr.valid || result_valid_int) && !(instruction_i.instr.instr_type == FMV_X2F)),
    .out_ready_i    ( 1'b1 ), // are we always ready???
    // Outputs
    .in_ready_o     ( ready_fpu ),
-   .result_o       ( instruction_o.result ),
+   .result_o       ( result_int ),
    .status_o       ( fp_status ),
    .tag_o          ( /* unused */ ),
-   .out_valid_o    ( instruction_o.valid ),
+   .out_valid_o    ( result_valid_int ),
    .busy_o         ( /* unused */ )
 );
 
-
-assign instruction_d.valid           = instruction_i.instr.valid && (instruction_i.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_F2X);
-assign instruction_d.pc              = instruction_i.instr.pc;
-assign instruction_d.bpred           = instruction_i.instr.bpred;
-assign instruction_d.rs1             = instruction_i.instr.rs1;
-assign instruction_d.rd              = instruction_i.instr.rd;
-assign instruction_d.change_pc_ena   = instruction_i.instr.change_pc_ena;
-assign instruction_d.regfile_we      = instruction_i.instr.regfile_fp_we;
-assign instruction_d.instr_type      = instruction_i.instr.instr_type;
-assign instruction_d.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-assign instruction_d.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_d.fprd            = instruction_i.fprd;
-assign instruction_d.checkpoint_done = instruction_i.checkpoint_done;
-assign instruction_d.chkp            = instruction_i.chkp;
-assign instruction_d.gl_index        = instruction_i.gl_index;
-assign instruction_d.ex              = instruction_i.instr.ex;
-`ifdef VERILATOR
-assign instruction_d.id              = instruction_i.instr.id;
-`endif
-assign instruction_d.branch_taken    = 1'b0;
-assign instruction_d.result_pc       = 0;
-assign instruction_d.result          = 0;
+assign instruction_d = instruction_i;
 
 // Instruction inside the FPU
 always_ff @(posedge clk_i, negedge rstn_i) begin
    if (~rstn_i) begin
       instruction_q <= '0;
    end else begin
-      if (instruction_d.valid) begin
+      if (instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
          instruction_q <= instruction_d;
-      end else if (instruction_o.valid) begin
+      end else if (result_valid_int ) begin
          instruction_q <= instruction_d;
       end else begin
          instruction_q <= instruction_q;
@@ -397,52 +257,86 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
    end   
 end
 
-// Output of the FPU 
-assign instruction_o.pc              = instruction_q.pc;
-assign instruction_o.bpred           = instruction_q.bpred;
-assign instruction_o.rs1             = instruction_q.rs1;
-assign instruction_o.rd              = instruction_q.rd;
-assign instruction_o.change_pc_ena   = instruction_q.change_pc_ena;
-assign instruction_o.regfile_we      = instruction_q.regfile_we;
-assign instruction_o.instr_type      = instruction_q.instr_type;
-assign instruction_o.stall_csr_fence = instruction_q.stall_csr_fence;
-assign instruction_o.csr_addr        = instruction_q.csr_addr;
-assign instruction_o.fprd            = instruction_q.fprd;
-assign instruction_o.checkpoint_done = instruction_q.checkpoint_done;
-assign instruction_o.chkp            = instruction_q.chkp;
-assign instruction_o.gl_index        = instruction_q.gl_index;
-assign instruction_o.ex              = instruction_q.ex;
-`ifdef VERILATOR
-assign instruction_o.id            = instruction_q.id;
-`endif
-assign instruction_o.branch_taken  = 1'b0;
-assign instruction_o.result_pc     = 0;
-assign instruction_o.fp_status     = fp_status;
+// Output FPU
+always_comb begin 
+   if (instruction_i.instr.instr_type == FMV_X2F) begin
+      instruction_o.result          = instruction_i.instr.fmt ? instruction_i.data_rs1 : {{32{1'b1}},instruction_i.data_rs1[31:0]};
+      instruction_o.valid           = instruction_i.instr.regfile_fp_we;
+      instruction_o.pc              = instruction_i.instr.pc;
+      instruction_o.bpred           = instruction_i.instr.bpred;
+      instruction_o.rs1             = instruction_i.instr.rs1;
+      instruction_o.rd              = instruction_i.instr.rd;
+      instruction_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
+      instruction_o.regfile_we      = instruction_i.instr.regfile_fp_we;
+      instruction_o.instr_type      = instruction_i.instr.instr_type;
+      instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
+      instruction_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
+      instruction_o.fprd            = instruction_i.fprd;
+      instruction_o.checkpoint_done = instruction_i.checkpoint_done;
+      instruction_o.chkp            = instruction_i.chkp;
+      instruction_o.gl_index        = instruction_i.gl_index;
+      instruction_o.ex              = instruction_i.instr.ex;
+      `ifdef VERILATOR
+            instruction_o.id        = instruction_i.instr.id;
+      `endif
+      instruction_o.branch_taken    = 1'b0;
+      instruction_o.result_pc       = 0;
+      instruction_o.fp_status       = fp_status;
+   end else begin
+      instruction_o.result          = result_int;
+      instruction_o.valid           = result_valid_int && (instruction_q.instr.regfile_fp_we);
+      instruction_o.pc              = instruction_q.instr.pc;
+      instruction_o.bpred           = instruction_q.instr.bpred;
+      instruction_o.rs1             = instruction_q.instr.rs1;
+      instruction_o.rd              = instruction_q.instr.rd;
+      instruction_o.change_pc_ena   = instruction_q.instr.change_pc_ena;
+      instruction_o.regfile_we      = instruction_q.instr.regfile_fp_we;
+      instruction_o.instr_type      = instruction_q.instr.instr_type;
+      instruction_o.stall_csr_fence = instruction_q.instr.stall_csr_fence;
+      instruction_o.csr_addr        = instruction_q.instr.imm[CSR_ADDR_SIZE-1:0];
+      instruction_o.fprd            = instruction_q.fprd;
+      instruction_o.checkpoint_done = instruction_q.checkpoint_done;
+      instruction_o.chkp            = instruction_q.chkp;
+      instruction_o.gl_index        = instruction_q.gl_index;
+      instruction_o.ex              = instruction_q.instr.ex;
+      `ifdef VERILATOR
+            instruction_o.id              = instruction_q.instr.id;
+      `endif
+      instruction_o.branch_taken    = 1'b0;
+      instruction_o.result_pc       = 0;
+      instruction_o.fp_status       = fp_status;
+   end
+end 
+//assign instruction_o.result          = result_int;
 
-// Stall if the FPU is not ready or the is a fp instruction on flight
-assign stall_o = (!ready_fpu || (instruction_q.valid && !instruction_o.valid)) && !(instruction_i.instr.instr_type == FMV_F2X);
 
-// Output related to FP to integer
-assign instruction_scalar_o.valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & (instruction_i.instr.instr_type == FMV_F2X);
-assign instruction_scalar_o.pc              = instruction_i.instr.pc;
-assign instruction_scalar_o.bpred           = instruction_i.instr.bpred;
-assign instruction_scalar_o.rs1             = instruction_i.instr.rs1;
-assign instruction_scalar_o.rd              = instruction_i.instr.rd;
-assign instruction_scalar_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
-assign instruction_scalar_o.regfile_we      = instruction_i.instr.regfile_we;
-assign instruction_scalar_o.instr_type      = instruction_i.instr.instr_type;
-assign instruction_scalar_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-assign instruction_scalar_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_scalar_o.prd             = instruction_i.fprd;
-assign instruction_scalar_o.checkpoint_done = instruction_i.checkpoint_done;
-assign instruction_scalar_o.chkp            = instruction_i.chkp;
-assign instruction_scalar_o.gl_index        = instruction_i.gl_index;
-assign instruction_scalar_o.ex              = instruction_i.instr.ex;
+// Stall if the FPU is not ready or there is a fp instruction on flight
+assign stall_o = (!ready_fpu || (instruction_q.instr.valid && !result_valid_int)) && !(instruction_i.instr.instr_type == FMV_X2F);
+
+
+// Output FPU scalar
+assign instruction_scalar_o.valid           = result_valid_int && (instruction_q.instr.regfile_we);
+assign instruction_scalar_o.result          = result_int;
+assign instruction_scalar_o.pc              = instruction_q.instr.pc;
+assign instruction_scalar_o.bpred           = instruction_q.instr.bpred;
+assign instruction_scalar_o.rs1             = instruction_q.instr.rs1;
+assign instruction_scalar_o.rd              = instruction_q.instr.rd;
+assign instruction_scalar_o.change_pc_ena   = instruction_q.instr.change_pc_ena;
+assign instruction_scalar_o.regfile_we      = instruction_q.instr.regfile_we;
+assign instruction_scalar_o.instr_type      = instruction_q.instr.instr_type;
+assign instruction_scalar_o.stall_csr_fence = instruction_q.instr.stall_csr_fence;
+assign instruction_scalar_o.csr_addr        = instruction_q.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_scalar_o.prd             = instruction_q.fprd;
+assign instruction_scalar_o.checkpoint_done = instruction_q.checkpoint_done;
+assign instruction_scalar_o.chkp            = instruction_q.chkp;
+assign instruction_scalar_o.gl_index        = instruction_q.gl_index;
+assign instruction_scalar_o.ex              = instruction_q.instr.ex;
 `ifdef VERILATOR
-assign instruction_scalar_o.id              = instruction_i.instr.id;
+assign instruction_scalar_o.id              = instruction_q.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
-assign instruction_scalar_o.result          = (instruction_i.instr.instr_type == FMV_F2X) ? {{32{instruction_i.data_rs1[31]}},instruction_i.data_rs1[31:0]} : instruction_i.data_rs1;
+assign instruction_scalar_o.fp_status              = fp_status;
+
 
 endmodule

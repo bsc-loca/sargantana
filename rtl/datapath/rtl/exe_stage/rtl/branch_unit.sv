@@ -113,6 +113,7 @@ assign instruction_o.gl_index        = instruction_i.gl_index;
 assign instruction_o.id            = instruction_i.instr.id;
 `endif
 assign instruction_o.branch_taken  = branch_taken;
+assign instruction_o.fp_status     = 'h0;
 
 // Target 
 
