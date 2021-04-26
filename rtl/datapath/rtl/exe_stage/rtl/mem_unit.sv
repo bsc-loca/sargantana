@@ -693,7 +693,6 @@ assign instruction_simd_o.csr_addr        = instruction_to_wb.instr.imm[CSR_ADDR
 assign instruction_simd_o.pvd             = instruction_to_wb.pvd;
 assign instruction_simd_o.checkpoint_done = instruction_to_wb.checkpoint_done;
 assign instruction_simd_o.chkp            = instruction_to_wb.chkp;
-assign instruction_simd_o.simd_chkp       = instruction_to_wb.simd_chkp;
 assign instruction_simd_o.gl_index        = instruction_to_wb.gl_index;
 assign instruction_simd_o.branch_taken    = 1'b0;
 assign instruction_simd_o.result_pc       = 0;

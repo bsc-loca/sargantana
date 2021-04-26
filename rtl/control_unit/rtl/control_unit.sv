@@ -210,7 +210,6 @@ module control_unit(
     assign cu_ir_o.do_recover = (~correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 
     assign cu_ir_o.recover_checkpoint = wb_cu_i.chkp;
-    assign cu_ir_o.simd_recover_checkpoint = wb_cu_i.simd_chkp;
 
     assign cu_ir_o.delete_checkpoint = (correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
 

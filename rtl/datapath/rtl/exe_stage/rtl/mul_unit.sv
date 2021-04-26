@@ -110,7 +110,6 @@ assign instruction_0_d.csr_addr      = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0
 assign instruction_0_d.prd           = instruction_i.prd;
 assign instruction_0_d.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_0_d.chkp          = instruction_i.chkp;
-assign instruction_0_d.simd_chkp     = instruction_i.simd_chkp;
 assign instruction_0_d.gl_index      = instruction_i.gl_index;
 assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;

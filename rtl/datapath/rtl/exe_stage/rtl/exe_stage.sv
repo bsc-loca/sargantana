@@ -163,7 +163,6 @@ always_comb begin
     arith_instr.old_prd             = from_rr_i.old_prd;
     arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     arith_instr.chkp                = from_rr_i.chkp;
-    arith_instr.simd_chkp           = from_rr_i.simd_chkp;
     arith_instr.gl_index            = from_rr_i.gl_index;
 
     mem_instr.data_rs1            = rs1_data_def;
@@ -178,7 +177,6 @@ always_comb begin
     mem_instr.pvd                 = from_rr_i.pvd;
     mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     mem_instr.chkp                = from_rr_i.chkp;
-    mem_instr.simd_chkp           = from_rr_i.simd_chkp;
     mem_instr.gl_index            = from_rr_i.gl_index;
     mem_instr.fprd                = from_rr_i.fprd;
     mem_instr.old_prd             = from_rr_i.old_prd;
@@ -201,7 +199,6 @@ always_comb begin
     fp_instr.old_fprd             = from_rr_i.old_fprd;
     fp_instr.checkpoint_done      = from_rr_i.checkpoint_done;
     fp_instr.chkp                 = from_rr_i.chkp;
-    fp_instr.simd_chkp            = from_rr_i.simd_chkp;
     fp_instr.gl_index             = from_rr_i.gl_index;
 
     simd_instr.data_rs1            = from_rr_i.data_rs1;
@@ -222,7 +219,6 @@ always_comb begin
     simd_instr.old_pvd             = from_rr_i.old_pvd;
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     simd_instr.chkp                = from_rr_i.chkp;
-    simd_instr.simd_chkp           = from_rr_i.simd_chkp;
     simd_instr.gl_index            = from_rr_i.gl_index;
     if (stall_int || flush_i) begin
         arith_instr.instr   = '0;

@@ -517,7 +517,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
-        .recover_checkpoint_i   (cu_ir_int.simd_recover_checkpoint),
+        .recover_checkpoint_i   (cu_ir_int.recover_checkpoint),
         .commit_roll_back_i     (cu_ir_int.recover_commit),
         .new_register_o         (simd_free_register_to_rename),
         .checkpoint_o           (simd_checkpoint_free_list),
@@ -575,7 +575,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .do_checkpoint_i(cu_ir_int.do_checkpoint),
         .do_recover_i(cu_ir_int.do_recover),
         .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
-        .recover_checkpoint_i(cu_ir_int.simd_recover_checkpoint),
+        .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
         .recover_commit_i(cu_ir_int.recover_commit), 
         .commit_old_dst_i(instruction_to_commit.vd),    
         .commit_write_dst_i(cu_ir_int.simd_enable_commit_update),  
@@ -635,7 +635,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     always @(posedge clk_i) assert (simd_checkpoint_rename == simd_checkpoint_free_list);
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
-    assign stage_no_stall_rr_q.simd_chkp = simd_checkpoint_rename;
 
     // Signals for Control Unit
     assign ir_cu_int.valid              = stage_ir_rr_d.instr.valid;
@@ -701,7 +700,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             stage_ir_rr_q.frdy3 = stage_no_stall_rr_q.frdy3;
             stage_ir_rr_q.old_fprd = stage_no_stall_rr_q.old_fprd;
             stage_ir_rr_q.chkp = stage_no_stall_rr_q.chkp;
-            stage_ir_rr_q.simd_chkp = stage_no_stall_rr_q.simd_chkp;
             stage_ir_rr_q.checkpoint_done = stage_no_stall_rr_q.checkpoint_done;
         end else begin
             stage_ir_rr_q.instr = stage_stall_rr_q.instr;
@@ -729,7 +727,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             stage_ir_rr_q.frdy3 = stage_stall_rr_q.frdy3 | snoop_rr_frdy3;
             stage_ir_rr_q.old_fprd = stage_stall_rr_q.old_fprd;
             stage_ir_rr_q.chkp = stage_stall_rr_q.chkp;
-            stage_ir_rr_q.simd_chkp = stage_stall_rr_q.simd_chkp;
             stage_ir_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
         end
     end
@@ -914,7 +911,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign stage_rr_exe_d.vrdy_old_vd = stage_ir_rr_q.vrdy_old_vd;
     assign stage_rr_exe_d.old_fprd = stage_ir_rr_q.old_fprd;
     assign stage_rr_exe_d.chkp = stage_ir_rr_q.chkp;
-    assign stage_rr_exe_d.simd_chkp = stage_ir_rr_q.simd_chkp;
     assign stage_rr_exe_d.checkpoint_done = stage_ir_rr_q.checkpoint_done;
 
 
@@ -1033,7 +1029,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign reg_to_exe.vrdy_old_vd = snoop_exe_vrdy_old_vd | stage_rr_exe_q.vrdy_old_vd;
     assign reg_to_exe.checkpoint_done = stage_rr_exe_q.checkpoint_done;
     assign reg_to_exe.chkp = stage_rr_exe_q.chkp;
-    assign reg_to_exe.simd_chkp = stage_rr_exe_q.simd_chkp;
     assign reg_to_exe.gl_index = stage_rr_exe_q.gl_index;
 
     exe_stage exe_stage_inst(
@@ -1202,7 +1197,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
         wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;
         wb_cu_int.chkp = wb_scalar[0].chkp;
-        wb_cu_int.simd_chkp = wb_scalar[0].simd_chkp;
         wb_cu_int.gl_index = wb_scalar[0].gl_index;
 
         for (int i = 0; i<NUM_FP_WB; ++i) begin
