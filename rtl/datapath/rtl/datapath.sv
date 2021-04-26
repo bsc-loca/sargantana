@@ -729,7 +729,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             stage_ir_rr_q.frdy3 = stage_stall_rr_q.frdy3 | snoop_rr_frdy3;
             stage_ir_rr_q.old_fprd = stage_stall_rr_q.old_fprd;
             stage_ir_rr_q.chkp = stage_stall_rr_q.chkp;
-            stage_ir_rr_q.simd_chkp = stage_stall_rr_q.chkp;
+            stage_ir_rr_q.simd_chkp = stage_stall_rr_q.simd_chkp;
             stage_ir_rr_q.checkpoint_done = stage_stall_rr_q.checkpoint_done;
         end
     end
