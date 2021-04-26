@@ -403,13 +403,7 @@ typedef struct packed {
     logic    vrdy_old_vd;               // Ready vregister old vd
 
     logic checkpoint_done;              // It has a checkpoint
-<<<<<<< HEAD
     checkpoint_ptr chkp;                // Checkpoint of branch  
-=======
-    checkpoint_ptr chkp;                // Checkpoint of branch
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 } ir_rr_stage_t;
 
 typedef struct packed {
@@ -454,11 +448,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -482,11 +471,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_arith_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -517,11 +501,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
@@ -553,11 +532,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_simd_instr_t;
@@ -614,11 +588,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
 
@@ -648,11 +617,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
->>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
@@ -734,11 +698,6 @@ typedef struct packed {
     logic delete_checkpoint;               // Delete last checkpoint
     logic do_recover;                      // Recover checkpoint
     checkpoint_ptr recover_checkpoint;     // Label of the checkpoint to recover   
-<<<<<<< HEAD
-=======
-    checkpoint_ptr simd_recover_checkpoint;// Label of the simd checkpoint to recover
-    checkpoint_ptr fp_recover_checkpoint;  // Label of the fp checkpoint to recover
->>>>>>> Add fp renaming
     logic recover_commit;                  // Recover at Commit
     logic enable_commit_update;            // Enable update of Free List and Rename from commit
     logic simd_enable_commit_update;       // Enable update of SIMD Free List and Rename from commit
@@ -776,11 +735,6 @@ typedef struct packed {
     logic change_pc_ena;                     // Enable PC write
     logic checkpoint_done;        // It has a checkpoint
     checkpoint_ptr  chkp;         // Label of the checkpoint
-<<<<<<< HEAD
-=======
-    checkpoint_ptr  simd_chkp;    // Label of the checkpoint SIMD
-    checkpoint_ptr  fp_chkp;      // Label of the checkpoint FP
->>>>>>> Add fp renaming
     gl_index_t gl_index;          // Graduation List entry of ALU
     logic [NUM_SCALAR_WB-1:0] write_enable;  // Write Enable to Register File
     logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
