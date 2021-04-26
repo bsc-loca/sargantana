@@ -350,8 +350,6 @@ typedef struct packed {
     logic use_fs2;                      // Instruction uses fregister source 2
     logic use_fs3;                      // Instruction uses fregister source 2
     riscv_pkg::op_frm_fp_t frm;         // FP rounding mode
-    regfile_sel_t regfile_src;          // which refile get the sources
-    regfile_sel_t regfile_dst;          // which regfile to write
 
     logic use_imm;                      // Use Immediate later
     logic use_pc;                       // Use PC later
@@ -559,8 +557,6 @@ typedef struct packed {
     //phreg_t old_prd;                   // Old Physical register destination
     logic checkpoint_done;               // It has a checkpoint
     checkpoint_ptr chkp;                 // Checkpoint of branch
-    checkpoint_ptr fp_chkp;              // Checkpoint of branch
-    checkpoint_ptr simd_chkp;            // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -646,8 +642,6 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
-    checkpoint_ptr simd_chkp;           // Checkpoint of branch
-    checkpoint_ptr fp_chkp;             // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry  
 } exe_wb_fp_instr_t;       //  Execution Stage to FP Write Back
