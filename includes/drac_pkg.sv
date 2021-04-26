@@ -558,6 +558,7 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -645,6 +646,7 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry  
 } exe_wb_fp_instr_t;       //  Execution Stage to FP Write Back
