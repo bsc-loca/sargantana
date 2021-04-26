@@ -178,10 +178,10 @@ always_comb begin
     mem_instr.rdy2                = from_rr_i.rdy2;
     mem_instr.prd                 = from_rr_i.prd;
     mem_instr.pvd                 = from_rr_i.pvd;
+    mem_instr.fprd                = from_rr_i.fprd;
     mem_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     mem_instr.chkp                = from_rr_i.chkp;
     mem_instr.gl_index            = from_rr_i.gl_index;
-    mem_instr.fprd                = from_rr_i.fprd;
     mem_instr.old_prd             = from_rr_i.old_prd;
     mem_instr.old_pvd             = from_rr_i.old_pvd;
     mem_instr.old_fprd            = from_rr_i.old_fprd;

@@ -80,7 +80,7 @@ module decoder(
         decode_instr_o.change_pc_ena = 1'b0;
         decode_instr_o.regfile_we    = 1'b0;
         decode_instr_o.vregfile_we   = 1'b0;
-        decode_instr_o.regfile_fp_we = 1'b0;
+        decode_instr_o.fregfile_we   = 1'b0;
         // does not really matter
         decode_instr_o.use_imm = 1'b0;
         decode_instr_o.use_pc  = 1'b0;
@@ -596,12 +596,12 @@ module decoder(
                         F3_FLW: begin
                             decode_instr_o.instr_type = FLW;
                             decode_instr_o.regfile_dst = FPU_RF;
-                            decode_instr_o.regfile_fp_we = 1'b1;
+                            decode_instr_o.fregfile_we = 1'b1;
                         end
                         F3_FLD: begin
                             decode_instr_o.instr_type = FLD;
                             decode_instr_o.regfile_dst = FPU_RF;
-                            decode_instr_o.regfile_fp_we = 1'b1;
+                            decode_instr_o.fregfile_we = 1'b1;
                         end
                         F3_VSEW: begin
                             decode_instr_o.use_mask = ~decode_i.inst.vltype.vm;
@@ -1059,7 +1059,7 @@ module decoder(
                 OP_FNMADD: begin
                     // Fused Multiply Add
                     decode_instr_o.unit = UNIT_FPU;
-                    decode_instr_o.regfile_fp_we = 1'b1;
+                    decode_instr_o.fregfile_we = 1'b1;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
@@ -1124,7 +1124,7 @@ module decoder(
                 end
                 OP_FP: begin
                     decode_instr_o.unit = UNIT_FPU;
-                    decode_instr_o.regfile_fp_we = 1'b1;
+                    decode_instr_o.fregfile_we = 1'b1;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.regfile_src = FPU_RF;
                     decode_instr_o.regfile_dst = FPU_RF;
@@ -1174,7 +1174,7 @@ module decoder(
                             decode_instr_o.instr_type = FCVT_F2I;
                             check_frm = 1'b1;
                             decode_instr_o.use_fs2 = 1'b0;
-                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.fregfile_we = 1'b0;
                             decode_instr_o.regfile_we = 1'b1;
                             // Check through rounding modes if illegal instr
                             /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
@@ -1183,7 +1183,7 @@ module decoder(
                         end
                         F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
                             decode_instr_o.regfile_dst = SCALAR_RF;
-                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.fregfile_we = 1'b0;
                             decode_instr_o.regfile_we = 1'b1;
                             decode_instr_o.use_fs2 = 1'b0;
                             case (decode_i.inst.fprtype.rm)
@@ -1199,7 +1199,7 @@ module decoder(
                                     decode_instr_o.use_imm       = 1'b0;
                                     decode_instr_o.unit          = UNIT_ALU;
                                     decode_instr_o.rs2           = 'h0;
-                                    decode_instr_o.regfile_fp_we = 1'b0;
+                                    decode_instr_o.fregfile_we = 1'b0;
                                     decode_instr_o.use_imm       = 1'b0;
                                     decode_instr_o.regfile_src   = FPU_RF;
                                     decode_instr_o.regfile_dst   = SCALAR_RF;
@@ -1219,7 +1219,7 @@ module decoder(
                         F5_FP_FCMP: begin // FP comp
                             decode_instr_o.instr_type = FCMP;
                             decode_instr_o.regfile_dst = SCALAR_RF;
-                            decode_instr_o.regfile_fp_we = 1'b0;
+                            decode_instr_o.fregfile_we = 1'b0;
                             decode_instr_o.regfile_we = 1'b1;
                             // Check through rounding modes if illegal instr
                             if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
@@ -1231,7 +1231,7 @@ module decoder(
                             decode_instr_o.use_fs1 = 1'b0;
                             decode_instr_o.use_fs2 = 1'b0;
                             decode_instr_o.use_rs1 = 1'b1;
-                            decode_instr_o.regfile_fp_we = 1'b1;
+                            decode_instr_o.fregfile_we = 1'b1;
                             decode_instr_o.regfile_we = 1'b0;
                             check_frm = 1'b1;
                             // Check through rounding modes if illegal instr

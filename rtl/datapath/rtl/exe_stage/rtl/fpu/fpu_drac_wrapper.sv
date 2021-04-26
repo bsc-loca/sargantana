@@ -253,7 +253,10 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
       instruction_q <= '0;
       sign_extend_q <= '0;
    end else begin
-      if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
+      if (kill_i) begin
+         instruction_q <= '0;
+         sign_extend_q <= '0;
+      end else if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
          instruction_q <= instruction_d;
          sign_extend_q <= sign_extend_int;
       end else if (result_valid_int ) begin
@@ -270,13 +273,13 @@ end
 always_comb begin 
    if (instruction_i.instr.instr_type == FMV_X2F) begin
       instruction_o.result          = instruction_i.instr.fmt ? instruction_i.data_rs1 : {{32{1'b1}},instruction_i.data_rs1[31:0]};
-      instruction_o.valid           = instruction_i.instr.regfile_fp_we;
+      instruction_o.valid           = instruction_i.instr.valid; // valid or regfile ena
       instruction_o.pc              = instruction_i.instr.pc;
       instruction_o.bpred           = instruction_i.instr.bpred;
       instruction_o.rs1             = instruction_i.instr.rs1;
       instruction_o.rd              = instruction_i.instr.rd;
       instruction_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
-      instruction_o.regfile_we      = instruction_i.instr.regfile_fp_we;
+      instruction_o.regfile_we      = instruction_i.instr.fregfile_we;
       instruction_o.instr_type      = instruction_i.instr.instr_type;
       instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
       instruction_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
@@ -293,13 +296,13 @@ always_comb begin
       instruction_o.fp_status       = fp_status;
    end else begin
       instruction_o.result          = result_int;
-      instruction_o.valid           = result_valid_int && (instruction_q.instr.regfile_fp_we);
+      instruction_o.valid           = result_valid_int && (instruction_q.instr.fregfile_we);
       instruction_o.pc              = instruction_q.instr.pc;
       instruction_o.bpred           = instruction_q.instr.bpred;
       instruction_o.rs1             = instruction_q.instr.rs1;
       instruction_o.rd              = instruction_q.instr.rd;
       instruction_o.change_pc_ena   = instruction_q.instr.change_pc_ena;
-      instruction_o.regfile_we      = instruction_q.instr.regfile_fp_we;
+      instruction_o.regfile_we      = instruction_q.instr.fregfile_we;
       instruction_o.instr_type      = instruction_q.instr.instr_type;
       instruction_o.stall_csr_fence = instruction_q.instr.stall_csr_fence;
       instruction_o.csr_addr        = instruction_q.instr.imm[CSR_ADDR_SIZE-1:0];
@@ -308,12 +311,12 @@ always_comb begin
       instruction_o.chkp            = instruction_q.chkp;
       instruction_o.gl_index        = instruction_q.gl_index;
       instruction_o.ex              = instruction_q.instr.ex;
-      `ifdef VERILATOR
-            instruction_o.id              = instruction_q.instr.id;
-      `endif
       instruction_o.branch_taken    = 1'b0;
       instruction_o.result_pc       = 0;
       instruction_o.fp_status       = fp_status;
+      `ifdef VERILATOR
+         instruction_o.id           = instruction_q.instr.id;
+      `endif
    end
 end 
 //assign instruction_o.result          = result_int;

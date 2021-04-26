@@ -66,7 +66,6 @@ parameter INSTRUCTION_QUEUE_NUM_ENTRIES = 16;
 
 // Physical registers 
 parameter NUM_PHISICAL_REGISTERS = 64;
-parameter NUM_FP_PHISICAL_REGISTERS = 64;
 parameter PHISICAL_REGFILE_WIDTH = 6;
 typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
 
@@ -74,6 +73,11 @@ typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
 parameter NUM_PHISICAL_VREGISTERS = 64;
 parameter PHISICAL_VREGFILE_WIDTH = 6;
 typedef logic [PHISICAL_VREGFILE_WIDTH-1:0] phvreg_t;
+
+// Physical fp registers 
+parameter NUM_PHYSICAL_FREGISTERS = 64;
+parameter PHYSICAL_FREGFILE_WIDTH = 6;
+typedef logic [PHYSICAL_FREGFILE_WIDTH-1:0] phfreg_t;
 
 // Register checkpointing
 parameter NUM_CHECKPOINTS = 4;
@@ -358,8 +362,9 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC 
     logic regfile_we;                   // Write to register file
     logic vregfile_we;                  // Write to vregister file
+    logic fregfile_we;                  // Write to fregister file
     logic use_mask;                     // Use vector mask
-    logic regfile_fp_we;               // Write to register file FPU
+    //logic regfile_fp_we;               // Write to register file FPU
     instr_type_t instr_type;            // Type of instruction
     logic signed_op;                    // Signed Operation
     logic [3:0] mem_size;               // Memory operation size (Byte, Word, etc)
@@ -398,7 +403,13 @@ typedef struct packed {
     logic    vrdy_old_vd;               // Ready vregister old vd
 
     logic checkpoint_done;              // It has a checkpoint
+<<<<<<< HEAD
     checkpoint_ptr chkp;                // Checkpoint of branch  
+=======
+    checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 } ir_rr_stage_t;
 
 typedef struct packed {
@@ -443,6 +454,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -466,6 +482,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_arith_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -496,6 +517,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
@@ -527,6 +553,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_simd_instr_t;
@@ -548,13 +579,14 @@ typedef struct packed {
     logic   frdy2;                       // Ready register source 2
     phreg_t fprs3;                       // Physical register source 3
     logic   frdy3;                       // Ready register source 3
-    //phreg_t prd;                        // Physical register destination 
+    //phreg_t prd;                       // Physical register destination 
     phreg_t old_fprd;                    // Old Physical register destination
     phreg_t fprd;                        // Physical register destination
-    //phreg_t old_prd;                    // Old Physical register destination
-
-    logic checkpoint_done;              // It has a checkpoint
-    checkpoint_ptr chkp;                // Checkpoint of branch
+    //phreg_t old_prd;                   // Old Physical register destination
+    logic checkpoint_done;               // It has a checkpoint
+    checkpoint_ptr chkp;                 // Checkpoint of branch
+    checkpoint_ptr fp_chkp;              // Checkpoint of branch
+    checkpoint_ptr simd_chkp;            // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
@@ -582,6 +614,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
 
@@ -611,6 +648,11 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_chkp;           // SIMD Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // FP Checkpoint of branch
+>>>>>>> Add fp renaming
 
     gl_index_t gl_index;                // Graduation List entry
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
@@ -640,6 +682,8 @@ typedef struct packed {
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
+    checkpoint_ptr simd_chkp;           // Checkpoint of branch
+    checkpoint_ptr fp_chkp;             // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry  
 } exe_wb_fp_instr_t;       //  Execution Stage to FP Write Back
@@ -670,8 +714,10 @@ typedef struct packed {
     logic full_iq;                      // Instruction Queue full
     logic out_of_checkpoints;           // Rename out of checkpoints
     logic simd_out_of_checkpoints;      // SIMD Rename out of checkpoints
+    logic fp_out_of_checkpoints;        // FP Rename out of checkpoints
     logic empty_free_list;              // Free list out of registers
     logic simd_empty_free_list;         // SIMD Free list out of registers
+    logic fp_empty_free_list;           // FP Free list out of registers
     logic is_branch;                    // Rename instruction is a branch
 } ir_cu_t;      // Rename to Control Unit
 
@@ -688,19 +734,24 @@ typedef struct packed {
     logic delete_checkpoint;               // Delete last checkpoint
     logic do_recover;                      // Recover checkpoint
     checkpoint_ptr recover_checkpoint;     // Label of the checkpoint to recover   
+<<<<<<< HEAD
+=======
+    checkpoint_ptr simd_recover_checkpoint;// Label of the simd checkpoint to recover
+    checkpoint_ptr fp_recover_checkpoint;  // Label of the fp checkpoint to recover
+>>>>>>> Add fp renaming
     logic recover_commit;                  // Recover at Commit
     logic enable_commit_update;            // Enable update of Free List and Rename from commit
     logic simd_enable_commit_update;       // Enable update of SIMD Free List and Rename from commit
-    logic enable_commit_update_fp;         // Enable update of Free List and Rename from commit
+    logic fp_enable_commit_update;         // Enable update of FP Free List and Rename from commit
 } cu_ir_t;      // Control Unit to Rename
 
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] write_enable; // Enable write on register file
     logic [NUM_SIMD_WB-1:0]  vwrite_enable; // Enable write on vregister file
+    logic [NUM_FP_WB-1:0]    fwrite_enable; // Enable write on register file FP
     logic [NUM_SCALAR_WB-1:0] snoop_enable; // Enable snoop to rr and exe stage
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable; // Enable snoop to rr and exe stage
-    logic [NUM_FP_WB-1:0] fp_write_enable; // Enable write on register file FP
-    logic [NUM_FP_WB-1:0] fp_snoop_enable; // Enable snoop to rr and exe stage
+    logic [NUM_FP_WB-1:0]    fsnoop_enable; // Enable snoop to rr and exe stage
     logic write_enable_dbg;                 // Enable write on register file dbg usage
 } cu_rr_t;      // Control unit to Register File
 
@@ -721,17 +772,22 @@ typedef struct packed {
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] valid;         // Valid Intruction
     logic [NUM_SIMD_WB-1:0]  vvalid;         // Valid SIMD Instruction
+    logic [NUM_FP_WB-1:0]    fvalid;         // Valid FP Intruction
     logic change_pc_ena;                     // Enable PC write
     logic checkpoint_done;        // It has a checkpoint
     checkpoint_ptr  chkp;         // Label of the checkpoint
+<<<<<<< HEAD
+=======
+    checkpoint_ptr  simd_chkp;    // Label of the checkpoint SIMD
+    checkpoint_ptr  fp_chkp;      // Label of the checkpoint FP
+>>>>>>> Add fp renaming
     gl_index_t gl_index;          // Graduation List entry of ALU
     logic [NUM_SCALAR_WB-1:0] write_enable;  // Write Enable to Register File
     logic [NUM_SCALAR_WB-1:0] snoop_enable;  // Snoop Enable to rr and exe
     logic [NUM_SIMD_WB-1:0]  vwrite_enable;  // Write Enable to VRegister File
     logic [NUM_SIMD_WB-1:0]  vsnoop_enable;  // Snoop Enable to rr and exe
-    logic [NUM_FP_WB-1:0] fp_valid;          // Valid Intruction
-    logic [NUM_FP_WB-1:0] fp_write_enable;   // Write Enable to Register File
-    logic [NUM_FP_WB-1:0] fp_snoop_enable; // Enable snoop to rr and exe stage
+    logic [NUM_FP_WB-1:0]    fwrite_enable;   // Write Enable to Register File
+    logic [NUM_FP_WB-1:0]    fsnoop_enable; // Enable snoop to rr and exe stage
 } wb_cu_t;      // Write Back to Control Unit
 
 // Control Unit signals
@@ -748,8 +804,8 @@ typedef struct packed {
     logic stall_commit;         // Stop commits
     logic regfile_we;           // Commit update enable
     logic vregfile_we;          // Commit update enable
-    logic fp_write_enable;      // Write Enable to Register File
-    logic fp_regfile_we;        // Commit update enable
+    logic fwrite_enable;      // Write Enable to Register File
+    logic fregfile_we;        // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
 } commit_cu_t;      // Write Back to Control Unit
 
@@ -912,13 +968,13 @@ typedef struct packed {
     logic           stall_csr_fence;        // CSR or fence
     logic           regfile_we;             // Write to register file
     logic           vregfile_we;            // Write to vregister file
+    logic           fregfile_we;            // Write to fregister file
     phreg_t         pvd;                    // Physical vregister destination to write      
     phreg_t         old_pvd;                // Old Physical vregister destination
-    logic           fp_regfile_we;          // Write to register file
     phreg_t         prd;                    // Physical register destination to write 
-    phreg_t         fprd;                    // Physical register destination to write      
     phreg_t         old_prd;                // Old Physical register destination
-    phreg_t         old_fprd;                // Old Physical register destination
+    phreg_t         fprd;                   // Physical register destination to write
+    phreg_t         old_fprd;               // Old Physical register destination
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;          // Bits of the instruction
     `endif
