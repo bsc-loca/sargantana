@@ -200,17 +200,18 @@ end
             // Write new ready register
             for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
                 if (ready_enable[i]) begin
-                    for(int j = 0; j<NUM_CHECKPOINTS; j++) begin
-                        if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (j == version_head) )) 
-                           ready_table[vaddr_i[i]][j] <= 1'b1;
-                    end
-                    if((checkpoint_enable & register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
-                        ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1;
+                    for(int j = 0; j < NUM_CHECKPOINTS; j++) begin
+                        if (~checkpoint_enable | (checkpoint_ptr'(j) != (version_head + 2'b1))) begin
+                            if ((register_table[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (checkpoint_ptr'(j) == version_head) )) 
+                                ready_table[vaddr_i[i]][j] <= 1'b1;
+                        end else if ((register_table[vaddr_i[i]][version_head] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
+                            ready_table[vaddr_i[i]][version_head + 2'b1] <= 1'b1; 
+                        end
                     end
                 end
             end
             checkpoint_o <= version_head;
-        end
+        end        
     end
 
 `endif

@@ -253,7 +253,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
       instruction_q <= '0;
       sign_extend_q <= '0;
    end else begin
-      if (instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
+      if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
          instruction_q <= instruction_d;
          sign_extend_q <= sign_extend_int;
       end else if (result_valid_int ) begin
