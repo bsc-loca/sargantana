@@ -474,7 +474,9 @@ typedef struct packed {
     instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
     bus_simd_t data_rs2;                // Data operand 2
+    bus_simd_t data_old_vd;             // Data simd old destination
     bus_mask_t data_vm;                 // Data simd mask
+    sew_t      sew;                     // Element width
     bus64_t imm;                        // Immediate
     // any interrupt
     logic       csr_interrupt;

@@ -142,6 +142,9 @@ assign flush_to_lsq = kill_i | flush_i;
 assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM && instruction_i.instr.valid) ? instruction_i.instr : 'h0 ;
 assign instruction_to_lsq.data_rs1      = instruction_i.data_rs1;
 assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
+assign instruction_to_lsq.data_old_vd   = instruction_i.data_old_vd;
+assign instruction_to_lsq.data_vm       = instruction_i.data_vm;
+assign instruction_to_lsq.sew           = instruction_i.sew;
 assign instruction_to_lsq.prd           = instruction_i.prd;
 assign instruction_to_lsq.pvd           = instruction_i.pvd;
 assign instruction_to_lsq.fprd          = instruction_i.fprd;
@@ -629,6 +632,43 @@ always_comb begin
     end
 end
 
+bus_simd_t masked_data_to_wb;
+
+//Apply the mask to the vector result
+always_comb begin
+    masked_data_to_wb = instruction_to_wb.data_old_vd;
+    case (instruction_to_wb.sew)
+        SEW_8: begin
+            for (int i = 0; i<VLEN/8; ++i) begin
+                if (instruction_to_wb.data_vm[i]) begin
+                    masked_data_to_wb[(8*i)+:8] = data_to_wb[(8*i)+:8];
+                end
+            end
+        end
+        SEW_16: begin
+            for (int i = 0; i<VLEN/16; ++i) begin
+                if (instruction_to_wb.data_vm[i*2]) begin
+                    masked_data_to_wb[(16*i)+:16] = data_to_wb[(16*i)+:16];
+                end
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i<VLEN/32; ++i) begin
+                if (instruction_to_wb.data_vm[i*4]) begin
+                    masked_data_to_wb[(32*i)+:32] = data_to_wb[(32*i)+:32];
+                end
+            end
+        end
+        SEW_64: begin
+            for (int i = 0; i<VLEN/64; ++i) begin
+                if (instruction_to_wb.data_vm[i*8]) begin
+                    masked_data_to_wb[(64*i)+:64] = data_to_wb[(64*i)+:64];
+                end
+            end
+        end
+    endcase
+end
+
 // Output Instruction
 assign instruction_scalar_o.valid         = instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we;
 assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
@@ -696,7 +736,7 @@ assign instruction_simd_o.chkp            = instruction_to_wb.chkp;
 assign instruction_simd_o.gl_index        = instruction_to_wb.gl_index;
 assign instruction_simd_o.branch_taken    = 1'b0;
 assign instruction_simd_o.result_pc       = 0;
-assign instruction_simd_o.vresult         = data_to_wb;
+assign instruction_simd_o.vresult         = masked_data_to_wb;
 assign instruction_simd_o.ex              = exception_to_wb;
 
 assign exception_mem_commit_o      = (exception_to_wb.valid & is_STORE_or_AMO_s2_q) ? exception_to_wb : 'h0;

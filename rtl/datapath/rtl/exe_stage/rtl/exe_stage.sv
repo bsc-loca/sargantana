@@ -148,7 +148,7 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
                                      & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3) 
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
-                                     & (from_rr_i.vrdy_old_vd));
+                                     & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -167,6 +167,9 @@ always_comb begin
 
     mem_instr.data_rs1            = rs1_data_def;
     mem_instr.data_rs2            = rs2_data_def;
+    mem_instr.data_old_vd         = from_rr_i.data_old_vd;
+    mem_instr.data_vm             = from_rr_i.data_vm;
+    mem_instr.sew                 = sew_i;
     mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
     mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
     mem_instr.prs1                = from_rr_i.prs1;
