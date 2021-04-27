@@ -40,7 +40,7 @@ module regfile_fp (
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [0:NUM_FP_PHISICAL_REGISTERS-1];
+reg64_t registers [0:NUM_PHYSICAL_FREGISTERS-1];
 bus64_t bypass_data1;
 bus64_t bypass_data2;
 bus64_t bypass_data3;

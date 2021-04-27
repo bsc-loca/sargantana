@@ -107,18 +107,23 @@ module datapath(
     logic out_of_checkpoints_free_list;
     logic simd_out_of_checkpoints_rename;
     logic simd_out_of_checkpoints_free_list;
+    logic fp_out_of_checkpoints_rename;
+    logic fp_out_of_checkpoints_free_list;
 
     logic free_list_empty;
     logic simd_free_list_empty;
+    logic fp_free_list_empty;
 
-    phreg_t free_register_to_rename;
+    phreg_t  free_register_to_rename;
     phvreg_t simd_free_register_to_rename;
-    phreg_t fp_free_register_to_rename;
+    phfreg_t fp_free_register_to_rename;
 
     checkpoint_ptr checkpoint_free_list;
     checkpoint_ptr checkpoint_rename;
     checkpoint_ptr simd_checkpoint_free_list;
     checkpoint_ptr simd_checkpoint_rename;
+    checkpoint_ptr fp_checkpoint_free_list;
+    checkpoint_ptr fp_checkpoint_rename;
 
     logic src_select_ir_rr_q;
 
@@ -522,9 +527,25 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .new_register_o         (simd_free_register_to_rename),
         .checkpoint_o           (simd_checkpoint_free_list),
         .out_of_checkpoints_o   (simd_out_of_checkpoints_free_list),
-        .empty_o                (simd_free_list_empty)
+        .empty_o                (simd_free_list_empty) // TODO not connected
     );
-    assign fp_free_register_to_rename = stage_ir_rr_d.instr.rd;
+
+    fp_free_list fp_free_list_inst(
+        .clk_i                  (clk_i),
+        .rstn_i                 (rstn_i),
+        .read_head_i            (stage_ir_rr_d.instr.fregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
+        .add_free_register_i    (cu_ir_int.fp_enable_commit_update),
+        .free_register_i        (instruction_to_commit.old_pvd),
+        .do_checkpoint_i        (cu_ir_int.do_checkpoint),
+        .do_recover_i           (cu_ir_int.do_recover),
+        .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i   (cu_ir_int.recover_checkpoint),
+        .commit_roll_back_i     (cu_ir_int.recover_commit),
+        .new_register_o         (fp_free_register_to_rename),
+        .checkpoint_o           (fp_checkpoint_free_list),
+        .out_of_checkpoints_o   (fp_out_of_checkpoints_free_list),
+        .empty_o                (fp_free_list_empty) // TODO not connected
+    );
 
     // Rename Table
     rename_table rename_table_inst(
@@ -592,30 +613,29 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .out_of_checkpoints_o(simd_out_of_checkpoints_rename)
     );
 
-    assign fp_free_register_to_rename = stage_ir_rr_d.instr.rd; // Mapping 1 to 1
-    // Rename Table
-    rename_table_fp rename_table_fp_inst(
+    // FP Rename Table 
+    fp_rename_table fp_rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .read_src1_i(stage_ir_rr_d.instr.rs1),
         .read_src2_i(stage_ir_rr_d.instr.rs2),
         .read_src3_i(stage_ir_rr_d.instr.rs3),
         .old_dst_i(stage_ir_rr_d.instr.rd),
-        .write_dst_i(stage_ir_rr_d.instr.regfile_fp_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
-        .new_dst_i(fp_free_register_to_rename), // We don't do rename
+        .write_dst_i(stage_ir_rr_d.instr.fregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
+        .new_dst_i(fp_free_register_to_rename),
         .use_fs1_i(stage_ir_rr_d.instr.use_fs1),
         .use_fs2_i(stage_ir_rr_d.instr.use_fs2),
         .use_fs3_i(stage_ir_rr_d.instr.use_fs3),
-        .ready_i(cu_rr_int.fp_write_enable),
+        .ready_i(cu_rr_int.fwrite_enable),
         .vaddr_i(fp_write_vaddr), // WB
         .paddr_i(fp_write_paddr_rr), // WB
-        .do_checkpoint_i('h0),//cu_ir_int.do_checkpoint),
-        .do_recover_i('h0),//cu_ir_int.do_recover),
-        .delete_checkpoint_i('h0),//cu_ir_int.delete_checkpoint),
-        .recover_checkpoint_i('h0),//cu_ir_int.recover_checkpoint),
-        .recover_commit_i('h0),//cu_ir_int.recover_commit), 
-        .commit_old_dst_i(instruction_to_commit.rd), // Virtual
-        .commit_write_dst_i(cu_ir_int.enable_commit_update_fp),  
+        .do_checkpoint_i(cu_ir_int.do_checkpoint),
+        .do_recover_i(cu_ir_int.do_recover),
+        .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
+        .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
+        .recover_commit_i(cu_ir_int.recover_commit),
+        .commit_old_dst_i(instruction_to_commit.rd),
+        .commit_write_dst_i(cu_ir_int.fp_enable_commit_update),
         .commit_new_dst_i(instruction_to_commit.rd),
         .src1_o(stage_no_stall_rr_q.fprs1),
         .rdy1_o(stage_no_stall_rr_q.frdy1),
@@ -623,9 +643,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .rdy2_o(stage_no_stall_rr_q.frdy2),
         .src3_o(stage_no_stall_rr_q.fprs3),
         .rdy3_o(stage_no_stall_rr_q.frdy3),
-        .old_dst_o(stage_no_stall_rr_q.old_fprd)
-        //.checkpoint_o(checkpoint_rename),
-        //.out_of_checkpoints_o(out_of_checkpoints_rename)
+        .old_dst_o(stage_no_stall_rr_q.old_fprd),
+        .checkpoint_o(fp_checkpoint_rename),
+        .out_of_checkpoints_o(fp_out_of_checkpoints_rename)
     );
     
     // Check two structures output the same
@@ -633,21 +653,24 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
     always @(posedge clk_i) assert (simd_out_of_checkpoints_rename == simd_out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (simd_checkpoint_rename == simd_checkpoint_free_list);
+    always @(posedge clk_i) assert (fp_out_of_checkpoints_rename == fp_out_of_checkpoints_free_list);
+    always @(posedge clk_i) assert (fp_checkpoint_rename == fp_checkpoint_free_list);
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 
     // Signals for Control Unit
-    assign ir_cu_int.valid              = stage_ir_rr_d.instr.valid;
-    assign ir_cu_int.empty_free_list    = free_list_empty;
-    assign ir_cu_int.out_of_checkpoints = out_of_checkpoints_rename;
+    assign ir_cu_int.valid                   = stage_ir_rr_d.instr.valid;
+    assign ir_cu_int.empty_free_list         = free_list_empty;
+    assign ir_cu_int.out_of_checkpoints      = out_of_checkpoints_rename;
     assign ir_cu_int.simd_out_of_checkpoints = simd_out_of_checkpoints_rename;
-    assign ir_cu_int.is_branch          = (stage_ir_rr_d.instr.instr_type == BLT)  ||
-                                          (stage_ir_rr_d.instr.instr_type == BLTU) ||
-                                          (stage_ir_rr_d.instr.instr_type == BGE)  ||
-                                          (stage_ir_rr_d.instr.instr_type == BGEU) ||
-                                          (stage_ir_rr_d.instr.instr_type == BEQ)  ||
-                                          (stage_ir_rr_d.instr.instr_type == BNE)  ||
-                                          (stage_ir_rr_d.instr.instr_type == JALR);
+    assign ir_cu_int.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
+    assign ir_cu_int.is_branch               = (stage_ir_rr_d.instr.instr_type == BLT)  ||
+                                               (stage_ir_rr_d.instr.instr_type == BLTU) ||
+                                               (stage_ir_rr_d.instr.instr_type == BGE)  ||
+                                               (stage_ir_rr_d.instr.instr_type == BGEU) ||
+                                               (stage_ir_rr_d.instr.instr_type == BEQ)  ||
+                                               (stage_ir_rr_d.instr.instr_type == BNE)  ||
+                                               (stage_ir_rr_d.instr.instr_type == JALR);
 
     // Register IR to RR
     register #($bits(instr_entry_t) + $bits(phreg_t) + $bits(phvreg_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
@@ -746,16 +769,16 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign instruction_decode_gl.stall_csr_fence        = stage_ir_rr_q.instr.stall_csr_fence;
     assign instruction_decode_gl.old_prd                = stage_ir_rr_q.old_prd;
     assign instruction_decode_gl.old_fprd                = stage_ir_rr_q.old_fprd;
-    assign instruction_decode_gl.prd                    = stage_ir_rr_q.prd;
     assign instruction_decode_gl.old_pvd                = stage_ir_rr_q.old_pvd;
+    assign instruction_decode_gl.prd                    = stage_ir_rr_q.prd;
     assign instruction_decode_gl.pvd                    = stage_ir_rr_q.pvd;
     assign instruction_decode_gl.fprd                   = stage_ir_rr_q.fprd;
     assign instruction_decode_gl.regfile_we             = stage_ir_rr_q.instr.regfile_we;
     assign instruction_decode_gl.vregfile_we            = stage_ir_rr_q.instr.vregfile_we;
+    assign instruction_decode_gl.fregfile_we            = stage_ir_rr_q.instr.fregfile_we;
     `ifdef VERILATOR
         assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
     `endif
-    assign instruction_decode_gl.fp_regfile_we          = stage_ir_rr_q.instr.regfile_fp_we;
     assign instruction_decode_gl.fp_status              = '0;
 
     graduation_list graduation_list_inst(
@@ -806,9 +829,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            snoop_rr_frdy1 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs1);
-            snoop_rr_frdy2 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs2);
-            snoop_rr_frdy3 |= cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs3);
+            snoop_rr_frdy1 |= cu_rr_int.fwrite_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs1);
+            snoop_rr_frdy2 |= cu_rr_int.fwrite_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs2);
+            snoop_rr_frdy3 |= cu_rr_int.fwrite_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q.fprs3);
         end
     end
 
@@ -833,7 +856,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
-        .write_enable_i(cu_rr_int.fp_write_enable),
+        .write_enable_i(cu_rr_int.fwrite_enable),
         .write_addr_i(fp_write_paddr_rr),
         .write_data_i(fp_data_wb_to_rr),
         
@@ -860,46 +883,37 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .read_data_old_vd_o(stage_rr_exe_d.data_old_vd),
         .read_mask_o(stage_rr_exe_d.data_vm)
     );
-    // Decide from which Regfile to Read
+    // Decide from which Regfile to Read FP
     always_comb begin : read_src
         if (stage_ir_rr_q.instr.use_fs1) begin
             stage_rr_exe_d.data_rs1 = rr_data_fp_src1;
-        end else begin
+        end else begin // From Scalar
             stage_rr_exe_d.data_rs1 = rr_data_scalar_src1;
         end
-        if (stage_ir_rr_q.instr.use_fs2) begin
+        if (stage_ir_rr_q.instr.use_fs2) begin 
             stage_rr_exe_d.data_rs2 = rr_data_fp_src2;
-        end else begin
+        end else begin // From Scalar
             stage_rr_exe_d.data_rs2 = rr_data_scalar_src2;
         end
-        /*unique case(stage_ir_rr_q.instr.regfile_src)
-                FPU_RF: begin
-                    stage_rr_exe_d.data_rs1 = rr_data_fp_src1;
-                    stage_rr_exe_d.data_rs2 = rr_data_fp_src2;
-                end
-                default: begin
-                    stage_rr_exe_d.data_rs1 = rr_data_scalar_src1;
-                    stage_rr_exe_d.data_rs2 = rr_data_scalar_src2;
-                end
-        endcase*/
     end
 
     assign stage_rr_exe_d.instr = stage_ir_rr_q.instr;
     assign stage_rr_exe_d.csr_interrupt_cause = resp_csr_cpu_i.csr_interrupt_cause;
     assign stage_rr_exe_d.csr_interrupt = resp_csr_cpu_i.csr_interrupt;
     assign stage_rr_exe_d.prd = stage_ir_rr_q.prd;
-    assign stage_rr_exe_d.fprd = stage_ir_rr_q.fprd;
     assign stage_rr_exe_d.prs1 = stage_ir_rr_q.prs1;
     assign stage_rr_exe_d.prs2 = stage_ir_rr_q.prs2;
     assign stage_rr_exe_d.rdy1 = stage_ir_rr_q.rdy1;
     assign stage_rr_exe_d.rdy2 = stage_ir_rr_q.rdy2;
+    assign stage_rr_exe_d.old_prd = stage_ir_rr_q.old_prd;
+    assign stage_rr_exe_d.fprd = stage_ir_rr_q.fprd;
     assign stage_rr_exe_d.fprs1 = stage_ir_rr_q.fprs1;
     assign stage_rr_exe_d.fprs2 = stage_ir_rr_q.fprs2;
     assign stage_rr_exe_d.fprs3 = stage_ir_rr_q.fprs3;
     assign stage_rr_exe_d.frdy1 = stage_ir_rr_q.frdy1;
     assign stage_rr_exe_d.frdy2 = stage_ir_rr_q.frdy2;
     assign stage_rr_exe_d.frdy3 = stage_ir_rr_q.frdy3;
-    assign stage_rr_exe_d.old_prd = stage_ir_rr_q.old_prd;
+    assign stage_rr_exe_d.old_fprd = stage_ir_rr_q.old_fprd;
     assign stage_rr_exe_d.pvd = stage_ir_rr_q.pvd;
     assign stage_rr_exe_d.pvs1 = stage_ir_rr_q.pvs1;
     assign stage_rr_exe_d.pvs2 = stage_ir_rr_q.pvs2;
@@ -909,7 +923,6 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign stage_rr_exe_d.vrdym = stage_ir_rr_q.vrdym;
     assign stage_rr_exe_d.old_pvd = stage_ir_rr_q.old_pvd;
     assign stage_rr_exe_d.vrdy_old_vd = stage_ir_rr_q.vrdy_old_vd;
-    assign stage_rr_exe_d.old_fprd = stage_ir_rr_q.old_fprd;
     assign stage_rr_exe_d.chkp = stage_ir_rr_q.chkp;
     assign stage_rr_exe_d.checkpoint_done = stage_ir_rr_q.checkpoint_done;
 
@@ -962,9 +975,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            snoop_exe_frs1[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs1);
-            snoop_exe_frs2[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs2);
-            snoop_exe_frs3[i] = cu_rr_int.fp_write_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs3);
+            snoop_exe_frs1[i] = cu_rr_int.fsnoop_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs1);
+            snoop_exe_frs2[i] = cu_rr_int.fsnoop_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs2);
+            snoop_exe_frs3[i] = cu_rr_int.fsnoop_enable[i] & (fp_write_paddr_exe[i] == stage_rr_exe_q.fprs3);
             snoop_exe_data_frs1 |= snoop_exe_frs1[i] ? fp_data_wb_to_exe[i] : 64'b0;
             snoop_exe_data_frs2 |= snoop_exe_frs2[i] ? fp_data_wb_to_exe[i] : 64'b0;
             snoop_exe_data_frs3 |= snoop_exe_frs3[i] ? fp_data_wb_to_exe[i] : 64'b0;
@@ -1004,19 +1017,23 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign reg_to_exe.data_rs3 = exe_data_frs3;
     assign reg_to_exe.csr_interrupt = stage_rr_exe_q.csr_interrupt;
     assign reg_to_exe.csr_interrupt_cause = stage_rr_exe_q.csr_interrupt_cause;
+    
     assign reg_to_exe.prs1 = stage_rr_exe_q.prs1;
     assign reg_to_exe.rdy1 = snoop_exe_rdy1 | stage_rr_exe_q.rdy1;
     assign reg_to_exe.prs2 = stage_rr_exe_q.prs2;
     assign reg_to_exe.rdy2 = snoop_exe_rdy2 | stage_rr_exe_q.rdy2;
+    assign reg_to_exe.prd = stage_rr_exe_q.prd;
+    assign reg_to_exe.old_prd = stage_rr_exe_q.old_prd;
+    
     assign reg_to_exe.fprs1 = stage_rr_exe_q.fprs1;
     assign reg_to_exe.frdy1 = snoop_exe_frdy1 | stage_rr_exe_q.frdy1;
     assign reg_to_exe.fprs2 = stage_rr_exe_q.fprs2;
     assign reg_to_exe.frdy2 = snoop_exe_frdy2 | stage_rr_exe_q.frdy2;
     assign reg_to_exe.fprs3 = stage_rr_exe_q.fprs3;
     assign reg_to_exe.frdy3 = snoop_exe_frdy3 | stage_rr_exe_q.frdy3;
-    assign reg_to_exe.prd = stage_rr_exe_q.prd;
     assign reg_to_exe.fprd = stage_rr_exe_q.fprd;
-    assign reg_to_exe.old_prd = stage_rr_exe_q.old_prd;
+    assign reg_to_exe.old_fprd = stage_rr_exe_q.old_fprd;
+
     assign reg_to_exe.pvs1 = stage_rr_exe_q.pvs1;
     assign reg_to_exe.vrdy1 = snoop_exe_vrdy1 | stage_rr_exe_q.vrdy1;
     assign reg_to_exe.pvs2 = stage_rr_exe_q.pvs2;
@@ -1025,8 +1042,8 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign reg_to_exe.vrdym = snoop_exe_vrdym | stage_rr_exe_q.vrdym;
     assign reg_to_exe.pvd = stage_rr_exe_q.pvd;
     assign reg_to_exe.old_pvd = stage_rr_exe_q.old_pvd;
-    assign reg_to_exe.old_fprd = stage_rr_exe_q.old_fprd;
     assign reg_to_exe.vrdy_old_vd = snoop_exe_vrdy_old_vd | stage_rr_exe_q.vrdy_old_vd;
+
     assign reg_to_exe.checkpoint_done = stage_rr_exe_q.checkpoint_done;
     assign reg_to_exe.chkp = stage_rr_exe_q.chkp;
     assign reg_to_exe.gl_index = stage_rr_exe_q.gl_index;
@@ -1195,13 +1212,10 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vvalid[i]        = wb_simd[i].valid;
         end
-        wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;
-        wb_cu_int.chkp = wb_scalar[0].chkp;
-        wb_cu_int.gl_index = wb_scalar[0].gl_index;
-
+        
         for (int i = 0; i<NUM_FP_WB; ++i) begin
             //Graduation list writeback arrays
-            gl_valid_fp[i] = wb_fp[i].valid;
+            gl_valid_fp[i] = wb_fp[i].valid  & wb_fp[i].regfile_we;
             gl_index_fp[i] = wb_fp[i].gl_index;
             instruction_fp_writeback_gl[i].csr_addr  = wb_fp[i].csr_addr;
             instruction_fp_writeback_gl[i].exception = wb_fp[i].ex;
@@ -1210,10 +1224,14 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             fp_data_wb_to_exe[i]  = wb_fp[i].result;
             fp_write_paddr_exe[i] = wb_fp[i].fprd;
             fp_write_vaddr[i]     = wb_fp[i].rd;
-            //TODO: FP bypasses to exe
-            wb_cu_int.fp_write_enable[i] = wb_fp[i].regfile_we;
-            wb_cu_int.fp_valid[i]        = wb_fp[i].valid;
+            wb_cu_int.fwrite_enable[i] = wb_fp[i].regfile_we;
+            wb_cu_int.fsnoop_enable[i] = wb_fp[i].regfile_we;
+            wb_cu_int.fvalid[i]        = wb_fp[i].valid;
         end
+
+        wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;
+        wb_cu_int.chkp = wb_scalar[0].chkp;
+        wb_cu_int.gl_index = wb_scalar[0].gl_index;
 
     end
 
@@ -1299,7 +1317,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign commit_cu_int.valid = instruction_to_commit.valid;
     assign commit_cu_int.regfile_we = instruction_to_commit.regfile_we;
     assign commit_cu_int.vregfile_we = instruction_to_commit.vregfile_we;
-    assign commit_cu_int.fp_regfile_we = instruction_to_commit.fp_regfile_we;
+    assign commit_cu_int.fregfile_we = instruction_to_commit.fregfile_we;
     assign commit_cu_int.csr_enable = csr_ena_int;
     assign commit_cu_int.stall_csr_fence = instruction_to_commit.stall_csr_fence && instruction_to_commit.valid;
     assign commit_cu_int.xcpt = commit_xcpt;
@@ -1383,11 +1401,11 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
     end
 
-    assign commit_addr_reg  = instruction_to_commit.rd;
+    assign commit_addr_reg   = instruction_to_commit.rd;
     assign commit_addr_vreg  = instruction_to_commit.vd;
-    assign commit_reg_we    = instruction_to_commit.regfile_we && commit_valid;
+    assign commit_reg_we     = instruction_to_commit.regfile_we && commit_valid;
     assign commit_vreg_we    = instruction_to_commit.vregfile_we;
-    assign commit_freg_we    = instruction_to_commit.fp_regfile_we && commit_valid;
+    assign commit_freg_we    = instruction_to_commit.fregfile_we && commit_valid;
 
     // PCcommit_freg_we
     assign pc_if1  = stage_if_1_if_2_d.pc_inst;
