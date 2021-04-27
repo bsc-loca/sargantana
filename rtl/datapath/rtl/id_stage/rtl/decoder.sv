@@ -1239,6 +1239,7 @@ module decoder(
                         F5_FP_FCVT_SD: begin
                             decode_instr_o.instr_type = FCVT_F2F;
                             decode_instr_o.use_fs2 = 1'b0;
+                            check_frm = 1'b1;
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

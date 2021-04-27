@@ -59,6 +59,7 @@ always_comb begin
    dst_fmt         = src_fmt;
    int_fmt         = src_fmt == FP32 ? INT32 : INT64;
    sign_extend_int = 0;
+   op_mod = 0;
 
    operands[0] = instruction_i.data_rs1;
    operands[1] = instruction_i.data_rs2;
@@ -180,9 +181,14 @@ always_comb begin
       // FP to FP
       drac_pkg::FCVT_F2F: begin
          op              = F2F;
-         op_mod          = 1;
-         //rnd_mode_sel    = 1;
-         //opcode_rnd_mode = RTZ;
+         op_mod          = 0;
+         src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
+         add_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
+         if (instruction_i.instr.fmt) begin
+            dst_fmt = FP64;
+         end else begin
+            dst_fmt = FP32;
+         end
       end
       // FP to 
       /*drac_pkg::FMV_X2F: begin
