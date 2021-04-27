@@ -46,18 +46,18 @@ rr_exe_fpu_instr_t instruction_d, instruction_q;
 
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
-      src_fmt = FP64;
+      add_fmt = FP64;
    end else begin
-      src_fmt = FP32;
+      add_fmt = FP32;
    end
 end
 // Operation decoding
 always_comb begin
    rnd_mode_sel    = 0;
    opcode_rnd_mode = RNE;
-   add_fmt         = src_fmt;
-   dst_fmt         = src_fmt;
-   int_fmt         = src_fmt == FP32 ? INT32 : INT64;
+   src_fmt         = add_fmt;
+   dst_fmt         = add_fmt;
+   int_fmt         = add_fmt == FP32 ? INT32 : INT64;
    sign_extend_int = 0;
    op_mod = 0;
 
@@ -183,20 +183,7 @@ always_comb begin
          op              = F2F;
          op_mod          = 0;
          src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
-         add_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
-         if (instruction_i.instr.fmt) begin
-            dst_fmt = FP64;
-         end else begin
-            dst_fmt = FP32;
-         end
       end
-      // FP to 
-      /*drac_pkg::FMV_X2F: begin
-         op              = I2F;
-         op_mod          = 0;
-         rnd_mode_sel    = 1;
-         opcode_rnd_mode = RNE;
-      end*/
       default: begin 
          op     = operation_e'('1); // don't care
          op_mod = DONT_CARE;        // don't care
@@ -204,20 +191,6 @@ always_comb begin
    endcase
 
 end
-
-/*always_comb begin
-   case (sew_i)
-      BINARY32: begin
-         src_fmt      = FP32;
-      end
-      BINARY64: begin
-         src_fmt      = FP64;
-      end
-      default: begin
-         src_fmt      = FP64;
-      end
-   endcase
-end*/
 
 fpuv_top #(
    .Features       ( Features ),
@@ -229,9 +202,9 @@ fpuv_top #(
    // Input
    .operands_i     ( operands ),
    .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : instruction_i.instr.frm),
-   .op_i           ( op ), /// ---???????
-   .op_mod_i       ( op_mod ), /// ??????
-   .src_fmt_i      ( src_fmt ), // FMT mode
+   .op_i           ( op ),
+   .op_mod_i       ( op_mod ),
+   .src_fmt_i      ( src_fmt ),
    .add_fmt_i      ( add_fmt ),
    .dst_fmt_i      ( dst_fmt ),
    .int_fmt_i      ( int_fmt ),
@@ -241,7 +214,7 @@ fpuv_top #(
    .vectorial_op_i ( 'h0 ),
    .tag_i          ( 1'b0 ),
    .in_valid_i     ( instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) && (!instruction_q.instr.valid || result_valid_int) && !(instruction_i.instr.instr_type == FMV_X2F)),
-   .out_ready_i    ( 1'b1 ), // are we always ready???
+   .out_ready_i    ( 1'b1 ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
    .result_o       ( result_int ),
