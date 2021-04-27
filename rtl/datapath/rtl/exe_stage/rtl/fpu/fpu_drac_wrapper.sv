@@ -78,6 +78,7 @@ always_comb begin
       //FCMP,
       // Floating-Point Classify Instruction
       //FCLASS,
+      // Documentation: https://github.com/pulp-platform/fpnew/tree/79f75e0a0fdab6ebc3840a14077c39f4934321fe/docs#parameters
 
       drac_pkg::FADD: begin // addition
          op     = fpuv_pkg::ADD;
