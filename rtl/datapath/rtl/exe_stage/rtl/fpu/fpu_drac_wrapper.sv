@@ -162,26 +162,26 @@ always_comb begin
          op_mod      = 0;
       end   
       drac_pkg::FSGNJ: begin
-         op          = SGNJ;
+         op          = fpuv_pkg::SGNJ;
          op_mod      = 0;
       end
       // FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
       // FP to I
       drac_pkg::FCVT_F2I: begin
-         op          = F2I;
+         op          = fpuv_pkg::F2I;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
          int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
          sign_extend_int = (int_fmt == INT32);
       end
       // I to FP
       drac_pkg::FCVT_I2F: begin
-         op          = I2F;
+         op          = fpuv_pkg::I2F;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
          int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
       end
       // FP to FP
       drac_pkg::FCVT_F2F: begin
-         op              = F2F;
+         op              = fpuv_pkg::F2F;
          op_mod          = 0;
          src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
       end
@@ -240,8 +240,13 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
          instruction_q <= instruction_d;
          sign_extend_q <= sign_extend_int;
       end else if (result_valid_int ) begin
-         instruction_q <= instruction_d;
-         sign_extend_q <= sign_extend_int;
+         if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU) && !(instruction_i.instr.instr_type == FMV_X2F)) begin
+            instruction_q <= instruction_d;
+            sign_extend_q <= sign_extend_int;
+         end else begin
+            instruction_q <= '0;//instruction_d;
+            sign_extend_q <= '0;//sign_extend_int;
+         end
       end else begin
          instruction_q <= instruction_q;
          sign_extend_q <= sign_extend_q;
