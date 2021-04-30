@@ -636,7 +636,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .recover_commit_i(cu_ir_int.recover_commit),
         .commit_old_dst_i(instruction_to_commit.rd),
         .commit_write_dst_i(cu_ir_int.fp_enable_commit_update),
-        .commit_new_dst_i(instruction_to_commit.rd),
+        .commit_new_dst_i(instruction_to_commit.fprd),
         .src1_o(stage_no_stall_rr_q.fprs1),
         .rdy1_o(stage_no_stall_rr_q.frdy1),
         .src2_o(stage_no_stall_rr_q.fprs2),
