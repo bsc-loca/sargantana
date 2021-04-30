@@ -535,7 +535,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_ir_rr_d.instr.fregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .add_free_register_i    (cu_ir_int.fp_enable_commit_update),
-        .free_register_i        (instruction_to_commit.old_pvd),
+        .free_register_i        (instruction_to_commit.old_fprd),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
