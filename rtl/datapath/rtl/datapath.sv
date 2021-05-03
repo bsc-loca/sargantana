@@ -246,6 +246,7 @@ module datapath(
     commit_cu_t commit_cu_int;
     cu_commit_t cu_commit_int;
     logic commit_xcpt;
+    bus64_t commit_xcpt_cause;
     logic commit_store_or_amo_int;
     logic mem_commit_store_or_amo_int;
     
@@ -1312,6 +1313,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
     assign commit_xcpt = (~commit_store_or_amo_int)? instruction_to_commit.exception.valid : exception_mem_commit_int.valid;
+    assign commit_xcpt_cause = (~commit_store_or_amo_int)? instruction_to_commit.exception.cause : exception_mem_commit_int.cause;
 
     // Control Unit From Commit
     assign commit_cu_int.valid = instruction_to_commit.valid;
@@ -1441,7 +1443,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             .data(commit_data),
             .sew(sew_i),
             .xcpt(commit_xcpt),
-            .xcpt_cause(instruction_to_commit.exception.cause),
+            .xcpt_cause(commit_xcpt_cause),
             .csr_priv_lvl(csr_priv_lvl_i),
             .csr_rw_data(req_cpu_csr_o.csr_rw_data),
             .csr_xcpt(resp_csr_cpu_i.csr_exception),
