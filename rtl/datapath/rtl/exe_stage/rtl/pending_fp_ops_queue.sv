@@ -31,8 +31,8 @@ module pending_fp_ops_queue(
     input fpuv_pkg::status_t        result_fp_status_i,
     input logic                     advance_head_i,         // Advance head pointer one position
 
-    output exe_wb_fp_instr_t        finish_instr_fp_o,      // Next Instruction to Write Back FP
-    output exe_wb_scalar_instr_t    finish_instr_scalar_o,  // Next Instruction to Write Back scalar
+    output rr_exe_fpu_instr_t       finish_instr_fp_o,      // Next Instruction to Write Back
+    output fpuv_pkg::status_t       finish_fp_status_o,    // Next fp_status to Write Back
     
     output reg_t                    tag_o,                  // Tag given to the incoming instruction
     output logic                    full_o                  // fifo full
@@ -119,7 +119,9 @@ begin
     end
 end
 
-assign finish_instr_o = ((num > 0) & control_bits_table[head]) ? instruction_table[head] : 'h0;
+assign finish_instr_fp_o = ((num > 0) & control_bits_table[head]) ? instruction_table[head] : 'h0;
+
+assign finish_fp_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
 
 assign full_o  = ((num >= (PMRQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
 

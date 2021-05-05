@@ -20,6 +20,7 @@ import fpuv_wrapper_pkg::*;
    input  logic                     clk_i,
    input  logic                     rstn_i,
    input  logic                     kill_i,
+   input  logic                     stall_wb_i,
    input  rr_exe_fpu_instr_t        instruction_i,
    output exe_wb_fp_instr_t         instruction_o,
    output exe_wb_scalar_instr_t     instruction_scalar_o,
@@ -36,14 +37,15 @@ fp_format_e  add_fmt;
 fp_format_e  dst_fmt;
 int_format_e int_fmt;
 logic ready_fpu;
-fpuv_pkg::status_t result_fp_status_int;
-reg_t tag_current_instr_int;
+fpuv_pkg::status_t result_fp_status_int,finish_fp_status_int;
+reg_t tag_current_instr_int, result_tag_int;
 
 logic sign_extend_int, sign_extend_q;
-logic result_valid_int;
+logic result_valid_int, stall_pending_fp_ops;
 bus64_t result_int;
+logic enable_fp_op_int;
 
-rr_exe_fpu_instr_t instruction_d, instruction_q;
+rr_exe_fpu_instr_t instruction_d, instruction_q, finish_fp_op_int;
 
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
@@ -201,20 +203,23 @@ always_comb begin
 
 end
 
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU); //&& (!instruction_q.instr.valid || result_valid_int);
+
 pending_fp_ops_queue pending_fp_ops_queue_inst (
-    .clk_i(clk_),              // Clock Singal
+    .clk_i(clk_i),              // Clock Singal
     .rstn_i(rstn_i),           // Negated Reset Signal
     .flush_i(kill_i),          // Flush all entries
-    .valid_i(instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & ready_fpu),                // Valid instruction 
+    .valid_i(enable_fp_op_int & ready_fpu),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
     .result_valid_i(result_valid_int),         // Result valid
     .result_tag_i(result_tag_int),           // Instruction that finishes
     .result_data_i(result_int),          // Result asociated data
     .result_fp_status_i(result_fp_status_int),
-    .advance_head_i(result_valid_int),         // Advance head pointer one position
-    .finish_instr_fp_o(),      // Next Instruction to Write Back FP
-    .tag_o(tag_current_instr),                  // Tag given to the incoming instruction
-    .full_o()                  // fifo full
+    .advance_head_i(finish_fp_op_int.instr.valid & !stall_wb_i),         // Advance head pointer one position
+    .finish_instr_fp_o(finish_fp_op_int),      // Next Instruction to Write Back FP
+    .finish_fp_status_o(finish_fp_status_int),  // FP_STATUS
+    .tag_o(tag_current_instr_int),                  // Tag given to the incoming instruction
+    .full_o(stall_pending_fp_ops)                  // fifo full
 );
 
 fpuv_top #(
@@ -238,7 +243,7 @@ fpuv_top #(
    .inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( 'h0 ),
    .tag_i          ( tag_current_instr_int ),
-   .in_valid_i     ( instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) && (!instruction_q.instr.valid || result_valid_int)), //&& !(instruction_i.instr.instr_type == FMV_X2F)),
+   .in_valid_i     ( enable_fp_op_int), //&& !(instruction_i.instr.instr_type == FMV_X2F)),
    .out_ready_i    ( 1'b1 ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
@@ -249,82 +254,29 @@ fpuv_top #(
    .busy_o         ( /* unused */ )
 );
 
-assign instruction_d = instruction_i;
-
-// Instruction inside the FPU
-always_ff @(posedge clk_i, negedge rstn_i) begin
-   if (~rstn_i) begin
-      instruction_q <= '0;
-      sign_extend_q <= '0;
-   end else begin
-      if (kill_i) begin
-         instruction_q <= '0;
-         sign_extend_q <= '0;
-      end else if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU)) begin //&& !(instruction_i.instr.instr_type == FMV_X2F)) begin
-         instruction_q <= instruction_d;
-         sign_extend_q <= sign_extend_int;
-      end else if (result_valid_int ) begin
-         if (ready_fpu && instruction_d.instr.valid && (instruction_d.instr.unit == UNIT_FPU)) begin //&& !(instruction_i.instr.instr_type == FMV_X2F)) begin
-            instruction_q <= instruction_d;
-            sign_extend_q <= sign_extend_int;
-         end else begin
-            instruction_q <= '0;//instruction_d;
-            sign_extend_q <= '0;//sign_extend_int;
-         end
-      end else begin
-         instruction_q <= instruction_q;
-         sign_extend_q <= sign_extend_q;
-      end
-   end   
-end
-
 // Output FPU
 always_comb begin 
-   /*if (instruction_i.instr.instr_type == FMV_X2F) begin
-      instruction_o.result          = instruction_i.instr.fmt ? instruction_i.data_rs1 : {{32{1'b1}},instruction_i.data_rs1[31:0]};
-      instruction_o.valid           = instruction_i.instr.valid; // valid or regfile ena
-      instruction_o.pc              = instruction_i.instr.pc;
-      instruction_o.bpred           = instruction_i.instr.bpred;
-      instruction_o.rs1             = instruction_i.instr.rs1;
-      instruction_o.rd              = instruction_i.instr.rd;
-      instruction_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
-      instruction_o.regfile_we      = instruction_i.instr.fregfile_we;
-      instruction_o.instr_type      = instruction_i.instr.instr_type;
-      instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-      instruction_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
-      instruction_o.fprd            = instruction_i.fprd;
-      instruction_o.checkpoint_done = instruction_i.checkpoint_done;
-      instruction_o.chkp            = instruction_i.chkp;
-      instruction_o.gl_index        = instruction_i.gl_index;
-      instruction_o.ex              = instruction_i.instr.ex;
-      `ifdef VERILATOR
-            instruction_o.id        = instruction_i.instr.id;
-      `endif
+      instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;
+      instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
+      instruction_o.pc              = finish_fp_op_int.instr.pc;
+      instruction_o.bpred           = finish_fp_op_int.instr.bpred;
+      instruction_o.rs1             = finish_fp_op_int.instr.rs1;
+      instruction_o.rd              = finish_fp_op_int.instr.rd;
+      instruction_o.change_pc_ena   = finish_fp_op_int.instr.change_pc_ena;
+      instruction_o.regfile_we      = finish_fp_op_int.instr.fregfile_we;
+      instruction_o.instr_type      = finish_fp_op_int.instr.instr_type;
+      instruction_o.stall_csr_fence = finish_fp_op_int.instr.stall_csr_fence;
+      instruction_o.csr_addr        = finish_fp_op_int.instr.imm[CSR_ADDR_SIZE-1:0];
+      instruction_o.fprd            = finish_fp_op_int.fprd;
+      instruction_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
+      instruction_o.chkp            = finish_fp_op_int.chkp;
+      instruction_o.gl_index        = finish_fp_op_int.gl_index;
+      instruction_o.ex              = finish_fp_op_int.instr.ex;
       instruction_o.branch_taken    = 1'b0;
       instruction_o.result_pc       = 0;
-      instruction_o.fp_status       = fp_status;
-   end else begin*/
-      instruction_o.result          = instruction_q.instr.op_32 ? {{32{1'b1}},result_int[31:0]} : result_int;
-      instruction_o.valid           = result_valid_int && (instruction_q.instr.fregfile_we);
-      instruction_o.pc              = instruction_q.instr.pc;
-      instruction_o.bpred           = instruction_q.instr.bpred;
-      instruction_o.rs1             = instruction_q.instr.rs1;
-      instruction_o.rd              = instruction_q.instr.rd;
-      instruction_o.change_pc_ena   = instruction_q.instr.change_pc_ena;
-      instruction_o.regfile_we      = instruction_q.instr.fregfile_we;
-      instruction_o.instr_type      = instruction_q.instr.instr_type;
-      instruction_o.stall_csr_fence = instruction_q.instr.stall_csr_fence;
-      instruction_o.csr_addr        = instruction_q.instr.imm[CSR_ADDR_SIZE-1:0];
-      instruction_o.fprd            = instruction_q.fprd;
-      instruction_o.checkpoint_done = instruction_q.checkpoint_done;
-      instruction_o.chkp            = instruction_q.chkp;
-      instruction_o.gl_index        = instruction_q.gl_index;
-      instruction_o.ex              = instruction_q.instr.ex;
-      instruction_o.branch_taken    = 1'b0;
-      instruction_o.result_pc       = 0;
-      instruction_o.fp_status       = result_fp_status_int;
+      instruction_o.fp_status       = finish_fp_status_int;
       `ifdef VERILATOR
-         instruction_o.id           = instruction_q.instr.id;
+         instruction_o.id           = finish_fp_op_int.instr.id;
       `endif
    //end
 end 
@@ -332,32 +284,32 @@ end
 
 
 // Stall if the FPU is not ready or there is a fp instruction on flight
-assign stall_o = (!ready_fpu || (instruction_q.instr.valid && !result_valid_int));// && !(instruction_i.instr.instr_type == FMV_X2F);
+assign stall_o = (!ready_fpu | stall_pending_fp_ops);// && !(instruction_i.instr.instr_type == FMV_X2F);
 
 
 // Output FPU scalar
-assign instruction_scalar_o.valid           = result_valid_int && (instruction_q.instr.regfile_we);
-assign instruction_scalar_o.result          = instruction_q.instr.op_32 ? {{32{result_int[31]}},result_int[31:0]} : result_int;
-assign instruction_scalar_o.pc              = instruction_q.instr.pc;
-assign instruction_scalar_o.bpred           = instruction_q.instr.bpred;
-assign instruction_scalar_o.rs1             = instruction_q.instr.rs1;
-assign instruction_scalar_o.rd              = instruction_q.instr.rd;
-assign instruction_scalar_o.change_pc_ena   = instruction_q.instr.change_pc_ena;
-assign instruction_scalar_o.regfile_we      = instruction_q.instr.regfile_we;
-assign instruction_scalar_o.instr_type      = instruction_q.instr.instr_type;
-assign instruction_scalar_o.stall_csr_fence = instruction_q.instr.stall_csr_fence;
-assign instruction_scalar_o.csr_addr        = instruction_q.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_scalar_o.prd             = instruction_q.fprd;
-assign instruction_scalar_o.checkpoint_done = instruction_q.checkpoint_done;
-assign instruction_scalar_o.chkp            = instruction_q.chkp;
-assign instruction_scalar_o.gl_index        = instruction_q.gl_index;
-assign instruction_scalar_o.ex              = instruction_q.instr.ex;
+assign instruction_scalar_o.valid           = finish_fp_op_int.instr.valid && finish_fp_op_int.instr.regfile_we;
+assign instruction_scalar_o.result          = finish_fp_op_int.instr.op_32 ? {{32{finish_fp_op_int.data_rs3[31]}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
+assign instruction_scalar_o.pc              = finish_fp_op_int.instr.pc;
+assign instruction_scalar_o.bpred           = finish_fp_op_int.instr.bpred;
+assign instruction_scalar_o.rs1             = finish_fp_op_int.instr.rs1;
+assign instruction_scalar_o.rd              = finish_fp_op_int.instr.rd;
+assign instruction_scalar_o.change_pc_ena   = finish_fp_op_int.instr.change_pc_ena;
+assign instruction_scalar_o.regfile_we      = finish_fp_op_int.instr.regfile_we;
+assign instruction_scalar_o.instr_type      = finish_fp_op_int.instr.instr_type;
+assign instruction_scalar_o.stall_csr_fence = finish_fp_op_int.instr.stall_csr_fence;
+assign instruction_scalar_o.csr_addr        = finish_fp_op_int.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_scalar_o.prd             = finish_fp_op_int.fprd;
+assign instruction_scalar_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
+assign instruction_scalar_o.chkp            = finish_fp_op_int.chkp;
+assign instruction_scalar_o.gl_index        = finish_fp_op_int.gl_index;
+assign instruction_scalar_o.ex              = finish_fp_op_int.instr.ex;
 `ifdef VERILATOR
 assign instruction_scalar_o.id              = instruction_q.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
-assign instruction_scalar_o.fp_status       = result_fp_status_int;
+assign instruction_scalar_o.fp_status       = finish_fp_status_int;
 
 
 endmodule

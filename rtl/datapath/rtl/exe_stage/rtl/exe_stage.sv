@@ -300,6 +300,7 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
    .kill_i                  (kill_i),
+   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD)),
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
    .instruction_scalar_o    (fp_to_scalar_wb),
