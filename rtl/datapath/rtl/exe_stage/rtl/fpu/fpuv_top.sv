@@ -22,7 +22,7 @@ module fpuv_top #(
   // FPU configuration
   parameter fpuv_pkg::fpu_features_t        Features       = fpuv_pkg::RV64D_Xsflt,
   parameter fpuv_pkg::fpu_implementation_t  Implementation = fpuv_pkg::DEFAULT_NOREGS,
-  parameter type                            TagType        = logic,
+  parameter type                            TagType        = logic[4:0],
   // Do not change
   localparam int unsigned WIDTH        = Features.Width,
   localparam int unsigned NUM_OPERANDS = 3

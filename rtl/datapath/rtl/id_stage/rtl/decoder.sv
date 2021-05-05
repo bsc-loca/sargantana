@@ -1166,6 +1166,8 @@ module decoder(
                             decode_instr_o.use_fs2 = 1'b0;
                             decode_instr_o.fregfile_we = 1'b0;
                             decode_instr_o.regfile_we = 1'b1;
+                            // Check if FMT is FP32 then INT 32 then extens sign
+                            decode_instr_o.op_32   = !decode_instr_o.rs2[1];
                             // Check through rounding modes if illegal instr
                             /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -1231,6 +1233,12 @@ module decoder(
                             decode_instr_o.use_fs2 = 1'b0;
                             decode_instr_o.use_rs1 = 1'b1;
                             decode_instr_o.use_rs2 = 1'b0;
+                            // Check if FMT is FP32 then INT 32 then extens sign
+                            if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                decode_instr_o.op_32   = 1'b1;
+                            end else begin
+                                decode_instr_o.op_32   = 1'b0;
+                            end
                             if (decode_i.inst.fprtype.rm != 3'b000) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
