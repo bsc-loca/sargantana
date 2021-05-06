@@ -45,7 +45,7 @@ logic result_valid_int, stall_pending_fp_ops;
 bus64_t result_int;
 logic enable_fp_op_int;
 
-rr_exe_fpu_instr_t instruction_d, instruction_q, finish_fp_op_int;
+rr_exe_fpu_instr_t finish_fp_op_int;
 
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
@@ -203,7 +203,7 @@ always_comb begin
 
 end
 
-assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU); //&& (!instruction_q.instr.valid || result_valid_int);
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU);
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
@@ -243,7 +243,7 @@ fpuv_top #(
    .inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( 'h0 ),
    .tag_i          ( tag_current_instr_int ),
-   .in_valid_i     ( enable_fp_op_int), //&& !(instruction_i.instr.instr_type == FMV_X2F)),
+   .in_valid_i     ( enable_fp_op_int),
    .out_ready_i    ( 1'b1 ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
@@ -280,11 +280,10 @@ always_comb begin
       `endif
    //end
 end 
-//assign instruction_o.result          = result_int;
 
 
 // Stall if the FPU is not ready or there is a fp instruction on flight
-assign stall_o = (!ready_fpu | stall_pending_fp_ops);// && !(instruction_i.instr.instr_type == FMV_X2F);
+assign stall_o = (!ready_fpu | stall_pending_fp_ops);
 
 
 // Output FPU scalar
@@ -305,7 +304,7 @@ assign instruction_scalar_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_scalar_o.gl_index        = finish_fp_op_int.gl_index;
 assign instruction_scalar_o.ex              = finish_fp_op_int.instr.ex;
 `ifdef VERILATOR
-assign instruction_scalar_o.id              = instruction_q.instr.id;
+assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;

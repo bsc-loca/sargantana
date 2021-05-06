@@ -98,6 +98,7 @@ parameter LSQ_NUM_ENTRIES = 8;
 
 // Pending Mem Request Queue
 parameter PMRQ_NUM_ENTRIES = 16;
+parameter PFPQ_NUM_ENTRIES = 8;
 
 // SIMD
 typedef logic [1:0] fu_id_t;

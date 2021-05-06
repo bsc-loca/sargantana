@@ -14,7 +14,7 @@
 import drac_pkg::*;
 
 
-//typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
+//typedef logic [$clog2(PFPQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
 
 module pending_fp_ops_queue(
     input logic                     clk_i,                  // Clock Singal
@@ -48,7 +48,7 @@ pmrq_entry_pointer tail;
 pmrq_entry_pointer head;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(PMRQ_NUM_ENTRIES):0] num;
+logic [$clog2(PFPQ_NUM_ENTRIES):0] num;
 
 // Internal Control Signals
 logic write_enable;
@@ -60,7 +60,7 @@ assign tag_o = tag_int;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = valid_i & instruction_i.instr.valid & (num < PMRQ_NUM_ENTRIES);
+assign write_enable = valid_i & instruction_i.instr.valid & (num < PFPQ_NUM_ENTRIES);
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
@@ -71,29 +71,47 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 
 // FIFO Memory structure
-rr_exe_fpu_instr_t  instruction_table           [0:PMRQ_NUM_ENTRIES-1];
-fpuv_pkg::status_t  instruction_table_status    [0:PMRQ_NUM_ENTRIES-1];
-reg_t               tag_table                   [0:PMRQ_NUM_ENTRIES-1];
-logic               control_bits_table          [0:PMRQ_NUM_ENTRIES-1];
+rr_exe_fpu_instr_t  instruction_table           [0:PFPQ_NUM_ENTRIES-1];
+fpuv_pkg::status_t  instruction_table_status    [0:PFPQ_NUM_ENTRIES-1];
+reg_t               tag_table                   [0:PFPQ_NUM_ENTRIES-1];
+logic               control_bits_table          [0:PFPQ_NUM_ENTRIES-1];
+logic               valid_table                 [0:PFPQ_NUM_ENTRIES-1];
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
-    // Write tail
-    if (write_enable) begin
-        instruction_table[tail]  <= instruction_i;
-        tag_table[tail]          <= tag_int;
-        control_bits_table[tail] <= 1'b0;
+    if (~rstn_i) begin
+        for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
+            valid_table[j] <= 1'b0;
+        end
     end
-    
-    // Table initial state
-    if(result_valid_i) begin
-        for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
-            if (tag_table[j] == result_tag_i) begin
-                control_bits_table[j] <= 1'b1;
-                instruction_table[j].data_rs3 <= result_data_i;
-                instruction_table_status[j]   <= result_fp_status_i;
+    else if (flush_i) begin
+        for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
+            valid_table[j] <= 1'b0;
+        end
+    end else begin
+        if (write_enable) begin
+            instruction_table[tail]  <= instruction_i;
+            tag_table[tail]          <= tag_int;
+            control_bits_table[tail] <= 1'b0;
+            valid_table[tail]        <= 1'b1;
+        end
+        
+        // Table initial state
+        if(result_valid_i) begin
+            for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
+                if (tag_table[j] == result_tag_i && valid_table[j]) begin
+                    control_bits_table[j] <= 1'b1;
+                    instruction_table[j].data_rs3 <= result_data_i;
+                    instruction_table_status[j]   <= result_fp_status_i;
+                end
             end
         end
+
+        if (advance_head_enable) begin
+            valid_table[head] <= 1'b0;
+        end
+
+
     end
 end
 
@@ -123,7 +141,7 @@ assign finish_instr_fp_o = ((num > 0) & control_bits_table[head]) ? instruction_
 
 assign finish_fp_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
 
-assign full_o  = ((num >= (PMRQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
+assign full_o  = ((num >= (PFPQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
 
 endmodule
 
