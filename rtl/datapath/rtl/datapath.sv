@@ -1104,6 +1104,8 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
     end
 
+    always @(posedge clk_i)  assert (!(exe_to_wb_scalar_simd_fp[0].valid & exe_to_wb_scalar_simd_fp[1].valid));
+
     register #(NUM_SCALAR_WB * $bits(exe_wb_scalar_instr_t) + NUM_SIMD_WB * $bits(exe_wb_simd_instr_t) + NUM_FP_WB * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),

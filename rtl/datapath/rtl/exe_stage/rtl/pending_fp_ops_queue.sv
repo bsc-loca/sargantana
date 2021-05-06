@@ -14,7 +14,7 @@
 import drac_pkg::*;
 
 
-//typedef logic [$clog2(PFPQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
+typedef logic [$clog2(PFPQ_NUM_ENTRIES)-1:0] pfpq_entry_pointer;
 
 module pending_fp_ops_queue(
     input logic                     clk_i,                  // Clock Singal
@@ -42,10 +42,10 @@ module pending_fp_ops_queue(
 reg_t tag_int;
 
 // Points to the next available entry
-pmrq_entry_pointer tail;
+pfpq_entry_pointer tail;
 
 // Points to the oldest executed entry
-pmrq_entry_pointer head;
+pfpq_entry_pointer head;
 
 //Num must be 1 bit bigger than head an tail
 logic [$clog2(PFPQ_NUM_ENTRIES):0] num;
