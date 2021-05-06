@@ -141,7 +141,7 @@ assign finish_instr_fp_o = ((num > 0) & control_bits_table[head]) ? instruction_
 
 assign finish_fp_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
 
-assign full_o  = ((num >= (PFPQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
+assign full_o  = ((num >= PFPQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
 endmodule
 

@@ -203,7 +203,7 @@ always_comb begin
 
 end
 
-assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU);
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops;
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
@@ -255,31 +255,28 @@ fpuv_top #(
 );
 
 // Output FPU
-always_comb begin 
-      instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;
-      instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
-      instruction_o.pc              = finish_fp_op_int.instr.pc;
-      instruction_o.bpred           = finish_fp_op_int.instr.bpred;
-      instruction_o.rs1             = finish_fp_op_int.instr.rs1;
-      instruction_o.rd              = finish_fp_op_int.instr.rd;
-      instruction_o.change_pc_ena   = finish_fp_op_int.instr.change_pc_ena;
-      instruction_o.regfile_we      = finish_fp_op_int.instr.fregfile_we;
-      instruction_o.instr_type      = finish_fp_op_int.instr.instr_type;
-      instruction_o.stall_csr_fence = finish_fp_op_int.instr.stall_csr_fence;
-      instruction_o.csr_addr        = finish_fp_op_int.instr.imm[CSR_ADDR_SIZE-1:0];
-      instruction_o.fprd            = finish_fp_op_int.fprd;
-      instruction_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
-      instruction_o.chkp            = finish_fp_op_int.chkp;
-      instruction_o.gl_index        = finish_fp_op_int.gl_index;
-      instruction_o.ex              = finish_fp_op_int.instr.ex;
-      instruction_o.branch_taken    = 1'b0;
-      instruction_o.result_pc       = 0;
-      instruction_o.fp_status       = finish_fp_status_int;
-      `ifdef VERILATOR
-         instruction_o.id           = finish_fp_op_int.instr.id;
-      `endif
-   //end
-end 
+assign instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;
+assign instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
+assign instruction_o.pc              = finish_fp_op_int.instr.pc;
+assign instruction_o.bpred           = finish_fp_op_int.instr.bpred;
+assign instruction_o.rs1             = finish_fp_op_int.instr.rs1;
+assign instruction_o.rd              = finish_fp_op_int.instr.rd;
+assign instruction_o.change_pc_ena   = finish_fp_op_int.instr.change_pc_ena;
+assign instruction_o.regfile_we      = finish_fp_op_int.instr.fregfile_we;
+assign instruction_o.instr_type      = finish_fp_op_int.instr.instr_type;
+assign instruction_o.stall_csr_fence = finish_fp_op_int.instr.stall_csr_fence;
+assign instruction_o.csr_addr        = finish_fp_op_int.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_o.fprd            = finish_fp_op_int.fprd;
+assign instruction_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
+assign instruction_o.chkp            = finish_fp_op_int.chkp;
+assign instruction_o.gl_index        = finish_fp_op_int.gl_index;
+assign instruction_o.ex              = finish_fp_op_int.instr.ex;
+assign instruction_o.branch_taken    = 1'b0;
+assign instruction_o.result_pc       = 0;
+assign instruction_o.fp_status       = finish_fp_status_int;
+`ifdef VERILATOR
+   assign instruction_o.id           = finish_fp_op_int.instr.id;
+`endif 
 
 
 // Stall if the FPU is not ready or there is a fp instruction on flight
