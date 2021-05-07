@@ -789,21 +789,6 @@ module decoder(
                                 F6_VADD: begin
                                     decode_instr_o.instr_type = VADD;
                                 end
-                                F6_VSUB: begin
-                                    decode_instr_o.instr_type = VSUB;
-                                end
-                                F6_VMIN: begin
-                                    decode_instr_o.instr_type = VMIN;
-                                end
-                                F6_VMINU: begin
-                                    decode_instr_o.instr_type = VMINU;
-                                end
-                                F6_VMAX: begin
-                                    decode_instr_o.instr_type = VMAX;
-                                end
-                                F6_VMAXU: begin
-                                    decode_instr_o.instr_type = VMAXU;
-                                end
                                 F6_VAND: begin
                                     decode_instr_o.instr_type = VAND;
                                 end

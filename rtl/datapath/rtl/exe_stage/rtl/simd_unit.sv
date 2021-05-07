@@ -223,7 +223,7 @@ always_comb begin
 end
 
 //Produce the scalar and vector wb structs
-assign instruction_scalar_o.valid = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD);
+assign instruction_scalar_o.valid = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD) & instruction_i.instr.regfile_we;
 assign instruction_scalar_o.pc    = instruction_i.instr.pc;
 assign instruction_scalar_o.bpred = instruction_i.instr.bpred;
 assign instruction_scalar_o.rs1   = instruction_i.instr.rs1;
@@ -244,7 +244,7 @@ assign instruction_scalar_o.result_pc = 0;
 assign instruction_scalar_o.id = instruction_i.instr.id;
 `endif
 
-assign instruction_simd_o.valid = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD);
+assign instruction_simd_o.valid = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD) & instruction_i.instr.vregfile_we;
 assign instruction_simd_o.pc    = instruction_i.instr.pc;
 assign instruction_simd_o.bpred = instruction_i.instr.bpred;
 assign instruction_simd_o.rs1   = instruction_i.instr.rs1;

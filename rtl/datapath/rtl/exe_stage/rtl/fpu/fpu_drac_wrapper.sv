@@ -284,7 +284,7 @@ assign stall_o = (!ready_fpu | stall_pending_fp_ops);
 
 
 // Output FPU scalar
-assign instruction_scalar_o.valid           = finish_fp_op_int.instr.valid && finish_fp_op_int.instr.regfile_we;
+assign instruction_scalar_o.valid           = finish_fp_op_int.instr.valid && finish_fp_op_int.instr.regfile_we && !stall_wb_i;
 assign instruction_scalar_o.result          = finish_fp_op_int.instr.op_32 ? {{32{finish_fp_op_int.data_rs3[31]}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
 assign instruction_scalar_o.pc              = finish_fp_op_int.instr.pc;
 assign instruction_scalar_o.bpred           = finish_fp_op_int.instr.bpred;
