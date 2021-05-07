@@ -86,7 +86,7 @@ assign w_data[79:60] = data_i;
 `endif
 
 `ifdef MEMS_22NM
-  IN22FDX_R1DH_NFHN_W00128B048M02C256 MDArray_tag_A_l1 (
+  IN22FDX_R1PH_NFHN_W00128B048M02C256 MDArray_tag_A_l1 (
     .CLK(clk_i),
     .CEN(1'b0), // chip_enable??
     .RDWEN(write_enable),
@@ -102,7 +102,7 @@ assign w_data[79:60] = data_i;
     .Q(q_sram[47:0])
   );
   
-  IN22FDX_R1DH_NFHN_W00128B048M02C256 MDArray_tag_B_l1 (
+  IN22FDX_R1PH_NFHN_W00128B048M02C256 MDArray_tag_B_l1 (
     .CLK(clk_i),
     .CEN(1'b0), // chip_enable??
     .RDWEN(write_enable),
@@ -152,4 +152,3 @@ assign tag_way_o[2] = q_sram[59:40];
 assign tag_way_o[3] = q_sram[79:60];
 
 endmodule
-
