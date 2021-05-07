@@ -231,7 +231,7 @@ fpuv_top #(
    .flush_i        ( kill_i ),
    // Input
    .operands_i     ( operands ),
-   .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : instruction_i.instr.frm),
+   .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : roundmode_e'(instruction_i.instr.frm)),
    .op_i           ( op ),
    .op_mod_i       ( op_mod ),
    .src_fmt_i      ( src_fmt ),

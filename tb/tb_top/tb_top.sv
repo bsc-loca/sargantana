@@ -111,7 +111,7 @@ module tb_top();
         .CSR_EVEC(tb_csr_evec),
         .CSR_INTERRUPT(tb_csr_interrupt),
         .CSR_INTERRUPT_CAUSE(tb_csr_interrupt_cause),
-        .CSR_SEW(SEW_16),
+        .csr_vpu_data_i(40'h0),
 
         .PTWINVALIDATE(1'b0),
         .TLB_RESP_MISS(1'b0),
@@ -294,7 +294,7 @@ module tb_top();
             #N4000_CLK_PERIOD;
             pr <= top_drac_inst.datapath_inst.rename_table_inst.commit_table[3];
             #CLK_PERIOD;
-            if (top_drac_inst.datapath_inst.regfile.registers[pr] == 1) begin
+            if (top_drac_inst.datapath_inst.regfile_inst.registers[pr] == 1) begin
                 //FAIL
                 tmp = 0;
             end else begin

@@ -322,8 +322,8 @@ assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
 assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
 assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
 
-logic [1:0] sew;
-assign sew = csr_vpu_data_i[37:36];
+sew_t sew;
+assign sew = sew_t'(csr_vpu_data_i[37:36]);
 
 datapath datapath_inst(
     .clk_i(CLK),
