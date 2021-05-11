@@ -435,7 +435,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         xcpt_addr_s2_q       <= 'h0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <= 'h0;
-    end else if (reset_next_lsq) begin       // In case of miss flush the pipeline
+    end else if (reset_next_lsq || flush_to_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <= 'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         is_STORE_s1_q        <= 1'b0;

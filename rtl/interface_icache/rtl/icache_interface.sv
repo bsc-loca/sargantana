@@ -68,7 +68,6 @@ logic tlb_resp_xcp_if_int;
 
 // Icache_interface can do request to icache
 assign do_request_int = req_fetch_icache_i.valid                & 
-                        ~req_fetch_icache_i.invalidate_buffer   & 
                         icache_req_ready_i                      ;
 
 //assign is_same_addr = (icache_resp_vaddr_i[ADDR_SIZE-1:4] == req_fetch_icache_i.vaddr[ADDR_SIZE-1:4]);
@@ -131,7 +130,7 @@ always_comb begin
     end
 end
 
-assign resp_icache_fetch_o.valid =  (tlb_resp_xcp_if_int) || icache_resp_valid_i;
+assign resp_icache_fetch_o.valid =  (tlb_resp_xcp_if_i) || icache_resp_valid_i;
 assign resp_icache_fetch_o.instr_page_fault = tlb_resp_xcp_if_i;
 assign req_fetch_ready_o = icache_req_ready_i;
 
