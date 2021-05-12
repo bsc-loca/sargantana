@@ -189,9 +189,9 @@ typedef enum logic [3:0]{
     UNIT_BRANCH,                // Select Branch computation
     UNIT_MEM,                   // Select Memory unit
     UNIT_SIMD,                  // Select SIMD
+    UNIT_FPU,                   // Select FPU
     UNIT_CONTROL,               // Select CONTROL
-    UNIT_SYSTEM,                // Select CSR
-    UNIT_FPU
+    UNIT_SYSTEM                // Select CSR
 } functional_unit_t;   // Selection of funtional unit in exe stage 
 
 typedef enum logic [1:0]{
@@ -663,7 +663,7 @@ typedef struct packed {
 typedef struct packed {
     logic valid;                        // Valid instruction
     logic valid_jal;                    // JAL is valid
-    logic stall_csr_fence;              // CSR or fence
+    logic stall_csr_fence;              // CSR or fenceEPI_RV64D
     logic is_branch;                    // Decode instruction is a branch
     logic predicted_as_branch;          // Decode instruction was predicted as branch
 } id_cu_t;      // Decode to Control Unit
@@ -962,7 +962,7 @@ typedef struct packed {
 
 localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
       Width:         64,
-      EnableVectors: 1'b0, // guillemlp do not do vectors i guess?
+      EnableVectors: 1'b0,
       EnableNanBox:  1'b1,
       FpFmtMask:     5'b11000,
       IntFmtMask:    4'b0011
@@ -980,7 +980,7 @@ localparam fpuv_pkg::fpu_implementation_t EPI_INIT = '{
     PipeConfig: fpuv_pkg::DISTRIBUTED
 };
 
-localparam int unsigned DIVSQRT_ITER = 1; //This parameter configure the number of iterations per cycle of the divsqrt unit.
+localparam int unsigned DIVSQRT_ITER = 3; //This parameter configure the number of iterations per cycle of the divsqrt unit.
 localparam int unsigned SEW_WIDTH = 3;
 typedef enum logic [SEW_WIDTH - 1 : 0] {
     BINARY32 = 'b010,

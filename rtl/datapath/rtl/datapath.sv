@@ -1487,13 +1487,28 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
             .exe_id(stage_rr_exe_q.instr.id),
             .exe_stall(control_int.stall_exe),
             .exe_flush(flush_int.flush_exe),
-            //.exe_unit(reg_to_exe.instr.unit),
+            .exe_unit(reg_to_exe.instr.unit),
 
             .wb1_valid(wb_scalar[0].valid),
             .wb1_id(wb_scalar[0].id),
 
             .wb2_valid(wb_scalar[1].valid),
-            .wb2_id(wb_scalar[1].id)
+            .wb2_id(wb_scalar[1].id),
+            // Scalar 
+            .wb3_valid(wb_scalar[2].valid),
+            .wb3_id(wb_scalar[2].id),
+            // FP 1
+            .wb1_fp_valid(wb_fp[0].valid),
+            .wb1_fp_id(wb_fp[0].id),
+            // FP 2
+            .wb2_fp_valid(wb_fp[1].valid),
+            .wb2_fp_id(wb_fp[1].id),
+            // SIMD 1
+            .wb1_simd_valid(wb_simd[0].valid),
+            .wb1_simd_id(wb_simd[0].id),
+            // SIMD 2
+            .wb2_simd_valid(wb_simd[1].valid),
+            .wb2_simd_id(wb_simd[1].id)
         );
     `endif
 `endif
