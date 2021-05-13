@@ -27,7 +27,7 @@ bus_simd_t rs1_replicated;
 bus_simd_t data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of data_vd
 
-//We replicate rs1 taking the sew into account
+//We replicate rs1 or imm taking the sew into account
 always_comb begin
     case (instruction_i.sew)
         SEW_8: begin
@@ -57,11 +57,12 @@ always_comb begin
     endcase
 end
 
-//The source operands are separated into an array of elements, each of which
-//go into the functional units
+//The source operands are separated into an array of 64-bit wide elements, each of which
+//go into the Functional Units
 genvar i;
 generate
     for (i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
+        //vs1 is either the data_vs1, or the replicated rs1/imm
         assign vs1_elements[i] = instruction_i.instr.is_opvx | instruction_i.instr.is_opvi ? 
                                  rs1_replicated[((i+1)*DATA_SIZE)-1:(i*DATA_SIZE)] : 
                                  instruction_i.data_vs1[((i+1)*DATA_SIZE)-1:(i*DATA_SIZE)];
@@ -75,6 +76,7 @@ generate
             .data_vd_o     (vd_elements[i])
         );
 
+        //The result of the FUs are concatenated into the result data
         assign data_vd[((i+1)*drac_pkg::DATA_SIZE)-1:(i*drac_pkg::DATA_SIZE)] = vd_elements[i];
     end
 endgenerate
@@ -82,12 +84,13 @@ endgenerate
 bus64_t ext_element;
 logic found_first_zero;
 
-//Compute the result of operations that don't operate vector element
+//Compute the result of operations that don't operate on vector element
 //granularity, and produce a scalar result
 always_comb begin
     ext_element = 'h0;
     found_first_zero = 1'b0;
     if (instruction_i.instr.instr_type == VMV_X_S) begin
+        //Extract element 0
         case (instruction_i.sew)
             SEW_8: begin
                 data_rd = {55'h0, vs2_elements[0]};
@@ -103,6 +106,7 @@ always_comb begin
             end
         endcase
     end else if (instruction_i.instr.instr_type == VEXT) begin
+        //Extract element specified by rs1
         case (instruction_i.sew)
             SEW_8: begin
                 if (instruction_i.data_rs1 >= VELEMENTS*8) begin
@@ -154,6 +158,9 @@ always_comb begin
             end
         endcase
     end else if (instruction_i.instr.instr_type == VCNT) begin
+        //Vector count equals
+        //Uses the result of the FUs, which performed a vseq, and counts
+        //consecutive '1's
         case (instruction_i.sew)
             SEW_8: begin
                 for (int i = 0; i<VLEN/8; ++i) begin
@@ -188,6 +195,7 @@ end
 bus_simd_t masked_data_vd;
 
 //Apply the mask to the vector result
+//Unaffected elements are filled with the old vd data
 always_comb begin
     masked_data_vd = instruction_i.data_old_vd;
     case (instruction_i.sew)

@@ -15,11 +15,11 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module functional_unit (
-    input fu_id_t               fu_id_i,
-    input rr_exe_simd_instr_t   instruction_i,
-    input bus64_t               data_vs1_i,
-    input bus64_t               data_vs2_i,
-    output bus64_t              data_vd_o
+    input fu_id_t               fu_id_i,        // Functional Unit's ID
+    input rr_exe_simd_instr_t   instruction_i,  // Instruction input
+    input bus64_t               data_vs1_i,     // 64-bit source operand 1
+    input bus64_t               data_vs2_i,     // 64-bit source operand 2
+    output bus64_t              data_vd_o       // 64-bit result
 );
 
 bus64_t result_vaddsub;
