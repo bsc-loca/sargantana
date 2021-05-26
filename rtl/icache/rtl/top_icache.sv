@@ -75,6 +75,7 @@ logic cmp_enable        ;
 logic cmp_enable_q      ;
 logic treq_valid        ;
 logic valid_bit         ;
+logic valid_ifill_resp  ;
 
 logic ifill_req_was_sent_d;
 logic ifill_req_was_sent_q;
@@ -82,7 +83,7 @@ logic ifill_req_was_sent_q;
 logic ifill_process_started_d   ;
 logic ifill_process_started_q   ;
 logic tag_we                    ;
-logic block_invalidate         ;
+logic block_invalidate          ;
 
 tresp_i_t  mmu_tresp_d;  
 tresp_i_t  mmu_tresp_q; 
@@ -185,8 +186,7 @@ top_memory icache_memory(
     .tag_we_i    ( tag_we  ),
     .data_we_i   ( cache_wr_ena ),
     .flush_en_i  ( is_flush_d ),
-    //.we_valid_bit_i ( tag_we || block_invalidate )
-    .valid_bit_i ( valid_bit ),
+    .valid_bit_i ( valid_bit),
     .cline_i     ( ifill_resp_i.data ),
     .tag_i       ( cline_tag_q ),
     .addr_i      ( addr_valid ),

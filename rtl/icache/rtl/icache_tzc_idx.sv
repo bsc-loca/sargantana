@@ -9,6 +9,7 @@
  * Revision History
  *  Revision   | Author    | Commit | Description
  *  ******     | Neiel L.  |        | 
+ *  0.1        | Gerard C. |        | Changed the method to a decoder
  * -----------------------------------------------
  */
 
@@ -17,18 +18,22 @@ import drac_icache_pkg::*;
 // A trailing zero counter
 module icache_tzc_idx(
   input  logic         [ICACHE_N_WAY-1:0] in_i          ,
-  output logic [$clog2(ICACHE_N_WAY)-1:0] way_o   
+  output logic [ICACHE_N_WAY_CLOG2-1:0] way_o   
 );
 
-// zeros counter
+// The above solution gives too many warnings, we should opt for a decoder
+// THIS ONLY WORKS BECAUSE ICACHE_N_WAY = 4
+// If the parameter changes this should change accordingly
+
 always_comb begin
     way_o    = '0;
-    for (int unsigned i = 0; i < ICACHE_N_WAY; i++) begin
-        if (in_i[i]) begin
-            way_o = i[$clog2(ICACHE_N_WAY)-1:0];
-            break ;
-        end
-    end
+    if (in_i[0]) way_o = 2'b00;
+    else if (in_i[1]) way_o = 2'b01;
+    else if (in_i[2]) way_o = 2'b10;
+    else if (in_i[3]) way_o = 2'b11;
+    else way_o = '0;
 end
+
+
 
 endmodule 

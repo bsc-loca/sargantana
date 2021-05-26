@@ -119,13 +119,13 @@ always_comb begin
             replay_valid_o    = 1'b0;
         end
         TLB_MISS: begin//011
-            state_d = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i) ? READ      :
-                                                         (mmu_ptw_valid_i) ? REPLAY_TLB:
-                                                                             TLB_MISS  ;
-                                                                                     
-            treq_valid_o      = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill);
-            cmp_enable_o      = cache_enable_i ;
-            cache_rd_ena_o    = ( !mmu_miss_i && !mmu_ex_valid_i && !is_flush_or_kill) ;
+            state_d = ( is_flush_or_kill && !mmu_ptw_valid_i ) ? KILL_TLB   :
+                      ( mmu_ex_valid_i   || is_flush_or_kill ) ? READ       :
+                      ( mmu_ptw_valid_i                      ) ? REPLAY_TLB :
+                                             TLB_MISS   ;                                             
+            treq_valid_o      = 1'b0 ;
+            cmp_enable_o      = 1'b0 ;
+            cache_rd_ena_o    = 1'b0 ;
             iresp_valid_o     = (mmu_ex_valid_i);
             miss_o            = 1'b0 ;
             miss_kill_o       = 1'b0 ;//PMU
@@ -133,7 +133,7 @@ always_comb begin
             ifill_req_valid_o = 1'b0 ;
             cache_wr_ena_o    = 1'b0 ;
             flush_en_o        = flush_i ;
-            replay_valid_o    = ( is_flush_or_kill || mmu_ex_valid_i || !mmu_miss_i);
+            replay_valid_o    = 1'b0 ;
         end
 
         REPLAY: begin //100
@@ -151,11 +151,11 @@ always_comb begin
             replay_valid_o    = (!is_flush_or_kill && !mmu_ex_valid_i );
         end
         KILL: begin //101
-            //- It must wait to translation response and data will be ignored.
+            //- data will be ignored.
             state_d = (!ifill_sent_ack_i) ? READ : KILL;
             cmp_enable_o      = 1'b0  ;
             iresp_ready_o     = 1'b0  ;
-            iresp_valid_o     = mmu_ex_valid_i  ;
+            iresp_valid_o     = 1'b0  ;
             cache_rd_ena_o    = 1'b0  ;
             cache_wr_ena_o    = 1'b0  ;
             miss_o            = 1'b0  ;
@@ -178,6 +178,21 @@ always_comb begin
             ifill_req_valid_o = 1'b0  ;
             flush_en_o        = flush_i  ;
             replay_valid_o    = 1'b1;
+        end
+        KILL_TLB: begin //111
+            //- It must wait to translation response
+            state_d = (mmu_ptw_valid_i) ? READ : KILL_TLB;
+            cmp_enable_o      = 1'b0  ;
+            iresp_ready_o     = 1'b0  ;
+            iresp_valid_o     = 1'b0  ;
+            cache_rd_ena_o    = 1'b0  ;
+            cache_wr_ena_o    = 1'b0  ;
+            miss_o            = 1'b0  ;
+            miss_kill_o       = 1'b0  ;//PMU
+            treq_valid_o      = 1'b0  ;
+            ifill_req_valid_o = 1'b0  ;
+            flush_en_o        = 1'b0  ;
+            replay_valid_o    = 1'b0;
         end
         default: begin
             state_d           = READ  ;
