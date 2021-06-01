@@ -24,6 +24,7 @@ localparam int unsigned ASSOCIATIVE  = 4            ; //- Size of a set.
 localparam int unsigned ICACHE_DEPTH = 256          ; //- .
 
 localparam int unsigned ICACHE_N_WAY = 4                        ; //- Ways number.
+localparam int unsigned ICACHE_N_WAY_CLOG2 = $clog2( ICACHE_N_WAY );
 localparam int unsigned TAG_WIDHT    = 20                       ; //- Tag size.
 localparam int unsigned TAG_DEPTH    = ICACHE_DEPTH/ASSOCIATIVE ; //- .
 localparam int unsigned ADDR_WIDHT   = $clog2( ICACHE_DEPTH )   ; //- icache Addr vector
@@ -80,7 +81,8 @@ typedef enum logic[2:0] {NO_REQ,
                          TLB_MISS, 
                          REPLAY, 
                          KILL,
-                         REPLAY_TLB
+                         REPLAY_TLB,
+                         KILL_TLB
                      } ictrl_state_t;
 
 //------------------------------------------------------
