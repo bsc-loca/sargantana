@@ -85,8 +85,8 @@ always_comb begin
             end
             VSETVLI,
             VSETVL: begin
-                csr_cmd_int = CSR_CMD_VSELVL; //TODO: vsetvl with x0 implies infinite vl
-                csr_rw_data_int = instruction_to_commit_i.result;
+                csr_cmd_int = (instruction_to_commit_i.rs1 == 'h0) ? CSR_CMD_N2 : CSR_CMD_VSELVL;
+                csr_rw_data_int = (instruction_to_commit_i.rs1 == 'h0 && instruction_to_commit_i.rd == 'h0) ? 64'b1 : instruction_to_commit_i.result;
                 csr_ena_int = 1'b1;
             end
             default: begin
