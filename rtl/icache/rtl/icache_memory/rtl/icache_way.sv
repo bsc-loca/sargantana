@@ -71,7 +71,7 @@ module icache_way (
     `endif
  
     `ifdef MEMS_22NM 
-    IN22FDX_R1PH_NFHN_W00256B128M02C256 L1InstArray (
+    IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
         .CLK(clk_i),
         .CEN(1'b0),
         .RDWEN(~write_enable),
