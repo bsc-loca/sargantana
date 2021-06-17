@@ -146,7 +146,7 @@ module decoder(
                     jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
                                         !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
                                         (decode_i.bpred.decision == PRED_TAKEN));
-                    if (!xcpt_addr_misaligned_int && decode_i.valid && ras_link_rd_int) begin
+                    if (!xcpt_addr_misaligned_int && decode_i.valid && ras_link_rd_int && !stall_i) begin
                         ras_push_int = 1'b1;
                     end
                     
@@ -163,7 +163,7 @@ module decoder(
                     if (decode_i.inst.itype.func3 != 'h0) begin
                         xcpt_illegal_instruction_int = 1'b1;
                     end
-                    if (!xcpt_addr_misaligned_int && decode_i.valid) begin
+                    if (!xcpt_addr_misaligned_int && decode_i.valid && !stall_i) begin
                         if (!ras_link_rd_int && ras_link_rs1_int) begin
                             ras_pop_int = 1'b1;
                         end else if (ras_link_rd_int && !ras_link_rs1_int) begin
@@ -176,8 +176,8 @@ module decoder(
                         end
                     end
                     jal_id_if_o.jump_addr = ras_pc_int; 
-                    jal_id_if_o.valid = ras_pop_int && !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
-                                        (decode_i.bpred.decision == PRED_TAKEN) && !flush_i && !stall_i);
+                    jal_id_if_o.valid = !xcpt_addr_misaligned_int && decode_i.valid && ras_link_rs1_int && (!ras_link_rd_int || decode_instr_o.rs1 != decode_instr_o.rd) && // ras_pop_int 
+                                        !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & (decode_i.bpred.decision == PRED_TAKEN) && !flush_i && !stall_i);
 
                     decode_instr_o.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
                     decode_instr_o.bpred.decision = (jal_id_if_o.valid || decode_i.bpred.decision == PRED_TAKEN) 
