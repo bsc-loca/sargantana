@@ -153,7 +153,7 @@ always_comb begin
                                     dmem_req_cmd_o = 5'b01111; // amomaxu
                                     type_of_op = MEM_AMO;
         end
-        LD,LW,LWU,LH,LHU,LB,LBU,FLD,FLW: begin
+        LD,LW,LWU,LH,LHU,LB,LBU,VLE,FLD,FLW: begin
                                     dmem_req_cmd_o = 5'b00000; // Load
                                     type_of_op = MEM_LOAD;
         end
