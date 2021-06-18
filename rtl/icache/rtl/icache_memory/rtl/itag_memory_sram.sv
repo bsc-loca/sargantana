@@ -85,26 +85,49 @@ assign w_data[79:60] = data_i;
 `endif
 
 `ifdef MEMS_22NM
-  logic [79:0] q_sram;
-  IN22FDX_R1PH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
-    .CLK(clk_i),
-    .CEN(1'b0), // chip_enable??
-    .RDWEN(write_enable),
-    .AW(address[5:1]), // Port-A address word line inputs 
-    .AC(address[0]), // POrt-A address column inputs 
-    .D(write_data), // Data 
-    .BW(~write_mask), // Mask 
-    .T_LOGIC(1'b0), // Test logic, active high? 
-    .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
-    .MA_WL(1'b0),
-    .MA_WRAS(1'b0),
-    .MA_WRASD(1'b0),
-    .Q(q_sram)
-  );
-  assign tag_way_o[0] = q_sram[19:0];
-  assign tag_way_o[1] = q_sram[39:20];
-  assign tag_way_o[2] = q_sram[59:40];
-  assign tag_way_o[3] = q_sram[79:60];
+	`ifdef MEMS_R1PH
+		logic [79:0] q_sram;
+		IN22FDX_R1PH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
+		.CLK(clk_i),
+		.CEN(1'b0), // chip_enable??
+		.RDWEN(write_enable),
+		.AW(address[5:1]), // Port-A address word line inputs 
+		.AC(address[0]), // POrt-A address column inputs 
+		.D(write_data), // Data 
+		.BW(~write_mask), // Mask 
+		.T_LOGIC(1'b0), // Test logic, active high? 
+		.MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+		.MA_WL(1'b0),
+		.MA_WRAS(1'b0),
+		.MA_WRASD(1'b0),
+		.Q(q_sram)
+		);
+		assign tag_way_o[0] = q_sram[19:0];
+		assign tag_way_o[1] = q_sram[39:20];
+		assign tag_way_o[2] = q_sram[59:40];
+		assign tag_way_o[3] = q_sram[79:60];
+	`else
+		logic [79:0] q_sram;
+		IN22FDX_R1DH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
+		.CLK(clk_i),
+		.CEN(1'b0), // chip_enable??
+		.RDWEN(write_enable),
+		.AW(address[5:1]), // Port-A address word line inputs 
+		.AC(address[0]), // POrt-A address column inputs 
+		.D(write_data), // Data 
+		.BW(~write_mask), // Mask 
+		.T_LOGIC(1'b0), // Test logic, active high? 
+		.MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+		.MA_WL(1'b0),
+		.MA_WRAS(1'b0),
+		.MA_WRASD(1'b0),
+		.Q(q_sram)
+		);
+		assign tag_way_o[0] = q_sram[19:0];
+		assign tag_way_o[1] = q_sram[39:20];
+		assign tag_way_o[2] = q_sram[59:40];
+		assign tag_way_o[3] = q_sram[79:60];
+	`endif
 `else
  // [47:0]
   logic [95:0] q_sram;

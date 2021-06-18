@@ -40,7 +40,7 @@ module return_address_stack(
     // Latched value to return
     addrPC_t return_address;
 
-    `ifndef SYNTHESIS
+    `ifndef SYNTHESIS_ADDRESS_STACK
         // Initialize entries to 0.
         integer i;
         initial

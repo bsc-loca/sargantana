@@ -54,7 +54,7 @@ logic [1:0] past_state_pht;
     reg [ADDR_SIZE-1:0] branch_target_buffer [0:_NUM_BIMODAL_ENTRIES_-1];
 
     
-    `ifndef SYNTHESIS
+    `ifndef SYNTHESIS_BIMODAL_PREDICTOR
         // Initialize all the entries of the pattern history table with the initial state
         integer i;
         initial 
