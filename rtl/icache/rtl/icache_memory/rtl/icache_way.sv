@@ -74,8 +74,8 @@ module icache_way (
 		`ifdef MEMS_R1PH
 			IN22FDX_R1PH_NFHN_W00256B128M02C256 L1InstArray (
 				.CLK(clk_i),
-				.CEN(1'b0),
-				.RDWEN(~write_enable),
+				.CEN(chip_enable),
+				.RDWEN(write_enable),
 				.AW(addr_i[7:1]), // Port-A address word line inputs
 				.AC(addr_i[0]), // POrt-A address column inputs
 				.D(write_data), // Data
@@ -89,8 +89,8 @@ module icache_way (
 		`else
 			IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
 				.CLK(clk_i),
-				.CEN(1'b0),
-				.RDWEN(~write_enable),
+				.CEN(chip_enable),
+				.RDWEN(write_enable),
 				.AW(addr_i[7:1]), // Port-A address word line inputs
 				.AC(addr_i[0]), // POrt-A address column inputs
 				.D(write_data), // Data

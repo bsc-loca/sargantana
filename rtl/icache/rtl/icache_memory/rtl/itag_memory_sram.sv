@@ -22,7 +22,7 @@ module itag_memory_sram64x80(
     input  logic                                   vbit_i     ,
     input  logic                                   flush_i    ,
     input  logic                   [TAG_WIDHT-1:0] data_i     ,
-    input  logic                  [ADDR_WIDHT-1:0] addr_i     ,
+    input  logic                  [ADDR_WIDHT-3:0] addr_i     ,
     output logic [ICACHE_N_WAY-1:0][TAG_WIDHT-1:0] tag_way_o  , //- one for each way.
     output logic                [ICACHE_N_WAY-1:0] vbit_o       
 );
@@ -35,10 +35,11 @@ module itag_memory_sram64x80(
 logic [ICACHE_DEPTH-1:0] vbit_vec [0:ICACHE_N_WAY-1];
 
 //Tag array wires
+logic [79:0] q_sram;
 logic [79:0] write_mask, write_data, w_mask, w_data, mask;
 logic write_enable;
 logic chip_enable;
-logic [ADDR_WIDHT:0] address;
+logic [ADDR_WIDHT-3:0] address;
 
 //--VALID bit vector
 genvar i;
@@ -74,19 +75,18 @@ assign w_data[79:60] = data_i;
   assign #0.3 write_mask = ~w_mask;
   assign #0.3 write_data = w_data;
   assign #0.3 write_enable = ~we_i;
-  assign #0.3 address = {1'b0, addr_i};
+  assign #0.3 address = addr_i;
   assign #0.3 chip_enable = ~(|req_i);
 `else
   assign write_mask = ~w_mask;
   assign write_data = w_data;
   assign write_enable = ~we_i;
-  assign address = {1'b0, addr_i};
+  assign address = addr_i;
   assign chip_enable = ~(|req_i);
 `endif
 
 `ifdef MEMS_22NM
 	`ifdef MEMS_R1PH
-		logic [79:0] q_sram;
 		IN22FDX_R1PH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
@@ -102,12 +102,7 @@ assign w_data[79:60] = data_i;
 		.MA_WRASD(1'b0),
 		.Q(q_sram)
 		);
-		assign tag_way_o[0] = q_sram[19:0];
-		assign tag_way_o[1] = q_sram[39:20];
-		assign tag_way_o[2] = q_sram[59:40];
-		assign tag_way_o[3] = q_sram[79:60];
 	`else
-		logic [79:0] q_sram;
 		IN22FDX_R1DH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
@@ -123,14 +118,9 @@ assign w_data[79:60] = data_i;
 		.MA_WRASD(1'b0),
 		.Q(q_sram)
 		);
-		assign tag_way_o[0] = q_sram[19:0];
-		assign tag_way_o[1] = q_sram[39:20];
-		assign tag_way_o[2] = q_sram[59:40];
-		assign tag_way_o[3] = q_sram[79:60];
 	`endif
 `else
  // [47:0]
-  logic [95:0] q_sram;
   TS1N65LPHSA128X48M4F MDArray_tag_A_l1 (
     .A  (address) ,
     .D  (write_data[47:0]) ,
@@ -156,12 +146,12 @@ assign w_data[79:60] = data_i;
     .RTSEL(2'b00),
     .AWT(1'b0)
   ); 
-  assign tag_way_o[0] = q_sram[19:0];
-  assign tag_way_o[1] = q_sram[39:20];
-  assign tag_way_o[2] = q_sram[59:40];
-  assign tag_way_o[3] = q_sram[79:60];
 `endif
 
+assign tag_way_o[0] = q_sram[19:0];
+assign tag_way_o[1] = q_sram[39:20];
+assign tag_way_o[2] = q_sram[59:40];
+assign tag_way_o[3] = q_sram[79:60];
 
 
 endmodule
