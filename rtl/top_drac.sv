@@ -53,6 +53,7 @@ module top_drac(
     input logic                 io_csr_csr_replay,
     input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
+    input logic [3:0]           csr_frm_i,
 
 //------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -343,6 +344,7 @@ datapath datapath_inst(
     .req_cpu_csr_o(req_datapath_csr_interface),
     .debug_o(debug_out),
     .csr_priv_lvl_i(csr_priv_lvl_i),
+    .csr_frm_i(csr_frm_i),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
