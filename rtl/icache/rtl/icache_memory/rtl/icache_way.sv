@@ -71,20 +71,37 @@ module icache_way (
     `endif
  
     `ifdef MEMS_22NM 
-    IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
-        .CLK(clk_i),
-        .CEN(1'b0),
-        .RDWEN(~write_enable),
-        .AW(addr_i[7:1]), // Port-A address word line inputs
-        .AC(addr_i[0]), // POrt-A address column inputs
-        .D(write_data), // Data
-        .BW(~{128{1'b0}}), // Mask
-        .T_LOGIC(1'b0), // Test logic, active high? 
-        .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
-        .MA_WL(1'b0),
-        .MA_WRAS(1'b0),
-        .MA_WRASD(1'b0),
-        .Q(RW0O_sram)
+		`ifdef MEMS_R1PH
+			IN22FDX_R1PH_NFHN_W00256B128M02C256 L1InstArray (
+				.CLK(clk_i),
+				.CEN(chip_enable),
+				.RDWEN(write_enable),
+				.AW(addr_i[7:1]), // Port-A address word line inputs
+				.AC(addr_i[0]), // POrt-A address column inputs
+				.D(write_data), // Data
+				.BW(~{128{1'b0}}), // Mask
+				.T_LOGIC(1'b0), // Test logic, active high? 
+				.MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+				.MA_WL(1'b0),
+				.MA_WRAS(1'b0),
+				.MA_WRASD(1'b0),
+				.Q(RW0O_sram)
+		`else
+			IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
+				.CLK(clk_i),
+				.CEN(chip_enable),
+				.RDWEN(write_enable),
+				.AW(addr_i[7:1]), // Port-A address word line inputs
+				.AC(addr_i[0]), // POrt-A address column inputs
+				.D(write_data), // Data
+				.BW(~{128{1'b0}}), // Mask
+				.T_LOGIC(1'b0), // Test logic, active high? 
+				.MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+				.MA_WL(1'b0),
+				.MA_WRAS(1'b0),
+				.MA_WRASD(1'b0),
+				.Q(RW0O_sram)
+		`endif
 	);
     `else
     TS1N65LPHSA256X128M4F L1InstArray (

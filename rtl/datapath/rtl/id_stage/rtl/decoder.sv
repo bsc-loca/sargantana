@@ -27,6 +27,13 @@ module decoder(
     output  jal_id_if_t      jal_id_if_o
 );
 
+	//Auxilar signals
+	wire [6:0] F7_NORMAL_AUX;
+	wire [6:0] F7_SRAI_SUB_SRA_AUX;
+	assign F7_NORMAL_AUX = F7_NORMAL;
+	assign F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA;
+
+
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
     logic xcpt_addr_misaligned_int;
@@ -401,7 +408,7 @@ module decoder(
                         F3_SLLI: begin
                             decode_instr_o.instr_type = SLL;
                             // check for illegal instruction
-                            if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL[6:1]) begin
+                            if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL_AUX[6:1]) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 xcpt_illegal_instruction_int = 1'b0;
@@ -409,10 +416,10 @@ module decoder(
                         end
                         F3_SRLAI: begin
                             case (decode_i.inst.rtype.func7[31:26])
-                                F7_SRAI_SUB_SRA[6:1]: begin
+                                F7_SRAI_SUB_SRA_AUX[6:1]: begin
                                     decode_instr_o.instr_type = SRA;
                                 end
-                                F7_NORMAL[6:1]: begin
+                                F7_NORMAL_AUX[6:1]: begin
                                     decode_instr_o.instr_type = SRL;
                                 end
                                 default: begin // check illegal instruction

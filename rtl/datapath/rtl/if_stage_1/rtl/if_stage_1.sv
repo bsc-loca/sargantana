@@ -50,7 +50,8 @@ module if_stage_1(
 );
     // next pc logic
     addrPC_t next_pc;
-    regPC_t pc;
+//    regPC_t pc;
+    reg[63:0] pc;
     `ifdef VERILATOR
     logic[63:0] id, next_id;
     `endif

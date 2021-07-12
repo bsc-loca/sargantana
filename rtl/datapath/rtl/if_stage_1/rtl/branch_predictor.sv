@@ -58,6 +58,7 @@ logic           is_branch_tag_valid;
 // Instatiation of bimodal predictor
 bimodal_predictor bimodal_predictor_inst(
     .clk_i (clk_i),
+    .rstn_i (rstn_i),
     .pc_fetch_i (pc_fetch_i),
     .pc_execution_i (pc_execution_i),
     .branch_addr_result_exec_i (branch_addr_result_exec_i),

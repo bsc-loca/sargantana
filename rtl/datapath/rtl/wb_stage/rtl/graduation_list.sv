@@ -99,12 +99,14 @@ assign is_store_or_amo = (instruction_i.instr_type == SD) || (instruction_i.inst
 gl_instruction_t entries [0:NUM_ENTRIES-1];
 
 always@(posedge clk_i, negedge rstn_i)
-begin
+begin 
     if (~rstn_i) begin
+		instruction_o <= 'b0;
         for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
                 valid_bit[i] <= 1'b0;
         end
     end else begin
+		instruction_o <= 'b0;
         if (read_enable) begin
             if ((num == 0) & (instruction_i.valid)) begin // Imposible case
                 instruction_o <= instruction_i;
