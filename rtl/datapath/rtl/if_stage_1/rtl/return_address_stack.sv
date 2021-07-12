@@ -43,7 +43,7 @@ module return_address_stack(
 
     assign output_pointer = head_pointer - 'h1;
 
-    `ifndef SYNTHESIS_ADDRESS_STACK
+/*    `ifndef SYNTHESIS_ADDRESS_STACK
         // Initialize entries to 0.
         integer i;
         initial
@@ -52,13 +52,16 @@ module return_address_stack(
                 address_stack[i] = 'h0;
             end
         end
-    `endif
+    `endif*/
 
     always@(posedge clk_i)
     begin
         if(~rstn_i) begin
             return_address <= 0;
             head_pointer <= 0;
+            for(integer i = 0; i < _NUM_RAS_ENTRIES_ ; i = i + 1) begin
+                address_stack[i] <= 'h0;
+            end
         end else if (push_i && pop_i) begin
             address_stack[head_pointer] <= pc_execution_i;
         end else if(push_i) begin
