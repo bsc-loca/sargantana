@@ -751,7 +751,7 @@ assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
 
 //// Kill the dcache interface instruction
-assign req_cpu_dcache_o.kill = kill_i;
+assign req_cpu_dcache_o.kill = kill_i | reset_next_lsq;
 
 //// Input/Output Address Base Pointer
 assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
