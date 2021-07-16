@@ -58,17 +58,11 @@ module icache_way (
     logic write_enable;
     logic chip_enable;
     
-    `ifdef INCISIVE_SIMULATION
-        assign #0.3 write_data = data_i;
-        assign #0.3 write_enable = ~we_i;
-        assign #0.3 chip_enable = ~req_i;
-        assign #0.3 address = addr_i;
-    `else
-        assign write_data = data_i;
-        assign write_enable = ~we_i;
-        assign chip_enable = ~req_i;
-        assign address = addr_i;
-    `endif
+	assign write_data = data_i;
+	assign write_enable = ~we_i;
+	assign chip_enable = ~req_i;
+	assign address = addr_i;
+
  
     `ifdef MEMS_22NM 
 		`ifdef MEMS_R1PH

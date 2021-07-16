@@ -69,21 +69,11 @@ assign w_data[39:20] = data_i;
 assign w_data[59:40] = data_i;
 assign w_data[79:60] = data_i;
 
-
-
-`ifdef INCISIVE_SIMULATION
-  assign #0.3 write_mask = ~w_mask;
-  assign #0.3 write_data = w_data;
-  assign #0.3 write_enable = ~we_i;
-  assign #0.3 address = addr_i;
-  assign #0.3 chip_enable = ~(|req_i);
-`else
-  assign write_mask = ~w_mask;
-  assign write_data = w_data;
-  assign write_enable = ~we_i;
-  assign address = addr_i;
-  assign chip_enable = ~(|req_i);
-`endif
+assign write_mask = ~w_mask;
+assign write_data = w_data;
+assign write_enable = ~we_i;
+assign address = addr_i;
+assign chip_enable = ~(|req_i);
 
 `ifdef MEMS_22NM
 	`ifdef MEMS_R1PH
