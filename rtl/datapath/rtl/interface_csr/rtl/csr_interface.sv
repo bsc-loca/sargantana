@@ -39,7 +39,7 @@ always_comb begin
     csr_cmd_int = CSR_CMD_NOPE;
     csr_rw_data_int = 64'b0;
     csr_ena_int = 1'b0;
-    if (instruction_to_commit_i.valid) begin
+    if (instruction_to_commit_i.valid && !instruction_to_commit_i.exception.valid) begin
         case (instruction_to_commit_i.instr_type)
             CSRRW: begin
                 csr_cmd_int = CSR_CMD_WRITE;
