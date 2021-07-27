@@ -221,7 +221,7 @@ always_comb begin
                     req_cpu_dcache_o.valid      = (instruction_to_dcache.instr.valid & resp_dcache_cpu_i.ready) & 
                                                   (~is_STORE_or_AMO_s0_d | commit_store_or_amo_i) & (~full_pmrq) &
                                                   (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | 
-                                                    (mem_gl_index_o == instruction_to_dcache.gl_index));
+                                                    (mem_gl_index_o == instruction_to_dcache.gl_index)) & ~resp_dcache_cpu_i.nack;
                                                   
                     source_dcache               = READ;     // Use instruction from LSQ
                     read_next_lsq               = 1'b1;     // Advance LSQ 
@@ -244,7 +244,7 @@ always_comb begin
                     end
                     
                     // Next Sate Logic                                          
-                    next_state = (instruction_to_dcache.instr.valid & resp_dcache_cpu_i.ready & (~full_pmrq) &
+                    next_state = (instruction_to_dcache.instr.valid & resp_dcache_cpu_i.ready & (~full_pmrq) & ~resp_dcache_cpu_i.nack &
                                  (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == instruction_to_dcache.gl_index))) ?
                                     (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) ? WaitCommit : ReadHead :
                                     WaitReady; 
@@ -254,7 +254,7 @@ always_comb begin
             WaitReady: begin
                 // Request Logic
                 req_cpu_dcache_o.valid      = (stored_instr_to_dcache.instr.valid & resp_dcache_cpu_i.ready & 
-                                              (commit_store_or_amo_i | ~is_STORE_or_AMO_s0_d) & (~full_pmrq) &
+                                              (commit_store_or_amo_i | ~is_STORE_or_AMO_s0_d) & (~full_pmrq) & ~resp_dcache_cpu_i.nack &
                                               (~(store_on_fly | amo_on_fly) | ~is_STORE_or_AMO_s0_d | 
                                                 (mem_gl_index_o == stored_instr_to_dcache.gl_index)));
                                                  
@@ -279,7 +279,7 @@ always_comb begin
                 end
                     
                 // Next Sate Logic
-                next_state = (stored_instr_to_dcache.instr.valid & resp_dcache_cpu_i.ready  & (~full_pmrq) &
+                next_state = (stored_instr_to_dcache.instr.valid & resp_dcache_cpu_i.ready  & (~full_pmrq) & ~resp_dcache_cpu_i.nack &
                              (~(store_on_fly | amo_on_fly)| ~is_STORE_or_AMO_s0_d | (mem_gl_index_o == stored_instr_to_dcache.gl_index))) ?
                                 (is_STORE_or_AMO_s0_d & !commit_store_or_amo_i) ? WaitCommit : ReadHead :
                                  WaitReady; 
@@ -288,7 +288,7 @@ always_comb begin
             WaitCommit: begin
                 // Request Logic
                 req_cpu_dcache_o.valid      = commit_store_or_amo_i & ~(store_on_fly | amo_on_fly)&
-                                              resp_dcache_cpu_i.ready & (~full_pmrq);
+                                              resp_dcache_cpu_i.ready & (~full_pmrq) & ~resp_dcache_cpu_i.nack;
                 source_dcache               = STORED;                   // Use instruction stored previously
                 read_next_lsq               = 1'b0;                     // Not Advance LSQ
                 mem_commit_stall_s0         = commit_store_or_amo_i & (~full_pmrq);
@@ -303,7 +303,7 @@ always_comb begin
                 end
                 
                 // Next Sate Logic
-                next_state = (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready & (~full_pmrq)) ?
+                next_state = (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready & (~full_pmrq) & ~resp_dcache_cpu_i.nack) ?
                                 ReadHead : WaitCommit;
             end
         endcase
