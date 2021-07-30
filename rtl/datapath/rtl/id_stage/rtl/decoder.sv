@@ -109,7 +109,7 @@ module decoder(
         // Assign by default the immediate in the result
         decode_instr_o.imm = imm_value;
         // This is lowrisc related
-        decode_instr_o.mem_size = decode_i.inst.common.func3;
+        decode_instr_o.mem_size = {1'b0,decode_i.inst.common.func3};
         decode_instr_o.signed_op = 1'b0;
 
         jal_id_if_o.valid = 1'b0;
@@ -613,7 +613,7 @@ module decoder(
                                             LUMOP_UNIT_STRIDE: begin
                                                 decode_instr_o.vregfile_we = 1'b1;
                                                 decode_instr_o.instr_type = VLE;
-                                                decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
+                                                decode_instr_o.mem_size = __vector_element; //TODO: Fix this hardcoding
                                             end
                                             default: begin
                                                 xcpt_illegal_instruction_int = 1'b1;
@@ -658,7 +658,7 @@ module decoder(
                                                 
                                                 decode_instr_o.use_vs2 = 1'b1;
                                                 decode_instr_o.instr_type = VSE;
-                                                decode_instr_o.mem_size = 4'b0111; //TODO: Fix this hardcoding
+                                                decode_instr_o.mem_size = __vector_element; //TODO: Fix this hardcoding
                                                 decode_instr_o.vs2 = decode_i.inst.vstype.vs3;
                                             end
                                             default: begin

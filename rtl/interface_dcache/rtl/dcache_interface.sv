@@ -78,10 +78,10 @@ logic dmem_xcpt_pf_ld_reg;
           MakeRequest = 2'b10,
           WaitResponse = 2'b11;*/
 
-parameter MEM_NOP   = 2'b00,
-          MEM_LOAD  = 2'b01,
-          MEM_STORE = 2'b10,
-          MEM_AMO   = 2'b11;
+parameter MEM_NOP   = 3'b00,
+          MEM_LOAD  = 3'b01,
+          MEM_STORE = 3'b10,
+          MEM_AMO   = 3'b11;
 
 //-------------------------------------------------------------
 // CONTROL SIGNALS
@@ -171,7 +171,7 @@ always_comb begin
 end
 
 // Address calculation
-assign dmem_req_addr_64 = (type_of_op == MEM_AMO) ? req_cpu_dcache_i.data_rs1 : req_cpu_dcache_i.data_rs1 + req_cpu_dcache_i.imm;
+assign dmem_req_addr_64 =  req_cpu_dcache_i.data_rs1;
 assign dmem_req_addr_o = dmem_req_addr_64[39:0];
 
 // Granularity of mem. access. (BYTE, HALFWORD, WORD, DOUBLEWORD, QUADWORD)
@@ -208,8 +208,8 @@ assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
 
 //-PMU
-assign dmem_is_store_o = (type_of_op == MEM_STORE) && dmem_req_valid_o   ;
-assign dmem_is_load_o  = (type_of_op == MEM_LOAD) && dmem_req_valid_o ;
+assign dmem_is_store_o = (type_of_op == MEM_STORE) && dmem_req_valid_o;
+assign dmem_is_load_o  = (type_of_op == MEM_LOAD) && dmem_req_valid_o;
 
 endmodule
 //`default_nettype wire
