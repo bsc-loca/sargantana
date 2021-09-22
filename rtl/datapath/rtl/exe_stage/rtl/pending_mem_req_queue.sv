@@ -117,7 +117,8 @@ begin
             instruction_table[j].data_rs2 <= replay_data_i;
         end
         if (response_valid_i && unaligned_bit_table[j] &&
-           ((tag_table[j] + 1'b1) == tag_next_i)) begin
+           ((tag_table[j] + 1'b1) == tag_next_i) && 
+            (!write_enable || j != tail)) begin
             unaligned_result_table[j] <= replay_data_i;
             unaligned_nowait_table[j] <= 1'b1;
         end
