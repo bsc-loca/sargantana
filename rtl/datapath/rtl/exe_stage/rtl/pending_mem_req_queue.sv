@@ -67,6 +67,11 @@ logic          control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
 
 always_ff @(posedge clk_i)
 begin
+    if (~rstn_i) begin
+        for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
+            control_bits_table[j] <= 1'b0;
+        end
+    end
     // Write tail
     if (write_enable) begin
         instruction_table[tail]  <= instruction_i;
