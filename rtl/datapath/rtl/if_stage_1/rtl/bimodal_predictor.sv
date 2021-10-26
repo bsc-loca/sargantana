@@ -68,11 +68,14 @@ logic [1:0] past_state_pht;
 
 
     // Read pattern history table at addres pc_fetch_i
+    logic [ADDR_SIZE-1:0] short_pred_addr;
     always_comb
     begin
         readed_state_pht = pattern_history_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
         past_state_pht = pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-        bimodal_predict_addr_o = branch_target_buffer[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        short_pred_addr = branch_target_buffer[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
+        bimodal_predict_addr_o = { {XLEN-ADDR_SIZE{short_pred_addr[ADDR_SIZE-1]}}, short_pred_addr};
+      //{ {8{extend[7]}}, extend[7:0] };
     end
    
     always_comb begin

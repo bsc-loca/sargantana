@@ -174,7 +174,18 @@ module top_drac(
     output logic                io_core_pmu_data_depend     ,
     output logic                io_core_pmu_struct_depend   ,
     output logic                io_core_pmu_grad_list_full  ,
-    output logic                io_core_pmu_free_list_empty 
+    output logic                io_core_pmu_free_list_empty ,
+
+//-----------------------------------------------------------------------------
+// BOOTROM CONTROLER INTERFACE
+//-----------------------------------------------------------------------------
+    input  logic                brom_ready_i        ,
+    input  logic [31:0]         brom_resp_data_i    ,
+    input  logic                brom_resp_valid_i   ,
+    output logic [23:0]         brom_req_address_o  ,
+    output logic                brom_req_valid_o    ,
+    
+    input logic                 en_translation_i  
 
 );
 
@@ -336,6 +347,7 @@ datapath datapath_inst(
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .sew_i(sew),//.sew_i(CSR_SEW),
+    .en_translation_i( en_translation_i ), 
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
     // Output datapath
@@ -358,7 +370,8 @@ icache_interface icache_interface_inst(
     .icache_resp_vaddr_i        ( icache_resp.vaddr ), 
     .icache_resp_valid_i        ( icache_resp.valid ),
     .icache_req_ready_i         ( icache_resp.ready ), 
-    .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ), 
+    .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ),
+    .en_translation_i           ( en_translation_i ), 
    
     // Outputs ICache
     .icache_invalidate_o    ( iflush             ), 
@@ -366,6 +379,15 @@ icache_interface icache_interface_inst(
     .icache_req_kill_o      ( lagarto_ireq.kill  ), 
     .icache_req_valid_o     ( lagarto_ireq.valid ),
     .icache_req_bits_vpn_o  ( lagarto_ireq.vpn   ), 
+
+    // Inputs Bootrom
+    .brom_ready_i           ( brom_ready_i      ),
+    .brom_resp_data_i       ( brom_resp_data_i  ), 
+    .brom_resp_valid_i      ( brom_resp_valid_i ),
+
+    // Outputs Bootrom
+    .brom_req_address_o     ( brom_req_address_o ),
+    .brom_req_valid_o       ( brom_req_valid_o   ),
 
     // Fetch stage interface - Request packet from fetch_stage
     .req_fetch_icache_i(req_datapath_icache_interface),

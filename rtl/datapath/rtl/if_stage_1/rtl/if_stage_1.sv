@@ -33,6 +33,7 @@ module if_stage_1(
     // from control unit
     input logic                 invalidate_icache_i,
     input logic                 invalidate_buffer_i,
+    input logic                 en_translation_i,
     // PC comming from commit/decode/ecall/debug
     input addrPC_t              pc_jump_i,
     // Signals for branch predictor from exe stage 
@@ -123,8 +124,10 @@ module if_stage_1(
     always_comb begin
         if (pc[38] ? !(&pc[63:39]) : |pc[63:39] ) begin
             ex_if_addr_fault_int = 1'b1;
-        end else begin
-            ex_if_addr_fault_int = 1'b0;
+        end else begin // check if unmapped addr
+            ex_if_addr_fault_int = ~en_translation_i & (( pc[39:0] >= UNMAPPED_ADDR_LOWER 
+                                              & pc[39:0] < UNMAPPED_ADDR_UPPER )
+                                              | pc[39:0] >= PHISIC_MEM_LIMIT);
         end
     end
     // check misaligned fetch
@@ -137,7 +140,7 @@ module if_stage_1(
     end
 
     // logic for icache access: if not misaligned 
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !stall_debug_i && !stall_i;
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !stall_debug_i && !stall_i;
     assign req_cpu_icache_o.vaddr = pc[39:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
