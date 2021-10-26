@@ -574,7 +574,7 @@ pending_mem_req_queue pending_mem_req_queue_inst (
     .instruction_i      (instruction_to_pmrq),
     .tag_i              (tag_id_s2_q),
     .flush_i            (flush_to_lsq),
-    .replay_valid_i     (resp_dcache_cpu_i.valid & resp_dcache_cpu_i.replay),
+    .replay_valid_i     (resp_dcache_cpu_i.valid & resp_dcache_cpu_i.replay & resp_dcache_cpu_i.has_data),
     .tag_next_i         (resp_dcache_cpu_i.rd),
     .replay_data_i      (resp_dcache_cpu_i.data),
     .advance_head_i     (advance_head_prmq),
