@@ -282,6 +282,7 @@ typedef struct packed {
     logic      replay;      // Replay instruction
     logic       ready;      // Ready to accept requests
     logic        nack;      // Request not accepted
+    logic    has_data;      // Dcache response contains data
     bus_simd_t   data;      // Data from load
     reg_t          rd;      // Tag of the mem access
     logic  xcpt_ma_st;      // Misaligned store exception
