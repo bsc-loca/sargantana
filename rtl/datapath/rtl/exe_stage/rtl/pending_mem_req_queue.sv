@@ -65,28 +65,29 @@ rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
 reg_t          tag_table            [0:PMRQ_NUM_ENTRIES-1];
 logic          control_bits_table   [0:PMRQ_NUM_ENTRIES-1];
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if (~rstn_i) begin
         for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
             control_bits_table[j] <= 1'b0;
         end
-    end
-    // Write tail
-    if (write_enable) begin
-        instruction_table[tail]  <= instruction_i;
-        tag_table[tail]          <= tag_i;
-        control_bits_table[tail] <= 1'b0;
-    end
-    
-    // Table initial state
-    if(replay_valid_i) begin
-        for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
-            if (tag_table[j] == tag_next_i) begin
-                control_bits_table[j] <= 1'b1;
-                instruction_table[j].data_rs2 <= replay_data_i;
-            end
-        end
+    end else begin
+      // Write tail
+      if (write_enable) begin
+          instruction_table[tail]  <= instruction_i;
+          tag_table[tail]          <= tag_i;
+          control_bits_table[tail] <= 1'b0;
+      end
+      
+      // Table initial state
+      if(replay_valid_i) begin
+          for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
+              if (tag_table[j] == tag_next_i) begin
+                  control_bits_table[j] <= 1'b1;
+                  instruction_table[j].data_rs2 <= replay_data_i;
+              end
+          end
+      end
     end
 end
 
