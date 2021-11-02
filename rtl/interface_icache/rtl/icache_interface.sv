@@ -29,6 +29,7 @@ module icache_interface(
     input logic              icache_req_ready_i      , // ICACHE_REQ_READY,
     input logic              tlb_resp_xcp_if_i       , // TLB_RESP_XCPT_IF,
     input logic              en_translation_i        ,
+    input logic              csr_spi_config_i        ,
     // Request output signals to Icache                      
     output logic             icache_invalidate_o     , // ICACHE_INVALIDATE
     output icache_idx_t      icache_req_bits_idx_o   , // ICACHE_REQ_BITS_IDX,
@@ -82,12 +83,13 @@ assign is_brom_old_access = ~en_translation_i & old_pc_req_q < BROM_SIZE;
 // Icache_interface can do request to icache
 assign do_icache_request_int = req_fetch_icache_i.valid                &
                                ~req_fetch_icache_i.invalidate_buffer   &
-                               ~is_brom_access                         & 
+                               (~is_brom_access | csr_spi_config_i)    & 
                                icache_req_ready_i                      ;
 
 // Icache_interface can do request to bootrom
 assign do_brom_request_int = req_fetch_icache_i.valid  &
                              is_brom_access            & 
+                             ~csr_spi_config_i         & 
                              brom_ready_i              ;
 
 assign brom_req_valid_o = do_brom_request_int;
