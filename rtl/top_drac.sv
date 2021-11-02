@@ -185,7 +185,8 @@ module top_drac(
     input  logic                brom_resp_valid_i   ,
     output logic [23:0]         brom_req_address_o  ,
     output logic                brom_req_valid_o    ,
-    
+   
+    input logic                 csr_spi_config_i, 
     input logic                 en_translation_i  
 
 );
@@ -373,6 +374,7 @@ icache_interface icache_interface_inst(
     .icache_req_ready_i         ( icache_resp.ready ), 
     .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ),
     .en_translation_i           ( en_translation_i ), 
+    .csr_spi_config_i           ( csr_spi_config_i  ), 
    
     // Outputs ICache
     .icache_invalidate_o    ( iflush             ), 
