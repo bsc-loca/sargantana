@@ -31,6 +31,12 @@ parameter CSR_CMD_SIZE = 3;
 parameter NUM_SCALAR_WB = 3;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
+
+parameter UNMAPPED_ADDR_LOWER = 20'h080000; 
+parameter UNMAPPED_ADDR_UPPER = 40'h080000000; 
+parameter PHISIC_MEM_LIMIT = 40'h0ffffffff; 
+parameter BROM_SIZE = 20'h080000;
+
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;

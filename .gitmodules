@@ -1,0 +1,3 @@
+[submodule "rtl/brom_cntrl"]
+	path = rtl/brom_cntrl
+	url = git@gitlab-internal.bsc.es:drac/bootrom-controller.git
