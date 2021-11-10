@@ -302,8 +302,10 @@ typedef struct packed {
     instr_type_t    instr_type;        // Type of instruction
     logic [3:0]       mem_size;        // Granularity of mem. access
     reg_t                   rd;        // Destination register. Used for identify a pending Miss
-    bus64_t                imm;        // Inmmediate 
     addr_t        io_base_addr;        // Address Base Pointer of INPUT/OUPUT
+    logic      is_amo_or_store;        // Type of instruction is amo or store
+    logic               is_amo;        // Type of instruction is amo
+    logic             is_store;        // Type of instruction is amo
 } req_cpu_dcache_t;
 
 // Fetch 1 Stage
@@ -503,7 +505,11 @@ typedef struct packed {
     phreg_t old_prd;                    // Old Physical register destination
     phvreg_t old_pvd;                   // Old Physical register destination
     phreg_t fprd;                       // Physical register destination
-    phreg_t old_fprd;                    // Old Physical register destination
+    phreg_t old_fprd;                   // Old Physical register destination
+    
+    logic is_amo_or_store;              // Encodes if type instruction is amo or store
+    logic is_amo;                       // Encodes if type instruction is amo
+    logic is_store;                     // Encodes if type instruction is store
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch

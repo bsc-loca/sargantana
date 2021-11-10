@@ -473,13 +473,13 @@ typedef enum logic [1:0] {
 } op_fmt_fp_drac_t; */
 
 // Status flags
-  typedef struct packed {
+typedef struct packed {
     logic NV; // Invalid
     logic DZ; // Divide by zero
     logic OF; // Overflow
     logic UF; // Underflow
     logic NX; // Inexact
-  } fp_status_t;
+} fp_status_t;
 
 // By RISCV ISA, exceptions are 64 bits
 typedef enum logic[XLEN-1:0] {
@@ -498,5 +498,8 @@ typedef enum logic[XLEN-1:0] {
     ST_AMO_PAGE_FAULT       = 64'h0F,
     NONE                    = 64'hFF
 } exception_cause_t;
+
+// Hack to codify Vector Element Loads and Stores
+parameter __vector_element = 4'b0111;
 
 endpackage
