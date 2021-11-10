@@ -939,6 +939,7 @@ typedef struct packed {
     phreg_t         old_fprd;               // Old Physical register destination
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;          // Bits of the instruction
+    bus64_t id;
     `endif
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
 } gl_instruction_t;

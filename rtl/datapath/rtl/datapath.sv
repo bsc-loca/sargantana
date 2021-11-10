@@ -781,6 +781,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     assign instruction_decode_gl.fregfile_we            = stage_ir_rr_q.instr.fregfile_we;
     `ifdef VERILATOR
         assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
+        assign instruction_decode_gl.id                 = stage_ir_rr_q.instr.id;
     `endif
     assign instruction_decode_gl.fp_status              = '0;
 
@@ -1431,6 +1432,16 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS
+        logic commit_store_int, is_commit_store_valid;
+        assign commit_store_int = (instruction_to_commit.instr_type == SD)     || 
+                                     (instruction_to_commit.instr_type == SW)  ||
+                                     (instruction_to_commit.instr_type == SH)  ||
+                                     (instruction_to_commit.instr_type == SB)  ||
+                                     (instruction_to_commit.instr_type == VSE) ||
+                                     (instruction_to_commit.instr_type == FSD) ||
+                                     (instruction_to_commit.instr_type == FSW);
+        assign is_commit_store_valid = instruction_to_commit.valid && !commit_cu_int.stall_commit && 
+                                        commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
         torture_dump_behav torture_dump
         (
             .clk(clk_i),
@@ -1496,6 +1507,9 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
 
             .wb2_valid(wb_scalar[1].valid),
             .wb2_id(wb_scalar[1].id),
+
+            .wb_store_valid(is_commit_store_valid),
+            .wb_srore_id(instruction_to_commit.id),
             // Scalar 
             .wb3_valid(wb_scalar[2].valid),
             .wb3_id(wb_scalar[2].id),
