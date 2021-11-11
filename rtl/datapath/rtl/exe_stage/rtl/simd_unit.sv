@@ -82,13 +82,11 @@ generate
 endgenerate
 
 bus64_t ext_element;
-logic found_first_zero;
 
 //Compute the result of operations that don't operate on vector element
 //granularity, and produce a scalar result
 always_comb begin
     ext_element = 'h0;
-    found_first_zero = 1'b0;
     if (instruction_i.instr.instr_type == VMV_X_S) begin
         //Extract element 0
         case (instruction_i.sew)
@@ -161,29 +159,30 @@ always_comb begin
         //Vector count equals
         //Uses the result of the FUs, which performed a vseq, and counts
         //consecutive '1's
+        data_rd = 0;
         case (instruction_i.sew)
             SEW_8: begin
                 for (int i = 0; i<VLEN/8; ++i) begin
-                    found_first_zero = found_first_zero | !data_vd[i*8];
-                    if (!found_first_zero) data_rd = i+1;
+                    if (!data_vd[i*8]) break;
+                    data_rd = i+1;
                 end
             end
             SEW_16: begin
                 for (int i = 0; i<VLEN/16; ++i) begin
-                    found_first_zero = found_first_zero | !data_vd[i*16];
-                    if (!found_first_zero) data_rd = i+1;
+                    if (!data_vd[i*16]) break;
+                    data_rd = i+1;
                 end
             end
             SEW_32: begin
                 for (int i = 0; i<VLEN/32; ++i) begin
-                    found_first_zero = found_first_zero | !data_vd[i*32];
-                    if (!found_first_zero) data_rd = i+1;
+                    if (!data_vd[i*32]) break;
+                    data_rd = i+1;
                 end
             end
             SEW_64: begin
                 for (int i = 0; i<VLEN/64; ++i) begin
-                    found_first_zero = found_first_zero | !data_vd[i*64];
-                    if (!found_first_zero) data_rd = i+1;
+                    if (!data_vd[i*64]) break;
+                    data_rd = i+1;
                 end
             end
         endcase
