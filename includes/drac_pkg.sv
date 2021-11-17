@@ -891,6 +891,10 @@ typedef struct packed {
     logic           reg_write_valid;
     // Write to register file data
     bus64_t         reg_write_data;
+    // Input register paddr
+    logic  [5:0]    reg_read_write_paddr;
+    // Read register file with paddr
+    logic           reg_p_read_valid;
 } debug_in_t;
 
 // LSQ in/out of instruction signals
@@ -957,6 +961,11 @@ typedef struct packed {
     logic           wb_reg_we_2;
     // write-back register file read data
     bus64_t         reg_read_data;
+    // Signal to ensure the debug ring only interacts when the
+    // pipeline is empty
+    logic	    reg_backend_empty;
+    // physical register addres from the list
+    logic  [5:0]    reg_list_paddr;
 } debug_out_t;
 
 
