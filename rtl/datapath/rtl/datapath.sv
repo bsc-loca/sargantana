@@ -33,7 +33,7 @@ module datapath(
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
-    output debug_out_t      debug_o ,
+    output debug_out_t      debug_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
@@ -129,6 +129,8 @@ module datapath(
 
     ir_cu_t ir_cu_int;
     cu_ir_t cu_ir_int;
+
+    reg_t free_list_read_src1_int;
 
     // Read Registers
     rr_exe_instr_t stage_rr_exe_d;
@@ -466,6 +468,8 @@ module datapath(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+assign free_list_read_src1_int = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_ir_rr_d.instr.rs1;
+assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     // Register ID to IR when stall
     register #($bits(instr_entry_t)) reg_id_inst(
@@ -552,12 +556,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     rename_table rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i(stage_ir_rr_d.instr.rs1),
+        .read_src1_i( free_list_read_src1_int ),
         .read_src2_i(stage_ir_rr_d.instr.rs2),
         .old_dst_i(stage_ir_rr_d.instr.rd),
         .write_dst_i(stage_ir_rr_d.instr.regfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .new_dst_i(free_register_to_rename),
-        .use_rs1_i(stage_ir_rr_d.instr.use_rs1),
+        .use_rs1_i(stage_ir_rr_d.instr.use_rs1 | (debug_i.reg_read_valid  && debug_i.halt_valid)),
         .use_rs2_i(stage_ir_rr_d.instr.use_rs2),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
@@ -803,7 +807,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         .instruction_o(instruction_gl_commit),
         .commit_gl_entry_o(index_gl_commit),
         .full_o(rr_cu_int.gl_full),
-        .empty_o()
+        .empty_o(debug_o.reg_backend_empty)
     );
 
     always_comb begin
@@ -836,7 +840,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
         end
     end
 
-    assign reg_prd1_addr  = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_ir_rr_q.prs1;
+    assign reg_prd1_addr  = (debug_i.reg_p_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_paddr : stage_ir_rr_q.prs1;
     
     // RR Stage
     regfile regfile_inst(
@@ -1246,7 +1250,7 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
                 // Change the data of write port 0 with dbg ring data
                 if (debug_i.reg_write_valid && debug_i.halt_valid) begin
                     data_wb_to_rr[i] = debug_i.reg_write_data;
-                    write_paddr_rr[i] = debug_i.reg_read_write_addr;
+                    write_paddr_rr[i] = debug_i.reg_read_write_paddr;
                 end else begin
                     data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : wb_scalar[i].result;
                     write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.prd : wb_scalar[i].prd;
