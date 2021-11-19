@@ -77,19 +77,20 @@ logic resp_icache_fetch_valid;
 
   
 
-assign is_brom_access = ~en_translation_i & req_fetch_icache_i.vaddr < BROM_SIZE;
-assign is_brom_old_access = ~en_translation_i & old_pc_req_q < BROM_SIZE;
+assign is_brom_access = ~en_translation_i & 
+                        req_fetch_icache_i.vaddr < BROM_SIZE &
+                        ~csr_spi_config_i;
+always @(posedge clk_i) is_brom_old_access <= is_brom_access;
 
 // Icache_interface can do request to icache
 assign do_icache_request_int = req_fetch_icache_i.valid                &
                                ~req_fetch_icache_i.invalidate_buffer   &
-                               (~is_brom_access | csr_spi_config_i)    & 
+                               ~is_brom_access                         & 
                                icache_req_ready_i                      ;
 
 // Icache_interface can do request to bootrom
 assign do_brom_request_int = req_fetch_icache_i.valid  &
                              is_brom_access            & 
-                             ~csr_spi_config_i         & 
                              brom_ready_i              ;
 
 assign brom_req_valid_o = do_brom_request_int;
