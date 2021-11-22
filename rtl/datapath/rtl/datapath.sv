@@ -1285,8 +1285,12 @@ assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_i
     );
 
     // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
-    always @(posedge clk_i) begin
+    always @(posedge clk_i, negedge rstn_i) begin
+      if(~rstn_i) begin
+        src_select_commit <= 0;
+      end else begin
         src_select_commit <= !control_int.stall_commit;
+      end
     end
 
     assign instruction_to_commit = (src_select_commit)? instruction_gl_commit : instruction_gl_commit_old_q;
