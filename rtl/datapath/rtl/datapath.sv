@@ -1184,11 +1184,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             // CSR are exclusive with the rest of instrucitons. Therefor, there are no conflicts
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
-                if (debug_i.reg_write_valid && debug_i.halt_valid) begin
-                    wb_cu_int.write_enable[i] = cu_rr_int.write_enable_dbg; //TODO: Check if this creates comb loops in cu
-                end else begin
-                    wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
-                end
+                wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
                 data_wb_to_exe[i] = wb_scalar[i].result;
                 write_paddr_exe[i] = wb_scalar[i].prd;
                 write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.rd :
