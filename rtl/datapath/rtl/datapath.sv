@@ -1411,21 +1411,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign commit_vreg_we    = instruction_to_commit.vregfile_we;
     assign commit_freg_we    = instruction_to_commit.fregfile_we && commit_valid;
 
-    // PCcommit_freg_we
-    assign pc_if1  = stage_if_1_if_2_d.pc_inst;
-    assign pc_if2  = stage_if_2_id_d.pc_inst;
-    assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
-    assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
-    assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
-    assign pc_wb = (valid_wb) ? wb_scalar[0].pc : 64'b0;
-
-    // Valid
-    assign valid_if1  = stage_if_1_if_2_d.valid;
-    assign valid_if2  = stage_if_2_id_d.valid;
-    assign valid_id  = decoded_instr.valid;
-    assign valid_rr  = stage_rr_exe_d.instr.valid;
-    assign valid_exe = stage_rr_exe_q.instr.valid;
-    assign valid_wb = wb_scalar[0].valid;
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS
@@ -1513,9 +1498,25 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     `endif
 `endif
 
+        // PCcommit_freg_we
+    assign pc_if1  = stage_if_1_if_2_d.pc_inst;
+    assign pc_if2  = stage_if_2_id_d.pc_inst;
+    assign pc_id  = (valid_id)  ? decoded_instr.pc : 64'b0;
+    assign pc_rr  = (valid_rr)  ? stage_rr_exe_d.instr.pc : 64'b0;
+    assign pc_exe = (valid_exe) ? stage_rr_exe_q.instr.pc : 64'b0;
+    assign pc_wb = (valid_wb) ? wb_scalar[0].pc : 64'b0;
+    
+        // Valid
+    assign valid_if1  = stage_if_1_if_2_d.valid;
+    assign valid_if2  = stage_if_2_id_d.valid;
+    assign valid_id  = decoded_instr.valid;
+    assign valid_rr  = stage_rr_exe_d.instr.valid;
+    assign valid_exe = stage_rr_exe_q.instr.valid;
+    assign valid_wb = wb_scalar[0].valid;
+
     // Debug Ring signals Output
     // PC
-    assign debug_o.pc_fetch = pc_if2[39:0];
+    assign debug_o.pc_fetch = pc_if1[39:0];
     assign debug_o.pc_dec   = pc_id[39:0];
     assign debug_o.pc_rr    = pc_rr[39:0];
     assign debug_o.pc_exe   = pc_exe[39:0];
