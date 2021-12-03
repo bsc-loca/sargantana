@@ -94,7 +94,7 @@ module control_unit(
                 // we don't allow regular reads/writes if not halted
                 if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
                                !csr_cu_i.csr_exception && commit_cu_i.write_enable) ||
-                             ( wb_cu_i.valid[i] && wb_cu_i.write_enable[i])) 
+                             ( wb_cu_i.valid[i] && wb_cu_i.write_enable[i]) || (debug_wr_valid_i && debug_halt_i)) 
                 begin
                     cu_rr_o.write_enable[i] = 1'b1;
                 end else begin

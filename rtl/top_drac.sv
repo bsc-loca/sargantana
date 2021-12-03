@@ -37,6 +37,8 @@ module top_drac(
     input  [4:0]                IO_REG_ADDR,
     input                       IO_REG_WRITE,
     input bus64_t               IO_REG_WRITE_DATA,
+    input  [5:0]		IO_REG_PADDR,
+    input			IO_REG_PREAD,
 
 //------------------------------------------------------------------------------------
 // CSR INPUT INTERFACE
@@ -147,6 +149,8 @@ module top_drac(
     output logic                IO_WB_WE,
     output bus64_t              IO_WB_BITS_ADDR,
 
+    output logic		IO_REG_BACKEND_EMPTY,
+    output logic  [5:0]		IO_REG_LIST_PADDR,
     output bus64_t              IO_REG_READ_DATA,
 
 
@@ -236,7 +240,8 @@ assign debug_in.reg_read_valid=IO_REG_READ;
 assign debug_in.reg_read_write_addr=IO_REG_ADDR;
 assign debug_in.reg_write_valid=IO_REG_WRITE;
 assign debug_in.reg_write_data=IO_REG_WRITE_DATA;
-
+assign debug_in.reg_p_read_valid=IO_REG_PREAD;
+assign debug_in.reg_read_write_paddr=IO_REG_PADDR;
     
 assign IO_FETCH_PC=debug_out.pc_fetch;
 assign IO_DEC_PC=debug_out.pc_dec;
@@ -247,7 +252,8 @@ assign IO_WB_PC_VALID=debug_out.wb_valid_1;
 assign IO_WB_ADDR=debug_out.wb_reg_addr_1;
 assign IO_WB_WE=debug_out.wb_reg_we_1;
 assign IO_REG_READ_DATA=debug_out.reg_read_data;
-
+assign IO_REG_LIST_PADDR=debug_out.reg_list_paddr;
+assign IO_REG_BACKEND_EMPTY=debug_out.reg_backend_empty;
 
 // Register to save the last access to memory 
 always @(posedge CLK, negedge RST) begin
