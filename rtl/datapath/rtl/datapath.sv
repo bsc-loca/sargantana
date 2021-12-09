@@ -45,10 +45,15 @@ module datapath(
 
 `ifdef VERILATOR
     // Stages: if -- id -- rr -- ex -- wb
-    bus64_t commit_pc;
-    bus_simd_t commit_data;
-    logic commit_valid, commit_reg_we, commit_vreg_we, commit_freg_we;
-    logic [4:0] commit_addr_reg, commit_addr_vreg;
+    bus64_t [1:0] commit_pc;
+    bus_simd_t [1:0] commit_data;
+    logic [1:0] commit_valid;
+    logic [1:0] commit_reg_we;
+    logic [1:0] commit_vreg_we; 
+    logic [1:0] commit_freg_we;
+    reg_t [1:0] commit_addr_reg;
+    reg_t [1:0] commit_addr_freg;
+    reg_t [1:0] commit_addr_vreg;
 `endif
 
     bus64_t pc_if1, pc_if2, pc_id, pc_rr, pc_exe, pc_wb;
@@ -1333,28 +1338,37 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
 `ifdef VERILATOR
     // Debug signals
-    assign commit_valid     = instruction_to_commit[0].valid && !commit_cu_int.stall_commit;
-    assign commit_pc        = (instruction_to_commit[0].valid) ? instruction_to_commit[0].pc : 64'b0;
-
     always_comb begin 
-        if(instruction_to_commit[0].valid) begin
-            if (commit_cu_int.write_enable) begin
-                commit_data = resp_csr_cpu_i.csr_rw_rdata;
-            end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
-                commit_data = exe_to_wb_scalar[1].result;
+        for (int i=0; i<2; i++) begin
+            commit_valid[i]    = retire_inst_gl[i];
+            commit_pc[i]        = (instruction_to_commit[i].valid) ? instruction_to_commit[i].pc : 64'b0;
+            commit_addr_reg[i]   = instruction_to_commit[i].rd;
+            commit_addr_freg[i]  = instruction_to_commit[i].rd;
+            commit_addr_vreg[i]  = instruction_to_commit[i].vd;
+            commit_reg_we[i]     = instruction_to_commit[i].regfile_we && commit_valid;
+            commit_vreg_we[i]    = instruction_to_commit[i].vregfile_we;
+            commit_freg_we[i]    = instruction_to_commit[i].fregfile_we && commit_valid;
+            if (i==0) begin
+                if(instruction_to_commit[0].valid) begin
+                    if (commit_cu_int.write_enable) begin
+                        commit_data[0] = resp_csr_cpu_i.csr_rw_rdata;
+                    end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
+                        commit_data[0] = exe_to_wb_scalar[1].result;
+                    end else begin
+                        commit_data[0] = instruction_to_commit[0].result;
+                    end
+                end else begin
+                    commit_data[0] = 64'b0;
+                end
             end else begin
-                commit_data = instruction_to_commit[0].result;
+                if(instruction_to_commit[i].valid) begin
+                    commit_data[i] = instruction_to_commit[i].result;
+                end else begin
+                    commit_data[i] = 64'b0;
+                end
             end
-        end else begin
-            commit_data = 64'b0;
         end
     end
-
-    assign commit_addr_reg   = instruction_to_commit[0].rd;
-    assign commit_addr_vreg  = instruction_to_commit[0].vd;
-    assign commit_reg_we     = instruction_to_commit[0].regfile_we && commit_valid;
-    assign commit_vreg_we    = instruction_to_commit[0].vregfile_we;
-    assign commit_freg_we    = instruction_to_commit[0].fregfile_we && commit_valid;
 
 
     // Module that generates the signature of the core to compare with spike
@@ -1367,16 +1381,26 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         (
             .clk(clk_i),
             .rst(rstn_i),
-            .commit_valid(commit_valid),
-            .reg_wr_valid(commit_reg_we && (commit_addr_reg != 5'b0)),
-            .freg_wr_valid(commit_freg_we),
-            .vreg_wr_valid(commit_vreg_we),
-            .pc(commit_pc),
-            .inst(instruction_to_commit[0].inst),
-            .reg_dst(commit_addr_reg),
-            .freg_dst(commit_addr_freg),
-            .vreg_dst(commit_addr_vreg),
-            .data(commit_data),
+            .commit_valid_0(commit_valid[0]),
+            .reg_wr_valid_0(commit_reg_we[0] && (commit_addr_reg[0] != 5'b0)),
+            .freg_wr_valid_0(commit_freg_we[0]),
+            .vreg_wr_valid_0(commit_vreg_we[0]),
+            .pc_0(commit_pc[0]),
+            .inst_0(instruction_to_commit[0].inst),
+            .reg_dst_0(commit_addr_reg[0]),
+            .freg_dst_0(commit_addr_freg[0]),
+            .vreg_dst_0(commit_addr_vreg[0]),
+            .data_0(commit_data[0]),
+            .commit_valid_1(commit_valid[1]),
+            .reg_wr_valid_1(commit_reg_we[1] && (commit_addr_reg[1] != 5'b0)),
+            .freg_wr_valid_1(commit_freg_we[1]),
+            .vreg_wr_valid_1(commit_vreg_we[1]),
+            .pc_1(commit_pc[1]),
+            .inst_1(instruction_to_commit[1].inst),
+            .reg_dst_1(commit_addr_reg[1]),
+            .freg_dst_1(commit_addr_freg[1]),
+            .vreg_dst_1(commit_addr_vreg[1]),
+            .data_1(commit_data[1]),
             .sew(sew_i),
             .xcpt(commit_xcpt),
             .xcpt_cause(commit_xcpt_cause),

@@ -858,7 +858,7 @@ typedef struct packed {
     // exception from wb
     logic       csr_exception;
     // every time commit send this
-    logic       csr_retire;
+    logic [1:0] csr_retire;
     // exception cause
     bus64_t     csr_xcpt_cause;
     // xcpt pc 

@@ -157,7 +157,7 @@ always_comb begin
         req_cpu_csr_o.csr_retire = 2'h1;
         retire_inst_o = 2'h1;
     end else if (instruction_to_commit_i[0].valid && !commit_xcpt_i && !mem_commit_stall_i && !commit_2_blocked) begin
-        req_cpu_csr_o.csr_retire = 2'h2;
+        req_cpu_csr_o.csr_retire = 2'b11;
         retire_inst_o = 2'b11;
     end; 
 end
