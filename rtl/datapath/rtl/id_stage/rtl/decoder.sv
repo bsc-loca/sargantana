@@ -122,6 +122,8 @@ module decoder(
             decode_instr_o.inst = decode_i.inst;
         `endif
 
+        decode_instr_o.mem_type = NOT_MEM;
+
 
         if (!decode_i.ex.valid && decode_i.valid ) begin
 
@@ -225,6 +227,7 @@ module decoder(
                     endcase 
                 end
                 OP_LOAD:begin
+                    decode_instr_o.mem_type = LOAD;
                     decode_instr_o.regfile_we = 1'b1;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.use_rs1 = 1'b1;
@@ -257,6 +260,7 @@ module decoder(
                     endcase
                 end
                 OP_STORE: begin
+                    decode_instr_o.mem_type = STORE;
                     decode_instr_o.regfile_we = 1'b0;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.use_rs1 = 1'b1;
@@ -282,6 +286,7 @@ module decoder(
                 end
                 OP_ATOMICS: begin
                     // NOTE (guillemlp) what to do with aq and rl?
+                    decode_instr_o.mem_type = AMO;
                     decode_instr_o.regfile_we   = 1'b1;
                     decode_instr_o.use_imm      = 1'b0;
                     decode_instr_o.use_rs1      = 1'b1;
@@ -592,6 +597,7 @@ module decoder(
                     
                 end
                 OP_LOAD_FP: begin
+                    decode_instr_o.mem_type = LOAD;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.unit = UNIT_MEM;
                     decode_instr_o.use_rs1    = 1'b1;
@@ -634,6 +640,7 @@ module decoder(
                     endcase
                 end
                 OP_STORE_FP: begin
+                    decode_instr_o.mem_type = STORE;
                     decode_instr_o.unit = UNIT_MEM;
                     decode_instr_o.use_imm = 1'b0;
                     decode_instr_o.use_rs1 = 1'b1;

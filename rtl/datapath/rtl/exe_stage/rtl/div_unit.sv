@@ -90,8 +90,9 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_d[div_unit_sel_i].gl_index        = instruction_i.gl_index;
             instruction_d[div_unit_sel_i].branch_taken    = 1'b0;
             instruction_d[div_unit_sel_i].result_pc       = data_src1;                 // Store dividend in result_pc
+            instruction_d[div_unit_sel_i].mem_type        = data_src1;
             `ifdef VERILATOR
-            instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
+            instruction_d[div_unit_sel_i].id              = instruction_i.instr.mem_type;
             `endif
 
             instruction_d[~div_unit_sel_i] = instruction_q[~div_unit_sel_i];

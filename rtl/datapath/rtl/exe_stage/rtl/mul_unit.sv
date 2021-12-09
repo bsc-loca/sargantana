@@ -114,6 +114,7 @@ assign instruction_0_d.gl_index      = instruction_i.gl_index;
 assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;
 assign instruction_0_d.result        = instruction_i.instr.imm;
+assign instruction_0_d.mem_type      = instruction_i.instr.mem_type;
 `ifdef VERILATOR
 assign instruction_0_d.id            = instruction_i.instr.id;
 `endif

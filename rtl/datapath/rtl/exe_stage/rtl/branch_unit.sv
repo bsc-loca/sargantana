@@ -108,6 +108,7 @@ assign instruction_o.prd             = instruction_i.prd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;
 assign instruction_o.gl_index        = instruction_i.gl_index;
+assign instruction_o.mem_type        = instruction_i.instr.mem_type;
 `ifdef VERILATOR
 assign instruction_o.id            = instruction_i.instr.id;
 `endif

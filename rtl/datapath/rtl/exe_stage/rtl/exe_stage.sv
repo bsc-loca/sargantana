@@ -32,7 +32,7 @@ module exe_stage (
     input addr_t                        io_base_addr_i,
 
     input wire                          commit_store_or_amo_i, // Signal to execute stores and atomics in commit
-
+    input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     // OUTPUTS
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
@@ -283,6 +283,7 @@ mem_unit mem_unit_inst(
     .flush_i                (1'b0),
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
+    .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),

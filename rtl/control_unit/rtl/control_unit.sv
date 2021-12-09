@@ -352,9 +352,9 @@ module control_unit(
     end
 
     // Enable Update of Free List and Rename from Commit
-    assign cu_ir_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
-    assign cu_ir_o.simd_enable_commit_update = commit_cu_i.valid & commit_cu_i.vregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
-    assign cu_ir_o.fp_enable_commit_update = commit_cu_i.valid & commit_cu_i.fregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+    assign cu_ir_o.enable_commit_update = commit_cu_i.retire & commit_cu_i.regfile_we;
+    assign cu_ir_o.simd_enable_commit_update = commit_cu_i.retire & commit_cu_i.vregfile_we;
+    assign cu_ir_o.fp_enable_commit_update = commit_cu_i.retire & commit_cu_i.fregfile_we;
 
     // Recover checkpoint of Commit stage in Rename and Free List
     assign cu_ir_o.recover_commit = exception_enable_q;

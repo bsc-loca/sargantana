@@ -18,8 +18,8 @@ module fp_free_list(
     input logic            clk_i,               // Clock Singal
     input logic            rstn_i,              // Negated Reset Signal
     input logic            read_head_i,         // Read head of the circular buffer
-    input logic            add_free_register_i, // Add new free register
-    input phfreg_t         free_register_i,     // Register to be freed
+    input logic  [1:0]     add_free_register_i, // Add new free register
+    input phfreg_t [1:0]   free_register_i,     // Register to be freed
 
     input logic            do_checkpoint_i,     // After renaming do a checkpoint
     input logic            do_recover_i,        // Recover a checkpoint
@@ -53,7 +53,8 @@ logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [0:NUM_CHECKPOINTS-1];
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 
 // Determines if is gonna be read or writen
-logic write_enable;
+logic write_enable_0;
+logic write_enable_1;
 logic read_enable;
 logic checkpoint_enable;
 
@@ -65,11 +66,12 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // User can write to the free list a new free register
 // Freed register should be written to all checkpoints
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
-assign write_enable = (add_free_register_i) & (~commit_roll_back_i);
+assign write_enable_0 = (add_free_register_i[0]) & (~commit_roll_back_i);
+assign write_enable_1 = (add_free_register_i[1]) & (~commit_roll_back_i);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
-assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable) & (~do_recover_i) & (~commit_roll_back_i);
+assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable_0 | write_enable_1) & (~do_recover_i) & (~commit_roll_back_i);
 
 
 // FIFO Memory structure
@@ -107,8 +109,15 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-        if (write_enable) begin
-            register_table[tail] <= free_register_i;
+        if (write_enable_0) begin
+            register_table[tail] <= free_register_i[0];
+            if (write_enable_1) begin
+                register_table[tail + 1] <= free_register_i[1];
+            end
+        end else begin
+            if (write_enable_1) begin
+                register_table[tail] <= free_register_i[1];
+            end
         end
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,11 +125,11 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // When a register is freed increment tail
-        tail <= tail + write_enable;
+        tail <= tail + write_enable_0 + write_enable_1;
         
         // Recompute number of free registers available.
         for(i = 0; i < NUM_CHECKPOINTS; i++) begin
-            num_registers[i]  <= num_registers[i]  + write_enable;
+            num_registers[i]  <= num_registers[i]  + write_enable_0 + write_enable_1;
         end
         
         checkpoint_o <= version_head;
@@ -153,7 +162,7 @@ begin
             head[version_head] <= head[version_head] + read_enable;
             // Recompute number of free registers available. Note that the register we are reading only counts for the 
             // checkpoint in which we are right now 
-            num_registers[version_head]  <= num_registers[version_head]  + write_enable - read_enable;
+            num_registers[version_head]  <= num_registers[version_head]  + write_enable_0 + write_enable_1 - read_enable;
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //////// DO CHECKPOINT                                                                                /////////
@@ -165,15 +174,15 @@ begin
                 // Copy head position
                 head[version_head + 1'b1] <= head[version_head] + read_enable;
                 // Copy number of free registers.
-                num_registers[version_head + 1'b1]  <= num_registers[version_head]  + write_enable - read_enable;
+                num_registers[version_head + 1'b1]  <= num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable;
             end
         end
     end
 end
 
 
-assign new_register_o = (~read_enable)? 'h0 : ((num_registers[version_head] == 0) & (write_enable))? free_register_i : register_table[head[version_head]];
-assign empty_o = (num_registers[version_head] == 0) & (~write_enable);
+assign new_register_o = (~read_enable)? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0)) ? free_register_i[0] : ((num_registers[version_head] == 0) & (write_enable_1)) ? free_register_i[1] : register_table[head[version_head]];
+assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0 & ~write_enable_1;
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
 endmodule

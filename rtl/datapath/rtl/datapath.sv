@@ -177,7 +177,7 @@ module datapath(
     gl_index_t       [drac_pkg::NUM_SIMD_WB-1:0]   gl_index_simd;
     logic            [drac_pkg::NUM_SIMD_WB-1:0]   gl_valid_simd;
 
-    gl_instruction_t instruction_gl_commit; 
+    gl_instruction_t [1:0] instruction_gl_commit; 
     
     // Exe
     rr_exe_instr_t selection_rr_exe_d;
@@ -253,13 +253,14 @@ module datapath(
     logic commit_store_or_amo_int;
     logic mem_commit_store_or_amo_int;
     
-    gl_instruction_t instruction_gl_commit_old_q;
-    gl_instruction_t instruction_to_commit;
+    //gl_instruction_t instruction_gl_commit_old_q;
+    gl_instruction_t [1:0] instruction_to_commit;
     logic src_select_commit;
     exception_t exception_mem_commit_int;
     gl_index_t mem_gl_index_int;
     gl_index_t index_gl_commit;
-    gl_index_t index_gl_commit_old_q;
+    logic [1:0] retire_inst_gl;
+    //gl_index_t index_gl_commit_old_q;
 
     //Br at WB
     addrPC_t branch_addr_result_wb;
@@ -508,7 +509,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_ir_rr_d.instr.regfile_we & stage_ir_rr_d.instr.valid & (stage_ir_rr_d.instr.rd != 'h0) & (~control_int.stall_ir)),
         .add_free_register_i    (cu_ir_int.enable_commit_update),
-        .free_register_i        (instruction_to_commit.old_prd),
+        .free_register_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
@@ -525,7 +526,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_ir_rr_d.instr.vregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .add_free_register_i    (cu_ir_int.simd_enable_commit_update),
-        .free_register_i        (instruction_to_commit.old_pvd),
+        .free_register_i        ({instruction_to_commit[1].old_pvd, instruction_to_commit[0].old_pvd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
@@ -542,7 +543,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_ir_rr_d.instr.fregfile_we & stage_ir_rr_d.instr.valid & (~control_int.stall_ir)),
         .add_free_register_i    (cu_ir_int.fp_enable_commit_update),
-        .free_register_i        (instruction_to_commit.old_fprd),
+        .free_register_i        ({instruction_to_commit[1].old_fprd, instruction_to_commit[0].old_fprd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
@@ -573,9 +574,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
         .recover_commit_i(cu_ir_int.recover_commit), 
-        .commit_old_dst_i(instruction_to_commit.rd),    
+        .commit_old_dst_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),    
         .commit_write_dst_i(cu_ir_int.enable_commit_update),  
-        .commit_new_dst_i(instruction_to_commit.prd),
+        .commit_new_dst_i({instruction_to_commit[1].prd, instruction_to_commit[0].prd}),
         .src1_o(stage_no_stall_rr_q.prs1),
         .rdy1_o(stage_no_stall_rr_q.rdy1),
         .src2_o(stage_no_stall_rr_q.prs2),
@@ -605,9 +606,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
         .recover_commit_i(cu_ir_int.recover_commit), 
-        .commit_old_dst_i(instruction_to_commit.vd),    
+        .commit_old_dst_i({instruction_to_commit[1].vd, instruction_to_commit[0].vd}),    
         .commit_write_dst_i(cu_ir_int.simd_enable_commit_update),  
-        .commit_new_dst_i(instruction_to_commit.pvd),
+        .commit_new_dst_i({instruction_to_commit[1].pvd, instruction_to_commit[0].pvd}),
         .src1_o(stage_no_stall_rr_q.pvs1),
         .rdy1_o(stage_no_stall_rr_q.vrdy1),
         .src2_o(stage_no_stall_rr_q.pvs2),
@@ -641,9 +642,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
         .recover_commit_i(cu_ir_int.recover_commit),
-        .commit_old_dst_i(instruction_to_commit.rd),
+        .commit_old_dst_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),
         .commit_write_dst_i(cu_ir_int.fp_enable_commit_update),
-        .commit_new_dst_i(instruction_to_commit.fprd),
+        .commit_new_dst_i({instruction_to_commit[1].fprd, instruction_to_commit[0].fprd}),
         .src1_o(stage_no_stall_rr_q.fprs1),
         .rdy1_o(stage_no_stall_rr_q.frdy1),
         .src2_o(stage_no_stall_rr_q.fprs2),
@@ -788,12 +789,13 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         assign instruction_decode_gl.id                 = stage_ir_rr_q.instr.id;
     `endif
     assign instruction_decode_gl.fp_status              = '0;
+    assign instruction_decode_gl.mem_type               = stage_ir_rr_q.instr.mem_type;
 
     graduation_list graduation_list_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .instruction_i(instruction_decode_gl),
-        .read_head_i(cu_commit_int.enable_commit),
+        .read_head_i(retire_inst_gl),
         .instruction_writeback_i(gl_index),
         .instruction_writeback_enable_i(gl_valid),
         .instruction_writeback_data_i(instruction_writeback_gl),
@@ -1071,6 +1073,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .io_base_addr_i(io_base_addr),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
+        .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),
     
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
         .correct_branch_pred_o(correct_branch_pred),
@@ -1140,28 +1143,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    assign wb_amo_int = (wb_scalar[1].instr_type == AMO_MAXWU)   ||
-                        (wb_scalar[1].instr_type == AMO_MAXDU)   ||
-                        (wb_scalar[1].instr_type == AMO_MINWU)   ||
-                        (wb_scalar[1].instr_type == AMO_MINDU)   ||
-                        (wb_scalar[1].instr_type == AMO_MAXW)    ||
-                        (wb_scalar[1].instr_type == AMO_MAXD)    ||
-                        (wb_scalar[1].instr_type == AMO_MINW)    ||
-                        (wb_scalar[1].instr_type == AMO_MIND)    ||
-                        (wb_scalar[1].instr_type == AMO_ORW)     ||
-                        (wb_scalar[1].instr_type == AMO_ORD)     ||
-                        (wb_scalar[1].instr_type == AMO_ANDW)    ||
-                        (wb_scalar[1].instr_type == AMO_ANDD)    ||
-                        (wb_scalar[1].instr_type == AMO_XORW)    ||
-                        (wb_scalar[1].instr_type == AMO_XORD)    ||
-                        (wb_scalar[1].instr_type == AMO_ADDW)    ||
-                        (wb_scalar[1].instr_type == AMO_ADDD)    ||
-                        (wb_scalar[1].instr_type == AMO_SWAPW)   ||
-                        (wb_scalar[1].instr_type == AMO_SWAPD)   ||
-                        (wb_scalar[1].instr_type == AMO_SCW)     ||
-                        (wb_scalar[1].instr_type == AMO_SCD)     ||
-                        (wb_scalar[1].instr_type == AMO_LRW)     ||
-                        (wb_scalar[1].instr_type == AMO_LRD)     ;
+    assign wb_amo_int = wb_scalar[1].mem_type == AMO;
 
     //WB data for the bypasses (the CSRs should not be bypassed)
     always_comb begin
@@ -1190,7 +1172,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
                 data_wb_to_exe[i] = wb_scalar[i].result;
                 write_paddr_exe[i] = wb_scalar[i].prd;
-                write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.rd :
+                write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].rd :
                                   wb_scalar[i].rd;
                 wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
             end else begin
@@ -1252,7 +1234,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                     write_paddr_rr[i] = debug_i.reg_read_write_paddr;
                 end else begin
                     data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : wb_scalar[i].result;
-                    write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit.prd : wb_scalar[i].prd;
+                    write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].prd : wb_scalar[i].prd;
                 end
             end else begin
                 data_wb_to_rr[i] = wb_scalar[i].result;
@@ -1275,26 +1257,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     //////// COMMIT STAGE                                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    register #($bits(gl_instruction_t)+$bits(gl_index_t)) commit_inst(
-        .clk_i(clk_i),
-        .rstn_i(rstn_i),
-        .flush_i(flush_int.flush_commit),
-        .load_i(src_select_commit),
-        .input_i({instruction_gl_commit,index_gl_commit}),
-        .output_o({instruction_gl_commit_old_q,index_gl_commit_old_q})
-    );
-
-    // Syncronus Mux to decide between actual (decode + rename) or one cycle before (decode + rename)
-    always @(posedge clk_i, negedge rstn_i) begin
-      if(~rstn_i) begin
-        src_select_commit <= 0;
-      end else begin
-        src_select_commit <= !control_int.stall_commit;
-      end
-    end
-
-    assign instruction_to_commit = (src_select_commit)? instruction_gl_commit : instruction_gl_commit_old_q;
-    assign commit_cu_int.gl_index = (src_select_commit)? index_gl_commit : index_gl_commit_old_q;
+    assign instruction_to_commit = instruction_gl_commit;
+    assign commit_cu_int.gl_index = index_gl_commit;
 
     csr_interface csr_interface_inst
     (
@@ -1302,10 +1266,11 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .instruction_to_commit_i    (instruction_to_commit),
         .stall_exe_i                (control_int.stall_exe),
         .commit_store_or_amo_i      (commit_store_or_amo_int),
-        .mem_commit_stall_i         (mem_commit_stall_int),
+        .mem_commit_stall_i         (commit_cu_int.stall_commit),
         .exception_mem_commit_i     (exception_mem_commit_int),
         .csr_ena_int_o              (csr_ena_int),
-        .req_cpu_csr_o              (req_cpu_csr_o)
+        .req_cpu_csr_o              (req_cpu_csr_o),
+        .retire_inst_o              (retire_inst_gl)
     );
 
     // Delay the PC_EVEC treatment one cycle
@@ -1315,121 +1280,88 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             pc_next_csr_q <= 'b0;
         end else begin 
             pc_evec_q <= resp_csr_cpu_i.csr_evec;
-            pc_next_csr_q <= instruction_to_commit.pc + 64'h4;
+            pc_next_csr_q <= instruction_to_commit[0].pc + 64'h4;
         end
     end
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
-    assign commit_xcpt = (~commit_store_or_amo_int)? instruction_to_commit.exception.valid : exception_mem_commit_int.valid;
-    assign commit_xcpt_cause = (~commit_store_or_amo_int)? instruction_to_commit.exception.cause : exception_mem_commit_int.cause;
+    assign commit_xcpt = (~commit_store_or_amo_int)? instruction_to_commit[0].exception.valid : exception_mem_commit_int.valid;
+    assign commit_xcpt_cause = (~commit_store_or_amo_int)? instruction_to_commit[0].exception.cause : exception_mem_commit_int.cause;
 
     // Control Unit From Commit
-    assign commit_cu_int.valid = instruction_to_commit.valid;
-    assign commit_cu_int.regfile_we = instruction_to_commit.regfile_we;
-    assign commit_cu_int.vregfile_we = instruction_to_commit.vregfile_we;
-    assign commit_cu_int.fregfile_we = instruction_to_commit.fregfile_we;
+    assign commit_cu_int.valid = {instruction_to_commit[1].valid,instruction_to_commit[0].valid};
+    assign commit_cu_int.regfile_we = {instruction_to_commit[1].regfile_we,instruction_to_commit[0].regfile_we};
+    assign commit_cu_int.vregfile_we = {instruction_to_commit[1].vregfile_we,instruction_to_commit[0].vregfile_we};
+    assign commit_cu_int.fregfile_we = {instruction_to_commit[1].fregfile_we,instruction_to_commit[0].fregfile_we};
     assign commit_cu_int.csr_enable = csr_ena_int;
-    assign commit_cu_int.stall_csr_fence = instruction_to_commit.stall_csr_fence && instruction_to_commit.valid;
+    assign commit_cu_int.stall_csr_fence = instruction_to_commit[0].stall_csr_fence && instruction_to_commit[0].valid;
     assign commit_cu_int.xcpt = commit_xcpt;
 
     // tell cu that ecall was taken
-    assign commit_cu_int.ecall_taken = (instruction_to_commit.instr_type == ECALL  ||
-                                        instruction_to_commit.instr_type == MRTS   ||
-                                        instruction_to_commit.instr_type == EBREAK );
+    assign commit_cu_int.ecall_taken = (instruction_to_commit[0].instr_type == ECALL  ||
+                                        instruction_to_commit[0].instr_type == MRTS   ||
+                                        instruction_to_commit[0].instr_type == EBREAK );
 
     // tell cu that there is a fence or fence_i
-    assign commit_cu_int.fence = (instruction_to_commit.instr_type == FENCE_I || 
-                                  instruction_to_commit.instr_type == FENCE || 
-                                  instruction_to_commit.instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence = (instruction_to_commit[0].instr_type == FENCE_I || 
+                                  instruction_to_commit[0].instr_type == FENCE || 
+                                  instruction_to_commit[0].instr_type == SFENCE_VMA);
     // tell cu there is a fence i to flush the icache
-    assign commit_cu_int.fence_i = (instruction_to_commit.instr_type == FENCE_I || 
-                                    instruction_to_commit.instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence_i = (instruction_to_commit[0].instr_type == FENCE_I || 
+                                    instruction_to_commit[0].instr_type == SFENCE_VMA);
 
     // tell cu that commit needs to write there is a fence
-    assign commit_cu_int.write_enable = instruction_to_commit.valid &
-                                        (instruction_to_commit.instr_type == CSRRW  ||
-                                         instruction_to_commit.instr_type == CSRRS  ||
-                                         instruction_to_commit.instr_type == CSRRC  ||
-                                         instruction_to_commit.instr_type == CSRRWI ||
-                                         instruction_to_commit.instr_type == CSRRSI ||
-                                         instruction_to_commit.instr_type == CSRRCI ||
-                                         instruction_to_commit.instr_type == VSETVL ||
-                                         instruction_to_commit.instr_type == VSETVLI);
+    assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
+                                        (instruction_to_commit[0].instr_type == CSRRW  ||
+                                         instruction_to_commit[0].instr_type == CSRRS  ||
+                                         instruction_to_commit[0].instr_type == CSRRC  ||
+                                         instruction_to_commit[0].instr_type == CSRRWI ||
+                                         instruction_to_commit[0].instr_type == CSRRSI ||
+                                         instruction_to_commit[0].instr_type == CSRRCI ||
+                                         instruction_to_commit[0].instr_type == VSETVL ||
+                                         instruction_to_commit[0].instr_type == VSETVLI);
 
-    assign commit_store_or_amo_int = (instruction_to_commit.instr_type == SD)          || 
-                                     (instruction_to_commit.instr_type == SW)          ||
-                                     (instruction_to_commit.instr_type == SH)          ||
-                                     (instruction_to_commit.instr_type == SB)          ||
-                                     (instruction_to_commit.instr_type == VSE)         ||
-                                     (instruction_to_commit.instr_type == FSD)         ||
-                                     (instruction_to_commit.instr_type == FSW)         ||
-                                     (instruction_to_commit.instr_type == AMO_MAXWU)   ||
-                                     (instruction_to_commit.instr_type == AMO_MAXDU)   ||
-                                     (instruction_to_commit.instr_type == AMO_MINWU)   ||
-                                     (instruction_to_commit.instr_type == AMO_MINDU)   ||
-                                     (instruction_to_commit.instr_type == AMO_MAXW)    ||
-                                     (instruction_to_commit.instr_type == AMO_MAXD)    ||
-                                     (instruction_to_commit.instr_type == AMO_MINW)    ||
-                                     (instruction_to_commit.instr_type == AMO_MIND)    ||
-                                     (instruction_to_commit.instr_type == AMO_ORW)     ||
-                                     (instruction_to_commit.instr_type == AMO_ORD)     ||
-                                     (instruction_to_commit.instr_type == AMO_ANDW)    ||
-                                     (instruction_to_commit.instr_type == AMO_ANDD)    ||
-                                     (instruction_to_commit.instr_type == AMO_XORW)    ||
-                                     (instruction_to_commit.instr_type == AMO_XORD)    ||
-                                     (instruction_to_commit.instr_type == AMO_ADDW)    ||
-                                     (instruction_to_commit.instr_type == AMO_ADDD)    ||
-                                     (instruction_to_commit.instr_type == AMO_SWAPW)   ||
-                                     (instruction_to_commit.instr_type == AMO_SWAPD)   ||
-                                     (instruction_to_commit.instr_type == AMO_SCW)     ||
-                                     (instruction_to_commit.instr_type == AMO_SCD)     ||
-                                     (instruction_to_commit.instr_type == AMO_LRW)     ||
-                                     (instruction_to_commit.instr_type == AMO_LRD)     ;
+    assign commit_store_or_amo_int = (instruction_to_commit[0].mem_type == STORE) || 
+                                     (instruction_to_commit[0].mem_type == AMO);
 
     assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
-
+    assign commit_cu_int.retire = retire_inst_gl;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// DEBUG SIGNALS                                                                                /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifdef VERILATOR
     // Debug signals
-    assign commit_valid     = instruction_to_commit.valid && !commit_cu_int.stall_commit;
-    assign commit_pc        = (instruction_to_commit.valid) ? instruction_to_commit.pc : 64'b0;
+    assign commit_valid     = instruction_to_commit[0].valid && !commit_cu_int.stall_commit;
+    assign commit_pc        = (instruction_to_commit[0].valid) ? instruction_to_commit[0].pc : 64'b0;
 
     always_comb begin 
-        if(instruction_to_commit.valid) begin
+        if(instruction_to_commit[0].valid) begin
             if (commit_cu_int.write_enable) begin
                 commit_data = resp_csr_cpu_i.csr_rw_rdata;
             end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
                 commit_data = exe_to_wb_scalar[1].result;
             end else begin
-                commit_data = instruction_to_commit.result;
+                commit_data = instruction_to_commit[0].result;
             end
         end else begin
             commit_data = 64'b0;
         end
     end
 
-    assign commit_addr_reg   = instruction_to_commit.rd;
-    assign commit_addr_vreg  = instruction_to_commit.vd;
-    assign commit_reg_we     = instruction_to_commit.regfile_we && commit_valid;
-    assign commit_vreg_we    = instruction_to_commit.vregfile_we;
-    assign commit_freg_we    = instruction_to_commit.fregfile_we && commit_valid;
+    assign commit_addr_reg   = instruction_to_commit[0].rd;
+    assign commit_addr_vreg  = instruction_to_commit[0].vd;
+    assign commit_reg_we     = instruction_to_commit[0].regfile_we && commit_valid;
+    assign commit_vreg_we    = instruction_to_commit[0].vregfile_we;
+    assign commit_freg_we    = instruction_to_commit[0].fregfile_we && commit_valid;
 
 
     // Module that generates the signature of the core to compare with spike
     `ifdef VERILATOR_TORTURE_TESTS
         logic commit_store_int, is_commit_store_valid;
-        assign commit_store_int = (instruction_to_commit.instr_type == SD)     || 
-                                     (instruction_to_commit.instr_type == SW)  ||
-                                     (instruction_to_commit.instr_type == SH)  ||
-                                     (instruction_to_commit.instr_type == SB)  ||
-                                     (instruction_to_commit.instr_type == VSE) ||
-                                     (instruction_to_commit.instr_type == FSD) ||
-                                     (instruction_to_commit.instr_type == FSW);
-        assign is_commit_store_valid = instruction_to_commit.valid && !commit_cu_int.stall_commit && 
+        assign commit_store_int = instruction_to_commit[0].mem_type == STORE;
+        assign is_commit_store_valid = instruction_to_commit[0].valid && !commit_cu_int.stall_commit && 
                                         commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
         torture_dump_behav torture_dump
         (
@@ -1440,7 +1372,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             .freg_wr_valid(commit_freg_we),
             .vreg_wr_valid(commit_vreg_we),
             .pc(commit_pc),
-            .inst(instruction_to_commit.inst),
+            .inst(instruction_to_commit[0].inst),
             .reg_dst(commit_addr_reg),
             .freg_dst(commit_addr_freg),
             .vreg_dst(commit_addr_vreg),
@@ -1498,7 +1430,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             .wb2_id(wb_scalar[1].id),
 
             .wb_store_valid(is_commit_store_valid),
-            .wb_srore_id(instruction_to_commit.id),
+            .wb_srore_id(instruction_to_commit[0].id),
             // Scalar 
             .wb3_valid(wb_scalar[2].valid),
             .wb3_id(wb_scalar[2].id),
@@ -1557,13 +1489,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.valid;
     assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
-    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int || instruction_to_commit.instr_type == LB  || 
-                                                                 instruction_to_commit.instr_type == LH  ||
-                                                                 instruction_to_commit.instr_type == LW  ||
-                                                                 instruction_to_commit.instr_type == LD  ||
-                                                                 instruction_to_commit.instr_type == LBU ||
-                                                                 instruction_to_commit.instr_type == LHU ||
-                                                                 instruction_to_commit.instr_type == LWU);
+    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int || instruction_to_commit[0].mem_type == LOAD);
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;

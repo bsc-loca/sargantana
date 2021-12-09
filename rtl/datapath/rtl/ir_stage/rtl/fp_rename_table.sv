@@ -35,9 +35,9 @@ module fp_rename_table(
     input phreg_t [drac_pkg::NUM_FP_WB-1:0]    paddr_i,             // New register is ready
 
     input logic                                recover_commit_i,    // Copy commit table on register table
-    input reg_t                                commit_old_dst_i,    // Read and write to old destination register at commit table
-    input logic                                commit_write_dst_i,  // Needs to write to old destination register at commit table
-    input phreg_t                              commit_new_dst_i,    // Wich register write to old destination register at commit table
+    input reg_t [1:0]                          commit_old_dst_i,    // Read and write to old destination register at commit table
+    input logic [1:0]                          commit_write_dst_i,  // Needs to write to old destination register at commit table
+    input phreg_t [1:0]                        commit_new_dst_i,    // Wich register write to old destination register at commit table
 
     input logic                                do_checkpoint_i,     // After renaming do a checkpoint
     input logic                                do_recover_i,        // Recover a checkpoint
@@ -66,7 +66,8 @@ logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 logic write_enable;
 logic read_enable;
 logic checkpoint_enable;
-logic commit_write_enable;
+logic commit_write_enable_0;
+logic commit_write_enable_1;
 logic [drac_pkg::NUM_FP_WB-1:0] ready_enable;
 logic [drac_pkg::NUM_FP_WB-1:0] rdy1;
 logic [drac_pkg::NUM_FP_WB-1:0] rdy2;
@@ -79,7 +80,8 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 assign write_enable = write_dst_i & (~do_recover_i) & (~recover_commit_i);
 
 // User can wirte to commit table to add new destination register
-assign commit_write_enable = commit_write_dst_i & (~recover_commit_i);
+assign commit_write_enable_0 = commit_write_dst_i[0] & (~recover_commit_i);
+assign commit_write_enable_1 = commit_write_dst_i[1] & (~recover_commit_i);
 
 // User can read the table if no recover action is being done
 assign read_enable = (~do_recover_i) & (~recover_commit_i);
@@ -192,8 +194,15 @@ begin
         end
 
         // Update commit table
-        if (commit_write_enable) begin
-            commit_table[commit_old_dst_i] <= commit_new_dst_i;
+        if (commit_write_enable_0 & !commit_write_enable_1) begin
+            commit_table[commit_old_dst_i[0]] <= commit_new_dst_i[0];
+        end else if (commit_write_enable_0 & commit_write_enable_1 & commit_old_dst_i[0] == commit_old_dst_i[1]) begin
+            commit_table[commit_old_dst_i[1]] <= commit_new_dst_i[1];
+        end else if (commit_write_enable_0 & commit_write_enable_1 & commit_old_dst_i[0] != commit_old_dst_i[1]) begin
+            commit_table[commit_old_dst_i[0]] <= commit_new_dst_i[0];
+            commit_table[commit_old_dst_i[1]] <= commit_new_dst_i[1];
+        end else if (!commit_write_enable_0 & commit_write_enable_1) begin
+            commit_table[commit_old_dst_i[1]] <= commit_new_dst_i[1];
         end
 
         // Write new ready register
