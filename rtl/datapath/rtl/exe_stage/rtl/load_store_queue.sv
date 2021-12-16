@@ -148,7 +148,7 @@ begin
         tail <= tail + {2'b00, write_enable};
         num_to_exe <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable_lsq};
         num_on_fly <= 4'b0;
-        num_to_recover  <= num_on_fly;
+        num_to_recover  <= num_on_fly + num_to_recover;
         recover_head <= recover_head;
         recover_tail <= recover_head;
     end

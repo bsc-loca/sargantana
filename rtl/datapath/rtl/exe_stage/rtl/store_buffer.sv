@@ -70,7 +70,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
 rr_exe_mem_instr_t instruction_table    [0:ST_BUF_NUM_ENTRIES-1];
 logic              valid_table          [0:ST_BUF_NUM_ENTRIES-1];
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if (~rstn_i) begin
         for (integer j = 0; j < ST_BUF_NUM_ENTRIES; j++) begin
