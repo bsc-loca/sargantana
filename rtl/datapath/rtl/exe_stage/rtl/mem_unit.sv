@@ -104,9 +104,9 @@ logic io_s1_q;
 logic io_s2_q;
 
 // Tag Counter and Pipeline
-reg_t tag_id;
-reg_t tag_id_s1_q;
-reg_t tag_id_s2_q;
+logic [6:0] tag_id;
+logic [6:0] tag_id_s1_q;
+logic [6:0] tag_id_s2_q;
 
 // Exception pipeline
 logic xcpt;
@@ -237,6 +237,9 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         state <= ResetState;
         stored_instr_to_dcache.instr.valid <= 1'b0;
+    end else if (flush_to_lsq) begin
+        state <= ResetState;
+        stored_instr_to_dcache.instr.valid <= 1'b0;
     end else if (reset_next_lsq) begin
         state <= ReadHead;
         stored_instr_to_dcache.instr.valid <= 1'b0;
@@ -259,7 +262,7 @@ always_comb begin
         instruction_s1_d            =  'h0;     // No Instruction to next stage
         is_unalign1_s1_d            = 1'b0;
         is_unalign2_s1_d            = 1'b0;
-        next_state                  = ReadHead; // Next state Read Head
+        next_state                  = resp_dcache_cpu_i.ordered ? ReadHead : ResetState ; // Next state Read Head
     end else begin
         case(state)
             ////////////////////////////////////////////////// Reset state
@@ -271,7 +274,7 @@ always_comb begin
                 instruction_s1_d            =  'h0;         // No Instruction to next stage
                 is_unalign1_s1_d            = 1'b0;
                 is_unalign2_s1_d            = 1'b0;
-                next_state                  = ReadHead;     // Next state Read Head
+                next_state                  = resp_dcache_cpu_i.ordered ? ReadHead : ResetState; // Next state Read Head
             end
             ////////////////////////////////////////////////// Read head of LSQ
             ReadHead: begin

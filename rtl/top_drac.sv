@@ -426,6 +426,7 @@ dcache_interface dcache_interface_inst(
     .dmem_xcpt_ma_ld_i(DMEM_XCPT_MA_LD),
     .dmem_xcpt_pf_st_i(DMEM_XCPT_PF_ST),
     .dmem_xcpt_pf_ld_i(DMEM_XCPT_PF_LD),
+    .dmem_ordered_i(DMEM_ORDERED),
 
     // Interface request
     .dmem_req_valid_o(DMEM_REQ_VALID),

@@ -228,11 +228,6 @@ always_comb begin
         mem_instr.instr     = '0;
         fp_instr.instr      = '0;
         simd_instr.instr    = '0;
-    end else if (stall_fpu_int) begin
-        arith_instr.instr   = from_rr_i.instr;
-        mem_instr.instr     = '0;
-        fp_instr.instr      = from_rr_i.instr;
-        simd_instr.instr    = '0;
     end else begin
         arith_instr.instr   = from_rr_i.instr;
         mem_instr.instr     = from_rr_i.instr;

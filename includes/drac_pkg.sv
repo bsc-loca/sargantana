@@ -290,7 +290,8 @@ typedef struct packed {
     logic  xcpt_pf_st;      // Page fault store
     logic  xcpt_pf_ld;      // Page fault load 
     bus64_t      addr;      // Requested Address
-    logic io_address_space; // Request in Input/Output Address Space    
+    logic io_address_space; // Request in Input/Output Address Space
+    logic     ordered;    
 } resp_dcache_cpu_t;
 
 // Request send to DCache

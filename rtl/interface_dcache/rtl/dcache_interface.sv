@@ -36,6 +36,7 @@ module dcache_interface (
     input  logic        dmem_xcpt_ma_ld_i,   // Missaligned load
     input  logic        dmem_xcpt_pf_st_i,   // DTLB miss on store
     input  logic        dmem_xcpt_pf_ld_i,   // DTLB miss on load
+    input  logic        dmem_ordered_i,
 
     // Request TO DCACHE
 
@@ -208,6 +209,7 @@ assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_i;
 assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_i;
 assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
+assign resp_dcache_cpu_o.ordered = dmem_ordered_i;
 
 //-PMU
 assign dmem_is_store_o = (type_of_op == MEM_STORE) && dmem_req_valid_o;
