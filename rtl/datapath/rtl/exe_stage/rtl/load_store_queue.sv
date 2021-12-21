@@ -85,17 +85,21 @@ logic read_enable;
 logic read_enable_lsq;
 logic read_enable_sb;
 logic advance_head_enable;
+logic bypass_lsq;
+logic empty_int;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES);
+assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES) & !(empty_int && instruction_i.instr.mem_type == LOAD && read_enable);
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-assign read_enable = read_next_i & !empty_o & (~reset_next_i);
+assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD)) & (~reset_next_i);
 
 // User can advance the head of the buffer if there is data stored in the queue
 assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
+
+assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
 
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
@@ -191,6 +195,8 @@ always_comb begin
         next_instr_exe_o = control_table[head];
     end else if (read_enable && is_next_load && !st_buff_collision) begin
         next_instr_exe_o = control_table[head];
+    end else if (read_enable && bypass_lsq) begin
+        next_instr_exe_o = instruction_i;
     end
 end
 
@@ -204,10 +210,13 @@ always_comb begin
         blocked_store_o = 1'b0;
     end else if (is_next_load && !st_buff_collision) begin
         blocked_store_o = 1'b0;
+    end else if (bypass_lsq) begin
+        blocked_store_o = 1'b0;
     end
 end
 
-assign empty_o = (num_to_exe == '0 && st_buff_empty && num_to_recover == '0);
+assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_recover == '0;
+assign empty_o = empty_int && !bypass_lsq;
 assign full_o  = ((num_to_exe == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
 assign is_next_load = num_to_exe > '0 && (control_table[head].instr.mem_type == LOAD);
