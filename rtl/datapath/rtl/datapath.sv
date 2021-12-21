@@ -1084,14 +1084,15 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .correct_branch_pred_o(correct_branch_pred),
     
         .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
-        .mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        .mem_to_scalar_wb_o(wb_scalar[1]),
+        .mul_div_to_scalar_wb_o(wb_scalar[3]),
 
         .simd_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[0]),
         .fp_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[1]),
         .simd_to_simd_wb_o(exe_to_wb_simd[0]),
-        .mem_to_simd_wb_o(exe_to_wb_simd[1]),
+        .mem_to_simd_wb_o(wb_simd[1]),
 
-        .mem_to_fp_wb_o(exe_to_wb_fp[1]),
+        .mem_to_fp_wb_o(wb_fp[1]),
         .fp_to_wb_o(exe_to_wb_fp[0]),
         .exe_cu_o(exe_cu_int),
 
@@ -1121,13 +1122,13 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     always @(posedge clk_i)  assert (!(exe_to_wb_scalar_simd_fp[0].valid & exe_to_wb_scalar_simd_fp[1].valid));
 
-    register #(NUM_SCALAR_WB * $bits(exe_wb_scalar_instr_t) + NUM_SIMD_WB * $bits(exe_wb_simd_instr_t) + NUM_FP_WB * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
+    register #((NUM_SCALAR_WB - 1) * $bits(exe_wb_scalar_instr_t) + (NUM_SIMD_WB - 1) * $bits(exe_wb_simd_instr_t) + (NUM_FP_WB - 1) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i({exe_to_wb_scalar, exe_to_wb_simd, exe_to_wb_fp}),
-        .output_o({wb_scalar, wb_simd, wb_fp})
+        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[2], exe_to_wb_simd[0], exe_to_wb_fp[0]}),
+        .output_o({wb_scalar[0], wb_scalar[2], wb_simd[0], wb_fp[0]})
     );
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -1340,8 +1341,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     // Debug signals
     always_comb begin 
         for (int i=0; i<2; i++) begin
-            commit_valid[i]    = retire_inst_gl[i];
-            commit_pc[i]        = (instruction_to_commit[i].valid) ? instruction_to_commit[i].pc : 64'b0;
+            commit_valid[i]      = retire_inst_gl[i];
+            commit_pc[i]         = (instruction_to_commit[i].valid) ? instruction_to_commit[i].pc : 64'b0;
             commit_addr_reg[i]   = instruction_to_commit[i].rd;
             commit_addr_freg[i]  = instruction_to_commit[i].rd;
             commit_addr_vreg[i]  = instruction_to_commit[i].vd;

@@ -38,6 +38,7 @@ module exe_stage (
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        simd_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        fp_to_scalar_wb_o,
+    output exe_wb_scalar_instr_t        mul_div_to_scalar_wb_o,
     output exe_wb_simd_instr_t          simd_to_simd_wb_o,
     output exe_wb_simd_instr_t          mem_to_simd_wb_o,
     output exe_wb_fp_instr_t            mem_to_fp_wb_o,
@@ -318,24 +319,28 @@ always_comb begin
         mem_to_simd_wb_o    = 'h0;
         mem_to_fp_wb_o      = 'h0;
     end
+
+    if (mul_to_scalar_wb.valid) begin
+        mul_div_to_scalar_wb_o = mul_to_scalar_wb;
+        if (~mul_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            mul_div_to_scalar_wb_o.ex.valid = 1;
+            mul_div_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            mul_div_to_scalar_wb_o.ex.origin = 64'b0;
+        end
+    end else if (div_to_scalar_wb.valid) begin
+        mul_div_to_scalar_wb_o = div_to_scalar_wb;
+        if (~div_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
+            mul_div_to_scalar_wb_o.ex.valid = 1;
+            mul_div_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
+            mul_div_to_scalar_wb_o.ex.origin = 64'b0;
+        end
+    end else begin
+        mul_div_to_scalar_wb_o = 'h0;
+    end
     
     if (alu_to_scalar_wb.valid) begin
         arith_to_scalar_wb_o = alu_to_scalar_wb;
         if (~alu_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_scalar_wb_o.ex.valid = 1;
-            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-    end else if (mul_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = mul_to_scalar_wb;
-        if (~mul_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_scalar_wb_o.ex.valid = 1;
-            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-    end else if (div_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = div_to_scalar_wb;
-        if (~div_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
             arith_to_scalar_wb_o.ex.valid = 1;
             arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
             arith_to_scalar_wb_o.ex.origin = 64'b0;
@@ -392,7 +397,7 @@ always_comb begin
             fp_to_wb_o.ex.origin = 64'b0;
         end
     end else begin
-        fp_to_wb_o  = 'h0;
+        fp_to_wb_o = 'h0;
         fp_to_scalar_wb_o = 'h0;
     end
 end
@@ -423,7 +428,7 @@ always_comb begin
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM | from_rr_i.instr.unit == UNIT_SIMD))
-            stall_int = ~ready | ~ready_1cycle_inst;
+            stall_int = ~ready;
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
             pmu_stall_mem_o = stall_mem | (~ready);
@@ -488,6 +493,7 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
 assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_3 = simd_to_simd_wb_o.valid;
+//assign exe_cu_o.valid_4 = mul_div_to_scalar_wb_o.valid;
 assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
 assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
 assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;

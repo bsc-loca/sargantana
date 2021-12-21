@@ -28,7 +28,7 @@ parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
-parameter NUM_SCALAR_WB = 3;
+parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
 

@@ -252,6 +252,7 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.checkpoint_done = 'h0;
         instruction_o.chkp            = 'h0;
         instruction_o.gl_index        = 'h0;
+        instruction_o.mem_type        = NOT_MEM;
         `ifdef VERILATOR
         instruction_o.id              = 'h0;
         `endif
@@ -275,6 +276,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.checkpoint_done = instruction_q[0].checkpoint_done;
             instruction_o.chkp            = instruction_q[0].chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
+            instruction_o.mem_type        = instruction_q[0].mem_type;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[0].id;
             `endif
@@ -314,6 +316,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.checkpoint_done = instruction_q[1].checkpoint_done;
             instruction_o.chkp            = instruction_q[1].chkp;
             instruction_o.gl_index        = instruction_q[1].gl_index;
+            instruction_o.mem_type        = instruction_q[1].mem_type;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[1].id;
             `endif
