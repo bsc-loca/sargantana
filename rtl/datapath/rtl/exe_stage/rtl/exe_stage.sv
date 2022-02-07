@@ -132,7 +132,7 @@ assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.
 score_board score_board_inst(
     .clk_i            (clk_i),
     .rstn_i           (rstn_i),
-    .kill_i           (kill_i),
+    .flush_i          (flush_i),
     .set_mul_32_i     (set_mul_32_inst),               
     .set_mul_64_i     (set_mul_64_inst),               
     .set_div_32_i     (set_div_32_inst),               
@@ -224,21 +224,22 @@ always_comb begin
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     simd_instr.chkp                = from_rr_i.chkp;
     simd_instr.gl_index            = from_rr_i.gl_index;
-    if (stall_int || flush_i) begin
+    if (stall_int || kill_i) begin
         arith_instr.instr   = '0;
         mem_instr.instr     = '0;
         fp_instr.instr      = '0;
-        simd_instr.instr    = '0;
-    end else if (stall_fpu_int) begin
-        arith_instr.instr   = from_rr_i.instr;
-        mem_instr.instr     = '0;
-        fp_instr.instr      = from_rr_i.instr;
         simd_instr.instr    = '0;
     end else begin
         arith_instr.instr   = from_rr_i.instr;
         mem_instr.instr     = from_rr_i.instr;
         fp_instr.instr      = from_rr_i.instr;
         simd_instr.instr    = from_rr_i.instr;
+    end
+
+    if (~ready || kill_i) begin
+        fp_instr.instr      = '0;
+    end else begin
+        fp_instr.instr      = from_rr_i.instr;
     end
 end
 
@@ -250,7 +251,7 @@ alu alu_inst (
 mul_unit mul_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
-    .kill_mul_i     (kill_i),
+    .flush_mul_i    (flush_i),
     .instruction_i  (arith_instr),
     .instruction_o  (mul_to_scalar_wb)
 );
@@ -258,7 +259,7 @@ mul_unit mul_unit_inst (
 div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
-    .kill_div_i     (kill_i),
+    .flush_div_i     (flush_i),
     .div_unit_sel_i (div_unit_sel),
     .instruction_i  (arith_instr),
     .instruction_o  (div_to_scalar_wb)
@@ -280,8 +281,8 @@ mem_unit mem_unit_inst(
     .rstn_i                 (rstn_i),
     .io_base_addr_i         (io_base_addr_i),
     .instruction_i          (mem_instr),
-    .kill_i                 (kill_i),
-    .flush_i                (1'b0),
+    .flush_i                (flush_i),
+    .kill_i                 (1'b0),
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
     .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
@@ -301,7 +302,7 @@ mem_unit mem_unit_inst(
 fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
-   .kill_i                  (kill_i),
+   .flush_i                 (flush_i),
    .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & simd_instr.instr.regfile_we), // TODO: (gerard) check it
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
@@ -410,7 +411,7 @@ always_comb begin
     set_mul_64_inst = 1'b0;
     pmu_stall_mem_o = 1'b0; 
     stall_fpu_int   = 1'b0;
-    if (from_rr_i.instr.valid) begin
+    if (from_rr_i.instr.valid && !kill_i) begin
         if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_32_inst | ~ready_div_unit;
             set_div_32_inst = ready & ready_div_32_inst & ready_div_unit;
@@ -433,9 +434,8 @@ always_comb begin
             stall_int = stall_mem | (~ready);
             pmu_stall_mem_o = stall_mem | (~ready);
         end
-        else if (from_rr_i.instr.unit == UNIT_FPU) begin
+        if (from_rr_i.instr.unit == UNIT_FPU) begin
             stall_fpu_int = stall_fpu | (~ready_1cycle_inst && from_rr_i.instr.instr_type == FMV_F2X);
-            stall_int = (~ready);
         end
     end
 end

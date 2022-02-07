@@ -17,7 +17,7 @@ import riscv_pkg::*;
 module div_unit (
     input  logic                 clk_i,          // Clock signal
     input  logic                 rstn_i,         // Negative reset  
-    input  logic                 kill_div_i,     // Kill on fly instructions
+    input  logic                 flush_div_i,     // Kill on fly instructions
     input  logic                 div_unit_sel_i, // Select divider module
     input  rr_exe_arith_instr_t  instruction_i,  // New incoming instruction
     output exe_wb_scalar_instr_t instruction_o   // Output instruction
@@ -161,7 +161,7 @@ assign data_src2 = instruction_i.data_rs2;
                 divisor_q[i]            <= 'h0;
                 cycles_counter[i]       <= 6'd0;
             end
-        end else if (kill_div_i) begin
+        end else if (flush_div_i) begin
             for (int i = 0; i <= 1; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;

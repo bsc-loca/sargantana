@@ -48,22 +48,6 @@ rr_exe_mem_instr_t st_buff_inst_out;
 logic is_next_store;
 logic is_next_load;
 
-
-store_buffer store_buffer_inst(
-    .clk_i(clk_i),  
-    .rstn_i(rstn_i),
-    .write_enable_i(sb_write_enable),
-    .instruction_i(control_table[head]),
-    .flush_i(flush_i),
-    .advance_head_i(read_enable_sb),
-    .load_addr_i(control_table[head].data_rs1),
-    .load_size_i(control_table[head].instr.mem_size),
-    .finish_instr_o(st_buff_inst_out),
-    .empty_o(st_buff_empty),
-    .full_o(st_buff_full),
-    .collision_o(st_buff_collision)
-);
-
 // Points to the next available entry
 lsq_entry_pointer tail;
 
@@ -225,6 +209,23 @@ assign is_next_store = num_to_exe > '0 && (control_table[head].instr.mem_type ==
                                         control_table[head].instr.mem_type == AMO);
 
 assign pmu_load_after_store_o = st_buff_collision;
+
+
+store_buffer store_buffer_inst(
+    .clk_i(clk_i),  
+    .rstn_i(rstn_i),
+    .write_enable_i(sb_write_enable),
+    .instruction_i(control_table[head]),
+    .flush_i(flush_i),
+    .advance_head_i(read_enable_sb),
+    .load_addr_i(control_table[head].data_rs1),
+    .load_size_i(control_table[head].instr.mem_size),
+    .finish_instr_o(st_buff_inst_out),
+    .empty_o(st_buff_empty),
+    .full_o(st_buff_full),
+    .collision_o(st_buff_collision)
+);
+
 
 endmodule
 

@@ -17,7 +17,7 @@ import riscv_pkg::*;
 module mul_unit (
     input  logic                   clk_i,          // Clock Signal
     input  logic                   rstn_i,         // Negative reset signal
-    input  logic                   kill_mul_i,     // Kill on fly instructions signal
+    input  logic                   flush_mul_i,     // Kill on fly instructions signal
     input  rr_exe_arith_instr_t    instruction_i,  // New instruction
     output exe_wb_scalar_instr_t   instruction_o   // Output instruction
 );
@@ -131,7 +131,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         int_32_0_q               <= 1'b0;
         src1_def_q               <= 'h0;
         src2_def_q               <= 'h0;
-    end else if (kill_mul_i | (~instruction_0_d.valid)) begin
+    end else if (flush_mul_i | (~instruction_0_d.valid)) begin
         instruction_0_q          <= 'h0;
         type_0_q                 <= 3'b111;
         neg_def_0_q              <= 1'b0;
@@ -183,7 +183,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         neg_def_1_q              <= 1'b0;
         result_low_q             <= 'h0;
         result_high_q            <= 'h0;
-    end else if (kill_mul_i | (~instruction_0_q.valid) | int_32_0_q) begin
+    end else if (flush_mul_i | (~instruction_0_q.valid) | int_32_0_q) begin
         instruction_1_q          <= 'h0;
         type_1_q                 <= 3'b111;
         int_32_1_q               <= 1'b0;

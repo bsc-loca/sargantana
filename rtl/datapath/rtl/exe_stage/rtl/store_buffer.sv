@@ -67,8 +67,8 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 
 // FIFO Memory structure
-rr_exe_mem_instr_t instruction_table    [0:ST_BUF_NUM_ENTRIES-1];
-logic              valid_table          [0:ST_BUF_NUM_ENTRIES-1];
+rr_exe_mem_instr_t instruction_table [0:ST_BUF_NUM_ENTRIES-1];
+logic [ST_BUF_NUM_ENTRIES-1:0] valid_table;
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin

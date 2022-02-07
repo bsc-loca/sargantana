@@ -819,6 +819,7 @@ typedef struct packed {
     logic flush_ir;         // Flush instructions in Rename
     logic flush_rr;         // Flush instruction in Read Register
     logic flush_exe;        // Flush instruction in Execution Stage
+    logic kill_exe;         // Kill the instruction that will be executed this cycle
     logic flush_commit;     // Flush instruction in commit
 } pipeline_flush_t;
 

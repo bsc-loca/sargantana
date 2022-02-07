@@ -85,7 +85,8 @@ begin
 end
 
 
-assign instruction_o = (~read_enable)? 'h0 : instruction_bufffer[head];
+//assign instruction_o = (~read_enable)? 'h0 : instruction_bufffer[head];
+assign instruction_o = empty_o ? 'h0 : instruction_bufffer[head];
 assign empty_o = (num == 0);
 assign full_o  = ((num == INSTRUCTION_QUEUE_NUM_ENTRIES) | ~rstn_i);
 

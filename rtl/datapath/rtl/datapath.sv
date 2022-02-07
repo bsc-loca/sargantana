@@ -1067,7 +1067,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
-        .kill_i(flush_int.flush_exe),
+        .kill_i(flush_int.kill_exe),
         .csr_interrupt_i(resp_csr_cpu_i.csr_interrupt),
         .csr_interrupt_cause_i(resp_csr_cpu_i.csr_interrupt_cause),
 

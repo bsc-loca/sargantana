@@ -223,7 +223,7 @@ end
 
 // Mealy Output and Next State
 always_comb begin
-    if (kill_i) begin
+    if (flush_to_lsq) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
         source_dcache               = NULL;     
         read_next_lsq               = 1'b1;     // No Advance LSQ

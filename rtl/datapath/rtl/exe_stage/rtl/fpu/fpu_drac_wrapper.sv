@@ -19,7 +19,7 @@ import fpuv_wrapper_pkg::*;
 ) (
    input  logic                     clk_i,
    input  logic                     rstn_i,
-   input  logic                     kill_i,
+   input  logic                     flush_i,
    input  logic                     stall_wb_i,
    input  rr_exe_fpu_instr_t        instruction_i,
    output exe_wb_fp_instr_t         instruction_o,
@@ -208,7 +208,7 @@ assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
     .rstn_i(rstn_i),           // Negated Reset Signal
-    .flush_i(kill_i),          // Flush all entries
+    .flush_i(flush_i),          // Flush all entries
     .valid_i(enable_fp_op_int & ready_fpu),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
     .result_valid_i(result_valid_int),         // Result valid
@@ -228,7 +228,7 @@ fpuv_top #(
 ) i_fpuv_top (
    .clk_i          ( clk_i ),
    .rst_ni         ( rstn_i ),
-   .flush_i        ( kill_i ),
+   .flush_i        ( flush_i ),
    // Input
    .operands_i     ( operands ),
    .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : roundmode_e'(instruction_i.instr.frm)),
