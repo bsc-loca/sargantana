@@ -120,11 +120,11 @@ always_comb begin : collision_detector
                 collision |= instruction_table[j].data_rs1[11:4] == load_addr_i[11:4];
             end else if (load_size_i == 4'b0011 || instruction_table[j].instr.mem_size == 4'b0011) begin
                 collision |= instruction_table[j].data_rs1[11:3] == load_addr_i[11:3];
-            end else if (load_size_i == 4'b0010 || instruction_table[j].instr.mem_size == 4'b0010) begin
+            end else if (load_size_i[1:0] == 2'b10 || instruction_table[j].instr.mem_size[1:0] == 2'b10) begin
                 collision |= instruction_table[j].data_rs1[11:2] == load_addr_i[11:2];
-            end else if (load_size_i == 4'b0001 || instruction_table[j].instr.mem_size == 4'b0001) begin
+            end else if (load_size_i[1:0] == 2'b01 || instruction_table[j].instr.mem_size[1:0] == 2'b01) begin
                 collision |= instruction_table[j].data_rs1[11:1] == load_addr_i[11:1];
-            end else if (load_size_i == 4'b0000 || instruction_table[j].instr.mem_size == 4'b0000) begin
+            end else if (load_size_i[1:0] == 2'b00 || instruction_table[j].instr.mem_size[1:0] == 2'b00) begin
                 collision |= instruction_table[j].data_rs1[11:0] == load_addr_i[11:0];
             end
         end
