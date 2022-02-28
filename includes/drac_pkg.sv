@@ -923,7 +923,7 @@ typedef struct packed {
     reg_t           rs1;                    // Source register 1
     vreg_t          vd;                     // Destination VRegister
     vreg_t          vs1;                    // Source vregister 1
-    `ifdef VERILATOR_TEST
+    `ifdef VERILATOR
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate

@@ -130,7 +130,7 @@ begin
             if (instruction_writeback_enable_i[i]) begin
                 valid_bit[instruction_writeback_i[i]] <= 1'b1;
                 entries[instruction_writeback_i[i]].fp_status <= instruction_writeback_data_i[i].fp_status;
-                `ifdef VERILATOR_TEST
+                `ifdef VERILATOR
                     entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
                     entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
                     entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
@@ -142,7 +142,7 @@ begin
         for (int i = 0; i<NUM_SIMD_WB; ++i) begin
             if (instruction_simd_writeback_enable_i[i]) begin
                 valid_bit[instruction_simd_writeback_i[i]] <= 1'b1;
-                `ifdef VERILATOR_TEST
+                `ifdef VERILATOR
                     entries[instruction_simd_writeback_i[i]].csr_addr  <= instruction_simd_writeback_data_i[i].csr_addr;
                     entries[instruction_simd_writeback_i[i]].exception <= instruction_simd_writeback_data_i[i].exception;
                     entries[instruction_simd_writeback_i[i]].result    <= instruction_simd_writeback_data_i[i].result;
@@ -155,7 +155,7 @@ begin
             if (instruction_fp_writeback_enable_i[i]) begin
                 valid_bit[instruction_fp_writeback_i[i]] <= 1'b1;
                 entries[instruction_fp_writeback_i[i]].fp_status <= instruction_fp_writeback_data_i[i].fp_status;
-                `ifdef VERILATOR_TEST
+                `ifdef VERILATOR
                 entries[instruction_fp_writeback_i[i]].csr_addr  <= instruction_fp_writeback_data_i[i].csr_addr;
                 entries[instruction_fp_writeback_i[i]].exception <= instruction_fp_writeback_data_i[i].exception;
                 entries[instruction_fp_writeback_i[i]].result    <= instruction_fp_writeback_data_i[i].result;
