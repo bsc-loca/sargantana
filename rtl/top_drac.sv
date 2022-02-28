@@ -56,6 +56,7 @@ module top_drac(
     input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
     input logic [3:0]           csr_frm_i,
+    input logic                 en_ld_st_translation_i,
 
 //------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -365,6 +366,7 @@ datapath datapath_inst(
     .debug_o(debug_out),
     .csr_priv_lvl_i(csr_priv_lvl_i),
     .csr_frm_i(csr_frm_i),
+    .en_ld_st_translation_i(en_ld_st_translation_i),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -413,6 +415,7 @@ dcache_interface dcache_interface_inst(
     .rstn_i(RST),
 
     .req_cpu_dcache_i(req_datapath_dcache_interface),
+    .en_ld_st_translation_i(en_ld_st_translation_i),
 
     // DCACHE Answer
     .dmem_resp_replay_i(DMEM_RESP_BITS_REPLAY),

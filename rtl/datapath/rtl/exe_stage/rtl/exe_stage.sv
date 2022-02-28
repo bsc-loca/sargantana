@@ -19,9 +19,7 @@ module exe_stage (
     input logic                         rstn_i,
     input logic                         kill_i,
     input logic                         flush_i,
-
-    input logic                         csr_interrupt_i,        // interrupt detected on the csr
-    input bus64_t                       csr_interrupt_cause_i,  // which interrupt has been detected
+    input logic                         en_ld_st_translation_i, // virtualization mechanism enabled
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
@@ -48,6 +46,9 @@ module exe_stage (
     output exception_t                  exception_mem_commit_o, // Exception to commit
     output logic                        mem_store_or_amo_o,     // Inst at mem to do request is a Store or AMO
     output gl_index_t                   mem_gl_index_o,         // Index of the mem inst to do request
+
+    output exception_t                  ex_gl_o,                // Exception generated on the execution stage
+    output gl_index_t                   ex_gl_index_o,          // GL tag of the exception generated
 
     output req_cpu_dcache_t             req_cpu_dcache_o,       // Request to dcache interface 
     output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
@@ -115,6 +116,9 @@ logic ready_div_32_inst;
 logic div_unit_sel;
 logic ready_div_unit;
 
+exception_t mem_ex_int;
+gl_index_t mem_ex_index_int;
+
 // Bypasses
 `ifdef ASSERTIONS
     always @(posedge clk_i) begin
@@ -154,8 +158,6 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
     arith_instr.data_rs2            = rs2_data_def;
-    arith_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-    arith_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
     arith_instr.prs1                = from_rr_i.prs1;
     arith_instr.rdy1                = from_rr_i.rdy1;
     arith_instr.prs2                = from_rr_i.prs2;
@@ -171,8 +173,6 @@ always_comb begin
     mem_instr.data_old_vd         = from_rr_i.data_old_vd;
     mem_instr.data_vm             = from_rr_i.data_vm;
     mem_instr.sew                 = sew_i;
-    mem_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-    mem_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
     mem_instr.prs1                = from_rr_i.prs1;
     mem_instr.rdy1                = from_rr_i.rdy1;
     mem_instr.prs2                = from_rr_i.prs2;
@@ -191,8 +191,6 @@ always_comb begin
     fp_instr.data_rs1            = rs1_data_def;
     fp_instr.data_rs2            = rs2_data_def;
     fp_instr.data_rs3            = from_rr_i.data_rs3;
-    fp_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-    fp_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
     fp_instr.fprs1                = from_rr_i.fprs1;
     fp_instr.frdy1                = from_rr_i.frdy1;
     fp_instr.fprs2                = from_rr_i.fprs2;
@@ -211,8 +209,6 @@ always_comb begin
     simd_instr.data_old_vd         = from_rr_i.data_old_vd;
     simd_instr.data_vm             = from_rr_i.data_vm;
     simd_instr.sew                 = sew_i;
-    simd_instr.csr_interrupt       = from_rr_i.csr_interrupt;
-    simd_instr.csr_interrupt_cause = from_rr_i.csr_interrupt_cause;
     simd_instr.pvs1                = from_rr_i.pvs1;
     simd_instr.vrdy1               = from_rr_i.vrdy1;
     simd_instr.pvs2                = from_rr_i.pvs2;
@@ -280,6 +276,7 @@ mem_unit mem_unit_inst(
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
     .io_base_addr_i         (io_base_addr_i),
+    .en_ld_st_translation_i (en_ld_st_translation_i),
     .instruction_i          (mem_instr),
     .flush_i                (flush_i),
     .kill_i                 (1'b0),
@@ -323,44 +320,16 @@ always_comb begin
 
     if (mul_to_scalar_wb.valid) begin
         mul_div_to_scalar_wb_o = mul_to_scalar_wb;
-        if (~mul_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            mul_div_to_scalar_wb_o.ex.valid = 1;
-            mul_div_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            mul_div_to_scalar_wb_o.ex.origin = 64'b0;
-        end
     end else if (div_to_scalar_wb.valid) begin
         mul_div_to_scalar_wb_o = div_to_scalar_wb;
-        if (~div_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            mul_div_to_scalar_wb_o.ex.valid = 1;
-            mul_div_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            mul_div_to_scalar_wb_o.ex.origin = 64'b0;
-        end
     end else begin
         mul_div_to_scalar_wb_o = 'h0;
     end
     
     if (alu_to_scalar_wb.valid) begin
         arith_to_scalar_wb_o = alu_to_scalar_wb;
-        if (~alu_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_scalar_wb_o.ex.valid = 1;
-            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_scalar_wb_o.ex.origin = 64'b0;
-        end
     end else if (branch_to_scalar_wb.valid) begin
         arith_to_scalar_wb_o = branch_to_scalar_wb;
-        if (~branch_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_scalar_wb_o.ex.valid = 1;
-            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-    /*end else if (fp_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = fp_to_scalar_wb;
-        if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            arith_to_scalar_wb_o.ex.valid = 1;
-            arith_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            arith_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-    end*/ 
     end else begin
         arith_to_scalar_wb_o = 'h0;
     end
@@ -368,16 +337,6 @@ always_comb begin
     if (simd_to_scalar_wb.valid | simd_to_simd_wb.valid) begin
         simd_to_scalar_wb_o = simd_to_scalar_wb;
         simd_to_simd_wb_o = simd_to_simd_wb;
-        if (~simd_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            simd_to_scalar_wb_o.ex.valid = 1;
-            simd_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            simd_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-        if (~simd_to_simd_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            simd_to_simd_wb_o.ex.valid = 1;
-            simd_to_simd_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            simd_to_simd_wb_o.ex.origin = 64'b0;
-        end
     end else begin
         simd_to_scalar_wb_o = 'h0;
         simd_to_simd_wb_o = 'h0;
@@ -387,16 +346,6 @@ always_comb begin
     if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
         fp_to_scalar_wb_o = fp_to_scalar_wb;
-        if (~fp_to_scalar_wb.ex.valid & empty_mem & csr_interrupt_i) begin
-            fp_to_scalar_wb_o.ex.valid = 1;
-            fp_to_scalar_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            fp_to_scalar_wb_o.ex.origin = 64'b0;
-        end
-        if (~fp_to_wb_o.ex.valid & empty_mem & csr_interrupt_i) begin
-            fp_to_wb_o.ex.valid = 1;
-            fp_to_wb_o.ex.cause = exception_cause_t'(csr_interrupt_cause_i);
-            fp_to_wb_o.ex.origin = 64'b0;
-        end
     end else begin
         fp_to_wb_o = 'h0;
         fp_to_scalar_wb_o = 'h0;
@@ -440,7 +389,43 @@ always_comb begin
     end
 end
 
+//exception check
+always_comb begin
+    // Generating the mem exception
+    if (mem_to_scalar_wb.valid && mem_to_scalar_wb.ex.valid ) begin
+        mem_ex_int = mem_to_scalar_wb.ex;
+        mem_ex_index_int = mem_to_scalar_wb.gl_index;
+    end else if (mem_to_fp_wb.valid && mem_to_fp_wb.ex.valid ) begin
+        mem_ex_int = mem_to_fp_wb.ex;
+        mem_ex_index_int = mem_to_fp_wb.gl_index;
+    end else if (mem_to_simd_wb.valid && mem_to_simd_wb.ex.valid ) begin
+        mem_ex_int = mem_to_simd_wb.ex;
+        mem_ex_index_int = mem_to_simd_wb.gl_index;
+    end else begin
+        mem_ex_int  = 'h0;
+        mem_ex_index_int    = 'h0;
+    end
 
+
+    // Generating the exception of the execution stage. Only the Mem unit and the branch unit can produce exceptions. We need to check which is older
+    // It can be simplified since in this core a mem instruction at the exception stage is older than a branch instruction.
+    if (mem_ex_int.valid && !branch_to_scalar_wb.ex.valid) begin
+        ex_gl_o = mem_ex_int;
+        ex_gl_index_o = mem_ex_index_int;
+    end else if (!mem_ex_int.valid && branch_to_scalar_wb.ex.valid) begin 
+        ex_gl_o = branch_to_scalar_wb.ex;
+        ex_gl_index_o = branch_to_scalar_wb.gl_index; 
+    end else if (mem_ex_int.valid && branch_to_scalar_wb.ex.valid &&
+            (mem_ex_index_int > commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i < branch_to_scalar_wb.gl_index ) &&
+            (mem_ex_index_int < commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i > branch_to_scalar_wb.gl_index ) &&
+            (mem_ex_index_int > commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i < branch_to_scalar_wb.gl_index )) begin
+        ex_gl_o = mem_ex_int;
+        ex_gl_index_o = mem_ex_index_int;   
+    end else begin
+        ex_gl_o = branch_to_scalar_wb.ex;
+        ex_gl_index_o = branch_to_scalar_wb.gl_index; 
+    end
+end
 
 // Correct prediction
 always_comb begin

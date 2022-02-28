@@ -22,6 +22,7 @@ module load_store_queue(
     input logic                rstn_i,           // Negated Reset Signal
 
     input rr_exe_mem_instr_t   instruction_i,    // All instruction input signals
+    input logic                en_ld_st_translation_i,
      
     input logic                flush_i,          // Flush all entries
     input logic                read_next_i,      // Read next instruction of the ciruclar buffer
@@ -71,6 +72,8 @@ logic read_enable_sb;
 logic advance_head_enable;
 logic bypass_lsq;
 logic empty_int;
+
+logic io_address_space;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
@@ -184,6 +187,9 @@ always_comb begin
     end
 end
 
+// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
+assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (control_table[head].data_rs1 < 40'h80000000) && !en_ld_st_translation_i;
+
 always_comb begin
     blocked_store_o = 1'b1;
     if (num_to_recover != '0) begin
@@ -192,6 +198,9 @@ always_comb begin
         blocked_store_o = 1'b0;
     end else if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i)) begin
         blocked_store_o = 1'b0;
+    end else if (is_next_load && !st_buff_empty && io_address_space) begin 
+        // If the memory access is IO should not advance any store
+        blocked_store_o = 1'b1;
     end else if (is_next_load && !st_buff_collision) begin
         blocked_store_o = 1'b0;
     end else if (bypass_lsq) begin

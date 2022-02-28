@@ -19,11 +19,14 @@ import drac_pkg::*;
 module csr_interface (
     // Datapath signals
     input  logic            commit_xcpt_i,            // Exception at Commit
+    input  bus64_t          result_gl_i,
+    input  reg_csr_addr_t   csr_addr_gl_i,
     input  gl_instruction_t [1:0] instruction_to_commit_i,  // Instruction to be Committed
     input  logic            stall_exe_i,              // Exe Stage is Stalled
     input  logic            commit_store_or_amo_i,    // The Commit Instruction is AMO or STORE
     input  logic            mem_commit_stall_i,       // The Commit Instruction is Stalled at Mem Stage
     input  exception_t      exception_mem_commit_i,   // The Exception comming from AMO or STORE
+    input  exception_t      exception_gl_i,
     // CSR interruption
     output logic            csr_ena_int_o,            // Enable CSR petition
     // Request to CSR
@@ -40,21 +43,21 @@ always_comb begin
     csr_cmd_int = CSR_CMD_NOPE;
     csr_rw_data_int = 64'b0;
     csr_ena_int = 1'b0;
-    if (instruction_to_commit_i[0].valid && !instruction_to_commit_i[0].exception.valid) begin
+    if (instruction_to_commit_i[0].valid && !instruction_to_commit_i[0].ex_valid) begin
         case (instruction_to_commit_i[0].instr_type)
             CSRRW: begin
                 csr_cmd_int = CSR_CMD_WRITE;
-                csr_rw_data_int = instruction_to_commit_i[0].result;
+                csr_rw_data_int = result_gl_i;
                 csr_ena_int = 1'b1;
             end
             CSRRS: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_SET;
-                csr_rw_data_int = instruction_to_commit_i[0].result;
+                csr_rw_data_int = result_gl_i;
                 csr_ena_int = 1'b1;
             end
             CSRRC: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_READ : CSR_CMD_CLEAR;
-                csr_rw_data_int = instruction_to_commit_i[0].result;
+                csr_rw_data_int = result_gl_i;
                 csr_ena_int = 1'b1;
             end
             CSRRWI: begin
@@ -87,7 +90,7 @@ always_comb begin
             VSETVLI,
             VSETVL: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_N2 : CSR_CMD_VSELVL;
-                csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : instruction_to_commit_i[0].result;
+                csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
                 csr_ena_int = 1'b1;
             end
             default: begin
@@ -102,7 +105,7 @@ end
 
 // tell cu that ecall was taken
     assign commit_2_blocked = !instruction_to_commit_i[0].valid || 
-                                instruction_to_commit_i[0].exception.valid || 
+                                instruction_to_commit_i[0].ex_valid || 
                                 csr_ena_int || !instruction_to_commit_i[1].valid ||
                                 instruction_to_commit_i[1].valid &
                                 (instruction_to_commit_i[1].instr_type == ECALL ||
@@ -124,14 +127,14 @@ end
                                 instruction_to_commit_i[1].instr_type == VSETVLI|| 
                                 instruction_to_commit_i[1].mem_type == STORE    || 
                                 instruction_to_commit_i[1].mem_type == AMO)     ||
-                                instruction_to_commit_i[1].valid & instruction_to_commit_i[1].exception.valid;
+                                instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid;
 
 // CSR and Exceptions
-assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? instruction_to_commit_i[0].csr_addr : {CSR_ADDR_SIZE{1'b0}};
+assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? csr_addr_gl_i : {CSR_ADDR_SIZE{1'b0}};
 // if csr not enabled send command NOP
 assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
 // if csr not enabled send the interesting addr that you are accesing, exception help
-assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_store_or_amo_i)? instruction_to_commit_i[0].exception.origin : exception_mem_commit_i.origin;
+assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
 
 assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
 
@@ -162,7 +165,7 @@ always_comb begin
     end; 
 end
 // if there is a csr interrupt we take the interrupt?
-assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? instruction_to_commit_i[0].exception.cause : exception_mem_commit_i.cause;
+assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;

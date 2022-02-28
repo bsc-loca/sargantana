@@ -98,7 +98,6 @@ assign result_32 = {{32{result_32_aux[31]}},result_32_aux[31:0]};
 
 assign instruction_0_d.valid         = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_MUL);
 assign instruction_0_d.pc            = instruction_i.instr.pc;
-assign instruction_0_d.ex            = instruction_i.instr.ex;
 assign instruction_0_d.bpred         = instruction_i.instr.bpred;
 assign instruction_0_d.rs1           = instruction_i.instr.rs1;
 assign instruction_0_d.rd            = instruction_i.instr.rd;

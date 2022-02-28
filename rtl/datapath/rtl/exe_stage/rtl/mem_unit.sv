@@ -20,6 +20,7 @@ module mem_unit (
     input logic                  kill_i,                 // Exception detected at Commit
     input logic                  flush_i,                // Delete all load_store_queue entries
     input addr_t                 io_base_addr_i,         // Input_output_address
+    input logic                  en_ld_st_translation_i,
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
@@ -186,6 +187,7 @@ load_store_queue load_store_queue_inst (
     .clk_i              (clk_i),
     .rstn_i             (rstn_i),
     .instruction_i      (instruction_to_lsq),
+    .en_ld_st_translation_i (en_ld_st_translation_i),
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
     .reset_next_i       (reset_next_lsq),
@@ -604,8 +606,8 @@ assign req_cpu_dcache_o.data_rs2 = instruction_s1_q.data_rs2;
 assign mem_commit_stall_s1 = instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q;
 
 //// Check if there has been an exception, to send the instruction with the exception to writeback
-assign xcpt_s2_q = instruction_s2_q.instr.valid & (instruction_s2_q.instr.ex.valid |
-                        xcpt_ma_st_s2_q | xcpt_ma_ld_s2_q | xcpt_pf_st_s2_q | xcpt_pf_ld_s2_q |
+assign xcpt_s2_q = instruction_s2_q.instr.valid & (xcpt_ma_st_s2_q 
+                         | xcpt_ma_ld_s2_q | xcpt_pf_st_s2_q | xcpt_pf_ld_s2_q |
                         (|xcpt_addr_s2_q[63:40] != 0 && !xcpt_addr_s2_q[39]) |
                         (!(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )   );
 
@@ -668,9 +670,7 @@ always_comb begin
     exception_to_wb.cause  = INSTR_ADDR_MISALIGNED;
     exception_to_wb.origin = 'h0;
     exception_to_wb.valid  = 1'b0;
-    if(instruction_s2_q.instr.ex.valid) begin // Propagate exception from previous stages
-        exception_to_wb             = instruction_s2_q.instr.ex;
-    end else if(xcpt_ma_st_s2_q & instruction_s2_q.instr.valid) begin // Misaligned store
+    if(xcpt_ma_st_s2_q & instruction_s2_q.instr.valid) begin // Misaligned store
         exception_to_wb.cause       = ST_AMO_ADDR_MISALIGNED;
         exception_to_wb.origin      = xcpt_addr_s2_q;
         exception_to_wb.valid       = 1'b1;

@@ -66,14 +66,7 @@ assign data_src2 = instruction_i.data_rs2;
 
     always_comb begin
         if (instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV)) begin
-            instruction_d[div_unit_sel_i].ex.cause  = INSTR_ADDR_MISALIGNED;
-            instruction_d[div_unit_sel_i].ex.origin = 0;
-            instruction_d[div_unit_sel_i].ex.valid  = 0;
-
-            if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-                instruction_d[div_unit_sel_i].ex = instruction_i.instr.ex;
-            end
-
+            instruction_d[div_unit_sel_i].ex              = '0; // Divisions can not generate exceptions
             instruction_d[div_unit_sel_i].valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV);
             instruction_d[div_unit_sel_i].pc              = instruction_i.instr.pc;
             instruction_d[div_unit_sel_i].bpred           = instruction_i.instr.bpred;

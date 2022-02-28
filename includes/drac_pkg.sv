@@ -347,7 +347,7 @@ typedef struct packed {
     logic valid;                        // Valid instruction
     addrPC_t pc;                        // PC of the instruction
     branch_pred_t bpred;                // Branch Prediciton
-    exception_t ex;                     // Exceptions
+    logic ex_valid;                     // Exception valid
     reg_t rs1;                          // Register Source 1
     reg_t rs2;                          // Register Source 2
     reg_t rd;                           // Destination register
@@ -397,6 +397,12 @@ typedef struct packed {
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
+    exception_t ex;                     // Exceptions
+} id_ir_stage_t;
+
+typedef struct packed {
+    instr_entry_t instr;                // Instruction
+    exception_t ex;                     // Exceptions
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -435,11 +441,6 @@ typedef struct packed {
     bus_simd_t data_old_vd;             // Data vector old destination
     bus_mask_t data_vm;                 // Data vector mask
     bus64_t data_rs3;                   // Data operand 3 FP
-    // any interrupt
-    logic       csr_interrupt;
-    // save until the instruction then 
-    // give the interrupt cause as xcpt cause
-    bus64_t     csr_interrupt_cause;
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -476,11 +477,6 @@ typedef struct packed {
     instr_entry_t instr;                // Instruction
     bus64_t data_rs1;                   // Data operand 1
     bus64_t data_rs2;                   // Data operand 2
-    // any interrupt
-    logic       csr_interrupt;
-    // save until the instruction then 
-    // give the interrupt cause as xcpt cause
-    bus64_t     csr_interrupt_cause;
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -503,11 +499,6 @@ typedef struct packed {
     bus_mask_t data_vm;                 // Data simd mask
     sew_t      sew;                     // Element width
     bus64_t imm;                        // Immediate
-    // any interrupt
-    logic       csr_interrupt;
-    // save until the instruction then 
-    // give the interrupt cause as xcpt cause
-    bus64_t     csr_interrupt_cause;
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -536,13 +527,7 @@ typedef struct packed {
     bus_simd_t data_vs2;                // Data simd operand 2
     bus_simd_t data_old_vd;             // Data simd old destination
     bus_mask_t data_vm;                 // Data simd mask
-    sew_t      sew;                     // Element width
-    // any interrupt
-    logic       csr_interrupt;
-    // save until the instruction then 
-    // give the interrupt cause as xcpt cause
-    bus64_t     csr_interrupt_cause;
-    
+    sew_t      sew;                     // Element width    
     phvreg_t pvs1;                      // Physical register source 1
     logic   vrdy1;                      // Ready register source 1
     phvreg_t pvs2;                      // Physical register source 2
@@ -566,11 +551,6 @@ typedef struct packed {
     bus64_t data_rs1;                   // Data operand 1
     bus64_t data_rs2;                   // Data operand 2
     bus64_t data_rs3;                   // Data operand 2
-    // any interrupt
-    logic       csr_interrupt;
-    // save until the instruction then 
-    // give the interrupt cause as xcpt cause
-    bus64_t     csr_interrupt_cause;
     phreg_t fprs1;                       // Physical register source 1
     logic   frdy1;                       // Ready register source 1
     phreg_t fprs2;                       // Physical register source 2
@@ -943,9 +923,12 @@ typedef struct packed {
     reg_t           rs1;                    // Source register 1
     vreg_t          vd;                     // Destination VRegister
     vreg_t          vs1;                    // Source vregister 1
+    `ifdef VERILATOR_TEST
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
+    `endif
+    logic           ex_valid;
     logic           stall_csr_fence;        // CSR or fence
     logic           regfile_we;             // Write to register file
     logic           vregfile_we;            // Write to vregister file
@@ -963,6 +946,14 @@ typedef struct packed {
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
     mem_type_t mem_type;                // Mem instruction type
 } gl_instruction_t;
+
+
+typedef struct packed {
+    reg_csr_addr_t  csr_addr;               // CSR Address
+    exception_t     exception;              // Exceptions
+    bus_simd_t      result;                 // Result or immediate
+    fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
+} gl_wb_data_t;
 
 
 typedef struct packed {

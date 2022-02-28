@@ -277,15 +277,9 @@ always_comb begin
     instruction_scalar_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_scalar_o.ex.origin = 0;
     instruction_scalar_o.ex.valid = 0;
-    if (instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_scalar_o.ex = instruction_i.instr.ex;
-    end
     instruction_simd_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_simd_o.ex.origin = 0;
     instruction_simd_o.ex.valid = 0;
-    if (instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_simd_o.ex = instruction_i.instr.ex;
-    end
 end
 
 endmodule
