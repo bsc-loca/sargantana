@@ -409,21 +409,15 @@ always_comb begin
 
     // Generating the exception of the execution stage. Only the Mem unit and the branch unit can produce exceptions. We need to check which is older
     // It can be simplified since in this core a mem instruction at the exception stage is older than a branch instruction.
-    if (mem_ex_int.valid && !branch_to_scalar_wb.ex.valid) begin
+    if (mem_ex_int.valid) begin
         ex_gl_o = mem_ex_int;
         ex_gl_index_o = mem_ex_index_int;
-    end else if (!mem_ex_int.valid && branch_to_scalar_wb.ex.valid) begin 
+    end else if (branch_to_scalar_wb.ex.valid) begin 
         ex_gl_o = branch_to_scalar_wb.ex;
         ex_gl_index_o = branch_to_scalar_wb.gl_index; 
-    end else if (mem_ex_int.valid && branch_to_scalar_wb.ex.valid &&
-            (mem_ex_index_int > commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i < branch_to_scalar_wb.gl_index ) &&
-            (mem_ex_index_int < commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i > branch_to_scalar_wb.gl_index ) &&
-            (mem_ex_index_int > commit_store_or_amo_gl_idx_i && mem_ex_index_int < branch_to_scalar_wb.gl_index && commit_store_or_amo_gl_idx_i < branch_to_scalar_wb.gl_index )) begin
-        ex_gl_o = mem_ex_int;
-        ex_gl_index_o = mem_ex_index_int;   
     end else begin
-        ex_gl_o = branch_to_scalar_wb.ex;
-        ex_gl_index_o = branch_to_scalar_wb.gl_index; 
+        ex_gl_o = '0;
+        ex_gl_index_o = '0; 
     end
 end
 
