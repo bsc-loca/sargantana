@@ -171,13 +171,13 @@ begin
         end else if (!flush_commit_i & ex_from_exe_i.valid && exception_q.valid && (
             (ex_from_exe_index_i >= head && ex_from_exe_index_i < exception_index_q && head < exception_index_q ) ||
             (ex_from_exe_index_i >= head && ex_from_exe_index_i > exception_index_q && head > exception_index_q ) ||
-            (ex_from_exe_index_i < head && ex_from_exe_index_i > exception_index_q && head > exception_index_q ))) begin
+            (ex_from_exe_index_i < head && ex_from_exe_index_i < exception_index_q && head > exception_index_q ))) begin
             exception_q <= ex_from_exe_i;
             exception_index_q <= ex_from_exe_index_i;   
         end else if (flush_commit_i || flush_i && exception_q.valid && (
             (flush_index_i >= head && flush_index_i < exception_index_q && head < exception_index_q ) ||
             (flush_index_i >= head && flush_index_i > exception_index_q && head > exception_index_q ) ||
-            (flush_index_i < head && flush_index_i > exception_index_q && head > exception_index_q ))) begin
+            (flush_index_i < head && flush_index_i < exception_index_q && head > exception_index_q ))) begin
             exception_q <= '0;
         end
 
