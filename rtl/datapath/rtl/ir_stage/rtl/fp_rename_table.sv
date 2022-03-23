@@ -105,8 +105,10 @@ begin
     if(~rstn_i) begin
         // Table initial state
         for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
-            register_table[j][0] <= j[5:0];
-            ready_table[j][0] <= 1'b1;
+            for (integer k = 0; k < NUM_CHECKPOINTS; k++) begin
+                register_table[j][k] <= j[5:0];
+                ready_table[j][k] <= 1'b1;
+            end
             commit_table[j] <= j[5:0];
         end
         // Checkpoint signals
@@ -118,7 +120,11 @@ begin
         src1_o <= 0;
         src2_o <= 0;
         src3_o <= 0;
+        rdy1_o <= 1'b0;
+        rdy2_o <= 1'b0;
+        rdy3_o <= 1'b0;
         old_dst_o <= 0;
+        checkpoint_o <= '0;
     end 
     else if (recover_commit_i) begin // Recover commit table because exception
         for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
@@ -133,8 +139,11 @@ begin
         src1_o <= 0;
         src2_o <= 0;
         src3_o <= 0;
-        old_dst_o <= 0;  
-        checkpoint_o <= 0;
+        rdy1_o <= 1'b0;
+        rdy2_o <= 1'b0;
+        rdy3_o <= 1'b0;
+        old_dst_o <= 0;
+        checkpoint_o <= '0;
     end 
     else begin
 
@@ -171,12 +180,6 @@ begin
 
             // Second register renaming
             if (read_enable) begin
-                for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-                    rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
-                    rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
-                    rdy3[i] = ready_i[i] & (read_src3_i == vaddr_i[i]) & (register_table[read_src3_i][version_head] == paddr_i[i]);
-                end
-
                 src1_o <= register_table[read_src1_i][version_head];
                 rdy1_o <= ready_table[read_src1_i][version_head] | (|rdy1) | (~use_fs1_i);
                 src2_o <= register_table[read_src2_i][version_head];
@@ -220,6 +223,20 @@ begin
         end
         checkpoint_o <= version_head;
     end
+end
+
+always_comb begin
+    if (read_enable) begin
+        for (int i = 0; i < drac_pkg::NUM_FP_WB; ++i) begin
+            rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
+            rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
+            rdy3[i] = ready_i[i] & (read_src3_i == vaddr_i[i]) & (register_table[read_src3_i][version_head] == paddr_i[i]);
+        end
+    end else begin
+        rdy1 = '0;
+        rdy2 = '0;
+        rdy3 = '0;
+    end 
 end
 
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));

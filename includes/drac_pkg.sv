@@ -110,7 +110,7 @@ parameter PFPQ_NUM_ENTRIES = 8;
 parameter ST_BUF_NUM_ENTRIES = 8;
 
 // SIMD
-typedef logic [1:0] fu_id_t;
+typedef logic fu_id_t;
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
@@ -462,7 +462,7 @@ typedef struct packed {
     logic    vrdy2;                     // Ready vregister source 2
     phvreg_t pvm;                       // Physical vregister mask
     logic    vrdym;                     // Ready vregister mask
-    logic    use_mask;                  // Does the instruction use a mask?
+    //logic    use_mask;                  // Does the instruction use a mask?
     phvreg_t pvd;                       // Physical vregister destination
     phvreg_t old_pvd;                   // Old Physical vregister destination
     logic    vrdy_old_vd;               // Ready vregister old vd

@@ -55,7 +55,7 @@ module top_drac(
     input logic                 io_csr_csr_replay,
     input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
-    input logic [3:0]           csr_frm_i,
+    input logic [2:0]           csr_frm_i,
     input logic                 en_ld_st_translation_i,
 
 //------------------------------------------------------------------------------------

@@ -38,26 +38,12 @@ module return_address_stack(
     // Head pointer
     logic [_LENGTH_RAS_ - 1: 0] head_pointer;
     logic [_LENGTH_RAS_ - 1: 0] output_pointer;
-    // Latched value to return
-    addrPC_t return_address;
 
     assign output_pointer = head_pointer - 'h1;
-
-/*    `ifndef SYNTHESIS_ADDRESS_STACK
-        // Initialize entries to 0.
-        integer i;
-        initial
-        begin
-            for(i = 0; i < _NUM_RAS_ENTRIES_ ; i = i + 1) begin
-                address_stack[i] = 'h0;
-            end
-        end
-    `endif*/
 
     always@(posedge clk_i)
     begin
         if(~rstn_i) begin
-            return_address <= 0;
             head_pointer <= 0;
             for(integer i = 0; i < _NUM_RAS_ENTRIES_ ; i = i + 1) begin
                 address_stack[i] <= 'h0;

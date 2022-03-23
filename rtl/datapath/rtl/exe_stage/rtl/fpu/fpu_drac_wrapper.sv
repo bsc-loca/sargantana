@@ -238,10 +238,10 @@ fpuv_top #(
    .add_fmt_i      ( add_fmt ),
    .dst_fmt_i      ( dst_fmt ),
    .int_fmt_i      ( int_fmt ),
-   .masked_op_i    ( 'h0 ),
-   .mask_bits_i    ( 'h0 ),
+   .masked_op_i    ( '0 ),
+   .mask_bits_i    ( '0 ),
    .inactive_sel_i ( 2'b11 ),
-   .vectorial_op_i ( 'h0 ),
+   .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),
    .out_ready_i    ( 1'b1 ),
@@ -273,6 +273,7 @@ assign instruction_o.gl_index        = finish_fp_op_int.gl_index;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
 assign instruction_o.fp_status       = finish_fp_status_int;
+assign instruction_o.ex              = '0;
 `ifdef VERILATOR
    assign instruction_o.id           = finish_fp_op_int.instr.id;
 `endif 
@@ -304,6 +305,8 @@ assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
 assign instruction_scalar_o.fp_status       = finish_fp_status_int;
+assign instruction_scalar_o.ex              = '0;
+assign instruction_scalar_o.mem_type        = NOT_MEM;
 
 
 endmodule

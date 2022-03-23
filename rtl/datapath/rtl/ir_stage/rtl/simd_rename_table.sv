@@ -109,8 +109,10 @@ end
 
             // Table initial state
             for (integer j = 0; j < NUM_ISA_VREGISTERS; j++) begin
-                register_table[j][0] <= j[5:0];
-                ready_table[j][0] <= 1'b1;
+                for (integer k = 0; k < NUM_CHECKPOINTS; k++) begin
+                    register_table[j][k] <= j[5:0];
+                    ready_table[j][k] <= 1'b1;
+                end
                 commit_table[j] <= j[5:0];
             end
             // Checkpoint signals
@@ -119,10 +121,15 @@ end
             version_tail <= 2'b0;       // Last reserved table 0
 
             // Output signals
-            src1_o <= 0;
-            src2_o <= 0;
-            srcm_o <= 0;
-            old_dst_o <= 0;                     
+            src1_o <= '0;
+            src2_o <= '0;
+            srcm_o <= '0;
+            rdy1_o <= '0;
+            rdy2_o <= '0;
+            rdym_o <= '0;
+            rdy_old_dst_o <= '0;
+            old_dst_o <= 0;  
+            checkpoint_o <= 0;                    
         end 
         else if (recover_commit_i) begin // Recover commit table because exception
             for (integer j = 0; j < NUM_ISA_VREGISTERS; j++) begin
@@ -134,9 +141,13 @@ end
             version_tail <= 2'b0;       // Last reserved table 0
 
             // Output signals
-            src1_o <= 0;
-            src2_o <= 0;
-            srcm_o <= 0;
+            src1_o <= '0;
+            src2_o <= '0;
+            srcm_o <= '0;
+            rdy1_o <= '0;
+            rdy2_o <= '0;
+            rdym_o <= '0;
+            rdy_old_dst_o <= '0;
             old_dst_o <= 0;  
             checkpoint_o <= 0;
         end 
@@ -175,13 +186,6 @@ end
 
                 // Second register renaming
                 if (read_enable) begin
-                    for (int i = 0; i<NUM_SIMD_WB; ++i) begin
-                        rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
-                        rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
-                        rdym[i] = ready_i[i] & (0 == vaddr_i[i]) & (register_table[0][version_head] == paddr_i[i]);
-                        rdy_old_dst[i] = ready_i[i] & (old_dst_i == vaddr_i[i]) & (register_table[old_dst_i][version_head] == paddr_i[i]);
-                    end
-
                     src1_o <= register_table[read_src1_i][version_head];
                     rdy1_o <= ready_table[read_src1_i][version_head] | (|rdy1) | (~use_vs1_i);
                     src2_o <= register_table[read_src2_i][version_head];
@@ -227,6 +231,22 @@ end
             checkpoint_o <= version_head;
         end
     end
+
+always_comb begin
+    if (read_enable) begin
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            rdy1[i] = ready_i[i] & (read_src1_i == vaddr_i[i]) & (register_table[read_src1_i][version_head] == paddr_i[i]);
+            rdy2[i] = ready_i[i] & (read_src2_i == vaddr_i[i]) & (register_table[read_src2_i][version_head] == paddr_i[i]);
+            rdym[i] = ready_i[i] & (0 == vaddr_i[i]) & (register_table[0][version_head] == paddr_i[i]);
+            rdy_old_dst[i] = ready_i[i] & (old_dst_i == vaddr_i[i]) & (register_table[old_dst_i][version_head] == paddr_i[i]);
+        end
+    end else begin
+        rdy1 = '0;
+        rdy2 = '0;
+        rdym = '0;
+        rdy_old_dst = '0;
+    end 
+end
 
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 

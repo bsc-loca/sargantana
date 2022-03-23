@@ -84,10 +84,12 @@ begin
         version_head <= 'b0;            // Current head pointer
         num_checkpoints <= 'b0;         // No checkpoints
         version_tail <= 'b0;            // Last reserved pointer
-        head[0] <= 'b0;                 // Current head in position 
         tail    <= 'b0;                 // Current tail in position  
-        num_registers[0]  <= 6'b100000; // Number of free registers 32
-
+        checkpoint_o <= 'b0;            // Current checkpoint 
+        for (integer j = 0; j < NUM_CHECKPOINTS ; j = j + 1) begin
+            head[j] <= 'b0;                 // Current head in position
+            num_registers[j]  <= 6'b100000; // Number of free registers 32
+        end 
         for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
             register_table[i] <= i[5:0] + 6'b100000;
         end

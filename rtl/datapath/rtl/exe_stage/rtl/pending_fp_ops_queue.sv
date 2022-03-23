@@ -82,6 +82,10 @@ begin
     if (~rstn_i) begin
         for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
             valid_table[j] <= 1'b0;
+            instruction_table[j] <= '0;
+            instruction_table_status[j] <= '0;
+            tag_table[j] <= '0;
+            control_bits_table[j] <= '0;
         end
     end
     else if (flush_i) begin

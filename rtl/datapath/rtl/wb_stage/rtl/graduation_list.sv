@@ -62,7 +62,7 @@ module graduation_list #
 );
 
 
-parameter num_bits_index = $clog2(NUM_ENTRIES);
+localparam num_bits_index = $clog2(NUM_ENTRIES);
 
 gl_index_t head;
 gl_index_t tail;
@@ -108,8 +108,12 @@ begin
     if (~rstn_i) begin
         for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
             valid_bit[i] <= 1'b0;
-            exception_q <= '0;
+            entries[i] <= '0;
         end
+        exception_index_q <= '0;
+        exception_q <= '0;
+        csr_addr_q <= '0;
+        result_q <= '0;
     end else begin
 
         if (write_enable) begin

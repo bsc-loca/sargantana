@@ -210,7 +210,7 @@ load_store_queue load_store_queue_inst (
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         state <= ResetState;
-        stored_instr_to_dcache.instr.valid <= 1'b0;
+        stored_instr_to_dcache <= '0;
     end else if (reset_next_lsq) begin
         state <= ReadHead;
         stored_instr_to_dcache.instr.valid <= 1'b0;
@@ -225,6 +225,14 @@ end
 
 // Mealy Output and Next State
 always_comb begin
+    req_cpu_dcache_o.valid      = 1'b0;     // No Request
+    source_dcache               = NULL;     
+    read_next_lsq               = 1'b1;     // No Advance LSQ
+    mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
+    instruction_s1_d            =  'h0;     // No Instruction to next stage
+    is_unalign1_s1_d            = 1'b0;
+    is_unalign2_s1_d            = 1'b0;
+    next_state                  = ReadHead; // Next state Read Head
     if (flush_to_lsq) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
         source_dcache               = NULL;     
@@ -450,6 +458,9 @@ always_comb begin
     req_cpu_dcache_o.instr_type = ADD;
     req_cpu_dcache_o.mem_size   = 3'h0;
     req_cpu_dcache_o.rd         = 5'h0;
+    req_cpu_dcache_o.is_amo_or_store = 1'b0;
+    req_cpu_dcache_o.is_store   = 1'b0;
+    req_cpu_dcache_o.is_amo     = 1'b0;
     case(source_dcache)
         NULL:         begin
             req_cpu_dcache_o.data_rs1        = 64'h0;
@@ -538,6 +549,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_unalign2_s1_q     <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
+        xcpt_addr_s1_q       <=   '0;
         
         instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;

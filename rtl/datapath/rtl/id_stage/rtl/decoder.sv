@@ -126,6 +126,8 @@ module decoder(
 
         decode_instr_int.mem_type = NOT_MEM;
 
+        decode_instr_int.ex_valid = '0;
+
         if (!decode_i.ex.valid && decode_i.valid ) begin
             case (decode_i.inst.common.opcode)
                 // Load Upper immediate
@@ -1328,8 +1330,8 @@ module decoder(
         .rstn_i(rstn_i),
         .clk_i(clk_i),
         .pc_execution_i(decode_instr_int.pc + 64'h4),
-        .push_i(ras_push_int),
-        .pop_i(ras_pop_int),
+        .push_i(ras_push_int && !stall_i && !flush_i),
+        .pop_i(ras_pop_int && !stall_i && !flush_i),
         .return_address_o(ras_pc_int));
 
 endmodule

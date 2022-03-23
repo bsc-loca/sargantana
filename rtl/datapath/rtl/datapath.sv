@@ -1066,7 +1066,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
         exe_data_vs1 = snoop_exe_vrdy1 ? (snoop_exe_data_vs1) : stage_rr_exe_q.data_vs1;
         exe_data_vs2 = snoop_exe_vrdy2 ? (snoop_exe_data_vs2) : stage_rr_exe_q.data_vs2;
-        exe_data_old_vd = snoop_exe_old_vd ? (snoop_exe_data_old_vd) : stage_rr_exe_q.data_old_vd;
+        exe_data_old_vd = snoop_exe_vrdy_old_vd ? (snoop_exe_data_old_vd) : stage_rr_exe_q.data_old_vd;
         exe_data_vm  = snoop_exe_vrdym ? (snoop_exe_data_vm)  : stage_rr_exe_q.data_vm;
 
         snoop_exe_frdy1 = |snoop_exe_frs1;
@@ -1178,7 +1178,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     always @(posedge clk_i)  assert (!(exe_to_wb_scalar_simd_fp[0].valid & exe_to_wb_scalar_simd_fp[1].valid));
 
-    register #((NUM_SCALAR_WB - 1) * $bits(exe_wb_scalar_instr_t) + (NUM_SIMD_WB - 1) * $bits(exe_wb_simd_instr_t) + (NUM_FP_WB - 1) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
+    register #( (2) * $bits(exe_wb_scalar_instr_t) + (NUM_SIMD_WB - 1) * $bits(exe_wb_simd_instr_t) + (NUM_FP_WB - 1) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),

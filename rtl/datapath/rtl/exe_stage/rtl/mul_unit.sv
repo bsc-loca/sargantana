@@ -114,6 +114,8 @@ assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;
 assign instruction_0_d.result        = instruction_i.instr.imm;
 assign instruction_0_d.mem_type      = instruction_i.instr.mem_type;
+assign instruction_0_d.ex            = '0;
+assign instruction_0_d.fp_status     = '0;
 `ifdef VERILATOR
 assign instruction_0_d.id            = instruction_i.instr.id;
 `endif
@@ -169,6 +171,7 @@ assign instruction_s1.ex            = instruction_0_q.ex;
 assign instruction_s1.id            = instruction_0_q.id;
 `endif
 assign instruction_s1.fp_status     = 'h0;
+assign instruction_s1.mem_type      = instruction_0_q.mem_type;
 
 //--------------------------------------------------------------------------------------------------
 //----- SECOND STAGE  ------------------------------------------------------------------------------
@@ -247,6 +250,7 @@ assign instruction_s2.ex            = instruction_1_q.ex;
 assign instruction_s2.id            = instruction_1_q.id;
 `endif 
 assign instruction_s2.fp_status     = 'h0;
+assign instruction_s2.mem_type      = instruction_1_q.mem_type;
 
 //--------------------------------------------------------------------------------------------------
 //----- MUX SELECTS OUTPUT -------------------------------------------------------------------------

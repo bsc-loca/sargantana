@@ -52,9 +52,6 @@ logic is_next_load;
 // Points to the next available entry
 lsq_entry_pointer tail;
 
-// Points to the next executable entry
-lsq_entry_pointer next;
-
 // Points to the oldest executed entry
 lsq_entry_pointer head;
 
@@ -114,9 +111,7 @@ always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
         head <= 3'h0;
-        next <= 3'h0;
         tail <= 3'b0;
-        num  <= 4'b0;
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
         num_to_recover  <= 4'b0;
@@ -125,9 +120,7 @@ begin
     end
     else if (flush_i) begin
         head <= 3'h0;
-        next <= 3'h0;
         tail <= 3'b0;
-        num  <= 4'b0;
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
         num_to_recover  <= 4'b0;
