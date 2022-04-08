@@ -73,6 +73,7 @@ assign write_enable_1 = (add_free_register_i[1]) & (~commit_roll_back_i);
 // in this cycle a new register is written
 assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable_0 | write_enable_1) & (~do_recover_i) & (~commit_roll_back_i);
 
+assign tail_plus_one = tail + 5'b00001;
 
 // FIFO Memory structure
 phfreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1];    // SRAM used to store the free registers. Read syncronous.
@@ -91,7 +92,7 @@ begin
             num_registers[j]  <= 6'b100000; // Number of free registers 32
         end 
         for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
-            register_table[i] <= i[5:0] + 6'b100000;
+            register_table[i] <= i + 6'b100000;
         end
     end
     else if (commit_roll_back_i) begin
@@ -114,7 +115,7 @@ begin
         if (write_enable_0) begin
             register_table[tail] <= free_register_i[0];
             if (write_enable_1) begin
-                register_table[tail + 1] <= free_register_i[1];
+                register_table[tail_plus_one] <= free_register_i[1];
             end
         end else begin
             if (write_enable_1) begin

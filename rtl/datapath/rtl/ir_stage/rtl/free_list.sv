@@ -35,12 +35,13 @@ module free_list(
 localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
 // Free list Pointer
-typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
+typedef logic [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
+
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
 reg_free_list_entry head [0:NUM_CHECKPOINTS-1];
 reg_free_list_entry tail;
-
+reg_free_list_entry tail_plus_one;
 // Point to the actual version of free list
 checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
@@ -66,16 +67,18 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // Freed register should be written to all checkpoints
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
 // It cannot free register 0
-assign write_enable_0 = (add_free_register_i[0]) & (free_register_i[0] != 6'h0) & (~commit_roll_back_i);
-assign write_enable_1 = (add_free_register_i[1]) & (free_register_i[1] != 6'h0) & (~commit_roll_back_i);
+assign write_enable_0 = (add_free_register_i[0]) & (free_register_i[0] != 5'h0) & (~commit_roll_back_i);
+assign write_enable_1 = (add_free_register_i[1]) & (free_register_i[1] != 5'h0) & (~commit_roll_back_i);
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
 assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable_0 | write_enable_1) & (~do_recover_i) & (~commit_roll_back_i);
 
+assign tail_plus_one = tail + 5'b00001;
 
 // FIFO Memory structure
-phreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1];    // SRAM used to store the free registers. Read syncronous.
+phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table;    // SRAM used to store the free registers. Read syncronous.
+(* keep="TRUE" *) (* mark_debug="TRUE" *) phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table_reg;    // SRAM used to store the free registers. Read syncronous.
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
@@ -114,7 +117,7 @@ begin
         if (write_enable_0) begin
             register_table[tail] <= free_register_i[0];
             if (write_enable_1) begin
-                register_table[tail + 1] <= free_register_i[1];
+                register_table[tail_plus_one] <= free_register_i[1];
             end
         end else begin
             if (write_enable_1) begin
@@ -229,5 +232,43 @@ assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
         .num(num_registers[version_head])
     );
 `endif
+
+`ifdef CHECK_RENAME
+
+(* keep="TRUE" *) (* mark_debug="TRUE" *) logic [NUM_CHECKPOINTS-1:0] error_free_list_q;
+logic [NUM_CHECKPOINTS-1:0] error_free_list_d;
+
+always_comb begin
+    for(int i=0;i<NUM_CHECKPOINTS;i++) begin
+        error_free_list_d[i] = 1'b0;
+        for (int j=0; j<NUM_ISA_REGISTERS; j++)begin
+            if ((j >= head[i] && j < tail && head[i] < tail ) ||
+                    (j >= head[i] && j > tail && head[i] > tail ) ||
+                    (j < head[i] && j < tail && head[i] > tail )) begin
+                for (int k=0; k<NUM_ISA_REGISTERS; k++)begin
+                    if (register_table[j] == register_table[k] && (j != k) &&(
+                        (k >= head[i] && k < tail && head[i] < tail ) ||
+                        (k >= head[i] && k > tail && head[i] > tail ) ||
+                        (k < head[i] && k < tail && head[i] > tail ))) begin
+                        error_free_list_d[i] |= 1'b1; 
+                    end
+                end
+            end
+        end
+    end
+end
+
+always_ff @(posedge clk_i, negedge rstn_i) 
+begin
+    if(~rstn_i) begin
+        error_free_list_q <= '0;
+        register_table_reg <= '0;
+    end else begin
+        error_free_list_q <= error_free_list_d;
+        register_table_reg <= register_table;
+    end
+end
+
+`endif 
 
 endmodule

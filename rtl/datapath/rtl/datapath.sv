@@ -1355,7 +1355,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign commit_xcpt_cause = (~commit_store_or_amo_int)? ex_gl_out_int.cause : exception_mem_commit_int.cause;
 
     // Control Unit From Commit
-    assign commit_cu_int.valid = {instruction_to_commit[1].valid,instruction_to_commit[0].valid};
+    assign commit_cu_int.valid = instruction_to_commit[0].valid;
     assign commit_cu_int.regfile_we = {instruction_to_commit[1].regfile_we,instruction_to_commit[0].regfile_we};
     assign commit_cu_int.vregfile_we = {instruction_to_commit[1].vregfile_we,instruction_to_commit[0].vregfile_we};
     assign commit_cu_int.fregfile_we = {instruction_to_commit[1].fregfile_we,instruction_to_commit[0].fregfile_we};
@@ -1577,4 +1577,16 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
+
+    /*
+    (* keep="TRUE" *) (* mark_debug="TRUE" *) gl_instruction_t [1:0] instruction_to_commit_reg;
+    (* keep="TRUE" *) (* mark_debug="TRUE" *) commit_cu_t commit_cu_int_reg;
+    (* keep="TRUE" *) (* mark_debug="TRUE" *) cu_ir_t cu_ir_int_reg;
+    always_ff @(posedge clk_i) 
+    begin
+        instruction_to_commit_reg <= instruction_to_commit;
+        commit_cu_int_reg <= commit_cu_int;
+        cu_ir_int_reg <= cu_ir_int;
+    end*/
+
 endmodule

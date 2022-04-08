@@ -219,10 +219,10 @@ begin
         // Table initial state
         for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
             for (integer k = 0; k < NUM_CHECKPOINTS; k++) begin
-                register_table_q[j][k] <= {1'b0,j[4:0]};
+                register_table_q[j][k] <= j;
                 ready_table_q[j][k] <= 1'b1;
             end
-            commit_table_q[j] <= {1'b0,j[4:0]};
+            commit_table_q[j] <= j;
         end
         // Checkpoint signals
         version_head_q <= 2'b0;       // Current table, 0
@@ -251,5 +251,51 @@ always_comb begin
 end
 
 assign out_of_checkpoints_o = (num_checkpoints_q == (NUM_CHECKPOINTS - 1));
+
+`ifdef CHECK_RENAME
+
+(* keep="TRUE" *) (* mark_debug="TRUE" *) logic [NUM_CHECKPOINTS-1:0] error_rename_q;
+logic [NUM_CHECKPOINTS-1:0] error_rename_d;
+(* keep="TRUE" *) (* mark_debug="TRUE" *) logic  error_actual_coechpoint_q;
+logic error_actual_coechpoint_d;
+(* keep="TRUE" *) (* mark_debug="TRUE" *) logic error_commit_q;
+logic error_commit_d;
+
+always_comb begin
+    for(int i=0;i<NUM_CHECKPOINTS;i++) begin
+        error_rename_d[i] = 1'b0;
+        for (int j=0; j<NUM_ISA_REGISTERS; j++)begin
+            for (int k=0; k<NUM_ISA_REGISTERS; k++)begin
+                if (register_table_q[j][i] == register_table_q[k][i] && j!=k) begin
+                    error_rename_d[i] |= 1'b1; 
+                end
+            end
+        end
+    end
+    error_commit_d = 1'b0; 
+    for (int j=0; j<NUM_ISA_REGISTERS; j++)begin
+        for (int k=0; k<NUM_ISA_REGISTERS; k++)begin
+            if (commit_table_q[j] == commit_table_q[k] && j!=k) begin
+                error_commit_d |= 1'b1; 
+            end
+        end
+    end
+
+end
+
+always_ff @(posedge clk_i, negedge rstn_i) 
+begin
+    if(~rstn_i) begin
+        error_rename_q <= '0;
+        error_actual_coechpoint_q <= '0;
+        error_commit_q <= '0;
+    end else begin
+        error_rename_q <= error_rename_d;
+        error_actual_coechpoint_q <= error_actual_coechpoint_d;
+        error_commit_q <= error_actual_coechpoint_d;
+    end
+end
+
+`endif
 
 endmodule
