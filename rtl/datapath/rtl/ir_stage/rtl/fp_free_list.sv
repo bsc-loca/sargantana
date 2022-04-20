@@ -36,11 +36,12 @@ module fp_free_list(
 localparam NUM_ENTRIES_FREE_LIST = NUM_PHYSICAL_FREGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
 // Free list Pointer
-typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] vreg_free_list_entry;
+typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] freg_free_list_entry;
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
-vreg_free_list_entry head [0:NUM_CHECKPOINTS-1];
-vreg_free_list_entry tail;
+freg_free_list_entry head [0:NUM_CHECKPOINTS-1];
+freg_free_list_entry tail;
+freg_free_list_entry tail_plus_one;
 
 // Point to the actual version of free list
 checkpoint_ptr version_head;
