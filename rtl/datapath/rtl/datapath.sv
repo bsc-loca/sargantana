@@ -1387,8 +1387,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                                          instruction_to_commit[0].instr_type == VSETVL ||
                                          instruction_to_commit[0].instr_type == VSETVLI);
 
-    assign commit_store_or_amo_int = (instruction_to_commit[0].mem_type == STORE) || 
-                                     (instruction_to_commit[0].mem_type == AMO);
+    assign commit_store_or_amo_int = ((instruction_to_commit[0].mem_type == STORE) || 
+                                     (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid;
 
     assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
     assign commit_cu_int.retire = retire_inst_gl;
