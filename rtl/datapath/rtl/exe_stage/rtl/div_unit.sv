@@ -65,6 +65,13 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
 
     always_comb begin
+        for (int i = 1; i >= 0; i--) begin
+            instruction_d[i] = instruction_q[i];
+            div_zero_d[i]    = div_zero_q[i];
+            same_sign_d[i]   = same_sign_q[i];
+            op_32_d[i]       = op_32_q[i];
+            signed_op_d[i]   = signed_op_q[i]; 
+        end
         if (instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV)) begin
             instruction_d[div_unit_sel_i].ex.cause  = INSTR_ADDR_MISALIGNED;
             instruction_d[div_unit_sel_i].ex.origin = 0;
@@ -94,24 +101,10 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
             `endif
 
-            instruction_d[~div_unit_sel_i] = instruction_q[~div_unit_sel_i];
-            div_zero_d[~div_unit_sel_i]    = div_zero_q[~div_unit_sel_i];
-            same_sign_d[~div_unit_sel_i]   = same_sign_q[~div_unit_sel_i];
-            op_32_d[~div_unit_sel_i]       = op_32_q[~div_unit_sel_i];
-            signed_op_d[~div_unit_sel_i]   = signed_op_q[~div_unit_sel_i]; 
-
             div_zero_d[div_unit_sel_i]     = (~(|data_src2) || (instruction_i.instr.op_32 && ~(|data_src2[31:0])));
             same_sign_d[div_unit_sel_i]    = (instruction_i.instr.op_32) ? ~(data_src2[31] ^ data_src1[31]) 
             : ~(data_src2[63] ^ data_src1[63]);
-        end else begin
-            for (int i = 1; i >= 0; i--) begin
-                instruction_d[i] = instruction_q[i];
-                div_zero_d[i]    = div_zero_q[i];
-                same_sign_d[i]   = same_sign_q[i];
-                op_32_d[i]       = op_32_q[i];
-                signed_op_d[i]   = signed_op_q[i]; 
-            end
-        end
+        end 
     end
 
 
@@ -150,7 +143,7 @@ assign data_src2 = instruction_i.data_rs2;
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (~rstn_i) begin
             for (int i = 0; i <= 1; i++) begin
-                instruction_q[i].valid  <= 1'b0;
+                instruction_q[i]        <= 'h0;
                 div_zero_q[i]           <= 1'b0;
                 same_sign_q[i]          <= 1'b0;
                 op_32_q[i]              <= 1'b0;

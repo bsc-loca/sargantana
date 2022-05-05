@@ -87,6 +87,7 @@ bus64_t ext_element;
 //granularity, and produce a scalar result
 always_comb begin
     ext_element = 'h0;
+    data_rd = 'h0;
     if (instruction_i.instr.instr_type == VMV_X_S) begin
         //Extract element 0
         case (instruction_i.sew)
@@ -247,6 +248,7 @@ assign instruction_scalar_o.chkp = instruction_i.chkp;
 assign instruction_scalar_o.gl_index = instruction_i.gl_index;
 assign instruction_scalar_o.branch_taken = 1'b0;
 assign instruction_scalar_o.result_pc = 0;
+assign instruction_scalar_o.fp_status = 0;
 `ifdef VERILATOR
 assign instruction_scalar_o.id = instruction_i.instr.id;
 `endif
