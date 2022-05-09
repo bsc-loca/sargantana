@@ -15,7 +15,7 @@ import riscv_pkg::*;
 module score_board (
     input logic             clk_i,
     input logic             rstn_i,
-    input logic             kill_i,
+    input logic             flush_i,
 
     input wire              set_mul_32_i,               // Insert new Mul instruction of 2  cycles
     input wire              set_mul_64_i,               // Insert new Mul instruction of 3  cycles
@@ -46,7 +46,7 @@ module score_board (
                 div[i] <= 0;
             end 
         end 
-        else if (kill_i) begin
+        else if (flush_i) begin
             for(int i = 1; i >= 0; i--) begin
                 mul[i] <= 0;
                 ocup_div_unit[i] <= 33'd0;

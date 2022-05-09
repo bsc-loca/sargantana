@@ -86,11 +86,14 @@ logic          unaligned_nowait_table   [0:PMRQ_NUM_ENTRIES-1];
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if (~rstn_i) begin
-        for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
+        for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
             finish_bit_table[j] <= 1'b0;
-	    unaligned_bit_table[j] <= 1'b0;
-	    unaligned_nowait_table[j] <= 1'b0;
-	end
+            unaligned_bit_table[j] <= 1'b0;
+            unaligned_nowait_table[j] <= 1'b0;
+            instruction_table[j] <= '0;
+            tag_table[j] <= '0;
+            unaligned_result_table[j] <= '0;
+        end
     end else begin
 	if (write_enable) begin     // Write tail
             instruction_table[tail]      <= instruction_i;

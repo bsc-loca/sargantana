@@ -71,8 +71,6 @@ logic is_brom_old_access;
 
 reg_addr_t old_pc_req_d, old_pc_req_q;
 
-logic tlb_resp_xcp_if_int;
-
 logic resp_icache_fetch_valid;
 
   
@@ -116,10 +114,8 @@ assign icache_invalidate_o = req_fetch_icache_i.invalidate_icache;
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (!rstn_i) begin
         old_pc_req_q <= {ADDR_SIZE{1'b0}};
-        tlb_resp_xcp_if_int <= 1'b0;
     end else begin
         old_pc_req_q <= old_pc_req_d;
-        tlb_resp_xcp_if_int <= tlb_resp_xcp_if_i & do_icache_request_int;
     end
 end
 // old pc is the pc of the last cycle

@@ -249,6 +249,7 @@ assign instruction_scalar_o.gl_index = instruction_i.gl_index;
 assign instruction_scalar_o.branch_taken = 1'b0;
 assign instruction_scalar_o.result_pc = 0;
 assign instruction_scalar_o.fp_status = 0;
+assign instruction_scalar_o.mem_type = NOT_MEM;
 `ifdef VERILATOR
 assign instruction_scalar_o.id = instruction_i.instr.id;
 `endif
@@ -279,15 +280,9 @@ always_comb begin
     instruction_scalar_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_scalar_o.ex.origin = 0;
     instruction_scalar_o.ex.valid = 0;
-    if (instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_scalar_o.ex = instruction_i.instr.ex;
-    end
     instruction_simd_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_simd_o.ex.origin = 0;
     instruction_simd_o.ex.valid = 0;
-    if (instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_simd_o.ex = instruction_i.instr.ex;
-    end
 end
 
 endmodule

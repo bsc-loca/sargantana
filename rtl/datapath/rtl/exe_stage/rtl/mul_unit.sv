@@ -17,7 +17,7 @@ import riscv_pkg::*;
 module mul_unit (
     input  logic                   clk_i,          // Clock Signal
     input  logic                   rstn_i,         // Negative reset signal
-    input  logic                   kill_mul_i,     // Kill on fly instructions signal
+    input  logic                   flush_mul_i,     // Kill on fly instructions signal
     input  rr_exe_arith_instr_t    instruction_i,  // New instruction
     output exe_wb_scalar_instr_t   instruction_o   // Output instruction
 );
@@ -98,7 +98,6 @@ assign result_32 = {{32{result_32_aux[31]}},result_32_aux[31:0]};
 
 assign instruction_0_d.valid         = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_MUL);
 assign instruction_0_d.pc            = instruction_i.instr.pc;
-assign instruction_0_d.ex            = instruction_i.instr.ex;
 assign instruction_0_d.bpred         = instruction_i.instr.bpred;
 assign instruction_0_d.rs1           = instruction_i.instr.rs1;
 assign instruction_0_d.rd            = instruction_i.instr.rd;
@@ -114,6 +113,9 @@ assign instruction_0_d.gl_index      = instruction_i.gl_index;
 assign instruction_0_d.branch_taken  = 1'b0;
 assign instruction_0_d.result_pc     = 0;
 assign instruction_0_d.result        = instruction_i.instr.imm;
+assign instruction_0_d.mem_type      = instruction_i.instr.mem_type;
+assign instruction_0_d.ex            = '0;
+assign instruction_0_d.fp_status     = '0;
 `ifdef VERILATOR
 assign instruction_0_d.id            = instruction_i.instr.id;
 `endif
@@ -130,7 +132,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         int_32_0_q               <= 1'b0;
         src1_def_q               <= 'h0;
         src2_def_q               <= 'h0;
-    end else if (kill_mul_i | (~instruction_0_d.valid)) begin
+    end else if (flush_mul_i | (~instruction_0_d.valid)) begin
         instruction_0_q          <= 'h0;
         type_0_q                 <= 3'b111;
         neg_def_0_q              <= 1'b0;
@@ -169,6 +171,7 @@ assign instruction_s1.ex            = instruction_0_q.ex;
 assign instruction_s1.id            = instruction_0_q.id;
 `endif
 assign instruction_s1.fp_status     = 'h0;
+assign instruction_s1.mem_type      = instruction_0_q.mem_type;
 
 //--------------------------------------------------------------------------------------------------
 //----- SECOND STAGE  ------------------------------------------------------------------------------
@@ -182,7 +185,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         neg_def_1_q              <= 1'b0;
         result_low_q             <= 'h0;
         result_high_q            <= 'h0;
-    end else if (kill_mul_i | (~instruction_0_q.valid) | int_32_0_q) begin
+    end else if (flush_mul_i | (~instruction_0_q.valid) | int_32_0_q) begin
         instruction_1_q          <= 'h0;
         type_1_q                 <= 3'b111;
         int_32_1_q               <= 1'b0;
@@ -247,6 +250,7 @@ assign instruction_s2.ex            = instruction_1_q.ex;
 assign instruction_s2.id            = instruction_1_q.id;
 `endif 
 assign instruction_s2.fp_status     = 'h0;
+assign instruction_s2.mem_type      = instruction_1_q.mem_type;
 
 //--------------------------------------------------------------------------------------------------
 //----- MUX SELECTS OUTPUT -------------------------------------------------------------------------

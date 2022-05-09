@@ -104,6 +104,7 @@ assign instruction_o.prd             = instruction_i.prd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;
 assign instruction_o.gl_index        = instruction_i.gl_index;
+assign instruction_o.mem_type        = instruction_i.instr.mem_type;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
 `ifdef VERILATOR
@@ -116,9 +117,6 @@ always_comb begin
     instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
     instruction_o.ex.origin = 0;
     instruction_o.ex.valid  = 0;
-    if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_o.ex = instruction_i.instr.ex;
-    end
 end
 
 endmodule

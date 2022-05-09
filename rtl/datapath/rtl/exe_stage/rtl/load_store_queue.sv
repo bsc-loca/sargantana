@@ -7,7 +7,8 @@
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author      | Description
- *  0.1        | Victor.SP  |  
+ *  0.1        | Victor.SP   |
+ *  0.2        | Max Doblas  | Adding an Store Buffer  
  * -----------------------------------------------
  */
 
@@ -21,11 +22,15 @@ module load_store_queue(
     input logic                rstn_i,           // Negated Reset Signal
 
     input rr_exe_mem_instr_t   instruction_i,    // All instruction input signals
+    input logic                en_ld_st_translation_i,
      
     input logic                flush_i,          // Flush all entries
     input logic                read_next_i,      // Read next instruction of the ciruclar buffer
     input logic                reset_next_i,     // Reset next instruction to the exec pointer
     input logic                advance_head_i,   // Advance head pointer one position
+    input logic                rob_store_ack_i,
+    input gl_index_t           rob_store_gl_idx_i,  // Signal from commit enables writes.
+    output logic               blocked_store_o,
 
     output rr_exe_mem_instr_t  next_instr_exe_o, // Next Instruction to be executed 
        
@@ -35,11 +40,17 @@ module load_store_queue(
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
+// store buff signals
+logic st_buff_full;
+logic st_buff_empty;
+logic st_buff_collision;
+logic sb_write_enable;
+rr_exe_mem_instr_t st_buff_inst_out;
+logic is_next_store;
+logic is_next_load;
+
 // Points to the next available entry
 lsq_entry_pointer tail;
-
-// Points to the next executable entry
-lsq_entry_pointer next;
 
 // Points to the oldest executed entry
 lsq_entry_pointer head;
@@ -48,25 +59,38 @@ lsq_entry_pointer head;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_exe;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_on_fly;
+logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_recover;
 
 // Internal Control Signals
 logic write_enable;
 logic read_enable;
+logic read_enable_lsq;
+logic read_enable_sb;
 logic advance_head_enable;
+logic bypass_lsq;
+logic empty_int;
+
+logic io_address_space;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.instr.valid & (num < LSQ_NUM_ENTRIES);
+assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES) & !(empty_int && instruction_i.instr.mem_type == LOAD && read_enable);
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-assign read_enable = read_next_i & (num_to_exe > 0) & (~reset_next_i);
+assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD)) & (~reset_next_i);
 
 // User can advance the head of the buffer if there is data stored in the queue
 assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
 
+assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
+
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
+// recover table
+rr_exe_mem_instr_t recover_table[0:1];
+logic recover_head;
+logic recover_tail;
 
 always_ff @(posedge clk_i)
 begin
@@ -76,84 +100,134 @@ begin
     end
 end
 
-
+always_ff @(posedge clk_i)
+begin
+    if (read_enable) begin
+        recover_table[recover_tail] <= next_instr_exe_o;
+    end
+end
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
         head <= 3'h0;
-        next <= 3'h0;
         tail <= 3'b0;
-        num  <= 4'b0;
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
+        num_to_recover  <= 4'b0;
+        recover_head <= 1'b0;
+        recover_tail <= 1'b0;
     end
     else if (flush_i) begin
         head <= 3'h0;
-        next <= 3'h0;
         tail <= 3'b0;
-        num  <= 4'b0;
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
+        num_to_recover  <= 4'b0;
+        recover_head <= 1'b0;
+        recover_tail <= 1'b0;
     end
     else if (reset_next_i) begin
-        next <= head;
-        head <= head;
+        head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, advance_head_enable};
-        num_to_exe   <= num_to_exe + {3'b0, write_enable} + num_on_fly;
-        num_on_fly   <= 4'b0;
+        num_to_exe <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable_lsq};
+        num_on_fly <= 4'b0;
+        num_to_recover  <= num_on_fly + num_to_recover;
+        recover_head <= recover_head;
+        recover_tail <= recover_head;
     end
     else begin
-        next <= next + {2'b00, read_enable};
-        head <= head + {2'b00, advance_head_enable};
+        head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, advance_head_enable};
-        num_to_exe   <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable};
-        num_on_fly   <= num_on_fly + {2'b00, read_enable} - {3'b0, advance_head_enable};
+        num_to_exe      <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable_lsq};
+        num_on_fly      <= num_on_fly + {2'b00, read_enable} - {3'b0, advance_head_enable};
+        num_to_recover  <= num_to_recover > 0 ? num_to_recover - {3'b0, read_enable} : 4'b0;
+        recover_head <= recover_head + advance_head_enable;
+        recover_tail <= recover_tail + read_enable;
     end
 end
 
+always_comb begin
+    read_enable_lsq = 1'b0;
+    read_enable_sb = 1'b0;
+    sb_write_enable = 1'b0;
+    if (read_enable && num_to_recover > 0) begin
 
-assign next_instr_exe_o = (~read_enable)? 'h0 : control_table[next];
+    end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
+        read_enable_sb = 1'b1;
+    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin
+        read_enable_lsq = 1'b1;
+    end else if (read_enable && is_next_load && !st_buff_collision) begin
+        read_enable_lsq = 1'b1;
+    end else if ((!read_enable || !rob_store_ack_i || control_table[head].gl_index != rob_store_gl_idx_i) && is_next_store && !st_buff_full) begin
+        sb_write_enable = 1'b1;
+        read_enable_lsq = 1'b1;
+    end
+end 
 
-assign empty_o = (num_to_exe == 0);
-assign full_o  = ((num == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
+always_comb begin
+    next_instr_exe_o = 'h0;
+    if (read_enable && num_to_recover > 0) begin
+        next_instr_exe_o = recover_table[recover_tail];
+    end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
+        next_instr_exe_o = st_buff_inst_out;
+    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin
+        next_instr_exe_o = control_table[head];
+    end else if (read_enable && is_next_load && !st_buff_collision) begin
+        next_instr_exe_o = control_table[head];
+    end else if (read_enable && bypass_lsq) begin
+        next_instr_exe_o = instruction_i;
+    end
+end
 
-assign pmu_load_after_store_o = ~read_enable && num_to_exe > 0 && 
-                                (control_table[next].instr.instr_type == LB || 
-                                control_table[next].instr.instr_type == LH  ||
-                                control_table[next].instr.instr_type == LW  ||
-                                control_table[next].instr.instr_type == LD  ||
-                                control_table[next].instr.instr_type == LBU ||
-                                control_table[next].instr.instr_type == LHU ||
-                                control_table[next].instr.instr_type == LWU) &&  
-                                (control_table[next-1].instr.instr_type == SD       || 
-                                control_table[next-1].instr.instr_type == SW        ||
-                                control_table[next-1].instr.instr_type == SH        ||
-                                control_table[next-1].instr.instr_type == SB        ||
-                                control_table[next-1].instr.instr_type == AMO_MAXWU ||
-                                control_table[next-1].instr.instr_type == AMO_MAXDU ||
-                                control_table[next-1].instr.instr_type == AMO_MINWU ||
-                                control_table[next-1].instr.instr_type == AMO_MINDU ||
-                                control_table[next-1].instr.instr_type == AMO_MAXW  ||
-                                control_table[next-1].instr.instr_type == AMO_MAXD  ||
-                                control_table[next-1].instr.instr_type == AMO_MINW  ||
-                                control_table[next-1].instr.instr_type == AMO_MIND  ||
-                                control_table[next-1].instr.instr_type == AMO_ORW   ||
-                                control_table[next-1].instr.instr_type == AMO_ORD   ||
-                                control_table[next-1].instr.instr_type == AMO_ANDW  ||
-                                control_table[next-1].instr.instr_type == AMO_ANDD  ||
-                                control_table[next-1].instr.instr_type == AMO_XORW  ||
-                                control_table[next-1].instr.instr_type == AMO_XORD  ||
-                                control_table[next-1].instr.instr_type == AMO_ADDW  ||
-                                control_table[next-1].instr.instr_type == AMO_ADDD  ||
-                                control_table[next-1].instr.instr_type == AMO_SWAPW ||
-                                control_table[next-1].instr.instr_type == AMO_SWAPD ||
-                                control_table[next-1].instr.instr_type == AMO_SCW   ||
-                                control_table[next-1].instr.instr_type == AMO_SCD   ||
-                                control_table[next-1].instr.instr_type == AMO_LRW   ||
-                                control_table[next-1].instr.instr_type == AMO_LRD);
+// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
+assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (control_table[head].data_rs1 < 40'h80000000) && !en_ld_st_translation_i;
+
+always_comb begin
+    blocked_store_o = 1'b1;
+    if (num_to_recover != '0) begin
+        blocked_store_o = 1'b0;
+    end else if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i)) begin
+        blocked_store_o = 1'b0;
+    end else if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i)) begin
+        blocked_store_o = 1'b0;
+    end else if (is_next_load && !st_buff_empty && io_address_space) begin 
+        // If the memory access is IO should not advance any store
+        blocked_store_o = 1'b1;
+    end else if (is_next_load && !st_buff_collision) begin
+        blocked_store_o = 1'b0;
+    end else if (bypass_lsq) begin
+        blocked_store_o = 1'b0;
+    end
+end
+
+assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_recover == '0;
+assign empty_o = empty_int && !bypass_lsq;
+assign full_o  = ((num_to_exe == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
+
+assign is_next_load = num_to_exe > '0 && (control_table[head].instr.mem_type == LOAD);
+
+assign is_next_store = num_to_exe > '0 && (control_table[head].instr.mem_type == STORE     || 
+                                        control_table[head].instr.mem_type == AMO);
+
+assign pmu_load_after_store_o = st_buff_collision;
+
+
+store_buffer store_buffer_inst(
+    .clk_i(clk_i),  
+    .rstn_i(rstn_i),
+    .write_enable_i(sb_write_enable),
+    .instruction_i(control_table[head]),
+    .flush_i(flush_i),
+    .advance_head_i(read_enable_sb),
+    .load_addr_i(control_table[head].data_rs1),
+    .load_size_i(control_table[head].instr.mem_size),
+    .finish_instr_o(st_buff_inst_out),
+    .empty_o(st_buff_empty),
+    .full_o(st_buff_full),
+    .collision_o(st_buff_collision)
+);
+
 
 endmodule
 

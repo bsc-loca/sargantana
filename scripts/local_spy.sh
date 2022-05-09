@@ -45,16 +45,21 @@ done <<< "$rtl_files"
 rm /tmp/optionsspy
 rm /tmp/importspy
 #copy files and set script
-	echo "read_file -type verilog {"includes/riscv_pkg.sv"}" >> /tmp/importspy 
-	echo "read_file -type verilog {"includes/drac_pkg.sv"}" >> /tmp/importspy 
+  echo "read_file -type verilog {"./includes/fpuv_pkg.sv"}" >> /tmp/importspy 
+  echo "read_file -type verilog {"./includes/fpuv_wrapper_pkg.sv"}" >> /tmp/importspy 
+	echo "read_file -type verilog {"./includes/riscv_pkg.sv"}" >> /tmp/importspy 
+	echo "read_file -type verilog {"./includes/drac_pkg.sv"}" >> /tmp/importspy 
+  echo "read_file -type verilog {"./includes/drac_icache_pkg.sv"}" >> /tmp/importspy 
 while read p; do
   #include all the founded rtl folders as includes in case you have dependences 
   #grep for warnings and errors and save it on a variable. Notice that sterr is 
   #required
 	echo "read_file -type verilog {"$p"}" >> /tmp/importspy 
 done <<< "$rtl_files"
-#set the top for spyglass. must be the first argument of the script.
+
 echo "set_option top top_drac" >> /tmp/optionsspy 
+#set the top for spyglass. must be the first argument of the script.
+echo "set_option incdir {"./rtl"}" >> /tmp/optionsspy 
 #remove old files and make local files
 rm -rf $DIR 
 mkdir $DIR

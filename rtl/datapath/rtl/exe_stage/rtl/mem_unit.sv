@@ -20,10 +20,12 @@ module mem_unit (
     input logic                  kill_i,                 // Exception detected at Commit
     input logic                  flush_i,                // Delete all load_store_queue entries
     input addr_t                 io_base_addr_i,         // Input_output_address
+    input logic                  en_ld_st_translation_i,
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
     input wire                   commit_store_or_amo_i,  // Signal from commit enables writes.
+    input gl_index_t             commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
 
 
     output req_cpu_dcache_t      req_cpu_dcache_o,       // Request to dcache
@@ -89,6 +91,7 @@ logic read_next_lsq;
 logic reset_next_lsq;
 
 logic advance_head_lsq;
+logic blocked_store;
 
 // Instruction to LSQ and pipline
 rr_exe_mem_instr_t instruction_to_lsq;
@@ -171,43 +174,10 @@ assign instruction_to_lsq.pvd           = instruction_i.pvd;
 assign instruction_to_lsq.fprd          = instruction_i.fprd;
 assign instruction_to_lsq.gl_index      = instruction_i.gl_index;
 
-assign instruction_to_lsq.is_amo_or_store  =  (instruction_i.instr.instr_type == SD)          || 
-                                              (instruction_i.instr.instr_type == SW)          ||
-                                              (instruction_i.instr.instr_type == SH)          ||
-                                              (instruction_i.instr.instr_type == SB)          ||
-                                              (instruction_i.instr.instr_type == VSE)         ||
-                                              (instruction_i.instr.instr_type == FSD)         ||
-                                              (instruction_i.instr.instr_type == FSW)         ||
-                                              (instruction_i.instr.instr_type == AMO_MAXWU)   ||
-                                              (instruction_i.instr.instr_type == AMO_MAXDU)   ||
-                                              (instruction_i.instr.instr_type == AMO_MINWU)   ||
-                                              (instruction_i.instr.instr_type == AMO_MINDU)   ||
-                                              (instruction_i.instr.instr_type == AMO_MAXW)    ||
-                                              (instruction_i.instr.instr_type == AMO_MAXD)    ||
-                                              (instruction_i.instr.instr_type == AMO_MINW)    ||
-                                              (instruction_i.instr.instr_type == AMO_MIND)    ||
-                                              (instruction_i.instr.instr_type == AMO_ORW)     ||
-                                              (instruction_i.instr.instr_type == AMO_ORD)     ||
-                                              (instruction_i.instr.instr_type == AMO_ANDW)    ||
-                                              (instruction_i.instr.instr_type == AMO_ANDD)    ||
-                                              (instruction_i.instr.instr_type == AMO_XORW)    ||
-                                              (instruction_i.instr.instr_type == AMO_XORD)    ||
-                                              (instruction_i.instr.instr_type == AMO_ADDW)    ||
-                                              (instruction_i.instr.instr_type == AMO_ADDD)    ||
-                                              (instruction_i.instr.instr_type == AMO_SWAPW)   ||
-                                              (instruction_i.instr.instr_type == AMO_SWAPD)   ||
-                                              (instruction_i.instr.instr_type == AMO_SCW)     ||
-                                              (instruction_i.instr.instr_type == AMO_SCD)     ||
-                                              (instruction_i.instr.instr_type == AMO_LRW)     ||
-                                              (instruction_i.instr.instr_type == AMO_LRD)     ;
+assign instruction_to_lsq.is_amo_or_store  =  (instruction_i.instr.mem_type == STORE) || 
+                                              (instruction_i.instr.mem_type == AMO);
 
-assign instruction_to_lsq.is_store  = (instruction_i.instr.instr_type == SD)          || 
-                                      (instruction_i.instr.instr_type == SW)          ||
-                                      (instruction_i.instr.instr_type == SH)          ||
-                                      (instruction_i.instr.instr_type == SB)          ||
-                                      (instruction_i.instr.instr_type == VSE)         ||
-                                      (instruction_i.instr.instr_type == FSD)         ||
-                                      (instruction_i.instr.instr_type == FSW)         ;
+assign instruction_to_lsq.is_store  = instruction_i.instr.mem_type == STORE;
                                       
 assign instruction_to_lsq.is_amo  = (instruction_to_lsq.is_amo_or_store & !instruction_to_lsq.is_store);
 
@@ -217,13 +187,17 @@ load_store_queue load_store_queue_inst (
     .clk_i              (clk_i),
     .rstn_i             (rstn_i),
     .instruction_i      (instruction_to_lsq),
+    .en_ld_st_translation_i (en_ld_st_translation_i),
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
     .reset_next_i       (reset_next_lsq),
     .advance_head_i     (advance_head_lsq),
     .next_instr_exe_o   (instruction_to_dcache),
+    .rob_store_ack_i    (commit_store_or_amo_i),
+    .rob_store_gl_idx_i (commit_store_or_amo_gl_idx_i),
     .full_o             (full_lsq),
     .empty_o            (empty_lsq),
+    .blocked_store_o    (blocked_store),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
@@ -261,8 +235,8 @@ always_comb begin
     instruction_s1_d            =  'h0;     // No Instruction to next stage
     is_unalign1_s1_d            = 1'b0;
     is_unalign2_s1_d            = 1'b0;
-    next_state                  = ReadHead; // Next 
-    if (kill_i) begin
+    next_state                  = ReadHead; // Next state Read Head
+    if (flush_to_lsq) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
         source_dcache               = NULL;     
         read_next_lsq               = 1'b1;     // No Advance LSQ
@@ -286,10 +260,10 @@ always_comb begin
             end
             ////////////////////////////////////////////////// Read head of LSQ
             ReadHead: begin
-                if (empty_lsq) begin
+                if (empty_lsq || blocked_store) begin
                     req_cpu_dcache_o.valid      = 1'b0;     // No Request
                     source_dcache               = NULL;     
-                    read_next_lsq               = 1'b1;     // No Advance LSQ 
+                    read_next_lsq               = 1'b0;     // No Advance LSQ 
                     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
                     instruction_s1_d            =  'h0;     // No Instruction to next stage
                     is_unalign1_s1_d            = 1'b0;
@@ -490,7 +464,6 @@ always_comb begin
     req_cpu_dcache_o.is_amo_or_store = 1'b0;
     req_cpu_dcache_o.is_store   = 1'b0;
     req_cpu_dcache_o.is_amo     = 1'b0;
-
     case(source_dcache)
         NULL:         begin
             req_cpu_dcache_o.data_rs1        = 64'h0;
@@ -648,8 +621,8 @@ assign req_cpu_dcache_o.data_rs2 = instruction_s1_q.data_rs2;
 assign mem_commit_stall_s1 = instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q;
 
 //// Check if there has been an exception, to send the instruction with the exception to writeback
-assign xcpt_s2_q = instruction_s2_q.instr.valid & (instruction_s2_q.instr.ex.valid |
-                        xcpt_ma_st_s2_q | xcpt_ma_ld_s2_q | xcpt_pf_st_s2_q | xcpt_pf_ld_s2_q |
+assign xcpt_s2_q = instruction_s2_q.instr.valid & (xcpt_ma_st_s2_q 
+                         | xcpt_ma_ld_s2_q | xcpt_pf_st_s2_q | xcpt_pf_ld_s2_q |
                         (|xcpt_addr_s2_q[63:40] != 0 && !xcpt_addr_s2_q[39]) |
                         (!(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )   );
 
@@ -712,9 +685,7 @@ always_comb begin
     exception_to_wb.cause  = INSTR_ADDR_MISALIGNED;
     exception_to_wb.origin = 'h0;
     exception_to_wb.valid  = 1'b0;
-    if(instruction_s2_q.instr.ex.valid) begin // Propagate exception from previous stages
-        exception_to_wb             = instruction_s2_q.instr.ex;
-    end else if(xcpt_ma_st_s2_q & instruction_s2_q.instr.valid) begin // Misaligned store
+    if(xcpt_ma_st_s2_q & instruction_s2_q.instr.valid) begin // Misaligned store
         exception_to_wb.cause       = ST_AMO_ADDR_MISALIGNED;
         exception_to_wb.origin      = xcpt_addr_s2_q;
         exception_to_wb.valid       = 1'b1;
@@ -874,6 +845,7 @@ assign instruction_scalar_o.result_pc     = 0;
 assign instruction_scalar_o.result        = data_to_wb;
 assign instruction_scalar_o.ex            = exception_to_wb;
 assign instruction_scalar_o.fp_status     = 'h0;
+assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
 
 // Output Float Instruction
 assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we; //fp_instr;

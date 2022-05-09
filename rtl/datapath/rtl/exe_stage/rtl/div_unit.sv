@@ -17,7 +17,7 @@ import riscv_pkg::*;
 module div_unit (
     input  logic                 clk_i,          // Clock signal
     input  logic                 rstn_i,         // Negative reset  
-    input  logic                 kill_div_i,     // Kill on fly instructions
+    input  logic                 flush_div_i,     // Kill on fly instructions
     input  logic                 div_unit_sel_i, // Select divider module
     input  rr_exe_arith_instr_t  instruction_i,  // New incoming instruction
     output exe_wb_scalar_instr_t instruction_o   // Output instruction
@@ -73,14 +73,7 @@ assign data_src2 = instruction_i.data_rs2;
             signed_op_d[i]   = signed_op_q[i]; 
         end
         if (instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV)) begin
-            instruction_d[div_unit_sel_i].ex.cause  = INSTR_ADDR_MISALIGNED;
-            instruction_d[div_unit_sel_i].ex.origin = 0;
-            instruction_d[div_unit_sel_i].ex.valid  = 0;
-
-            if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-                instruction_d[div_unit_sel_i].ex = instruction_i.instr.ex;
-            end
-
+            instruction_d[div_unit_sel_i].ex              = '0; // Divisions can not generate exceptions
             instruction_d[div_unit_sel_i].valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_DIV);
             instruction_d[div_unit_sel_i].pc              = instruction_i.instr.pc;
             instruction_d[div_unit_sel_i].bpred           = instruction_i.instr.bpred;
@@ -97,6 +90,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_d[div_unit_sel_i].gl_index        = instruction_i.gl_index;
             instruction_d[div_unit_sel_i].branch_taken    = 1'b0;
             instruction_d[div_unit_sel_i].result_pc       = data_src1;                 // Store dividend in result_pc
+            instruction_d[div_unit_sel_i].mem_type        = instruction_i.instr.mem_type;
             `ifdef VERILATOR
             instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
             `endif
@@ -153,7 +147,7 @@ assign data_src2 = instruction_i.data_rs2;
                 divisor_q[i]            <= 'h0;
                 cycles_counter[i]       <= 6'd0;
             end
-        end else if (kill_div_i) begin
+        end else if (flush_div_i) begin
             for (int i = 0; i <= 1; i++) begin
                 instruction_q[i].valid  <= 1'b0;
                 div_zero_q[i]           <= 1'b0;
@@ -244,6 +238,7 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.checkpoint_done = 'h0;
         instruction_o.chkp            = 'h0;
         instruction_o.gl_index        = 'h0;
+        instruction_o.mem_type        = NOT_MEM;
         `ifdef VERILATOR
         instruction_o.id              = 'h0;
         `endif
@@ -267,6 +262,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.checkpoint_done = instruction_q[0].checkpoint_done;
             instruction_o.chkp            = instruction_q[0].chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
+            instruction_o.mem_type        = instruction_q[0].mem_type;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[0].id;
             `endif
@@ -306,6 +302,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.checkpoint_done = instruction_q[1].checkpoint_done;
             instruction_o.chkp            = instruction_q[1].chkp;
             instruction_o.gl_index        = instruction_q[1].gl_index;
+            instruction_o.mem_type        = instruction_q[1].mem_type;
             `ifdef VERILATOR
             instruction_o.id              = instruction_q[1].id;
             `endif

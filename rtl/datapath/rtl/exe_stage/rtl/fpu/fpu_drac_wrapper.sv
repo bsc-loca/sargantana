@@ -19,7 +19,7 @@ import fpuv_wrapper_pkg::*;
 ) (
    input  logic                     clk_i,
    input  logic                     rstn_i,
-   input  logic                     kill_i,
+   input  logic                     flush_i,
    input  logic                     stall_wb_i,
    input  rr_exe_fpu_instr_t        instruction_i,
    output exe_wb_fp_instr_t         instruction_o,
@@ -208,7 +208,7 @@ assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
     .rstn_i(rstn_i),           // Negated Reset Signal
-    .flush_i(kill_i),          // Flush all entries
+    .flush_i(flush_i),          // Flush all entries
     .valid_i(enable_fp_op_int & ready_fpu),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
     .result_valid_i(result_valid_int),         // Result valid
@@ -228,7 +228,7 @@ fpuv_top #(
 ) i_fpuv_top (
    .clk_i          ( clk_i ),
    .rst_ni         ( rstn_i ),
-   .flush_i        ( kill_i ),
+   .flush_i        ( flush_i ),
    // Input
    .operands_i     ( operands ),
    .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : roundmode_e'(instruction_i.instr.frm)),
@@ -238,10 +238,10 @@ fpuv_top #(
    .add_fmt_i      ( add_fmt ),
    .dst_fmt_i      ( dst_fmt ),
    .int_fmt_i      ( int_fmt ),
-   .masked_op_i    ( 'h0 ),
-   .mask_bits_i    ( 'h0 ),
+   .masked_op_i    ( '0 ),
+   .mask_bits_i    ( '0 ),
    .inactive_sel_i ( 2'b11 ),
-   .vectorial_op_i ( 'h0 ),
+   .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),
    .out_ready_i    ( 1'b1 ),
@@ -270,10 +270,10 @@ assign instruction_o.fprd            = finish_fp_op_int.fprd;
 assign instruction_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
 assign instruction_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_o.gl_index        = finish_fp_op_int.gl_index;
-assign instruction_o.ex              = finish_fp_op_int.instr.ex;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
 assign instruction_o.fp_status       = finish_fp_status_int;
+assign instruction_o.ex              = '0;
 `ifdef VERILATOR
    assign instruction_o.id           = finish_fp_op_int.instr.id;
 `endif 
@@ -299,13 +299,14 @@ assign instruction_scalar_o.prd             = finish_fp_op_int.fprd;
 assign instruction_scalar_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
 assign instruction_scalar_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_scalar_o.gl_index        = finish_fp_op_int.gl_index;
-assign instruction_scalar_o.ex              = finish_fp_op_int.instr.ex;
 `ifdef VERILATOR
 assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
 assign instruction_scalar_o.fp_status       = finish_fp_status_int;
+assign instruction_scalar_o.ex              = '0;
+assign instruction_scalar_o.mem_type        = NOT_MEM;
 
 
 endmodule

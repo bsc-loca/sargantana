@@ -55,7 +55,8 @@ module top_drac(
     input logic                 io_csr_csr_replay,
     input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
-    input logic [3:0]           csr_frm_i,
+    input logic [2:0]           csr_frm_i,
+    input logic                 en_ld_st_translation_i,
 
 //------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
@@ -97,7 +98,7 @@ module top_drac(
     output logic   [2:0]        CSR_RW_CMD,
     output bus64_t              CSR_RW_WDATA,
     output logic                CSR_EXCEPTION,
-    output logic                CSR_RETIRE,
+    output logic  [1:0]         CSR_RETIRE,
     output bus64_t              CSR_CAUSE,
     output addr_t               CSR_PC,
     output logic [4:0]          csr_fp_status_o,
@@ -163,7 +164,7 @@ module top_drac(
     output logic                io_core_pmu_branch_taken    , 
     output logic                io_core_pmu_EXE_STORE       ,
     output logic                io_core_pmu_EXE_LOAD        ,
-    output logic                io_core_pmu_new_instruction ,
+    output logic  [1:0]         io_core_pmu_new_instruction ,
     output logic                io_core_pmu_icache_req      ,
     output logic                io_core_pmu_icache_kill     ,
     output logic                io_core_pmu_stall_if        ,
@@ -365,6 +366,7 @@ datapath datapath_inst(
     .debug_o(debug_out),
     .csr_priv_lvl_i(csr_priv_lvl_i),
     .csr_frm_i(csr_frm_i),
+    .en_ld_st_translation_i(en_ld_st_translation_i),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -413,6 +415,7 @@ dcache_interface dcache_interface_inst(
     .rstn_i(RST),
 
     .req_cpu_dcache_i(req_datapath_dcache_interface),
+    .en_ld_st_translation_i(en_ld_st_translation_i),
 
     // DCACHE Answer
     .dmem_resp_replay_i(DMEM_RESP_BITS_REPLAY),

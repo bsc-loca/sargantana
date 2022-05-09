@@ -108,6 +108,7 @@ assign instruction_o.prd             = instruction_i.prd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;
 assign instruction_o.gl_index        = instruction_i.gl_index;
+assign instruction_o.mem_type        = instruction_i.instr.mem_type;
 `ifdef VERILATOR
 assign instruction_o.id            = instruction_i.instr.id;
 `endif
@@ -126,9 +127,7 @@ always_comb begin
     instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
     instruction_o.ex.origin = 0;
     instruction_o.ex.valid  = 0;
-    if(instruction_i.instr.ex.valid) begin // Propagate exception from previous stages
-        instruction_o.ex = instruction_i.instr.ex;
-    end else if(instruction_i.instr.valid) begin // Check exceptions in exe stage
+    if(instruction_i.instr.valid) begin // Check exceptions in exe stage
         if (result[1:0] != 0 && instruction_i.instr.unit == UNIT_BRANCH &&
              (instruction_i.instr.instr_type == JALR ||
                ((instruction_i.instr.instr_type == BLT  || 
@@ -137,8 +136,7 @@ always_comb begin
                  instruction_i.instr.instr_type == BGEU || 
                  instruction_i.instr.instr_type == BEQ  || 
                  instruction_i.instr.instr_type == BNE ) &&
-                branch_taken )) &&
-             instruction_i.instr.valid) begin // invalid address
+                branch_taken ))) begin // invalid address
             instruction_o.ex.cause = INSTR_ADDR_MISALIGNED;
             instruction_o.ex.origin = result;
             instruction_o.ex.valid = 1;

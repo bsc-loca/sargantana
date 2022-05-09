@@ -253,6 +253,7 @@ module control_unit(
         pipeline_flush_o.flush_ir       = 1'b0;
         pipeline_flush_o.flush_rr       = 1'b0;
         pipeline_flush_o.flush_exe      = 1'b0;
+        pipeline_flush_o.kill_exe       = 1'b0;
         pipeline_flush_o.flush_commit   = 1'b0;
         flush_csr_fence                 = 1'b0;
         if (exception_enable_q) begin
@@ -264,8 +265,9 @@ module control_unit(
             pipeline_flush_o.flush_ir  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b0;
+            pipeline_flush_o.kill_exe  = 1'b1;
             flush_csr_fence            = 1'b1;
-        end else if (exe_cu_i.valid_1 & ~correct_branch_pred_exe_i) begin
+        end /*else if (exe_cu_i.valid_1 & ~correct_branch_pred_exe_i) begin
             if (exe_cu_i.stall) begin
                 pipeline_flush_o.flush_ir  = 1'b1;
                 pipeline_flush_o.flush_rr  = 1'b0;
@@ -277,7 +279,7 @@ module control_unit(
                 pipeline_flush_o.flush_exe = 1'b0;
                 flush_csr_fence            = 1'b1;
             end
-        end else if (exe_cu_i.stall) begin   
+        end */else if (exe_cu_i.stall) begin   
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
@@ -352,9 +354,9 @@ module control_unit(
     end
 
     // Enable Update of Free List and Rename from Commit
-    assign cu_ir_o.enable_commit_update = commit_cu_i.valid & commit_cu_i.regfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
-    assign cu_ir_o.simd_enable_commit_update = commit_cu_i.valid & commit_cu_i.vregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
-    assign cu_ir_o.fp_enable_commit_update = commit_cu_i.valid & commit_cu_i.fregfile_we & ~(exception_enable_d) & ~(commit_cu_i.stall_commit);
+    assign cu_ir_o.enable_commit_update = commit_cu_i.retire & commit_cu_i.regfile_we & {2{~exception_enable_d}};
+    assign cu_ir_o.simd_enable_commit_update = commit_cu_i.retire & commit_cu_i.vregfile_we & {2{~exception_enable_d}};
+    assign cu_ir_o.fp_enable_commit_update = commit_cu_i.retire & commit_cu_i.fregfile_we & {2{~exception_enable_d}};
 
     // Recover checkpoint of Commit stage in Rename and Free List
     assign cu_ir_o.recover_commit = exception_enable_q;
