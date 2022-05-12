@@ -21,14 +21,14 @@ module pending_mem_req_queue(
     input logic                 rstn_i,                 // Negated Reset Signal
 
     input rr_exe_mem_instr_t    instruction_i,          // All instruction input signals
-    input reg_t                 tag_i,                  // Tag of the incoming instruction
+    input logic [6:0]           tag_i,                  // Tag of the incoming instruction
     input logic                 unaligned_inst_i,       // Unaligned instruction
     input logic                 unaligned_res_valid_i,  // Unaligned result incoming
     input bus_simd_t            unaligned_res_data_i,   // Unaligned result data
 
     input logic                 replay_valid_i,         // A replay is being executed
     input logic                 response_valid_i,       // A response is being executed
-    input reg_t                 tag_next_i,             // Instruction that finishes
+    input logic [6:0]           tag_next_i,             // Instruction that finishes
     input bus_simd_t            replay_data_i,          // Replay asociated data
     
     input logic                 flush_i,                // Flush all entries
@@ -73,7 +73,7 @@ assign mv_back_head_enable = mv_back_tail_i & (!instruction_i.instr.valid) & (nu
 // FIFO Memory structure, stores instructions
 rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
 // Tag Storage
-reg_t          tag_table                [0:PMRQ_NUM_ENTRIES-1];
+logic [6:0]    tag_table                [0:PMRQ_NUM_ENTRIES-1];
 // Instruction already finished
 logic          finish_bit_table         [0:PMRQ_NUM_ENTRIES-1];
 // Instruction is unaligned vector

@@ -32,10 +32,10 @@ parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
 
-parameter UNMAPPED_ADDR_LOWER = 20'h080000; 
+parameter UNMAPPED_ADDR_LOWER = 20'b000010000000000000000000; 
 parameter UNMAPPED_ADDR_UPPER = 40'h080000000; 
 parameter PHISIC_MEM_LIMIT = 40'h0ffffffff; 
-parameter BROM_SIZE = 20'h080000;
+parameter BROM_SIZE = 20'b000010000000000000000000;
 
 // RISCV
 //parameter OPCODE_WIDTH = 6;
@@ -295,7 +295,7 @@ typedef struct packed {
     logic        nack;      // Request not accepted
     logic    has_data;      // Dcache response contains data
     bus_simd_t   data;      // Data from load
-    reg_t          rd;      // Tag of the mem access
+    logic[6:0]     rd;      // Tag of the mem access
     logic  xcpt_ma_st;      // Misaligned store exception
     logic  xcpt_ma_ld;      // Misaligned load exception
     logic  xcpt_pf_st;      // Page fault store
@@ -313,7 +313,7 @@ typedef struct packed {
     bus_simd_t        data_rs2;        // Data operand 2
     instr_type_t    instr_type;        // Type of instruction
     logic [3:0]       mem_size;        // Granularity of mem. access
-    reg_t                   rd;        // Destination register. Used for identify a pending Miss
+    logic [6:0]             rd;        // Destination register. Used for identify a pending Miss
     addr_t        io_base_addr;        // Address Base Pointer of INPUT/OUPUT
     logic      is_amo_or_store;        // Type of instruction is amo or store
     logic               is_amo;        // Type of instruction is amo

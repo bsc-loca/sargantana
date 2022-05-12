@@ -1,0 +1,21 @@
+waive -rule {  {W240}  }  -ignore -comment {Input X declared but not read.} 
+waive -rule {  {W415a}  }  -ignore -comment {Signal X is being assigned multiple times in same always block}  
+waive -rule {  {W528}  }  -ignore -comment {Variable x set but not read.} 
+
+waive -du {  {divsqrt_iter}  }  -ignore -comment {FPU errors} 
+waive -du {  {divsqrt_nrst}  }  -ignore -comment {FPU errors} 
+waive -du {  {divsqrt_top}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_cast_multi}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_classifier}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_divsqrt_multi}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_fma_multi}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_fma}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_lzc}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_noncomp}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_opgroup_block}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_opgroup_fmt_slice}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_opgroup_multifmt_slice}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_rounding}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_rr_arb_tree}  }  -ignore -comment {FPU errors} 
+waive -du {  {fpuv_top}  }  -ignore -comment {FPU errors} 
+waive -file {  {spyglass_reports/top_drac/top_drac/lint/lint_rtl/spyglass_reports/lint/SignalUsageReport.rpt}  }  -msg {Please refer to 'SignalUsageReport.rpt' for details of violating bits}  -rule {  {W123}  }  -comment {FPU Errors related} 

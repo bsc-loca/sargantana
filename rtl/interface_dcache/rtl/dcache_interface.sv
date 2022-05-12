@@ -184,7 +184,7 @@ assign dmem_op_type_o = req_cpu_dcache_i.mem_size;
 assign dmem_req_data_o = req_cpu_dcache_i.data_rs2;
 
 // TAG for MSHR. Identifies a MEMORY access
-assign dmem_req_tag_o = {2'b00,req_cpu_dcache_i.rd,1'b0};
+assign dmem_req_tag_o = {1'b0,req_cpu_dcache_i.rd};
 
 // Reset load-reserved/store-conditional 
 assign dmem_req_invalidate_lr_o = req_cpu_dcache_i.kill;
@@ -199,7 +199,7 @@ assign resp_dcache_cpu_o.ready = dmem_req_ready_i;
 assign resp_dcache_cpu_o.nack = dmem_resp_nack_i;
 assign resp_dcache_cpu_o.has_data = dmem_resp_has_data_i;
 assign resp_dcache_cpu_o.io_address_space = io_address_space;
-assign resp_dcache_cpu_o.rd = dmem_resp_tag_i[5:1];
+assign resp_dcache_cpu_o.rd = dmem_resp_tag_i;
 
 // Readed data from load
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;

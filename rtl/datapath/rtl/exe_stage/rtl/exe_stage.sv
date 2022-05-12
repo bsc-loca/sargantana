@@ -244,18 +244,18 @@ alu alu_inst (
     .instruction_o  (alu_to_scalar_wb)
 );
 
-mul_unit mul_unit_inst (
-    .clk_i          (clk_i),
-    .rstn_i         (rstn_i),
-    .flush_mul_i    (flush_i),
-    .instruction_i  (arith_instr),
-    .instruction_o  (mul_to_scalar_wb)
-);
+  mul_unit mul_unit_inst (
+    .clk_i         (clk_i           ),
+    .rstn_i        (rstn_i          ),
+    .flush_mul_i   (flush_i         ),
+    .instruction_i (arith_instr     ),
+    .instruction_o (mul_to_scalar_wb)
+  );
 
 div_unit div_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
-    .flush_div_i     (flush_i),
+    .flush_div_i    (flush_i),
     .div_unit_sel_i (div_unit_sel),
     .instruction_i  (arith_instr),
     .instruction_o  (div_to_scalar_wb)

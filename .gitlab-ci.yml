@@ -1,3 +1,34 @@
+image: localhost:5000/drac-vpu
+
+before_script:
+    # SSH Stuff
+    - mkdir -p ~/.ssh
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+    ## Run ssh-agent (inside the build environment)
+    - eval $(ssh-agent -s)
+    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+    - echo "$SSH_PRIVATE_KEY1" | tr -d '\r' | ssh-add -
+    ## Add the host to known_hosts
+    - touch ~/.ssh/known_hosts
+    - ssh-keyscan repo.hca.bsc.es >> ~/.ssh/known_hosts
+    - ssh-keyscan gitlab-internal.bsc.es >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+
+    ## set enviroment
+    - git config --global user.name "${GITLAB_USER_NAME}"
+    - git config --global user.email "${GITLAB_USER_EMAIL}"
+
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ssh -T git@gitlab-internal.bsc.es
+    - ssh -T git@repo.hca.bsc.es
+
+    # Clone repos
+    - rm -rf rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine
+    - git clone git@gitlab-internal.bsc.es:drac/mixgemm_uengine.git rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine -b main
+
+
+
+
 stages:
   - linting
   - simulation

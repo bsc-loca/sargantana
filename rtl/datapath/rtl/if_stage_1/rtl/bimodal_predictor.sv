@@ -93,7 +93,7 @@ logic [1:0] past_state_pht;
     always@(posedge clk_i or negedge rstn_i ) begin 
 		if (~rstn_i) begin
 			for(integer i = 0; i < _NUM_BIMODAL_ENTRIES_ ; i = i + 1) begin
-				pattern_history_table[i] <= 2'b0;
+				pattern_history_table[i] <= 2'b01;
 			end
         end else if(is_branch_EX_i) begin 
             pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= new_state_to_pht;

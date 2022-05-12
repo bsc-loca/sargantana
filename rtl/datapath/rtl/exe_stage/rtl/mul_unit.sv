@@ -54,7 +54,7 @@ assign same_sign = instruction_i.instr.op_32 ? ~(data_src2[31] ^ data_src1[31]) 
 
 assign type_0_d = instruction_i.instr.mem_size;
 
-assign int_32_0_d = instruction_i.instr.op_32;
+assign int_32_0_d = instruction_i.instr.op_32 & instruction_0_d.valid;
 
 // Source Operands, convert if source is negative and operation is signed
 always_comb begin
