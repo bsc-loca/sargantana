@@ -87,6 +87,7 @@ exe_wb_fp_instr_t     fp_to_wb;
 bus64_t result_mem;
 logic stall_mem;
 logic stall_int;
+logic stall_simd_int;
 logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
@@ -109,12 +110,18 @@ logic set_mul_64_inst;
 logic set_div_32_inst;
 logic set_div_64_inst;
 logic ready_1cycle_inst;
+logic ready_2cycle_inst;
 logic ready_mul_32_inst; 
 logic ready_mul_64_inst;
 logic ready_div_32_inst;
 
 logic div_unit_sel;
 logic ready_div_unit;
+
+logic set_vmul_32_inst;
+logic set_vmul_64_inst;
+logic ready_vec_1cycle_inst;
+logic is_vmul;
 
 exception_t mem_ex_int;
 gl_index_t mem_ex_index_int;
@@ -133,7 +140,7 @@ gl_index_t mem_ex_index_int;
 assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
 assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
 
-score_board score_board_inst(
+score_board_scalar score_board_scalar_inst(
     .clk_i            (clk_i),
     .rstn_i           (rstn_i),
     .flush_i          (flush_i),
@@ -149,11 +156,26 @@ score_board score_board_inst(
     .ready_div_unit_o (ready_div_unit)
 );
 
+score_board_simd score_board_simd_inst(
+    .clk_i               (clk_i),
+    .rstn_i              (rstn_i),
+    .flush_i             (flush_i),
+    .set_vmul_3cycle_i   (set_vmul_64_inst),
+    .set_vmul_2cycle_i   (set_vmul_32_inst),
+    .ready_vec_1cycle_o  (ready_vec_1cycle_inst),
+    .ready_vec_2cycle_o  (ready_vec_2cycle_inst)
+);
+
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
                                      & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
                                      & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3) 
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
                                      & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
+
+assign is_vmul = (from_rr_i.instr.instr_type == VMUL   ||
+                  from_rr_i.instr.instr_type == VMULH  ||
+                  from_rr_i.instr.instr_type == VMULHU ||
+                  from_rr_i.instr.instr_type == VMULHSU) ? 1'b1 : 1'b0;
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -220,6 +242,7 @@ always_comb begin
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     simd_instr.chkp                = from_rr_i.chkp;
     simd_instr.gl_index            = from_rr_i.gl_index;
+    simd_instr.is_vmul             = is_vmul;
     if (stall_int || kill_i) begin
         arith_instr.instr   = '0;
         mem_instr.instr     = '0;
@@ -267,6 +290,8 @@ branch_unit branch_unit_inst (
 );
 
 simd_unit simd_unit_inst (
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)
@@ -354,10 +379,13 @@ end
 
 always_comb begin
     stall_int = 1'b0;
+    stall_simd_int = 1'b0;
     set_div_32_inst = 1'b0;
     set_div_64_inst = 1'b0;
     set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
+    set_vmul_32_inst = 1'b0;
+    set_vmul_64_inst = 1'b0;
     pmu_stall_mem_o = 1'b0; 
     stall_fpu_int   = 1'b0;
     if (from_rr_i.instr.valid && !kill_i) begin
@@ -377,14 +405,29 @@ always_comb begin
             stall_int = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
-        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM | from_rr_i.instr.unit == UNIT_SIMD))
-            stall_int = ~ready;
+        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM )) begin
+            stall_int = ~ready | ~ready_1cycle_inst;
+				end
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
             pmu_stall_mem_o = stall_mem | (~ready);
         end
-        if (from_rr_i.instr.unit == UNIT_FPU) begin
+        else if (from_rr_i.instr.unit == UNIT_FPU) begin
             stall_fpu_int = stall_fpu | (~ready_1cycle_inst && from_rr_i.instr.instr_type == FMV_F2X);
+            stall_int = (~ready);
+        end
+        else if (from_rr_i.instr.unit == UNIT_SIMD & is_vmul & sew_i == SEW_64) begin
+            stall_int = ~ready;
+            set_vmul_64_inst = ready;
+        end
+        else if (from_rr_i.instr.unit == UNIT_SIMD & (is_vmul || from_rr_i.instr.instr_type == VREDSUM)) begin
+            stall_int = (~ready);
+            stall_simd_int = ~ready_vec_2cycle_inst;
+            set_vmul_32_inst = ready & ready_vec_2cycle_inst;
+        end
+        else if (from_rr_i.instr.unit == UNIT_SIMD) begin
+            stall_simd_int = ~ready_vec_1cycle_inst;
+            stall_int = ~ready;
         end
     end
 end
@@ -478,7 +521,7 @@ assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
 assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
-assign exe_cu_o.stall = stall_int || stall_fpu_int;
+assign exe_cu_o.stall = stall_int || stall_fpu_int || stall_simd_int;
 
 
 //-PMU 

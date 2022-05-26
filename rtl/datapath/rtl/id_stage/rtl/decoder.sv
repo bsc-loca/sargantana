@@ -836,6 +836,13 @@ module decoder(
                         end
                         F3_OPMVV: begin
                             case (decode_i.inst.vtype.func6)
+                                F6_VREDSUM: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VREDSUM;
+                                end
                                 F6_VEXT: begin
                                     decode_instr_int.vregfile_we = 1'b0;
                                     decode_instr_int.regfile_we = 1'b1;
@@ -866,6 +873,65 @@ module decoder(
                                     end else begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
+                                end
+                                F6_VMULHU: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VMULHU;
+                                end
+                                F6_VMUL: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VMUL;
+                                end
+                                F6_VMULHSU: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VMULHSU;
+                                end
+                                F6_VMULH: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VMULH;
+                                end
+                                default: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
+                        end
+                        F3_OPMVX: begin
+                            decode_instr_int.is_opvx     = 1'b1;
+                            decode_instr_int.use_vs1 = 1'b0;
+                            decode_instr_int.use_vs2 = 1'b1;
+                            decode_instr_int.use_rs1 = 1'b1;
+                            case (decode_i.inst.vtype.func6)
+                                F6_VMULHU: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.instr_type = VMULHU;
+                                end
+                                F6_VMUL: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.instr_type = VMUL;
+                                end
+                                F6_VMULHSU: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.instr_type = VMULHSU;
+                                end
+                                F6_VMULH: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.instr_type = VMULH;
                                 end
                                 default: begin
                                     xcpt_illegal_instruction_int = 1'b1;

@@ -110,7 +110,7 @@ parameter PFPQ_NUM_ENTRIES = 8;
 parameter ST_BUF_NUM_ENTRIES = 8;
 
 // SIMD
-typedef logic fu_id_t;
+typedef logic [$clog2(VELEMENTS)-1:0] fu_id_t;
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
@@ -266,7 +266,9 @@ typedef enum logic [7:0] {
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
    // Vectorial Instructions
-   VADD, VSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VSADD, VSADDU, VSSUB, VSSUBU, VSLL, VSRA, VSRL, VMV, VEXT, VID, VMV_X_S,
+   VADD, VSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VSADD, VSADDU, VSSUB, VSSUBU, VSLL, VSRA, VSRL, VMV, VEXT, VID, VMV_X_S, VMUL, VMULH, VMULHU, VMULHSU,
+   // Vectorial Reduction Instructions
+   VREDSUM,
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
@@ -544,6 +546,8 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
+
+    logic is_vmul;                      // Is a vmul instruction type (more than 1 cycle)
 } rr_exe_simd_instr_t;
 
 

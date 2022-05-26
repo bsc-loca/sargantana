@@ -12,7 +12,7 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
-module score_board (
+module score_board_scalar (
     input logic             clk_i,
     input logic             rstn_i,
     input logic             flush_i,

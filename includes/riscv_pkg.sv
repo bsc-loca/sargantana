@@ -319,10 +319,15 @@ typedef enum logic [5:0] {
 } op_func6_vector_opi_t;
 
 typedef enum logic [5:0] {
-    F6_VCNT      = 6'b000000, //Custom instruction, for now we use vredsum encoding
+    F6_VREDSUM   = 6'b000000, 
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
     F6_VWXUNARY0 = 6'b010000,
-    F6_VMUNARY0  = 6'b010110  //This encoding changes on v1.0 of specs. For now we keep it like this
+    F6_VCNT      = 6'b000110, //Custom instruction, for now we use vredmaxu encoding
+    F6_VMUNARY0  = 6'b010110,  //This encoding changes on v1.0 of specs. For now we keep it like this
+    F6_VMULHU    = 6'b100100,
+    F6_VMUL      = 6'b100101,
+    F6_VMULHSU   = 6'b100110,
+    F6_VMULH     = 6'b100111
 } op_func6_vector_opm_t;
 
 typedef enum logic [5:0] {
