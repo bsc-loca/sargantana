@@ -843,6 +843,27 @@ module decoder(
                                     decode_instr_int.use_vs2 = 1'b1;
                                     decode_instr_int.instr_type = VREDSUM;
                                 end
+                                F6_VREDAND: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VREDAND;
+                                end
+                                F6_VREDOR: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VREDOR;
+                                end
+                                F6_VREDXOR: begin
+                                    decode_instr_int.vregfile_we = 1'b1;
+                                    decode_instr_int.regfile_we = 1'b0;
+                                    decode_instr_int.use_vs1 = 1'b1;
+                                    decode_instr_int.use_vs2 = 1'b1;
+                                    decode_instr_int.instr_type = VREDXOR;
+                                end
                                 F6_VEXT: begin
                                     decode_instr_int.vregfile_we = 1'b0;
                                     decode_instr_int.regfile_we = 1'b1;

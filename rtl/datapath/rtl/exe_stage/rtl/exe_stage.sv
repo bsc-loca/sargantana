@@ -122,6 +122,7 @@ logic set_vmul_32_inst;
 logic set_vmul_64_inst;
 logic ready_vec_1cycle_inst;
 logic is_vmul;
+logic is_vred;
 
 exception_t mem_ex_int;
 gl_index_t mem_ex_index_int;
@@ -176,6 +177,11 @@ assign is_vmul = (from_rr_i.instr.instr_type == VMUL   ||
                   from_rr_i.instr.instr_type == VMULH  ||
                   from_rr_i.instr.instr_type == VMULHU ||
                   from_rr_i.instr.instr_type == VMULHSU) ? 1'b1 : 1'b0;
+
+assign is_vred = (from_rr_i.instr.instr_type == VREDSUM   ||
+                  from_rr_i.instr.instr_type == VREDAND   ||
+                  from_rr_i.instr.instr_type == VREDOR    ||
+                  from_rr_i.instr.instr_type == VREDXOR) ? 1'b1 : 1'b0;
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -243,6 +249,7 @@ always_comb begin
     simd_instr.chkp                = from_rr_i.chkp;
     simd_instr.gl_index            = from_rr_i.gl_index;
     simd_instr.is_vmul             = is_vmul;
+    simd_instr.is_vred             = is_vred;
     if (stall_int || kill_i) begin
         arith_instr.instr   = '0;
         mem_instr.instr     = '0;
@@ -420,7 +427,7 @@ always_comb begin
             stall_int = ~ready;
             set_vmul_64_inst = ready;
         end
-        else if (from_rr_i.instr.unit == UNIT_SIMD & (is_vmul || from_rr_i.instr.instr_type == VREDSUM)) begin
+        else if (from_rr_i.instr.unit == UNIT_SIMD & (is_vmul || is_vred)) begin
             stall_int = (~ready);
             stall_simd_int = ~ready_vec_2cycle_inst;
             set_vmul_32_inst = ready & ready_vec_2cycle_inst;

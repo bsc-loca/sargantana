@@ -268,7 +268,7 @@ typedef enum logic [7:0] {
    // Vectorial Instructions
    VADD, VSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VSADD, VSADDU, VSSUB, VSSUBU, VSLL, VSRA, VSRL, VMV, VEXT, VID, VMV_X_S, VMUL, VMULH, VMULHU, VMULHSU,
    // Vectorial Reduction Instructions
-   VREDSUM,
+   VREDSUM, VREDAND, VREDOR, VREDXOR, 
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
@@ -548,6 +548,7 @@ typedef struct packed {
     gl_index_t gl_index;                // Graduation List entry
 
     logic is_vmul;                      // Is a vmul instruction type (more than 1 cycle)
+    logic is_vred;                      // Is a vred instruction type (2 cycles)
 } rr_exe_simd_instr_t;
 
 

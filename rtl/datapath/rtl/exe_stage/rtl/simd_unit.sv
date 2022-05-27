@@ -45,7 +45,7 @@ always_comb begin
         if (instruction_int_0.sew == SEW_64) instr_3cycle_0 = 1'b1;
         else instr_2cycle_0 = 1'b1;
     end
-    else if (instruction_int_0.instr.instr_type == VREDSUM) begin
+    else if (instruction_int_0.is_vred) begin
         instr_2cycle_0 = 1'b1;
     end
 end
@@ -255,6 +255,20 @@ always_comb begin
     end
 end
 
+// Vector Reduction Module
+bus_simd_t red_data_vd;
+vred vred_inst(
+    .clk_i         (clk_i),
+    .rstn_i        (rstn_i),
+    .instr_type_i  (instruction_int_0.instr.instr_type),
+    .sew_i         (instruction_int_0.sew),
+    .data_fu_i     (data_vd),
+    .data_vs2_i    (instruction_int_0.data_vs2),
+    .red_data_vd_o (red_data_vd)
+);
+
+bus_simd_t result_data_vd;
+assign result_data_vd = (instruction_int.is_vred) ? red_data_vd : data_vd;
 bus_simd_t masked_data_vd;
 
 //Apply the mask to the vector result
@@ -265,46 +279,37 @@ always_comb begin
         SEW_8: begin
             for (int i = 0; i<VLEN/8; ++i) begin
                 if (instruction_int.data_vm[i]) begin
-                    masked_data_vd[(8*i)+:8] = data_vd[(8*i)+:8];
+                    masked_data_vd[(8*i)+:8] = result_data_vd[(8*i)+:8];
                 end
             end
         end
         SEW_16: begin
             for (int i = 0; i<VLEN/16; ++i) begin
                 if (instruction_int.data_vm[i*2]) begin
-                    masked_data_vd[(16*i)+:16] = data_vd[(16*i)+:16];
+                    masked_data_vd[(16*i)+:16] = result_data_vd[(16*i)+:16];
                 end
             end
         end
         SEW_32: begin
             for (int i = 0; i<VLEN/32; ++i) begin
                 if (instruction_int.data_vm[i*4]) begin
-                    masked_data_vd[(32*i)+:32] = data_vd[(32*i)+:32];
+                    masked_data_vd[(32*i)+:32] = result_data_vd[(32*i)+:32];
                 end
             end
         end
         SEW_64: begin
             for (int i = 0; i<VLEN/64; ++i) begin
                 if (instruction_int.data_vm[i*8]) begin
-                    masked_data_vd[(64*i)+:64] = data_vd[(64*i)+:64];
+                    masked_data_vd[(64*i)+:64] = result_data_vd[(64*i)+:64];
                 end
             end
         end
     endcase
 end
 
-bus_simd_t red_data_vd;
-vred vred_inst(
-    .clk_i         (clk_i),
-    .rstn_i        (rstn_i),
-    //.instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
-    .data_vs_i     (masked_data_vd),
-    .red_data_vd_o     (red_data_vd)
-);
 
-bus_simd_t result_data_vd;
-assign result_data_vd = (instruction_int.instr.instr_type == VREDSUM) ? red_data_vd : masked_data_vd;
+
+
 
 
 //Produce the scalar and vector wb structs
@@ -342,7 +347,7 @@ assign instruction_simd_o.pc    = instruction_int.instr.pc;
 assign instruction_simd_o.bpred = instruction_int.instr.bpred;
 assign instruction_simd_o.rs1   = instruction_int.instr.rs1;
 assign instruction_simd_o.vd    = instruction_int.instr.vd;
-assign instruction_simd_o.vresult = result_data_vd;
+assign instruction_simd_o.vresult = masked_data_vd;
 assign instruction_simd_o.change_pc_ena = instruction_int.instr.change_pc_ena;
 assign instruction_simd_o.vregfile_we = instruction_int.instr.vregfile_we;
 assign instruction_simd_o.instr_type = instruction_int.instr.instr_type;

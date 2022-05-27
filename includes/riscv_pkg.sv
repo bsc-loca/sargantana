@@ -320,6 +320,9 @@ typedef enum logic [5:0] {
 
 typedef enum logic [5:0] {
     F6_VREDSUM   = 6'b000000, 
+    F6_VREDAND   = 6'b000001,
+    F6_VREDOR    = 6'b000010,
+    F6_VREDXOR   = 6'b000011,
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
     F6_VWXUNARY0 = 6'b010000,
     F6_VCNT      = 6'b000110, //Custom instruction, for now we use vredmaxu encoding

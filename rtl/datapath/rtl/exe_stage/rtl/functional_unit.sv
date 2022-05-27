@@ -76,13 +76,13 @@ always_comb begin
         VMIN, VMINU, VMAX, VMAXU, VMSEQ, VCNT: begin
             data_vd_o = result_vcomp;
         end
-        VAND: begin
+        VAND, VREDAND: begin
             data_vd_o = data_vs1_i & data_vs2_i;
         end
-        VOR: begin
+        VOR, VREDOR: begin
             data_vd_o = data_vs1_i | data_vs2_i;
         end
-        VXOR: begin
+        VXOR, VREDXOR: begin
             data_vd_o = data_vs1_i ^ data_vs2_i;
         end
 
