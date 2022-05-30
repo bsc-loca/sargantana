@@ -62,7 +62,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_1                    <= SEW_8;
         data_vs_1                <= '0;
-        instr_type_1             <= '0;
+        instr_type_1             <= ADD;
     end
     else begin
         sew_1                    <= sew_0;
@@ -97,7 +97,7 @@ always_comb begin
                     red_data_vd_o = {112'h0, res_l2[0] + res_l2[1]};
                 end
                 SEW_32: begin
-                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+63 +: 32] + data_vs_1[i*64 +: 32];
+                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+32 +: 32] + data_vs_1[i*64 +: 32];
                     red_data_vd_o = {96'h0, res_l1[0] + res_l1[1]};
                 end
                 SEW_64: begin
@@ -123,7 +123,7 @@ always_comb begin
                     red_data_vd_o = {112'h0, res_l2[0] & res_l2[1]};
                 end
                 SEW_32: begin
-                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+63 +: 32] & data_vs_1[i*64 +: 32];
+                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+32 +: 32] & data_vs_1[i*64 +: 32];
                     red_data_vd_o = {96'h0, res_l1[0] & res_l1[1]};
                 end
                 SEW_64: begin
@@ -149,7 +149,7 @@ always_comb begin
                     red_data_vd_o = {112'h0, res_l2[0] | res_l2[1]};
                 end
                 SEW_32: begin
-                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+63 +: 32] | data_vs_1[i*64 +: 32];
+                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+32 +: 32] | data_vs_1[i*64 +: 32];
                     red_data_vd_o = {96'h0, res_l1[0] | res_l1[1]};
                 end
                 SEW_64: begin
@@ -175,7 +175,7 @@ always_comb begin
                     red_data_vd_o = {112'h0, res_l2[0] ^ res_l2[1]};
                 end
                 SEW_32: begin
-                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+63 +: 32] ^ data_vs_1[i*64 +: 32];
+                    for (int i=0; i < 2; i++) res_l1[i] = data_vs_1[i*64+32 +: 32] ^ data_vs_1[i*64 +: 32];
                     red_data_vd_o = {96'h0, res_l1[0] ^ res_l1[1]};
                 end
                 SEW_64: begin
