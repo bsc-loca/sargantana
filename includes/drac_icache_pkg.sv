@@ -90,7 +90,7 @@ typedef enum logic[2:0] {NO_REQ,
     typedef struct packed {    
         logic                  miss ;
         logic                  ptw_v;  // ptw response valid
-        logic   [19:0]         ppn  ;  // physical address in
+        logic [PADDR_SIZE-1:0] ppn  ;  // physical address in
         logic                  xcpt ;  // exception occurred during fetch
     } tresp_i_t;
 

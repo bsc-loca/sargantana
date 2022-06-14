@@ -122,8 +122,8 @@ module if_stage_1(
 
     // check addr fault fetch
     always_comb begin
-        if (pc[38] ? !(&pc[63:39]) : |pc[63:39] ) begin
-            ex_if_addr_fault_int = 1'b1;
+        if (pc[38] ? !(&pc[63:39]) : |pc[63:39]) begin
+            ex_if_addr_fault_int = en_translation_i;
         end else begin // check if unmapped addr
             ex_if_addr_fault_int = ~en_translation_i & (( pc[39:0] >= UNMAPPED_ADDR_LOWER 
                                               & pc[39:0] < UNMAPPED_ADDR_UPPER )

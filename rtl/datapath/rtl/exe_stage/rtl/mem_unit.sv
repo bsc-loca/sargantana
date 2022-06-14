@@ -703,7 +703,7 @@ always_comb begin
         exception_to_wb.valid       = 1'b1;
     end else if (((|xcpt_addr_s2_q[63:40] != 0 && !xcpt_addr_s2_q[39]) ||
                    ( !(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )) &&
-                   instruction_s2_q.instr.valid) begin // invalid address
+                   instruction_s2_q.instr.valid && en_ld_st_translation_i) begin // invalid address
         case(instruction_s2_q.instr.instr_type)
             SD, SW, SH, SB, VSE, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
             AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
