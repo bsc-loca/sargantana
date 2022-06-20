@@ -65,6 +65,7 @@ module graduation_list #
 localparam num_bits_index = $clog2(NUM_ENTRIES);
 
 gl_index_t head;
+gl_index_t head_puls_one;
 gl_index_t tail;
 
 //Num must be 1 bit bigger than head and tail
@@ -221,12 +222,14 @@ always_comb begin
     instruction_o[0] = 'b0;
     instruction_o[1] = 'b0;
     commit_gl_entry_o = head;
+    head_puls_one = head + 1;
+
     if ((~flush_commit_i)) begin
-        if (((num == 1) & valid_bit[head]) || ((num > 1) & valid_bit[head] & !valid_bit[head+1])) begin // Imposible case
+        if (((num == 1) & valid_bit[head]) || ((num > 1) & valid_bit[head] & !valid_bit[head_puls_one])) begin // Imposible case
             instruction_o[0] = entries[head];
-        end else if ((num > 1) & valid_bit[head] & valid_bit[head+1]) begin
+        end else if ((num > 1) & valid_bit[head] & valid_bit[head_puls_one]) begin
             instruction_o[0] = entries[head];
-            instruction_o[1] = entries[head+1];
+            instruction_o[1] = entries[head_puls_one];
         end
     end
 end
