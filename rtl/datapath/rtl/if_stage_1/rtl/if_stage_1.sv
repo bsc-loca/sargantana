@@ -122,13 +122,10 @@ module if_stage_1(
 
     // check addr fault fetch
     always_comb begin
-        if (pc[38] ? !(&pc[63:39]) : |pc[63:39]) begin
-            ex_if_addr_fault_int = en_translation_i;
-        end else begin // check if unmapped addr
-            ex_if_addr_fault_int = ~en_translation_i & (( pc[39:0] >= UNMAPPED_ADDR_LOWER 
-                                              & pc[39:0] < UNMAPPED_ADDR_UPPER )
-                                              | pc[39:0] >= PHISIC_MEM_LIMIT);
-        end
+            ex_if_addr_fault_int = en_translation_i && (pc[38] ? !(&pc[63:39]) : |pc[63:39]) ||
+                                  ~en_translation_i && (( pc >= UNMAPPED_ADDR_LOWER 
+                                                        && pc < UNMAPPED_ADDR_UPPER )
+                                                        || pc >= PHISIC_MEM_LIMIT);
     end
     // check misaligned fetch
     always_comb begin

@@ -701,9 +701,11 @@ always_comb begin
         exception_to_wb.cause       = LD_PAGE_FAULT;
         exception_to_wb.origin      = xcpt_addr_s2_q;
         exception_to_wb.valid       = 1'b1;
-    end else if (((|xcpt_addr_s2_q[63:40] != 0 && !xcpt_addr_s2_q[39]) ||
-                   ( !(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )) &&
-                   instruction_s2_q.instr.valid && en_ld_st_translation_i) begin // invalid address
+    end else if (instruction_s2_q.instr.valid && 
+                  (en_ld_st_translation_i && (xcpt_addr_s2_q[38] ? !(&xcpt_addr_s2_q[63:39]) : |xcpt_addr_s2_q[63:39]) ||
+                  ~en_ld_st_translation_i && (( xcpt_addr_s2_q >= UNMAPPED_ADDR_LOWER 
+                                             && xcpt_addr_s2_q < UNMAPPED_ADDR_UPPER )
+                                             || xcpt_addr_s2_q >= PHISIC_MEM_LIMIT))) begin // invalid address
         case(instruction_s2_q.instr.instr_type)
             SD, SW, SH, SB, VSE, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
             AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
