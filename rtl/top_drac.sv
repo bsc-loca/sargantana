@@ -66,7 +66,7 @@ module top_drac(
     input logic                 PTWINVALIDATE     ,
     input logic                 TLB_RESP_MISS     ,
     input logic                 TLB_RESP_XCPT_IF  ,
-    input logic  [19:0]         itlb_resp_ppn_i   ,   
+    input logic [PPN_SIZE-1:0]  itlb_resp_ppn_i   ,   
     input logic                 iptw_resp_valid_i ,
     //==============================================================
     
@@ -114,7 +114,7 @@ module top_drac(
 
     //- To L2
     output logic         io_mem_acquire_valid               ,
-    output logic  [25:0] io_mem_acquire_bits_addr_block     ,
+    output logic [BLOCK_ADDR_SIZE-1:0] io_mem_acquire_bits_addr_block,
     output logic         io_mem_acquire_bits_client_xact_id ,
     output logic   [1:0] io_mem_acquire_bits_addr_beat      ,
     output logic [127:0] io_mem_acquire_bits_data           ,

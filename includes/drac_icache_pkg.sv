@@ -25,13 +25,23 @@ localparam int unsigned ICACHE_DEPTH = 256          ; //- .
 
 localparam int unsigned ICACHE_N_WAY = 4                        ; //- Ways number.
 localparam int unsigned ICACHE_N_WAY_CLOG2 = $clog2( ICACHE_N_WAY );
-localparam int unsigned TAG_WIDHT    = 20                       ; //- Tag size.
 localparam int unsigned TAG_DEPTH    = ICACHE_DEPTH/ASSOCIATIVE ; //- .
 localparam int unsigned ADDR_WIDHT   = $clog2( ICACHE_DEPTH )   ; //- icache Addr vector
 localparam int unsigned TAG_ADDR_WIDHT = $clog2( TAG_DEPTH )   ; //- 
 localparam int unsigned WAY_WIDHT    = SET_WIDHT ; //- 
 
-localparam int unsigned PADDR_SIZE          = 26  ;
+`ifdef PADDR_39
+localparam int unsigned PADDR_SIZE   = 33;
+localparam int unsigned BLOCK_ADDR_SIZE = 33;
+localparam int unsigned PPN_SIZE     = 27;
+localparam int unsigned TAG_WIDHT    = 27; //- Tag size.
+`else
+localparam int unsigned PADDR_SIZE   = 26;
+localparam int unsigned BLOCK_ADDR_SIZE = 26;
+localparam int unsigned PPN_SIZE     = 20;
+localparam int unsigned TAG_WIDHT    = 20; //- Tag size.
+`endif
+
 localparam int unsigned VADDR_SIZE          = drac_pkg::ADDR_SIZE ;
 localparam int unsigned ICACHE_INDEX_WIDTH  = 12  ;
 localparam int unsigned ICACHE_TAG_WIDTH    = TAG_WIDHT  ;
@@ -90,7 +100,7 @@ typedef enum logic[2:0] {NO_REQ,
     typedef struct packed {    
         logic                  miss ;
         logic                  ptw_v;  // ptw response valid
-        logic [PADDR_SIZE-1:0] ppn  ;  // physical address in
+        logic [PPN_SIZE-1:0]   ppn  ;  // physical address in
         logic                  xcpt ;  // exception occurred during fetch
     } tresp_i_t;
 
