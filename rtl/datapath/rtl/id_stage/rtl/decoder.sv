@@ -23,6 +23,7 @@ module decoder(
     input   logic            stall_i,
     input   if_id_stage_t    decode_i,
     input   [2:0]            frm_i, // FP rounding Mode from CSR
+    input   [1:0]            csr_fs_i, 
     output  id_ir_stage_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
 );
@@ -648,13 +649,25 @@ module decoder(
                     case (decode_i.inst.stype.func3)
                         F3_FLW: begin
                             //decode_instr_int.regfile_src = FPU_RF;
-                            decode_instr_int.instr_type = FSW;
-                            decode_instr_int.use_fs2    = 1'b1;
+                            if (csr_fs_i == 2'b00) begin
+                                decode_instr_int.unit = UNIT_ALU;
+                                decode_instr_int.mem_type = NOT_MEM;
+                                decode_instr_int.use_rs1 = 1'b0; 
+                            end else begin
+                                decode_instr_int.instr_type = FSW;
+                                decode_instr_int.use_fs2    = 1'b1;
+                            end
                         end
                         F3_FLD: begin
                             //decode_instr_int.regfile_src = FPU_RF;
-                            decode_instr_int.instr_type = FSD;
-                            decode_instr_int.use_fs2    = 1'b1;
+                            if (csr_fs_i == 2'b00) begin
+                                decode_instr_int.unit = UNIT_ALU;
+                                decode_instr_int.mem_type = NOT_MEM;
+                                decode_instr_int.use_rs1 = 1'b0; 
+                            end else begin
+                                decode_instr_int.instr_type = FSD;
+                                decode_instr_int.use_fs2    = 1'b1;
+                            end
                         end
                         F3_VSEW: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vstype.vm;

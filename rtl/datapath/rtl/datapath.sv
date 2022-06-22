@@ -25,6 +25,7 @@ module datapath(
     input resp_dcache_cpu_t resp_dcache_cpu_i,
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input [2:0]             csr_frm_i, 
+    input [1:0]             csr_fs_i,  
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
     input debug_in_t        debug_i,
@@ -466,6 +467,7 @@ module datapath(
         .flush_i        (flush_int.flush_id),
         .decode_i       (stage_if_2_id_q),
         .frm_i          (csr_frm_i),
+        .csr_fs_i       (csr_fs_i), 
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)
     );

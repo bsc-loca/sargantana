@@ -56,6 +56,7 @@ module top_drac(
     input [1:0]                 csr_priv_lvl_i,
     input [39:0]                csr_vpu_data_i,
     input logic [2:0]           csr_frm_i,
+    input logic [1:0]           csr_fs_i,  
     input logic                 en_ld_st_translation_i,
 
 //------------------------------------------------------------------------------------
@@ -366,6 +367,7 @@ datapath datapath_inst(
     .debug_o(debug_out),
     .csr_priv_lvl_i(csr_priv_lvl_i),
     .csr_frm_i(csr_frm_i),
+    .csr_fs_i(csr_fs_i),
     .en_ld_st_translation_i(en_ld_st_translation_i),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
