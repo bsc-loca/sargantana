@@ -31,15 +31,15 @@ localparam int unsigned TAG_ADDR_WIDHT = $clog2( TAG_DEPTH )   ; //-
 localparam int unsigned WAY_WIDHT    = SET_WIDHT ; //- 
 
 `ifdef PADDR_39
-localparam int unsigned PADDR_SIZE   = 33;
+localparam int unsigned PADDR_SIZE      = 33;
 localparam int unsigned BLOCK_ADDR_SIZE = 33;
-localparam int unsigned PPN_SIZE     = 27;
-localparam int unsigned TAG_WIDHT    = 27; //- Tag size.
+localparam int unsigned PPN_BIT_SIZE    = 27;
+localparam int unsigned TAG_WIDHT       = 27; //- Tag size.
 `else
-localparam int unsigned PADDR_SIZE   = 26;
+localparam int unsigned PADDR_SIZE      = 26;
 localparam int unsigned BLOCK_ADDR_SIZE = 26;
-localparam int unsigned PPN_SIZE     = 20;
-localparam int unsigned TAG_WIDHT    = 20; //- Tag size.
+localparam int unsigned PPN_BIT_SIZE    = 20;
+localparam int unsigned TAG_WIDHT       = 20; //- Tag size.
 `endif
 
 localparam int unsigned VADDR_SIZE          = drac_pkg::ADDR_SIZE ;
@@ -100,7 +100,7 @@ typedef enum logic[2:0] {NO_REQ,
     typedef struct packed {    
         logic                  miss ;
         logic                  ptw_v;  // ptw response valid
-        logic [PPN_SIZE-1:0]   ppn  ;  // physical address in
+        logic [PPN_BIT_SIZE-1:0]   ppn  ;  // physical address in
         logic                  xcpt ;  // exception occurred during fetch
     } tresp_i_t;
 

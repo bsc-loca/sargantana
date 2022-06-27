@@ -66,7 +66,7 @@ module top_drac(
     input logic                 PTWINVALIDATE     ,
     input logic                 TLB_RESP_MISS     ,
     input logic                 TLB_RESP_XCPT_IF  ,
-    input logic [PPN_SIZE-1:0]  itlb_resp_ppn_i   ,   
+    input logic [PPN_BIT_SIZE-1:0] itlb_resp_ppn_i ,   
     input logic                 iptw_resp_valid_i ,
     //==============================================================
     
