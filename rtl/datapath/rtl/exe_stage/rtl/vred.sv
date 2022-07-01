@@ -74,9 +74,9 @@ end
 ////////////////////////////////////////////////////////////////////////////////
 //                                  STAGE 1                                   //
 ////////////////////////////////////////////////////////////////////////////////
-logic [15:0] res_l1 [7:0];
-logic [31:0] res_l2 [3:0];
-logic [63:0] res_l3 [1:0];
+logic [31:0] res_l1 [7:0];
+logic [15:0] res_l2 [3:0];
+logic [7:0] res_l3 [1:0];
 always_comb begin
     res_l1 = '{default:'{default:'0}};
     res_l2 = '{default:'{default:'0}};
@@ -89,7 +89,7 @@ always_comb begin
                     for (int i=0; i < 8; i++) res_l1[i] = data_vs_1[i*16+8 +: 8] + data_vs_1[i*16 +: 8];
                     for (int i=0; i < 4; i++) res_l2[i] = res_l1[i*2] + res_l1[i*2+1];
                     for (int i=0; i < 2; i++) res_l3[i] = res_l2[i*2] + res_l2[i*2+1];
-                    red_data_vd_o = {112'h0, res_l3[0] + res_l3[1]};
+                    red_data_vd_o = {120'h0, res_l3[0] + res_l3[1]};
                 end
                 SEW_16: begin
                     for (int i=0; i < 4; i++) res_l1[i] = data_vs_1[i*32+16 +: 16] + data_vs_1[i*32 +: 16];
@@ -101,7 +101,7 @@ always_comb begin
                     red_data_vd_o = {96'h0, res_l1[0] + res_l1[1]};
                 end
                 SEW_64: begin
-                    red_data_vd_o = data_vs_1[127:64] + data_vs_1[63:0];
+                    red_data_vd_o = {64'h0, data_vs_1[127:64] + data_vs_1[63:0]};
                 end
                 default : begin 
                     red_data_vd_o = '0;
@@ -115,7 +115,7 @@ always_comb begin
                     for (int i=0; i < 8; i++) res_l1[i] = data_vs_1[i*16+8 +: 8] & data_vs_1[i*16 +: 8];
                     for (int i=0; i < 4; i++) res_l2[i] = res_l1[i*2] & res_l1[i*2+1];
                     for (int i=0; i < 2; i++) res_l3[i] = res_l2[i*2] & res_l2[i*2+1];
-                    red_data_vd_o = {112'h0, res_l3[0] & res_l3[1]};
+                    red_data_vd_o = {120'h0, res_l3[0] & res_l3[1]};
                 end
                 SEW_16: begin
                     for (int i=0; i < 4; i++) res_l1[i] = data_vs_1[i*32+16 +: 16] & data_vs_1[i*32 +: 16];
@@ -127,7 +127,7 @@ always_comb begin
                     red_data_vd_o = {96'h0, res_l1[0] & res_l1[1]};
                 end
                 SEW_64: begin
-                    red_data_vd_o = data_vs_1[127:64] & data_vs_1[63:0];
+                    red_data_vd_o = {64'h0, data_vs_1[127:64] & data_vs_1[63:0]};
                 end
                 default : begin 
                     red_data_vd_o = '0;
@@ -141,7 +141,7 @@ always_comb begin
                     for (int i=0; i < 8; i++) res_l1[i] = data_vs_1[i*16+8 +: 8] | data_vs_1[i*16 +: 8];
                     for (int i=0; i < 4; i++) res_l2[i] = res_l1[i*2] | res_l1[i*2+1];
                     for (int i=0; i < 2; i++) res_l3[i] = res_l2[i*2] | res_l2[i*2+1];
-                    red_data_vd_o = {112'h0, res_l3[0] | res_l3[1]};
+                    red_data_vd_o = {120'h0, res_l3[0] | res_l3[1]};
                 end
                 SEW_16: begin
                     for (int i=0; i < 4; i++) res_l1[i] = data_vs_1[i*32+16 +: 16] | data_vs_1[i*32 +: 16];
@@ -153,7 +153,7 @@ always_comb begin
                     red_data_vd_o = {96'h0, res_l1[0] | res_l1[1]};
                 end
                 SEW_64: begin
-                    red_data_vd_o = data_vs_1[127:64] | data_vs_1[63:0];
+                    red_data_vd_o = {64'h0, data_vs_1[127:64] | data_vs_1[63:0]};
                 end
                 default : begin 
                     red_data_vd_o = '0;
@@ -167,7 +167,7 @@ always_comb begin
                     for (int i=0; i < 8; i++) res_l1[i] = data_vs_1[i*16+8 +: 8] ^ data_vs_1[i*16 +: 8];
                     for (int i=0; i < 4; i++) res_l2[i] = res_l1[i*2] ^ res_l1[i*2+1];
                     for (int i=0; i < 2; i++) res_l3[i] = res_l2[i*2] ^ res_l2[i*2+1];
-                    red_data_vd_o = {112'h0, res_l3[0] ^ res_l3[1]};
+                    red_data_vd_o = {120'h0, res_l3[0] ^ res_l3[1]};
                 end
                 SEW_16: begin
                     for (int i=0; i < 4; i++) res_l1[i] = data_vs_1[i*32+16 +: 16] ^ data_vs_1[i*32 +: 16];
@@ -179,7 +179,7 @@ always_comb begin
                     red_data_vd_o = {96'h0, res_l1[0] ^ res_l1[1]};
                 end
                 SEW_64: begin
-                    red_data_vd_o = data_vs_1[127:64] ^ data_vs_1[63:0];
+                    red_data_vd_o = {64'h0, data_vs_1[127:64] ^ data_vs_1[63:0]};
                 end
                 default : begin 
                     red_data_vd_o = '0;
