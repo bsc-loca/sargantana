@@ -14,7 +14,7 @@
 
 import drac_icache_pkg::*;
 
-module itag_memory_sram64x80(
+module itag_memory_sram64x108(
     input  logic                                   clk_i      ,
     input  logic                                   rstn_i     ,
     input  logic                [ICACHE_N_WAY-1:0] req_i      ,
@@ -35,8 +35,8 @@ module itag_memory_sram64x80(
 logic [ICACHE_DEPTH-1:0] vbit_vec [0:ICACHE_N_WAY-1];
 
 //Tag array wires
-logic [79:0] q_sram;
-logic [79:0] write_mask, write_data, w_mask, w_data, mask;
+logic [107:0] q_sram;
+logic [107:0] write_mask, write_data, w_mask, w_data, mask;
 logic write_enable;
 logic chip_enable;
 logic [ADDR_WIDHT-3:0] address;
@@ -58,16 +58,16 @@ endgenerate
 
 // Tag array SRAM implementation
 
-assign mask[19:0] = {20{req_i[0]}};
-assign mask[39:20] = {20{req_i[1]}};
-assign mask[59:40] = {20{req_i[2]}};
-assign mask[79:60] = {20{req_i[3]}};
-assign w_mask = {80{we_i}} & mask;
+assign mask[26:0] = {27{req_i[0]}};
+assign mask[53:27] = {27{req_i[1]}};
+assign mask[80:54] = {27{req_i[2]}};
+assign mask[107:81] = {27{req_i[3]}};
+assign w_mask = {108{we_i}} & mask;
     
-assign w_data[19:0] = data_i;
-assign w_data[39:20] = data_i;
-assign w_data[59:40] = data_i;
-assign w_data[79:60] = data_i;
+assign w_data[26:0] = data_i;
+assign w_data[53:27] = data_i;
+assign w_data[80:54] = data_i;
+assign w_data[107:81] = data_i;
 
 assign write_mask = ~w_mask;
 assign write_data = w_data;
@@ -77,7 +77,7 @@ assign chip_enable = ~(|req_i);
 
 `ifdef MEMS_22NM
 	`ifdef MEMS_R1PH
-		IN22FDX_R1PH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
+		R1PH_64x108 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
 		.RDWEN(write_enable),
@@ -93,7 +93,7 @@ assign chip_enable = ~(|req_i);
 		.Q(q_sram)
 		);
 	`else
-		IN22FDX_R1DH_NFHN_W00064B080M02C256 MDArray_tag_il1 (
+		R1PD_64x108 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
 		.RDWEN(write_enable),

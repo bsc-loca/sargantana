@@ -62,7 +62,7 @@ idata_memory idata_memory(
         .vbit_o     ( valid_bit_o )
     );
 `else
-    itag_memory_sram64x80 itag_memory(
+    itag_memory_sram64x108 itag_memory(
         .clk_i      ( clk_i       ),
         .rstn_i     ( rstn_i      ),
         .req_i      ( tag_req_i   ),
