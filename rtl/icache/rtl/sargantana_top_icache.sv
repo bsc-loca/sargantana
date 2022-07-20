@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
-module top_icache (
+module sargantana_top_icache (
     input  logic          clk_i              ,
     input  logic          rstn_i             ,
     input  logic          flush_i            , 
@@ -147,7 +147,7 @@ assign valid_bit =
                                          
 assign tag_we = tag_we_valid && ((ifill_resp_i.beat == 2'b00) || block_invalidate) ;
 
-icache_ctrl  icache_ctrl (
+sargantana_icache_ctrl  icache_ctrl (
     .clk_i              ( clk_i                     ),
     .rstn_i             ( rstn_i                    ),
     .cache_enable_i     ( 1'b1                      ),
@@ -178,7 +178,7 @@ icache_ctrl  icache_ctrl (
 );                                          
 
 
-top_memory icache_memory(
+sargantana_top_memory icache_memory(
     .clk_i       ( clk_i  ),
     .rstn_i      ( rstn_i ),
     .tag_req_i   ( tag_req_valid  ),
@@ -195,7 +195,7 @@ top_memory icache_memory(
     .valid_bit_o ( way_valid_bits )  
 );
 
-icache_replace_unit replace_unit(
+sargantana_icache_replace_unit replace_unit(
     .clk_i          ( clk_i            ),
     .rstn_i         ( rstn_i           ),
     .inval_i        ( block_invalidate ),
@@ -215,7 +215,7 @@ icache_replace_unit replace_unit(
 );
 
 
-icache_checker ichecker(
+sargantana_icache_checker ichecker(
     .read_tags_i        ( way_tags            ),
     .cmp_enable_q       ( cmp_enable_q        ),
     .cline_tag_d        ( cline_tag_d         ),
@@ -227,7 +227,7 @@ icache_checker ichecker(
 );
 
 
-icache_ff icache_ff(
+sargantana_icache_ff icache_ff(
     .clk_i              ( clk_i             ),
     .rstn_i             ( rstn_i            ),
     //.vaddr_d            ( vaddr_d           ),

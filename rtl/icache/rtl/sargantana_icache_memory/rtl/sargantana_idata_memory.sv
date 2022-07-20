@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 //Build the ways.
-module idata_memory (
+module sargantana_idata_memory (
     input  logic                                   clk_i         ,
     input  logic                                   rstn_i        ,
     input  logic                [ICACHE_N_WAY-1:0] req_i         ,
@@ -29,7 +29,7 @@ module idata_memory (
 genvar i;
 generate
 for ( i=0; i<ICACHE_N_WAY; i++ )begin:n_way
-icache_way way(
+sargantana_icache_way way(
     .clk_i       ( clk_i          ),
     .rstn_i      ( rstn_i         ),
     .req_i       ( req_i[i]       ),

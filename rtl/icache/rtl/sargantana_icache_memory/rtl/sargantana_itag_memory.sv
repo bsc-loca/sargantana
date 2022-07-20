@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
-module itag_memory(
+module sargantana_itag_memory(
     input  logic                                   clk_i      ,
     input  logic                                   rstn_i     ,
     input  logic                [ICACHE_N_WAY-1:0] req_i      ,
@@ -33,7 +33,7 @@ module itag_memory(
 genvar i;
 generate
 for ( i=0; i<ICACHE_N_WAY; i++ )begin:tag_way
-tag_way_memory tag_way (
+sargantana_tag_way_memory tag_way (
     .clk_i   ( clk_i        ),
     .rstn_i  ( rstn_i       ),
     .req_i   ( req_i[i]     ),

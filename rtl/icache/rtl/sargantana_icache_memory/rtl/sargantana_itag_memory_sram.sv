@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
-module itag_memory_sram64x108(
+module sargantana_itag_memory_sram64x80(
     input  logic                                   clk_i      ,
     input  logic                                   rstn_i     ,
     input  logic                [ICACHE_N_WAY-1:0] req_i      ,

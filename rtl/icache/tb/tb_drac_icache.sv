@@ -12,7 +12,7 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 
 `timescale 1 ns/ 1 ns

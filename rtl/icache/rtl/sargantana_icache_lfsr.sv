@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 // Linear feedback shift register 8bit (LFSR)
-module icache_lfsr (
+module sargantana_icache_lfsr (
     input  logic                            clk_i,
     input  logic                            rst_ni,
     input  logic                            en_i,

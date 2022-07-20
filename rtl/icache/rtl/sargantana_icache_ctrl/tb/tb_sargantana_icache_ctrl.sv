@@ -12,14 +12,14 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 //`ifndef FSM_ICTRL_TEST                                                 
 //    `define FSM_ICTRL_TEST
 //`endif                                          
 
 `timescale 1 ns/ 1 ns
-module tb_icache_ctrl();
+module tb_sargantana_icache_ctrl();
 
     logic clk_i              ;
     logic rstn_i             ;
@@ -49,7 +49,7 @@ module tb_icache_ctrl();
     reg   miss_o;              
     reg   flush_en_o;              
 
-icache_ctrl i1 (
+sargantana_icache_ctrl i1 (
     .clk_i             ( clk_i              ),
     .rstn_i            ( rstn_i             ),
     .cache_enable_i    ( cache_enable_i     ),

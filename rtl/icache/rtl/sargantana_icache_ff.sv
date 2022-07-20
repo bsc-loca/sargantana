@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 
-module icache_ff(
+module sargantana_icache_ff(
     input  logic                            clk_i            ,
     input  logic                            rstn_i           ,
     input   drac_pkg::icache_idx_t          idx_d            ,

@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 `timescale 1 ns/ 1 ns
-module tb_icache_memory();
+module tb_sargantana_icache_memory();
 
 
 //----------------------------------- input signals
@@ -33,7 +33,7 @@ reg   [ICACHE_N_WAY-1:0][WAY_WIDHT-1:0] cline_way_o ; //- Cache lines read.
 reg                  [ICACHE_N_WAY-1:0] valid_bit_o ; //- Validity bits read.
 
 
-top_memory i1(
+sargantana_top_memory i1(
     .clk_i       ( clk_i       ),
     .rstn_i      ( rstn_i      ),
     .way_req_i   ( way_req_i   ),

@@ -12,13 +12,13 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 
 //- Logical unit of cache replacement.
 //- Valid bit invalidation and replacement strategy
 
-module icache_replace_unit (
+module sargantana_icache_replace_unit (
     input                                   clk_i            ,
     input                                   rstn_i           ,
     //input  inval_t                          inval_i          ,
@@ -102,7 +102,7 @@ assign data_req_valid_o   = (cache_rd_ena_i ) ?                  '1 :
 
 
 // generate random cacheline index
-icache_lfsr lfsr (
+sargantana_icache_lfsr lfsr (
     .clk_i          ( clk_i         ),
     .rst_ni         ( rstn_i        ),
     .en_i           ( lfsr_ena      ),
@@ -111,7 +111,7 @@ icache_lfsr lfsr (
 
 
 // find invalid cache line
-icache_tzc tzc (
+sargantana_icache_tzc tzc (
     .in_i           ( ~way_valid_bits_i  ),
     .inval_way_o    (  a_invalid_way     ),
     .empty_o        (  all_ways_valid    )

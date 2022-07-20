@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
-module cleaning_module(
+module sargantana_cleaning_module(
     input  logic                    clk_i           ,
     input  logic                    rstn_i       ,
     input  logic                    flush_enable_i  ,

@@ -13,10 +13,10 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 // A trailing zero counter
-module icache_tzc_idx(
+module sargantana_icache_tzc_idx(
   input  logic         [ICACHE_N_WAY-1:0] in_i          ,
   output logic [ICACHE_N_WAY_CLOG2-1:0] way_o   
 );

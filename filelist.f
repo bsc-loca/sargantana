@@ -3,7 +3,7 @@
 ./includes/riscv_pkg.sv
 ./includes/drac_pkg.sv
 
-./includes/drac_icache_pkg.sv
+./includes/sargantana_icache_pkg.sv
 ./rtl/interface_icache/rtl/icache_interface.sv 
 ./rtl/control_unit/rtl/control_unit.sv 
 ./rtl/register.sv 

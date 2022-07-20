@@ -13,7 +13,7 @@
 */
 
 import drac_pkg::*;
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 module top_drac(
 //------------------------------------------------------------------------------------
@@ -452,7 +452,7 @@ dcache_interface dcache_interface_inst(
 );
 
 
-top_icache icache (
+sargantana_top_icache icache (
     .clk_i              ( CLK           ) ,
     .rstn_i             ( RST           ) ,
     .flush_i            ( iflush        ) , 

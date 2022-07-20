@@ -11,10 +11,10 @@
  *  ******     | Neiel L.  |        | 
  * -----------------------------------------------
  */
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
 /* Memory used to build a set*/
-module set_ram(
+module sargantana_set_ram(
     input  logic                  clk_i       ,
     input  logic                  rstn_i      ,
     input  logic                  req_i       ,

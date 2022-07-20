@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 
-module icache_way (
+module sargantana_icache_way (
     input  logic                  clk_i      ,
     input  logic                  rstn_i     ,
     input  logic                  req_i      ,
@@ -42,7 +42,7 @@ module icache_way (
 //end
 //endgenerate
 `ifndef SRAM_MEMORIES
-    set_ram sram(
+    sargantana_set_ram sram(
         .clk_i (clk_i ),
         .rstn_i(rstn_i),
         .req_i (req_i ),

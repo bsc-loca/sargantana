@@ -12,7 +12,7 @@
  * -----------------------------------------------
  */
 
-import drac_icache_pkg::*;
+import sargantana_icache_pkg::*;
 //`include "drac_config.v"
 
 `define RAM tb_top_icache.i1.icache_memory

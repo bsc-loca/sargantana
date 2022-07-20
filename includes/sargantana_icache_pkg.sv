@@ -1,6 +1,6 @@
 /* -----------------------------------------------
  * Project Name   : DRAC
- * File           : drac_icache_pkg.sv
+ * File           : sargantana_icache_pkg.sv
  * Organization   : Barcelona Supercomputing Center
  * Author(s)      : Neiel I. Leyva Santes. 
  * Email(s)       : neiel.leyva@bsc.es
@@ -14,7 +14,7 @@
 
 import drac_pkg::*;
 
-package drac_icache_pkg;
+package sargantana_icache_pkg;
 
 //------------------------------------------------ Global Configuration
 //- L1 instruction cache
