@@ -12,10 +12,12 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
+
 
 //Build the ways.
-module sargantana_idata_memory (
+module sargantana_idata_memory 
+    import sargantana_icache_pkg::*;
+(
     input  logic                                   clk_i         ,
     input  logic                                   rstn_i        ,
     input  logic                [ICACHE_N_WAY-1:0] req_i         ,

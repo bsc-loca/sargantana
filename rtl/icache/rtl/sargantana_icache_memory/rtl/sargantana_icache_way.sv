@@ -12,9 +12,10 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
 
-module sargantana_icache_way (
+module sargantana_icache_way 
+    import sargantana_icache_pkg::*;
+(
     input  logic                  clk_i      ,
     input  logic                  rstn_i     ,
     input  logic                  req_i      ,

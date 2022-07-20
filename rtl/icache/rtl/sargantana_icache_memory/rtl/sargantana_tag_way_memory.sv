@@ -12,9 +12,11 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
 
-module sargantana_tag_way_memory(
+
+module sargantana_tag_way_memory
+    import sargantana_icache_pkg::*;
+(
     input  logic                  clk_i ,
     input  logic                  rstn_i,
     input  logic                  req_i ,

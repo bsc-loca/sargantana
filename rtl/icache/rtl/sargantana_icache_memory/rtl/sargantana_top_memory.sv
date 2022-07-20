@@ -12,10 +12,12 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
+
 //`include "../../../includes/drac_config.v"
 
-module sargantana_top_memory(
+module sargantana_top_memory
+    import sargantana_icache_pkg::*;
+(
     input  logic                    clk_i        ,
     input  logic                    rstn_i       ,
     input  logic [ICACHE_N_WAY-1:0] tag_req_i    ,//- Valid request.  
@@ -37,7 +39,7 @@ module sargantana_top_memory(
 
 
 //- Data memory
-idata_memory sargantana_idata_memory(
+sargantana_idata_memory idata_memory(
     .clk_i          ( clk_i         ),
     .rstn_i         ( rstn_i        ),
     .req_i          ( data_req_i    ),
@@ -49,7 +51,7 @@ idata_memory sargantana_idata_memory(
 
 //- Tags memory
 `ifndef SRAM_MEMORIES
-    itag_memory sargantana_itag_memory(
+    sargantana_itag_memory itag_memory(
         .clk_i      ( clk_i       ),
         .rstn_i     ( rstn_i      ),
         .req_i      ( tag_req_i   ),
@@ -62,7 +64,7 @@ idata_memory sargantana_idata_memory(
         .vbit_o     ( valid_bit_o )
     );
 `else
-    itag_memory_sram64x80 sargantana_itag_memory(
+    sargantana_itag_memory_sram64x80 itag_memory(
         .clk_i      ( clk_i       ),
         .rstn_i     ( rstn_i      ),
         .req_i      ( tag_req_i   ),

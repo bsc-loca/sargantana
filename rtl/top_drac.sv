@@ -12,10 +12,9 @@
 * -----------------------------------------------
 */
 
-import drac_pkg::*;
-import sargantana_icache_pkg::*;
-
-module top_drac(
+module top_drac
+    import drac_pkg::*, sargantana_icache_pkg::*;
+(
 //------------------------------------------------------------------------------------
 // ORIGINAL INPUTS OF LAGARTO 
 //------------------------------------------------------------------------------------

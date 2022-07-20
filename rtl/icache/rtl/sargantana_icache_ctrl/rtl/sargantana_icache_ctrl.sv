@@ -12,9 +12,11 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
 
-module sargantana_icache_ctrl (
+
+module sargantana_icache_ctrl 
+    import sargantana_icache_pkg::*;
+(
     input  logic clk_i              ,
     input  logic rstn_i             ,
     input  logic cache_enable_i     , //-From CSR

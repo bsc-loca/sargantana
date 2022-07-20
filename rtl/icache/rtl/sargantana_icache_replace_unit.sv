@@ -12,13 +12,15 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
+
 
 
 //- Logical unit of cache replacement.
 //- Valid bit invalidation and replacement strategy
 
-module sargantana_icache_replace_unit (
+module sargantana_icache_replace_unit 
+    import sargantana_icache_pkg::*;
+(
     input                                   clk_i            ,
     input                                   rstn_i           ,
     //input  inval_t                          inval_i          ,

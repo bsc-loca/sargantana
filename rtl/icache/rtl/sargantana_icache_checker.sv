@@ -12,10 +12,12 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
+
 //`include "../includes/drac_config.v"
 
-module sargantana_icache_checker(
+module sargantana_icache_checker
+    import sargantana_icache_pkg::*;
+(
     input  logic                           cmp_enable_q     ,
     input  logic    [ICACHE_TAG_WIDTH-1:0] cline_tag_d      , //- From mmu, paddr.
     input  logic        [ICACHE_N_WAY-1:0] way_valid_bits_i ,    
@@ -42,7 +44,7 @@ end
 endgenerate
 
 // find valid cache line
-sargantana_icache_tzc_idx tzc_idx (
+icache_tzc_idx tzc_idx (
     .in_i  ( cline_hit_o  ),
     .way_o ( idx          )
 );

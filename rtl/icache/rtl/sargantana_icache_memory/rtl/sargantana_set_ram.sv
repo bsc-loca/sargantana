@@ -11,10 +11,12 @@
  *  ******     | Neiel L.  |        | 
  * -----------------------------------------------
  */
-import sargantana_icache_pkg::*;
+
 
 /* Memory used to build a set*/
-module sargantana_set_ram(
+module sargantana_set_ram
+    import sargantana_icache_pkg::*;
+(
     input  logic                  clk_i       ,
     input  logic                  rstn_i      ,
     input  logic                  req_i       ,

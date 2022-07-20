@@ -12,9 +12,11 @@
  * -----------------------------------------------
  */
 
-import sargantana_icache_pkg::*;
 
-module sargantana_itag_memory_sram64x80(
+
+module sargantana_itag_memory_sram64x80
+  import sargantana_icache_pkg::*;
+(
     input  logic                                   clk_i      ,
     input  logic                                   rstn_i     ,
     input  logic                [ICACHE_N_WAY-1:0] req_i      ,
