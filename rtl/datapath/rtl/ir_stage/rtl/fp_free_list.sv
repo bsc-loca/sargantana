@@ -11,10 +11,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module fp_free_list(
+module fp_free_list
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic            clk_i,               // Clock Singal
     input logic            rstn_i,              // Negated Reset Signal
     input logic            read_head_i,         // Read head of the circular buffer

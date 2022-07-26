@@ -11,9 +11,9 @@
 *  0.1        | Guillem.LP | 
 * -----------------------------------------------
 */
-import riscv_pkg::*;
-
 package drac_pkg;
+
+import riscv_pkg::*;
 
 //parameter XLEN = 64; 
 //parameter VLEN = 256;

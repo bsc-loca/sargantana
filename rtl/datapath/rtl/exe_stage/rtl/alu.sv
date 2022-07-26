@@ -10,10 +10,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module alu (
+module alu 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input rr_exe_arith_instr_t     instruction_i,       // In instruction
     output exe_wb_scalar_instr_t   instruction_o        // Out instruction
 );

@@ -14,10 +14,10 @@
 */
 //`default_nettype none
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module if_stage_1(
+module if_stage_1
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic                 clk_i,
     input logic                 rstn_i,
     input addr_t                reset_addr_i,

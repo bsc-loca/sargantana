@@ -7,10 +7,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-module graduation_list #
-    (
+module graduation_list 
+    import drac_pkg::*;
+    #(
         // How many different instructions can the GL keep. Must be multiple of 2.
         parameter integer NUM_ENTRIES  = 32
     )

@@ -11,10 +11,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module mem_unit (
+module mem_unit 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input  wire                  clk_i,                  // Clock signal
     input  wire                  rstn_i,                 // Reset signal
     input logic                  kill_i,                 // Exception detected at Commit

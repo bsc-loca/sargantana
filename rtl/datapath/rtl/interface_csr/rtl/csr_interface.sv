@@ -1,5 +1,3 @@
-import drac_pkg::*;
-
 /* -----------------------------------------------
  * Project Name   : DRAC
  * File           : csr_interface.v
@@ -16,7 +14,9 @@ import drac_pkg::*;
  
 // Interface of Data Path with CSR
 
-module csr_interface (
+module csr_interface
+    import drac_pkg::*;
+(
     // Datapath signals
     input  logic            commit_xcpt_i,            // Exception at Commit
     input  bus64_t          result_gl_i,

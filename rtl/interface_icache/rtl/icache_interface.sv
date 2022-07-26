@@ -12,10 +12,10 @@
 * -----------------------------------------------
 */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module icache_interface(
+module icache_interface
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic              clk_i,
     input logic              rstn_i,
 

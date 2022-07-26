@@ -9,10 +9,11 @@
  *  Revision   | Author    | Description
  * -----------------------------------------------
  */
-import drac_pkg::*;
-import riscv_pkg::*;
 
-module score_board_scalar (
+module score_board_scalar
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic             clk_i,
     input logic             rstn_i,
     input logic             flush_i,

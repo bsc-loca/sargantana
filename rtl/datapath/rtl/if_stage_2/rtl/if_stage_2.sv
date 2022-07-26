@@ -13,10 +13,10 @@
 */
 //`default_nettype none
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module if_stage_2(
+module if_stage_2
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic                 clk_i,
     input logic                 rstn_i,
     // data comming form the first stage

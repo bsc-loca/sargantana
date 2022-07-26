@@ -10,11 +10,12 @@
  * -----------------------------------------------
  */
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
-import fpuv_wrapper_pkg::*;
 
-module exe_stage (
+module exe_stage 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+    import fpuv_wrapper_pkg::*;
+(
     input logic                         clk_i,
     input logic                         rstn_i,
     input logic                         kill_i,

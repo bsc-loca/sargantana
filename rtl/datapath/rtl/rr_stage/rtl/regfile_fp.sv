@@ -17,11 +17,11 @@
 */
 
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
 
-
-module regfile_fp (
+module regfile_fp 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input   logic                                 clk_i,
     input   logic                                 rstn_i,
     // write port input

@@ -13,10 +13,10 @@
 * -----------------------------------------------
 */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module control_unit(
+module control_unit
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic             rstn_i,
     input logic             clk_i,
 

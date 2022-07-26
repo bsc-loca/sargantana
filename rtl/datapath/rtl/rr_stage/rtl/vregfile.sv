@@ -13,12 +13,11 @@
 */
 
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
 
-localparam MASK_BITS = VLEN/8;
-
-module vregfile (
+module vregfile 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input   logic                        clk_i,
     // write port input
     input   logic      [NUM_SIMD_WB-1:0] write_enable_i,
@@ -37,6 +36,9 @@ module vregfile (
     output  bus_simd_t                   read_data_old_vd_o,
     output  bus_mask_t                   read_mask_o
 ); 
+
+localparam MASK_BITS = VLEN/8;
+
 reg_simd_t registers [0:NUM_PHISICAL_VREGISTERS-1];
 bus_simd_t bypass_data1;
 bus_simd_t bypass_data2;

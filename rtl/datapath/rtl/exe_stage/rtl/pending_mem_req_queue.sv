@@ -11,12 +11,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-
-typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
-
-module pending_mem_req_queue(
+module pending_mem_req_queue
+    import drac_pkg::*;
+(
     input logic                 clk_i,                  // Clock Singal
     input logic                 rstn_i,                 // Negated Reset Signal
 
@@ -41,6 +38,8 @@ module pending_mem_req_queue(
        
     output logic                full_o                  // pmrq is full
 );
+
+typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
 
 // Points to the next available entry
 pmrq_entry_pointer tail;

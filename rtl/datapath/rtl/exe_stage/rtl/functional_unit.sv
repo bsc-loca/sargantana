@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module functional_unit (
+module functional_unit 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input wire                  clk_i,           // Clock
     input wire                  rstn_i,          // Reset
     input fu_id_t               fu_id_i,         // Functional Unit's ID

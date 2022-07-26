@@ -11,10 +11,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module mul_unit (
+module mul_unit 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input  logic                   clk_i,          // Clock Signal
     input  logic                   rstn_i,         // Negative reset signal
     input  logic                   flush_mul_i,     // Kill on fly instructions signal

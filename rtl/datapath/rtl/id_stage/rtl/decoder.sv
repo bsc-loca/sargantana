@@ -13,10 +13,11 @@
 */
 
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
 
-module decoder(
+module decoder
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input   logic            clk_i,
     input   logic            rstn_i,
     input   logic            flush_i,

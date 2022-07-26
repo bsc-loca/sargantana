@@ -12,12 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-
-typedef logic [$clog2(LSQ_NUM_ENTRIES)-1:0] lsq_entry_pointer;
-
-module load_store_queue(
+module load_store_queue
+    import drac_pkg::*;
+(
     input logic                clk_i,            // Clock Singal
     input logic                rstn_i,           // Negated Reset Signal
 
@@ -39,6 +36,8 @@ module load_store_queue(
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
+
+typedef logic [$clog2(LSQ_NUM_ENTRIES)-1:0] lsq_entry_pointer;
 
 // store buff signals
 logic st_buff_full;

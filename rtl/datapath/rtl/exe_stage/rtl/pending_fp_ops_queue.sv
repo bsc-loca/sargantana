@@ -11,12 +11,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-
-typedef logic [$clog2(PFPQ_NUM_ENTRIES)-1:0] pfpq_entry_pointer;
-
-module pending_fp_ops_queue(
+module pending_fp_ops_queue
+    import drac_pkg::*;
+(
     input logic                     clk_i,                  // Clock Singal
     input logic                     rstn_i,                 // Negated Reset Signal
 
@@ -37,6 +34,8 @@ module pending_fp_ops_queue(
     output reg_t                    tag_o,                  // Tag given to the incoming instruction
     output logic                    full_o                  // fifo full
 );
+
+typedef logic [$clog2(PFPQ_NUM_ENTRIES)-1:0] pfpq_entry_pointer;
 
 // current tag counter
 reg_t tag_int;

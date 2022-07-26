@@ -1,6 +1,5 @@
 //`default_nettype none
 //`include "drac_pkg.sv"
-import drac_pkg::*;
 
 /* -----------------------------------------------
  * Project Name   : DRAC
@@ -18,7 +17,9 @@ import drac_pkg::*;
  
 // Interface with Data Cache. Stores a Memory request until it finishes
 
-module dcache_interface (
+module dcache_interface 
+    import drac_pkg::*;
+(
     input  wire         clk_i,               // Clock
     input  wire         rstn_i,              // Negative Reset Signal
 

@@ -12,10 +12,10 @@
 * -----------------------------------------------
 */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module immediate(
+module immediate
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input instruction_t instr_i,
     output bus64_t imm_o
 );

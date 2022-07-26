@@ -12,10 +12,10 @@
 * -----------------------------------------------
 */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module datapath(
+module datapath
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input logic             clk_i,
     input logic             rstn_i,
     input addr_t            reset_addr_i,

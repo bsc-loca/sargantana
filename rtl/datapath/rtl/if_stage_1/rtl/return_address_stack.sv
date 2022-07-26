@@ -12,19 +12,10 @@
  * v0.2        | Max D.   | modifications in the pop push conditions and to the output pc
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-// log_2 of the number of entries in the RAS.
-localparam _LENGTH_RAS_  = 4;
-
-// Number of entries of the RAS.
-localparam _NUM_RAS_ENTRIES_ = 2 ** _LENGTH_RAS_;
-
-// Bits needed to store a single address location
-localparam _ADDRESS_LENGTH_ = 40;
-
-module return_address_stack(
+module return_address_stack
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input   logic      rstn_i,                        // Negative reset input signal
     input   logic      clk_i,                         // Clock input signal
     input   addrPC_t   pc_execution_i,                // Program counter at Execution Stage (for push)
@@ -32,6 +23,13 @@ module return_address_stack(
     input   logic      pop_i,                         // Pop enable bit
     output  addrPC_t   return_address_o               // Address popped from the stack
 );
+
+    // log_2 of the number of entries in the RAS.
+    localparam _LENGTH_RAS_  = 4;
+    // Number of entries of the RAS.
+    localparam _NUM_RAS_ENTRIES_ = 2 ** _LENGTH_RAS_;
+    // Bits needed to store a single address location
+    localparam _ADDRESS_LENGTH_ = 40;
 
     // Registers representing the actual address stack.
     addrPC_t address_stack [0:_NUM_RAS_ENTRIES_ -1];

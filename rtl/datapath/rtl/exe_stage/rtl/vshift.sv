@@ -11,10 +11,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module vshift (
+module vshift 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input instr_type_t          instr_type_i,   // Instruction type
     input sew_t                 sew_i,          // Element width
     input bus64_t               data_vs1_i,     // 64-bit source operand 1

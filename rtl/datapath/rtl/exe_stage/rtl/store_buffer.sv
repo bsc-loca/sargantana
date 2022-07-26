@@ -11,12 +11,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-
-typedef logic [$clog2(ST_BUF_NUM_ENTRIES)-1:0] st_buf_entry_pointer;
-
-module store_buffer(
+module store_buffer
+    import drac_pkg::*;
+(
     input logic                 clk_i,            // Clock Singal
     input logic                 rstn_i,           // Negated Reset Signal
     input logic                 write_enable_i,
@@ -36,6 +33,8 @@ module store_buffer(
 
     output logic                collision_o       // the new load collides with a store
 );
+
+typedef logic [$clog2(ST_BUF_NUM_ENTRIES)-1:0] st_buf_entry_pointer;
 
 // Points to the next available entry
 st_buf_entry_pointer tail;

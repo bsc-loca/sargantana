@@ -10,9 +10,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-module div_4bits (
+module div_4bits 
+    import drac_pkg::*;
+(
     input  bus64_t        remanent_i,           // Contains the remanent of the previous division    
     input  bus64_t        dividend_quotient_i,  // Contains at same time the dividend and the quotient of previous division
     input  bus64_t        divisor_i,            // Contains the divisor

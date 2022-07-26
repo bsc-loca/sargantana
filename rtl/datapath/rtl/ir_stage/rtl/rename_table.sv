@@ -12,10 +12,11 @@
  */
 
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
 
-module rename_table(
+module rename_table
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input wire                        clk_i,               // Clock Singal
     input wire                        rstn_i,              // Negated Reset Signal
 

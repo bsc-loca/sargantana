@@ -12,10 +12,10 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-import riscv_pkg::*;
-
-module simd_unit (
+module simd_unit 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 

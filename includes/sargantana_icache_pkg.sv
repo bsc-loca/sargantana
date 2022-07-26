@@ -12,9 +12,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
 package sargantana_icache_pkg;
+
+import drac_pkg::*;
 
 //------------------------------------------------ Global Configuration
 //- L1 instruction cache

@@ -11,28 +11,15 @@
  *  0.1        | Victor.SP | 
  * -----------------------------------------------
  */
-
-import drac_pkg::*;
-import riscv_pkg::*;
-
-// Length of the bimodal index register
-localparam _LENGTH_BIMODAL_INDEX_  = 7;
-
-// Number of entries of the bimodal predictor, must be 2^(_LENGTH_BIMODAL_INDEX_)
-localparam _NUM_BIMODAL_ENTRIES_ = 2**_LENGTH_BIMODAL_INDEX_;
-
-// Number of bits used for encoding the state of predictor state machine
-localparam _BITS_BIMODAL_STATE_MACHINE_ = 2;
-
-// Initial state of the predictor state machine
-localparam _INITIAL_STATE_BIMODAL_ = 2'b10;
-
  
  /* Bimodal branch predictor implementation
   *
   *
   */
-module bimodal_predictor(
+module bimodal_predictor
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input               clk_i,                         // Clock input signal
     input               rstn_i,                        // reset input signal
     input   addrPC_t    pc_fetch_i,                    // Program counter value at Fetch Stage
@@ -43,6 +30,15 @@ module bimodal_predictor(
     output              bimodal_predict_taken_o,       // Bit that encodes branch taken '1' or not '0'
     output  addrPC_t    bimodal_predict_addr_o         // Address predicted to jump
 );
+
+// Length of the bimodal index register
+localparam _LENGTH_BIMODAL_INDEX_  = 7;
+// Number of entries of the bimodal predictor, must be 2^(_LENGTH_BIMODAL_INDEX_)
+localparam _NUM_BIMODAL_ENTRIES_ = 2**_LENGTH_BIMODAL_INDEX_;
+// Number of bits used for encoding the state of predictor state machine
+localparam _BITS_BIMODAL_STATE_MACHINE_ = 2;
+// Initial state of the predictor state machine
+localparam _INITIAL_STATE_BIMODAL_ = 2'b10;
 
 logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] new_state_to_pht;
 logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] readed_state_pht;

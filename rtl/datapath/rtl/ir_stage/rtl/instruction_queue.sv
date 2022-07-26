@@ -11,13 +11,9 @@
  * -----------------------------------------------
  */
 
-import drac_pkg::*;
-
-typedef logic [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] instruction_queue_entry;
-typedef reg [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] reg_instruction_queue_entry;
-
-
-module instruction_queue(
+module instruction_queue
+    import drac_pkg::*;
+(
     input logic            clk_i,            // Clock Singal
     input logic            rstn_i,           // Negated Reset Signal
 
@@ -29,6 +25,9 @@ module instruction_queue(
     output logic           full_o,           // IQ is full
     output logic           empty_o           // IQ is empty TODO: check if empty signal is necessary
 );
+
+typedef logic [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] instruction_queue_entry;
+typedef reg [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] reg_instruction_queue_entry;
 
 reg_instruction_queue_entry head;
 reg_instruction_queue_entry tail;

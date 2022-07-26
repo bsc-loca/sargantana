@@ -14,16 +14,6 @@
  */
  
 //`default_nettype none
-import drac_pkg::*;
-import riscv_pkg::*;
- 
- // Number of entries of the is branch predictor.
-localparam NUM_IS_BRANCH_ENTRIES = 128; 
-
-// Tags stored in is_branch_table
-typedef logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
-typedef reg   [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
-
  
 /* Top view of the branch predictor module
  * 
@@ -31,7 +21,10 @@ typedef reg   [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
  * how they are connected. It is composed by Bimodal Predictor and Return
  * Addres Stack.
  */
-module branch_predictor(
+module branch_predictor
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
     input wire           clk_i,                         // Clock input signal
     input wire           rstn_i,                        // Reset negate input signal
     input addrPC_t       pc_fetch_i,                    // Program counter value at Fetch Stage
@@ -44,6 +37,13 @@ module branch_predictor(
     output logic         branch_predict_taken_o,        // Bit that encodes branch taken '1' or not '0'
     output addrPC_t      branch_predict_addr_o          // Address predicted to jump
 );
+
+ // Number of entries of the is branch predictor.
+localparam NUM_IS_BRANCH_ENTRIES = 128; 
+
+// Tags stored in is_branch_table
+typedef logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
+typedef reg   [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////// Declaration of local signals and modules                                               /////////////////////
