@@ -34,7 +34,7 @@ parameter NUM_SIMD_WB = 2;
 
 parameter UNMAPPED_ADDR_LOWER = 64'h0; 
 parameter UNMAPPED_ADDR_UPPER = 64'h0; 
-parameter PHISIC_MEM_LIMIT = 64'h0ffffffff; 
+parameter PHISIC_MEM_LIMIT = 64'h7fffffffff;  
 parameter BROM_SIZE = 20'b000010000000000000000000;
 
 // RISCV

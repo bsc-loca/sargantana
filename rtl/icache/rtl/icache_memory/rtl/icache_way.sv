@@ -66,7 +66,7 @@ module icache_way (
  
     `ifdef MEMS_22NM 
 		`ifdef MEMS_R1PH
-			IN22FDX_R1PH_NFHN_W00256B128M02C256 L1InstArray (
+			R1PH_256x128 L1InstArray(
 				.CLK(clk_i),
 				.CEN(chip_enable),
 				.RDWEN(write_enable),
@@ -80,6 +80,7 @@ module icache_way (
 				.MA_WRAS(1'b0),
 				.MA_WRASD(1'b0),
 				.Q(RW0O_sram)
+            );
 		`else
 			IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
 				.CLK(clk_i),
@@ -95,8 +96,9 @@ module icache_way (
 				.MA_WRAS(1'b0),
 				.MA_WRASD(1'b0),
 				.Q(RW0O_sram)
+            );
 		`endif
-	);
+	
     `else
     TS1N65LPHSA256X128M4F L1InstArray (
         .A  (address) ,
