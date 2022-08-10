@@ -67,7 +67,7 @@ module sargantana_icache_way
  
     `ifdef MEMS_22NM 
 		`ifdef MEMS_R1PH
-			R1PH_256x128 L1InstArray(
+			R1PH_256x128 L1InstArray (
 				.CLK(clk_i),
 				.CEN(chip_enable),
 				.RDWEN(write_enable),
@@ -83,7 +83,7 @@ module sargantana_icache_way
 				.Q(RW0O_sram)
             );
 		`else
-			IN22FDX_R1DH_NFHN_W00256B128M02C256 L1InstArray (
+			R1DH_256x128 L1InstArray (
 				.CLK(clk_i),
 				.CEN(chip_enable),
 				.RDWEN(write_enable),
