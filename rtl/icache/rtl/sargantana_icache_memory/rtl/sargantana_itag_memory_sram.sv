@@ -79,7 +79,7 @@ assign chip_enable = ~(|req_i);
 
 `ifdef MEMS_22NM
 	`ifdef MEMS_R1PH
-		R1PH_64x108 MDArray_tag_il1 (
+		R1PH_64x80 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
 		.RDWEN(write_enable),
@@ -95,7 +95,7 @@ assign chip_enable = ~(|req_i);
 		.Q(q_sram)
 		);
 	`else
-		R1PD_64x108 MDArray_tag_il1 (
+		R1DH_64x80 MDArray_tag_il1 (
 		.CLK(clk_i),
 		.CEN(1'b0), // chip_enable??
 		.RDWEN(write_enable),
