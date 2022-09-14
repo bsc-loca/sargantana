@@ -13,7 +13,11 @@
 import drac_pkg::*;
 import riscv_pkg::*;
 
+`ifdef FPGA
+(* use_dsp = "yes" *) module vmul (
+`else 
 module vmul (
+`endif
   input wire                  clk_i,          // Clock
   input wire                  rstn_i,         // Reset 
   input instr_type_t          instr_type_i,   // Instruction type
