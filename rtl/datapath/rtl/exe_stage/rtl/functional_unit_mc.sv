@@ -8,23 +8,28 @@
  * Revision History
  *  Revision   | Author    | Description
  *  0.1        | Gerard C. | 
+ *  0.2        | Xavier C. | Adding vmul and vred
  * -----------------------------------------------
  */
 
-module functional_unit 
+module functional_unit_mc
     import drac_pkg::*;
     import riscv_pkg::*;
 (
-    input fu_id_t               fu_id_i,        // Functional Unit's ID
-    input rr_exe_simd_instr_t   instruction_i,  // Instruction input
-    input bus64_t               data_vs1_i,     // 64-bit source operand 1
-    input bus64_t               data_vs2_i,     // 64-bit source operand 2
-    output bus64_t              data_vd_o       // 64-bit result
+    input wire                  clk_i,           // Clock
+    input wire                  rstn_i,          // Reset
+    input fu_id_t               fu_id_i,         // Functional Unit's ID
+    input rr_exe_simd_instr_t   instruction_i,   // Instruction input
+    input rr_exe_simd_instr_t   sel_out_instr_i, // Instruction to select the output result
+    input bus64_t               data_vs1_i,      // 64-bit source operand 1
+    input bus64_t               data_vs2_i,      // 64-bit source operand 2
+    output bus64_t              data_vd_o        // 64-bit result
 );
 
 bus64_t result_vaddsub;
 bus64_t result_vcomp;
 bus64_t result_vshift;
+bus64_t result_vmul;
 
 vaddsub vaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
@@ -50,21 +55,34 @@ vshift vshift_inst(
     .data_vd_o     (result_vshift)
 );
 
+vmul vmul_inst(
+    .clk_i         (clk_i),
+    .rstn_i        (rstn_i),
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs1_i    (data_vs1_i),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_vmul)
+);
+
 always_comb begin
-    case (instruction_i.instr.instr_type)
-        VADD, VSUB: begin
+    case (sel_out_instr_i.instr.instr_type)
+        VADD, VSUB, VREDSUM: begin
             data_vd_o = result_vaddsub;
+        end
+        VMUL, VMULH, VMULHU, VMULHSU: begin
+            data_vd_o = result_vmul;
         end
         VMIN, VMINU, VMAX, VMAXU, VMSEQ, VCNT: begin
             data_vd_o = result_vcomp;
         end
-        VAND: begin
+        VAND, VREDAND: begin
             data_vd_o = data_vs1_i & data_vs2_i;
         end
-        VOR: begin
+        VOR, VREDOR: begin
             data_vd_o = data_vs1_i | data_vs2_i;
         end
-        VXOR: begin
+        VXOR, VREDXOR: begin
             data_vd_o = data_vs1_i ^ data_vs2_i;
         end
 
@@ -73,7 +91,7 @@ always_comb begin
         end
 
         VID: begin
-            case (instruction_i.sew)
+            case (sel_out_instr_i.sew)
                 SEW_8: begin
                     for (int i = 0; i<8; ++i) begin
                         data_vd_o[(i*8)+:8] = (fu_id_i*8)+i;

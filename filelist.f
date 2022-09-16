@@ -48,12 +48,15 @@
 ./rtl/datapath/rtl/exe_stage/rtl/alu.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv 
+./rtl/datapath/rtl/exe_stage/rtl/functional_unit_mc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/functional_unit.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/vcomp.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv 
-./rtl/datapath/rtl/exe_stage/rtl/score_board.sv 
+./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv 
+./rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/mul_unit.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/mem_unit.sv 
+./rtl/datapath/rtl/exe_stage/rtl/simd_unit_mc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd_unit.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/vaddsub.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/div_4bits.sv 

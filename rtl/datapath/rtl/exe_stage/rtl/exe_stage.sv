@@ -297,13 +297,21 @@ branch_unit branch_unit_inst (
     .instruction_o      (branch_to_scalar_wb)
 );
 
-simd_unit simd_unit_inst (
+`ifdef MULTICYCLE_SIMD
+simd_unit_mc simd_unit_mc_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)
 );
+`else
+simd_unit simd_unit_inst (
+    .instruction_i  (simd_instr),
+    .instruction_scalar_o (simd_to_scalar_wb),
+    .instruction_simd_o  (simd_to_simd_wb)
+);
+`endif
 
 mem_unit mem_unit_inst(
     .clk_i                  (clk_i),
