@@ -51,6 +51,8 @@
 ./rtl/datapath/rtl/exe_stage/rtl/functional_unit_mc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/functional_unit.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/vcomp.sv 
+./rtl/datapath/rtl/exe_stage/rtl/vred.sv 
+./rtl/datapath/rtl/exe_stage/rtl/vmul.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv 
