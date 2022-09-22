@@ -984,12 +984,14 @@ module decoder
                             decode_instr_int.use_mask = 1'b0;
                             decode_instr_int.use_rs1 = 1'b1;
                             decode_instr_int.stall_csr_fence = 1'b1;
-                            if (decode_i.inst[31]) begin
+                            if (decode_i.inst[31] && (decode_i.inst[30:25] == 6'd0)) begin
                                 decode_instr_int.instr_type = VSETVL;
                                 decode_instr_int.use_rs2 = 1'b1;
-                            end else begin
+                            end else if (!decode_i.inst[31]) begin
                                 decode_instr_int.instr_type = VSETVLI;
                                 decode_instr_int.use_imm = 1'b1;
+                            end else begin
+                                xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
                         default: begin
