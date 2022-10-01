@@ -68,11 +68,11 @@ always_comb begin
     unique case (sew_i)
     SEW_8 : begin
         for (int i = 0; i < 8; i++) begin
-            src1_8bits[i] = data_vs1_i[i*8+:8];
-            src2_8bits[i] = data_vs2_i[i*8+:8];
+            src1_8bits[i][7:0] = data_vs1_i[i*8+:8];
+            src2_8bits[i][7:0] = data_vs2_i[i*8+:8];
 
-            src1_negative[i] = src1_signed_0 & src1_8bits[7][i];
-            src2_negative[i] = src2_signed_0 & src2_8bits[7][i];
+            src1_negative[i] = src1_signed_0 & src1_8bits[i][7];
+            src2_negative[i] = src2_signed_0 & src2_8bits[i][7];
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i];
 
@@ -83,45 +83,45 @@ always_comb begin
     end
     SEW_16 : begin
         for (int i = 0; i < 4; i++) begin
-            src1_16bits[i] = data_vs1_i[i*16+:16];
-            src2_16bits[i] = data_vs2_i[i*16+:16];
+            src1_16bits[i][15:0] = data_vs1_i[i*16+:16];
+            src2_16bits[i][15:0] = data_vs2_i[i*16+:16];
 
-            src1_negative[i] = src1_signed_0 & src1_16bits[15][i];
-            src2_negative[i] = src2_signed_0 & src2_16bits[15][i];
+            src1_negative[i] = src1_signed_0 & src1_16bits[i][15];
+            src2_negative[i] = src2_signed_0 & src2_16bits[i][15];
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i]; 
 
-            src1_data_0[i*16+:16] = (src1_negative[i]) ? ~src1_16bits[i] + 16'b1 : src1_16bits[i];
-            src2_data_0[i*16+:16] = (src2_negative[i]) ? ~src2_16bits[i] + 16'b1 : src2_16bits[i];
+            src1_data_0[i*16+:16] = (src1_negative[i]) ? ~src1_16bits[i][15:0] + 16'b1 : src1_16bits[i][15:0];
+            src2_data_0[i*16+:16] = (src2_negative[i]) ? ~src2_16bits[i][15:0] + 16'b1 : src2_16bits[i][15:0];
         end
         
     end
     SEW_32 : begin
         for (int i = 0; i < 2; i++) begin
-            src1_32bits[i] = data_vs1_i[i*32+:32];
-            src2_32bits[i] = data_vs2_i[i*32+:32];
+            src1_32bits[i][31:0] = data_vs1_i[i*32+:32];
+            src2_32bits[i][31:0] = data_vs2_i[i*32+:32];
 
             src1_negative[i] = src1_signed_0 & src1_32bits[i][31];
             src2_negative[i] = src2_signed_0 & src2_32bits[i][31];
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i];
 
-            src1_data_0[i*32+:32] = (src1_negative[i]) ? ~src1_32bits[i] + 32'b1 : src1_32bits[i];
-            src2_data_0[i*32+:32] = (src2_negative[i]) ? ~src2_32bits[i] + 32'b1 : src2_32bits[i];
+            src1_data_0[i*32+:32] = (src1_negative[i]) ? ~src1_32bits[i][31:0] + 32'b1 : src1_32bits[i][31:0];
+            src2_data_0[i*32+:32] = (src2_negative[i]) ? ~src2_32bits[i][31:0] + 32'b1 : src2_32bits[i][31:0];
         end
 
     end
     SEW_64 : begin
-        src1_64bits = data_vs1_i;
-        src2_64bits = data_vs2_i;
+        src1_64bits[63:0] = data_vs1_i[63:0];
+        src2_64bits[63:0] = data_vs2_i[63:0];
 
         src1_negative[0] = src1_signed_0 & src1_64bits[63];
         src2_negative[0] = src2_signed_0 & src2_64bits[63];
 
         negative_results_0[0] = src1_negative[0] ^ src2_negative[0];
 
-        src1_data_0[63:0] = (src1_negative[0]) ? ~src1_64bits + 64'b1 : src1_64bits;
-        src2_data_0[63:0] = (src2_negative[0]) ? ~src2_64bits + 64'b1 : src2_64bits;
+        src1_data_0[63:0] = (src1_negative[0]) ? ~src1_64bits[63:0] + 64'b1 : src1_64bits[63:0];
+        src2_data_0[63:0] = (src2_negative[0]) ? ~src2_64bits[63:0] + 64'b1 : src2_64bits[63:0];
     end
     default : begin
         src1_data_0[63:0] = 64'd0;
