@@ -48,8 +48,10 @@ genvar i;
 generate
 for ( i=0; i<ICACHE_N_WAY; i++ )begin
     always_ff @(posedge clk_i) begin
-        if(!rstn_i || flush_i) vbit_vec[i] <= '0; 
-        else if(req_i[i]) begin
+        if(!rstn_i || flush_i) begin
+            vbit_vec[i] <= '0; 
+            vbit_o[i] <= '0;
+        end else if(req_i[i]) begin
             if(we_i) vbit_vec[i][addr_i] <= vbit_i;
             else vbit_o[i] <= vbit_vec[i][addr_i];
         end
