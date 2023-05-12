@@ -504,10 +504,405 @@ typedef enum logic[XLEN-1:0] {
     INSTR_PAGE_FAULT        = 64'h0C,
     LD_PAGE_FAULT           = 64'h0D,
     ST_AMO_PAGE_FAULT       = 64'h0F,
+    DEBUG_REQUEST           = 64'h18,
     NONE                    = 64'hFF
 } exception_cause_t;
 
 // Hack to codify Vector Element Loads and Stores
 parameter __vector_element = 4'b0111;
+
+// --------------------
+// Privilege Spec
+// --------------------
+typedef enum logic[1:0] {
+    PRIV_LVL_M = 2'b11,
+    PRIV_LVL_S = 2'b01,
+    PRIV_LVL_U = 2'b00
+} priv_lvl_t;
+
+// type which holds xlen
+typedef enum logic [1:0] {
+    XLEN_32  = 2'b01,
+    XLEN_64  = 2'b10,
+    XLEN_128 = 2'b11
+} xlen_t;
+
+typedef enum logic [1:0] {
+    Off     = 2'b00,
+    Initial = 2'b01,
+    Clean   = 2'b10,
+    Dirty   = 2'b11
+} xs_t;
+
+typedef struct packed {
+    logic         sd;     // signal dirty state - read-only
+    logic [62:36] wpri4;  // writes preserved reads ignored
+    xlen_t        sxl;    // variable supervisor mode xlen - hardwired to zero
+    xlen_t        uxl;    // variable user mode xlen - hardwired to zero
+    logic [8:0]   wpri3;  // writes preserved reads ignored
+    logic         tsr;    // trap sret
+    logic         tw;     // time wait
+    logic         tvm;    // trap virtual memory
+    logic         mxr;    // make executable readable
+    logic         sum;    // permit supervisor user memory access
+    logic         mprv;   // modify privilege - privilege level for ld/st
+    xs_t          xs;     // extension register - hardwired to zero
+    xs_t          fs;     // floating point extension register
+    priv_lvl_t    mpp;    // holds the previous privilege mode up to machine
+    logic [1:0]   wpri2;  // writes preserved reads ignored
+    logic         spp;    // holds the previous privilege mode up to supervisor
+    logic         mpie;   // machine interrupts enable bit active prior to trap
+    logic         wpri1;  // writes preserved reads ignored
+    logic         spie;   // supervisor interrupts enable bit active prior to trap
+    logic         upie;   // user interrupts enable bit active prior to trap - hardwired to zero
+    logic         mie;    // machine interrupts enable
+    logic         wpri0;  // writes preserved reads ignored
+    logic         sie;    // supervisor interrupts enable
+    logic         uie;    // user interrupts enable - hardwired to zero
+} status_rv64_t;
+
+typedef struct packed {
+    logic         sd;     // signal dirty - read-only - hardwired zero
+    logic [7:0]   wpri3;  // writes preserved reads ignored
+    logic         tsr;    // trap sret
+    logic         tw;     // time wait
+    logic         tvm;    // trap virtual memory
+    logic         mxr;    // make executable readable
+    logic         sum;    // permit supervisor user memory access
+    logic         mprv;   // modify privilege - privilege level for ld/st
+    logic [1:0]   xs;     // extension register - hardwired to zero
+    logic [1:0]   fs;     // extension register - hardwired to zero
+    priv_lvl_t    mpp;    // holds the previous privilege mode up to machine
+    logic [1:0]   wpri2;  // writes preserved reads ignored
+    logic         spp;    // holds the previous privilege mode up to supervisor
+    logic         mpie;   // machine interrupts enable bit active prior to trap
+    logic         wpri1;  // writes preserved reads ignored
+    logic         spie;   // supervisor interrupts enable bit active prior to trap
+    logic         upie;   // user interrupts enable bit active prior to trap - hardwired to zero
+    logic         mie;    // machine interrupts enable
+    logic         wpri0;  // writes preserved reads ignored
+    logic         sie;    // supervisor interrupts enable
+    logic         uie;    // user interrupts enable - hardwired to zero
+} status_rv32_t;
+
+typedef struct packed {
+    logic [3:0]  mode;
+    logic [15:0] asid;
+    logic [43:0] ppn;
+} satp_t;
+
+localparam int unsigned IRQ_S_SOFT  = 1;
+localparam int unsigned IRQ_M_SOFT  = 3;
+localparam int unsigned IRQ_S_TIMER = 5;
+localparam int unsigned IRQ_M_TIMER = 7;
+localparam int unsigned IRQ_S_EXT   = 9;
+localparam int unsigned IRQ_M_EXT   = 11;
+
+localparam logic [63:0] MIP_SSIP = 1 << IRQ_S_SOFT;
+localparam logic [63:0] MIP_MSIP = 1 << IRQ_M_SOFT;
+localparam logic [63:0] MIP_STIP = 1 << IRQ_S_TIMER;
+localparam logic [63:0] MIP_MTIP = 1 << IRQ_M_TIMER;
+localparam logic [63:0] MIP_SEIP = 1 << IRQ_S_EXT;
+localparam logic [63:0] MIP_MEIP = 1 << IRQ_M_EXT;
+
+localparam logic [63:0] S_SW_INTERRUPT    = (1 << 63) | IRQ_S_SOFT;
+localparam logic [63:0] M_SW_INTERRUPT    = (1 << 63) | IRQ_M_SOFT;
+localparam logic [63:0] S_TIMER_INTERRUPT = (1 << 63) | IRQ_S_TIMER;
+localparam logic [63:0] M_TIMER_INTERRUPT = (1 << 63) | IRQ_M_TIMER;
+localparam logic [63:0] S_EXT_INTERRUPT   = (1 << 63) | IRQ_S_EXT;
+localparam logic [63:0] M_EXT_INTERRUPT   = (1 << 63) | IRQ_M_EXT;
+
+// -----
+// CSRs
+// -----
+typedef enum logic [11:0] {
+    // Floating-Point CSRs
+    CSR_FFLAGS         = 12'h001,
+    CSR_FRM            = 12'h002,
+    CSR_FCSR           = 12'h003,
+    CSR_FTRAN          = 12'h800,
+    // Supervisor Mode CSRs
+    CSR_SSTATUS        = 12'h100,
+    CSR_SIE            = 12'h104,
+    CSR_STVEC          = 12'h105,
+    CSR_SCOUNTEREN     = 12'h106,
+    CSR_SSCRATCH       = 12'h140,
+    CSR_SEPC           = 12'h141,
+    CSR_SCAUSE         = 12'h142,
+    CSR_STVAL          = 12'h143,
+    CSR_SIP            = 12'h144,
+    CSR_SATP           = 12'h180,
+    // Machine Mode CSRs
+    CSR_MSTATUS        = 12'h300,
+    CSR_MISA           = 12'h301,
+    CSR_MEDELEG        = 12'h302,
+    CSR_MIDELEG        = 12'h303,
+    CSR_MIE            = 12'h304,
+    CSR_MTVEC          = 12'h305,
+    CSR_MCOUNTEREN     = 12'h306,
+    CSR_MSCRATCH       = 12'h340,
+    CSR_MEPC           = 12'h341,
+    CSR_MCAUSE         = 12'h342,
+    CSR_MTVAL          = 12'h343,
+    CSR_MIP            = 12'h344,
+    CSR_MVENDORID      = 12'hF11,
+    CSR_MARCHID        = 12'hF12,
+    CSR_MIMPID         = 12'hF13,
+    CSR_MHARTID        = 12'hF14,
+    CSR_MCYCLE         = 12'hB00,
+    CSR_MINSTRET       = 12'hB02,
+    // Performance counters (Machine Mode)
+    CSR_ML1_ICACHE_MISS = 12'hB03,  // L1 Instr Cache Miss
+    CSR_ML1_DCACHE_MISS = 12'hB04,  // L1 Data Cache Miss
+    CSR_MITLB_MISS      = 12'hB05,  // ITLB Miss
+    CSR_MDTLB_MISS      = 12'hB06,  // DTLB Miss
+    CSR_MLOAD           = 12'hB07,  // Loads
+    CSR_MSTORE          = 12'hB08,  // Stores
+    CSR_MEXCEPTION      = 12'hB09,  // Taken exceptions
+    CSR_MEXCEPTION_RET  = 12'hB0A,  // Exception return
+    CSR_MBRANCH_JUMP    = 12'hB0B,  // Software change of PC
+    CSR_MCALL           = 12'hB0C,  // Procedure call
+    CSR_MRET            = 12'hB0D,  // Procedure Return
+    CSR_MMIS_PREDICT    = 12'hB0E,  // Branch mis-predicted
+    CSR_MSB_FULL        = 12'hB0F,  // Scoreboard full
+    CSR_MIF_EMPTY       = 12'hB10,  // instruction fetch queue empty
+    CSR_MHPM_COUNTER_17 = 12'hB11,  // reserved
+    CSR_MHPM_COUNTER_18 = 12'hB12,  // reserved
+    CSR_MHPM_COUNTER_19 = 12'hB13,  // reserved
+    CSR_MHPM_COUNTER_20 = 12'hB14,  // reserved
+    CSR_MHPM_COUNTER_21 = 12'hB15,  // reserved
+    CSR_MHPM_COUNTER_22 = 12'hB16,  // reserved
+    CSR_MHPM_COUNTER_23 = 12'hB17,  // reserved
+    CSR_MHPM_COUNTER_24 = 12'hB18,  // reserved
+    CSR_MHPM_COUNTER_25 = 12'hB19,  // reserved
+    CSR_MHPM_COUNTER_26 = 12'hB1A,  // reserved
+    CSR_MHPM_COUNTER_27 = 12'hB1B,  // reserved
+    CSR_MHPM_COUNTER_28 = 12'hB1C,  // reserved
+    CSR_MHPM_COUNTER_29 = 12'hB1D,  // reserved
+    CSR_MHPM_COUNTER_30 = 12'hB1E,  // reserved
+    CSR_MHPM_COUNTER_31 = 12'hB1F,  // reserved
+    // Cache Control (platform specifc)
+    CSR_DCACHE         = 12'h701,
+    CSR_ICACHE         = 12'h700,
+    // Triggers
+    CSR_TSELECT        = 12'h7A0,
+    CSR_TDATA1         = 12'h7A1,
+    CSR_TDATA2         = 12'h7A2,
+    CSR_TDATA3         = 12'h7A3,
+    CSR_TINFO          = 12'h7A4,
+    // Debug CSR
+    CSR_DCSR           = 12'h7b0,
+    CSR_DPC            = 12'h7b1,
+    CSR_DSCRATCH0      = 12'h7b2, // optional
+    CSR_DSCRATCH1      = 12'h7b3, // optional
+    // Counters and Timers (User Mode - R/O Shadows)
+    CSR_CYCLE          = 12'hC00,
+    CSR_TIME           = 12'hC01,
+    CSR_INSTRET        = 12'hC02,
+    // Performance counters (User Mode - R/O Shadows)
+    CSR_L1_ICACHE_MISS = 12'hC03,  // L1 Instr Cache Miss
+    CSR_L1_DCACHE_MISS = 12'hC04,  // L1 Data Cache Miss
+    CSR_ITLB_MISS      = 12'hC05,  // ITLB Miss
+    CSR_DTLB_MISS      = 12'hC06,  // DTLB Miss
+    CSR_LOAD           = 12'hC07,  // Loads
+    CSR_STORE          = 12'hC08,  // Stores
+    CSR_EXCEPTION      = 12'hC09,  // Taken exceptions
+    CSR_EXCEPTION_RET  = 12'hC0A,  // Exception return
+    CSR_BRANCH_JUMP    = 12'hC0B,  // Software change of PC
+    CSR_CALL           = 12'hC0C,  // Procedure call
+    CSR_RET            = 12'hC0D,  // Procedure Return
+    CSR_MIS_PREDICT    = 12'hC0E,  // Branch mis-predicted
+    CSR_SB_FULL        = 12'hC0F,  // Scoreboard full
+    CSR_IF_EMPTY       = 12'hC10,  // instruction fetch queue empty
+    CSR_HPM_COUNTER_17 = 12'hC11,  // reserved
+    CSR_HPM_COUNTER_18 = 12'hC12,  // reserved
+    CSR_HPM_COUNTER_19 = 12'hC13,  // reserved
+    CSR_HPM_COUNTER_20 = 12'hC14,  // reserved
+    CSR_HPM_COUNTER_21 = 12'hC15,  // reserved
+    CSR_HPM_COUNTER_22 = 12'hC16,  // reserved
+    CSR_HPM_COUNTER_23 = 12'hC17,  // reserved
+    CSR_HPM_COUNTER_24 = 12'hC18,  // reserved
+    CSR_HPM_COUNTER_25 = 12'hC19,  // reserved
+    CSR_HPM_COUNTER_26 = 12'hC1A,  // reserved
+    CSR_HPM_COUNTER_27 = 12'hC1B,  // reserved
+    CSR_HPM_COUNTER_28 = 12'hC1C,  // reserved
+    CSR_HPM_COUNTER_29 = 12'hC1D,  // reserved
+    CSR_HPM_COUNTER_30 = 12'hC1E,  // reserved
+    CSR_HPM_COUNTER_31 = 12'hC1F,  // reserved
+
+    CSR_MEM_MAP_0   = 12'h7C0,  // MEM space
+    CSR_MEM_MAP_1   = 12'h7C1,  // MEM space
+    CSR_MEM_MAP_2   = 12'h7C2,  // MEM space
+    CSR_MEM_MAP_3   = 12'h7C3,  // MEM space
+    CSR_MEM_MAP_4   = 12'h7C4,  // MEM space
+    CSR_MEM_MAP_5   = 12'h7C5,  // MEM space
+    CSR_MEM_MAP_6   = 12'h7C6,  // MEM space
+    CSR_MEM_MAP_7   = 12'h7C7,  // MEM space
+    CSR_MEM_MAP_8   = 12'h7C8,  // MEM space
+    CSR_MEM_MAP_9   = 12'h7C9,  // MEM space
+    CSR_MEM_MAP_10  = 12'h7CA,  // MEM space
+    CSR_MEM_MAP_11  = 12'h7CB,  // MEM space
+    CSR_MEM_MAP_12  = 12'h7CC,  // MEM space
+    CSR_MEM_MAP_13  = 12'h7CD,  // MEM space
+    CSR_MEM_MAP_14  = 12'h7CE,  // MEM space
+    CSR_MEM_MAP_15  = 12'h7CF,  // MEM space
+
+    CSR_IO_MAP_0    = 12'h7D0,  // IO space
+    CSR_IO_MAP_1    = 12'h7D1,  // IO space
+    CSR_IO_MAP_2    = 12'h7D2,  // IO space
+    CSR_IO_MAP_3    = 12'h7D3,  // IO space
+    CSR_IO_MAP_4    = 12'h7D4,  // IO space
+    CSR_IO_MAP_5    = 12'h7D5,  // IO space
+    CSR_IO_MAP_6    = 12'h7D6,  // IO space
+    CSR_IO_MAP_7    = 12'h7D7,  // IO space
+    CSR_IO_MAP_8    = 12'h7D8,  // IO space
+    CSR_IO_MAP_9    = 12'h7D9,  // IO space
+    CSR_IO_MAP_10   = 12'h7DA,  // IO space
+    CSR_IO_MAP_11   = 12'h7DB,  // IO space
+    CSR_IO_MAP_12   = 12'h7DC,  // IO space
+    CSR_IO_MAP_13   = 12'h7DD,  // IO space
+    CSR_IO_MAP_14   = 12'h7DE,  // IO space
+    CSR_IO_MAP_15   = 12'h7DF,  // IO space
+
+    CSR_IRQ_MAP_0   = 12'h7E0,  // IRQ space
+    CSR_IRQ_MAP_1   = 12'h7E1,  // IRQ space
+    CSR_IRQ_MAP_2   = 12'h7E2,  // IRQ space
+    CSR_IRQ_MAP_3   = 12'h7E3,  // IRQ space
+    CSR_IRQ_MAP_4   = 12'h7E4,  // IRQ space
+    CSR_IRQ_MAP_5   = 12'h7E5,  // IRQ space
+    CSR_IRQ_MAP_6   = 12'h7E6,  // IRQ space
+    CSR_IRQ_MAP_7   = 12'h7E7,  // IRQ space
+    CSR_IRQ_MAP_8   = 12'h7E8,  // IRQ space
+    CSR_IRQ_MAP_9   = 12'h7E9,  // IRQ space
+    CSR_IRQ_MAP_10  = 12'h7EA,  // IRQ space
+    CSR_IRQ_MAP_11  = 12'h7EB,  // IRQ space
+    CSR_IRQ_MAP_12  = 12'h7EC,  // IRQ space
+    CSR_IRQ_MAP_13  = 12'h7ED,  // IRQ space
+    CSR_IRQ_MAP_14  = 12'h7EE,  // IRQ space
+    CSR_IRQ_MAP_15  = 12'h7EF,  // IRQ space
+
+    CSR_PMPCFG_0    = 12'h3A0,  //Physical memory protection config
+    CSR_PMPCFG_1    = 12'h3A1,  //Physical memory protection config
+    CSR_PMPCFG_2    = 12'h3A2,  //Physical memory protection config
+    CSR_PMPCFG_3    = 12'h3A3,  //Physical memory protection config
+
+    CSR_PMPADDR_0   = 12'h3B0,  //Physical memory protection addr
+    CSR_PMPADDR_1   = 12'h3B1,  //Physical memory protection addr
+    CSR_PMPADDR_2   = 12'h3B2,  //Physical memory protection addr
+    CSR_PMPADDR_3   = 12'h3B3,  //Physical memory protection addr
+    CSR_PMPADDR_4   = 12'h3B4,  //Physical memory protection addr
+    CSR_PMPADDR_5   = 12'h3B5,  //Physical memory protection addr
+    CSR_PMPADDR_6   = 12'h3B6,  //Physical memory protection addr
+    CSR_PMPADDR_7   = 12'h3B7,  //Physical memory protection addr
+    CSR_PMPADDR_8   = 12'h3B8,  //Physical memory protection addr
+    CSR_PMPADDR_9   = 12'h3B9,  //Physical memory protection addr
+    CSR_PMPADDR_10  = 12'h3BA,  //Physical memory protection addr
+    CSR_PMPADDR_11  = 12'h3BB,  //Physical memory protection addr
+    CSR_PMPADDR_12  = 12'h3BC,  //Physical memory protection addr
+    CSR_PMPADDR_13  = 12'h3BD,  //Physical memory protection addr
+    CSR_PMPADDR_14  = 12'h3BE,  //Physical memory protection addr
+    CSR_PMPADDR_15  = 12'h3BF,  //Physical memory protection addr
+
+    TO_HOST         = 12'h9F0,  // to host csr used for simulation
+    FROM_HOST       = 12'h9F1,  // from host csr used for simulation
+
+    CSR_VL          = 12'hC20,  // Vector extension CSR
+    CSR_VTYPE       = 12'hC21,  // Vector extension CSR
+
+    CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
+    CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
+    CSR_SPI_CONFIG = 12'h7F2  // SPI Configuration CSR
+    
+} csr_reg_t;
+
+localparam logic [63:0] SSTATUS_UIE    = 64'h00000001;
+localparam logic [63:0] SSTATUS_SIE    = 64'h00000002;
+localparam logic [63:0] SSTATUS_SPIE   = 64'h00000020;
+localparam logic [63:0] SSTATUS_SPP    = 64'h00000100;
+localparam logic [63:0] SSTATUS_FS     = 64'h00006000;
+localparam logic [63:0] SSTATUS_XS     = 64'h00018000;
+localparam logic [63:0] SSTATUS_SUM    = 64'h00040000;
+localparam logic [63:0] SSTATUS_MXR    = 64'h00080000;
+localparam logic [63:0] SSTATUS_UPIE   = 64'h00000010;
+localparam logic [63:0] SSTATUS_UXL    = 64'h0000000300000000;
+localparam logic [63:0] SSTATUS64_SD   = 64'h8000000000000000;
+localparam logic [63:0] SSTATUS32_SD   = 64'h80000000;
+localparam logic [63:0] SSTATUS64_WPRI = 64'h7ffffffdfff398cc;
+
+localparam logic [63:0] MSTATUS_UIE    = 64'h00000001;
+localparam logic [63:0] MSTATUS_SIE    = 64'h00000002;
+localparam logic [63:0] MSTATUS_HIE    = 64'h00000004;
+localparam logic [63:0] MSTATUS_MIE    = 64'h00000008;
+localparam logic [63:0] MSTATUS_UPIE   = 64'h00000010;
+localparam logic [63:0] MSTATUS_SPIE   = 64'h00000020;
+localparam logic [63:0] MSTATUS_HPIE   = 64'h00000040;
+localparam logic [63:0] MSTATUS_MPIE   = 64'h00000080;
+localparam logic [63:0] MSTATUS_SPP    = 64'h00000100;
+localparam logic [63:0] MSTATUS_HPP    = 64'h00000600;
+localparam logic [63:0] MSTATUS_MPP    = 64'h00001800;
+localparam logic [63:0] MSTATUS_FS     = 64'h00006000;
+localparam logic [63:0] MSTATUS_XS     = 64'h00018000;
+localparam logic [63:0] MSTATUS_MPRV   = 64'h00020000;
+localparam logic [63:0] MSTATUS_SUM    = 64'h00040000;
+localparam logic [63:0] MSTATUS_MXR    = 64'h00080000;
+localparam logic [63:0] MSTATUS_TVM    = 64'h00100000;
+localparam logic [63:0] MSTATUS_TW     = 64'h00200000;
+localparam logic [63:0] MSTATUS_TSR    = 64'h00400000;
+localparam logic [63:0] MSTATUS32_SD   = 64'h80000000;
+localparam logic [64:0] MSTATUS32_WPRI = 64'h7f800044;
+localparam logic [63:0] MSTATUS_UXL    = 64'h0000000300000000;
+localparam logic [63:0] MSTATUS_SXL    = 64'h0000000C00000000;
+localparam logic [63:0] MSTATUS64_SD   = 64'h8000000000000000;
+localparam logic [63:0] MSTATUS64_WPRI = 64'h7ffffff5ff800044;
+
+typedef enum logic [2:0] {
+    CSRRW  = 3'h1,
+    CSRRS  = 3'h2,
+    CSRRC  = 3'h3,
+    CSRRWI = 3'h5,
+    CSRRSI = 3'h6,
+    CSRRCI = 3'h7
+} csr_op_t;
+
+// decoded CSR address
+typedef struct packed {
+    logic [1:0]  rw;
+    priv_lvl_t   priv_lvl;
+    logic  [7:0] address;
+} csr_addr_t;
+
+typedef union packed {
+    csr_reg_t   address;
+    csr_addr_t  csr_decode;
+} csr_t;
+
+// Floating-Point control and status register (32-bit!)
+typedef struct packed {
+    logic [31:15] reserved;  // reserved for L extension, return 0 otherwise
+    logic [6:0]   fprec;     // div/sqrt precision control
+    logic [2:0]   frm;       // float rounding mode
+    logic [4:0]   fflags;    // float exception flags
+} fcsr_t;
+
+// -----
+// Debug
+// -----
+typedef struct packed {
+    logic [31:28]     xdebugver;
+    logic [27:16]     zero2;
+    logic             ebreakm;
+    logic             zero1;
+    logic             ebreaks;
+    logic             ebreaku;
+    logic             stepie;
+    logic             stopcount;
+    logic             stoptime;
+    logic [8:6]       cause;
+    logic             zero0;
+    logic             mprven;
+    logic             nmip;
+    logic             step;
+    priv_lvl_t        prv;
+} dcsr_t;
 
 endpackage

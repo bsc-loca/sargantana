@@ -40,25 +40,6 @@ module top_drac
     input			IO_REG_PREAD,
 
 //------------------------------------------------------------------------------------
-// CSR INPUT INTERFACE
-//------------------------------------------------------------------------------------
-    input bus64_t               CSR_RW_RDATA,
-    input logic                 CSR_CSR_STALL,
-    input logic                 CSR_XCPT,
-    input [63:0]                CSR_XCPT_CAUSE,
-    input [63:0]                CSR_TVAL,
-    input logic                 CSR_ERET,
-    input addr_t                CSR_EVEC,
-    input logic                 CSR_INTERRUPT,
-    input bus64_t               CSR_INTERRUPT_CAUSE,
-    input logic                 io_csr_csr_replay,
-    input [1:0]                 csr_priv_lvl_i,
-    input [39:0]                csr_vpu_data_i,
-    input logic [2:0]           csr_frm_i,
-    input logic [1:0]           csr_fs_i,  
-    input logic                 en_ld_st_translation_i,
-
-//------------------------------------------------------------------------------------
 // I-CANCHE INPUT INTERFACE
 //------------------------------------------------------------------------------------
     
@@ -90,19 +71,6 @@ module top_drac
     input logic                 DMEM_XCPT_PF_ST,
     input logic                 DMEM_XCPT_PF_LD,
     input logic                 DMEM_ORDERED, // TODO: remove if we dont used
-
-//-----------------------------------------------------------------------------------
-// CSR OUTPUT INTERFACE
-//-----------------------------------------------------------------------------------
-    output logic   [11:0]       CSR_RW_ADDR,
-    output logic   [2:0]        CSR_RW_CMD,
-    output bus64_t              CSR_RW_WDATA,
-    output logic                CSR_EXCEPTION,
-    output logic  [1:0]         CSR_RETIRE,
-    output bus64_t              CSR_CAUSE,
-    output addr_t               CSR_PC,
-    output logic [4:0]          csr_fp_status_o,
-    output logic                csr_fp_status_valid_o,
 
 //-----------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
@@ -191,8 +159,32 @@ module top_drac
     output logic [23:0]         brom_req_address_o  ,
     output logic                brom_req_valid_o    ,
    
-    input logic                 csr_spi_config_i, 
-    input logic                 en_translation_i  
+    input logic                 csr_spi_config_i,
+
+//-----------------------------------------------------------------------------
+// INTERRUPTS
+//-----------------------------------------------------------------------------
+    input logic                 time_irq_i, // timer interrupt
+    input logic                 irq_i,      // external interrupt in
+    input  logic [63:0]         time_i,     // time passed since the core is reset
+
+//-----------------------------------------------------------------------------
+// PCR
+//-----------------------------------------------------------------------------
+    //PCR req inputs
+    input  logic                pcr_req_ready_i,    // ready bit of the pcr
+
+    //PCR resp inputs
+    input  logic                pcr_resp_valid_i,   // ready bit of the pcr
+    input  logic [63:0]         pcr_resp_data_i,    // read data from performance counter module
+    input  logic                pcr_resp_core_id_i, // core id of the tile that the date is sended
+
+    //PCR outputs request
+    output logic                pcr_req_valid_o,    // valid bit to make a pcr request
+    output logic  [11:0]        pcr_req_addr_o,     // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
+    output logic  [63:0]        pcr_req_data_o,     // write data to performance counter module
+    output logic  [2:0]         pcr_req_we_o,       // Cmd of the petition
+    output logic                pcr_req_core_id_o   // core id of the tile
 
 );
 
@@ -210,6 +202,12 @@ req_cpu_dcache_t req_datapath_dcache_interface;
 
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
+logic [1:0] csr_priv_lvl;
+logic [2:0] fcsr_rm;
+logic [1:0] fcsr_fs;
+logic en_ld_st_translation;
+logic en_translation;
+logic [39:0] vpu_csr;
 
 addr_t dcache_addr;
 
@@ -265,35 +263,9 @@ always @(posedge CLK, negedge RST) begin
 end
 
 assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
-
-assign resp_csr_interface_datapath.csr_rw_rdata = CSR_RW_RDATA;
-// NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
-// that the CSR are not blocked. In the implementation, since we only have one 
-// inorder core any access to the CSR/PCR will be available. In multicore
-// scenarios or higher performance cores you may need csr_replay.
-assign resp_csr_interface_datapath.csr_replay = 1'b0; 
-assign resp_csr_interface_datapath.csr_stall = CSR_CSR_STALL;
-assign resp_csr_interface_datapath.csr_exception = CSR_XCPT;
-assign resp_csr_interface_datapath.csr_exception_cause = CSR_XCPT_CAUSE;
-assign resp_csr_interface_datapath.csr_tval = CSR_TVAL;
-assign resp_csr_interface_datapath.csr_eret = CSR_ERET;
-assign resp_csr_interface_datapath.csr_evec = {{25{CSR_EVEC[39]}},CSR_EVEC[38:0]};
-assign resp_csr_interface_datapath.csr_interrupt = CSR_INTERRUPT;
-assign resp_csr_interface_datapath.csr_interrupt_cause = CSR_INTERRUPT_CAUSE;
  
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
-
-assign CSR_RW_ADDR      = req_datapath_csr_interface.csr_rw_addr;
-assign CSR_RW_CMD       = req_datapath_csr_interface.csr_rw_cmd;
-assign CSR_RW_WDATA     = req_datapath_csr_interface.csr_rw_data;
-assign CSR_EXCEPTION    = req_datapath_csr_interface.csr_exception;
-assign CSR_RETIRE       = req_datapath_csr_interface.csr_retire;
-assign CSR_CAUSE        = req_datapath_csr_interface.csr_xcpt_cause;
-assign CSR_PC           = req_datapath_csr_interface.csr_pc[39:0];
-assign csr_fp_status_o  = req_datapath_csr_interface.fp_status;
-assign csr_fp_status_valid_o  = req_datapath_csr_interface.csr_retire;
-
 
 //L2 Network conection - response
 assign ifill_resp.data  = io_mem_grant_bits_data             ;  
@@ -344,7 +316,7 @@ assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
 assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
 
 sew_t sew;
-assign sew = sew_t'(csr_vpu_data_i[37:36]);
+assign sew = sew_t'(vpu_csr[37:36]);
 
 datapath datapath_inst(
     .clk_i(CLK),
@@ -356,7 +328,7 @@ datapath datapath_inst(
     .resp_dcache_cpu_i(resp_dcache_interface_datapath), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .sew_i(sew),//.sew_i(CSR_SEW),
-    .en_translation_i( en_translation_i ), 
+    .en_translation_i( en_translation ), 
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
     // Output datapath
@@ -364,10 +336,10 @@ datapath datapath_inst(
     .req_cpu_icache_o(req_datapath_icache_interface),
     .req_cpu_csr_o(req_datapath_csr_interface),
     .debug_o(debug_out),
-    .csr_priv_lvl_i(csr_priv_lvl_i),
-    .csr_frm_i(csr_frm_i),
-    .csr_fs_i(csr_fs_i),
-    .en_ld_st_translation_i(en_ld_st_translation_i),
+    .csr_priv_lvl_i(csr_priv_lvl),
+    .csr_frm_i(fcsr_rm),
+    .csr_fs_i(fcsr_fs),
+    .en_ld_st_translation_i(en_ld_st_translation),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -382,7 +354,7 @@ icache_interface icache_interface_inst(
     .icache_resp_valid_i        ( icache_resp.valid ),
     .icache_req_ready_i         ( icache_resp.ready ), 
     .tlb_resp_xcp_if_i          ( icache_resp.xcpt  ),
-    .en_translation_i           ( en_translation_i ), 
+    .en_translation_i           ( en_translation ), 
     .csr_spi_config_i           ( csr_spi_config_i  ), 
    
     // Outputs ICache
@@ -463,6 +435,72 @@ sargantana_top_icache icache (
     .icache_ifill_req_o ( ifill_req     ) ,  //- To upper levels. 
     .imiss_time_pmu_o    ( imiss_time_pmu ) ,
     .imiss_kill_pmu_o    ( imiss_kill_pmu )
+);
+
+// NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
+// that the CSR are not blocked. In the implementation, since we only have one 
+// inorder core any access to the CSR/PCR will be available. In multicore
+// scenarios or higher performance cores you may need csr_replay.
+
+bus64_t csr_evec;
+assign resp_csr_interface_datapath.csr_evec = {{25{csr_evec[39]}},csr_evec[38:0]};
+
+logic tlb_flush; //TODO
+
+csr_bsc csr_inst (
+    .clk_i(CLK),
+    .rstn_i(RST),
+    .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                  //read and write address form the core
+    .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                   //specific operation to execute from the core 
+    .w_data_core_i(req_datapath_csr_interface.csr_rw_data),              //write data from the core
+    .r_data_core_o(resp_csr_interface_datapath.csr_rw_rdata),              // read data to the core, address specified with the rw_addr_i
+
+    .ex_i(req_datapath_csr_interface.csr_exception),                       // exception produced in the core
+    .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                 //cause of the exception
+    .pc_i(req_datapath_csr_interface.csr_pc[39:0]),                       //pc were the exception is produced
+
+    .retire_i(req_datapath_csr_interface.csr_retire),                   // shows if a instruction is retired from the core.
+    .time_irq_i(time_irq_i),                 // timer interrupt
+    .irq_i(irq_i),                      // external interrupt in
+    .interrupt_o(resp_csr_interface_datapath.csr_interrupt),                // Inerruption wire to the core
+    .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),          // Interruption cause
+
+    .time_i(time_i),                    // time passed since the core is reset
+
+    .pcr_req_ready_i(pcr_req_ready_i),            // ready bit of the pcr
+    .pcr_resp_valid_i(pcr_resp_valid_i),           // ready bit of the pcr
+    .pcr_resp_data_i(pcr_resp_data_i),            // read data from performance counter module
+    .pcr_resp_core_id_i(pcr_resp_core_id_i),         // core id of the tile that the date is sended
+    .pcr_req_valid_o(pcr_req_valid_o),            // valid bit to make a pcr request
+    .pcr_req_addr_o(pcr_req_addr_o),             // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
+    .pcr_req_data_o(pcr_req_data_o),             // write data to performance counter module
+    .pcr_req_we_o(pcr_req_we_o),               // Cmd of the petition
+    .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
+
+    .fcsr_flags_valid_i(req_datapath_csr_interface.csr_retire),
+    .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
+    .fcsr_rm_o(fcsr_rm),
+    .fcsr_fs_o(fcsr_fs),
+
+    .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
+    .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled
+    .csr_xcpt_o(resp_csr_interface_datapath.csr_exception),                 // Exeption pproduced by the csr   
+    .csr_xcpt_cause_o(resp_csr_interface_datapath.csr_exception_cause),           // Exception cause
+    .csr_tval_o(resp_csr_interface_datapath.csr_tval),                 // Value written to the tval registers
+    .eret_o(resp_csr_interface_datapath.csr_eret),
+
+    //.status_o(),                   //actual mstatus of the core
+    .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
+    //.ld_st_priv_lvl_o(),
+    .en_ld_st_translation_o(en_ld_st_translation),
+    .en_translation_o(en_translation),
+
+    .satp_ppn_o(ptw_base_ptr),                 // Page table base pointer for the PTW
+
+    .evec_o(csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
+
+    .flush_o(tlb_flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .vpu_csr_o(vpu_csr)
 );
 
 //PMU  
