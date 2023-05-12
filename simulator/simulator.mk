@@ -1,0 +1,46 @@
+VERILATOR = verilator
+SIM_DIR = $(PROJECT_DIR)/simulator
+
+include $(SIM_DIR)/bootrom/bootrom.mk
+
+TOP_MODULE = veri_top
+
+SIMULATOR = $(PROJECT_DIR)/sim
+
+FLAGS ?=
+
+VERI_FLAGS = \
+	$(foreach flag, $(FLAGS), -D$(flag)) \
+	-DVERILATOR_GCC \
+	+define+VERILATOR_TORTURE_TESTS \
+	+incdir+$(PROJECT_DIR)/rtl \
+	--top-module $(TOP_MODULE) \
+	--unroll-count 256 \
+	--trace \
+	--trace-max-array 512 \
+	--trace-max-width 256 \
+	-Wno-lint -Wno-style -Wno-STMTDLY -Wno-fatal \
+	-CFLAGS "-std=c++11" \
+	-CFLAGS "$(foreach CXX,$(SOC_MODELS_CXX),-I$(CXX)) " \
+	-LDFLAGS "-pthread" \
+	--exe \
+	--trace-structs \
+	--trace-params \
+	--trace-underscore \
+	--assert \
+	--Mdir $(SIM_DIR)/build \
+	--savable
+
+VERI_OPTI_FLAGS = -O2 -CFLAGS "-O2"
+
+SIM_CPP_SRCS = $(wildcard $(SIM_DIR)/models/cxx/*.cpp)
+SIM_VERILOG_SRCS = $(shell cat $(FILELIST)) $(wildcard $(SIM_DIR)/models/hdl/*.sv) $(SIM_DIR)/veri_top.sv
+ 
+$(SIMULATOR): $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) bootrom.hex
+		$(VERILATOR) --cc $(VERI_FLAGS) $(VERI_OPTI_FLAGS) $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) -o $(SIMULATOR)
+		$(MAKE) -C $(SIM_DIR)/build -f V$(TOP_MODULE).mk $(SIMULATOR)
+
+clean-simulator:
+		rm -rf $(SIM_DIR)/build $(SIMULATOR)
+
+clean:: clean-simulator

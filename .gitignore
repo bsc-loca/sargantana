@@ -12,3 +12,9 @@ doc/specifications/*/*.toc
 doc/specifications/*/*.out
 doc/specifications/*/*synctex.gz
 *.vcd
+.vscode/
+*.cache/
+.ctags.d/
+sim
+bootrom.hex
+signature.txt

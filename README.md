@@ -121,3 +121,9 @@ To run both cores along the SoC you need to clone the lagarto-lowrisc repository
 Checkout to the branch ```feature/drac-inorder```
 Initialize and update git submodules.
 Run make ```make vsim/DefaultConfig-sim```
+
+### Verilator and GCC compatibility table
+
+| Verilator | GCC    |
+|-----------|--------|
+| 5.010     | 13.1.1 |
