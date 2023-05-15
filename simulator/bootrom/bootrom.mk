@@ -6,7 +6,7 @@ RISCV_OBJCOPY ?= riscv64-unknown-elf-objcopy
 $(BOOTROM_DIR)/build:
 	mkdir -p $@
 
-$(BOOTROM_DIR)/build/%.dtb: $(BOOTROM_DIR)/%.dts
+$(BOOTROM_DIR)/build/%.dtb: $(BOOTROM_DIR)/%.dts $(BOOTROM_DIR)/build
 	dtc -I dts $< -O dtb -o $@
 
 $(BOOTROM_DIR)/build/bootrom.o: $(BOOTROM_DIR)/bootrom.S $(BOOTROM_DIR)/build/ariane.dtb $(BOOTROM_DIR)/build
