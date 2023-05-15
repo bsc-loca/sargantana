@@ -18,7 +18,7 @@ print_padded() {
 failed_tests=()
 passed_tests=0
 
-for test in $ISA_DIR/rv64u{f,i,d,m}-p-*; do
+for test in $ISA_DIR/rv64u{f,i,d,m,a}-p-*; do
     test_name=$(basename $test)
 
     if [[ "$test_name" != *dump ]]; then

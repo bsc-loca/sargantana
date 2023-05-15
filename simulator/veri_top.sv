@@ -136,7 +136,7 @@ module veri_top
         .addr_i(dmem_req_addr_o),
         .valid_i(dmem_req_valid_o),
         .tag_i(dmem_req_tag_o),
-        .wr_ena_i(dmem_req_cmd_o == 5'b00001),
+        .cmd_i(dmem_req_cmd_o),
         .wr_data_i(dmem_req_data_o),
         .word_size_i(dmem_op_type_o),
         .line_o(dmem_resp_data_i),

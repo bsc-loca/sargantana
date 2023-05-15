@@ -29,7 +29,7 @@ module perfect_dmem #(
     input addr_t                    addr_i,
     input logic                     valid_i,
     input logic [7:0]               tag_i,
-    input logic                     wr_ena_i,
+    input logic [4:0]               cmd_i,
     input bus_simd_t                wr_data_i,
     input logic [3:0]               word_size_i,
     output logic [LINE_SIZE-1:0]    line_o,
@@ -56,6 +56,7 @@ module perfect_dmem #(
     logic [3:0] word_size_d, word_size_q;
     logic valid_d, valid_q;
     logic tag_d, tag_q;
+    logic [4:0] cmd_d, cmd_q;
 
     logic [7:0]  mem_byte;
     logic [15:0] mem_half;
@@ -66,6 +67,17 @@ module perfect_dmem #(
     assign mem_half  = mem_out[{addr_i[3:1], 4'b0} +: 16];
     assign mem_word  = mem_out[{addr_i[3:2], 5'b0} +: 32];
     assign mem_dword = mem_out[{addr_i[3], 6'b0}   +: 64];
+
+    logic wr_ena;
+
+    assign wr_ena = cmd_i != 5'b00000 && cmd_i != 5'b00110;
+
+    logic [63:0] amo_mem_val, amo_core_val;
+    addr_t lr_addr_d, lr_addr_q;
+    logic reserved_d, reserved_q;
+
+    assign amo_mem_val = word_size_q == 3 ? mem_dword : {{32{mem_word[31]}}, mem_word};
+    assign amo_core_val = word_size_q == 3 ? wr_data_i[63:0] : {{32{wr_data_i[31]}}, wr_data_i[31:0]};
 
     perfect_memory_state_t state, next_state;
 
@@ -84,6 +96,9 @@ module perfect_dmem #(
             addr_int_q  <= 0;
             word_size_q <= 0;
             state       <= IDLE;
+            cmd_q       <= 0;
+            reserved_q  <= 0;
+            lr_addr_q   <= 0;
         end else begin
             counter     <= next_counter;
             line_q      <= line_d;
@@ -93,6 +108,9 @@ module perfect_dmem #(
             addr_int_q  <= addr_int_d;
             word_size_q <= word_size_d;
             state       <= next_state;
+            cmd_q       <= cmd_d;
+            reserved_q  <= reserved_d;
+            lr_addr_q   <= lr_addr_d;
         end
     end 
 
@@ -118,7 +136,8 @@ module perfect_dmem #(
                     addr_d       = addr_i;
                     addr_int_d   = addr_int;
                     word_size_d  = word_size_i;
-                    next_state   = wr_ena_i ? STORE_WRITE : WAIT;
+                    next_state   = wr_ena ? STORE_WRITE : WAIT;
+                    cmd_d = cmd_i;
                 end else begin
                     next_counter = 0;
                     valid_d      = 0'b0;
@@ -127,22 +146,33 @@ module perfect_dmem #(
                     addr_int_d   = 0;
                     word_size_d  = 0;
                     next_state   = IDLE;
+                    cmd_d = 0;
                 end
 
                 //Hold line output
                 if (ready_o && valid_i) begin
-                    memory_read({addr_i[31:4], 4'b0}, mem_out);
-                    case (word_size_i)
-                        4'b0000: line_d = {{120{mem_byte[7]}},mem_byte};
-                        4'b0001: line_d = {{112{mem_half[15]}},mem_half};
-                        4'b0010: line_d = {{96{mem_word[31]}},mem_word};
-                        4'b0011: line_d = {{64{mem_dword[63]}},mem_dword};
-                        4'b0100: line_d = {120'b0,mem_byte};
-                        4'b0101: line_d = {112'b0,mem_half};
-                        4'b0110: line_d = {96'b0,mem_word};
-                        4'b0111: line_d = {64'b0,mem_dword};
-                        4'b1000: line_d = mem_out;
-                    endcase
+                    if (cmd_i == 5'b00111) begin // Store Conditional
+                        line_d = reserved_q == 1'b1 && addr_i == lr_addr_q ? 1'b0 : 1'b1;
+                        reserved_d = 1'b0;
+                        lr_addr_d = 0;
+                    end else begin
+                        memory_read({addr_i[31:4], 4'b0}, mem_out);
+                        case (word_size_i)
+                            4'b0000: line_d = {{120{mem_byte[7]}},mem_byte};
+                            4'b0001: line_d = {{112{mem_half[15]}},mem_half};
+                            4'b0010: line_d = {{96{mem_word[31]}},mem_word};
+                            4'b0011: line_d = {{64{mem_dword[63]}},mem_dword};
+                            4'b0100: line_d = {120'b0,mem_byte};
+                            4'b0101: line_d = {112'b0,mem_half};
+                            4'b0110: line_d = {96'b0,mem_word};
+                            4'b0111: line_d = {64'b0,mem_dword};
+                            4'b1000: line_d = mem_out;
+                        endcase
+                        if (cmd_i == 5'b00110) begin // Load reserve
+                            reserved_d = 1'b1;
+                            lr_addr_d = addr_i;
+                        end
+                    end
                 end else begin
                     line_d = line_q;
                 end
@@ -183,7 +213,20 @@ module perfect_dmem #(
     // Here we could add a write in order to also check the saving of data
     always_ff @(posedge clk_i, negedge rstn_i) begin : proc_load_memory
         if (rstn_i && state == STORE_WRITE) begin
-            memory_write(addr_q, word_size_q, wr_data_i);
+            case(cmd_q)
+                5'b00111: if (line_q == 0) memory_write(addr_q, word_size_q, amo_core_val); // sc
+                5'b00100: memory_write(addr_q, word_size_q, amo_core_val); // amoswap
+                5'b01000: memory_write(addr_q, word_size_q, amo_mem_val + amo_core_val); // amoadd
+                5'b01001: memory_write(addr_q, word_size_q, amo_mem_val ^ amo_core_val); // amoxor
+                5'b01011: memory_write(addr_q, word_size_q, amo_mem_val & amo_core_val); // amoand
+                5'b01010: memory_write(addr_q, word_size_q, amo_mem_val | amo_core_val); // amoor
+                5'b01100: memory_write(addr_q, word_size_q, $signed(amo_mem_val) < $signed(amo_core_val) ? amo_mem_val : amo_core_val); // amomin
+                5'b01101: memory_write(addr_q, word_size_q, $signed(amo_mem_val) > $signed(amo_core_val) ? amo_mem_val : amo_core_val); // amomax
+                5'b01110: memory_write(addr_q, word_size_q, amo_mem_val < amo_core_val ? amo_mem_val : amo_core_val); // amominu
+                5'b01111: memory_write(addr_q, word_size_q, amo_mem_val > amo_core_val ? amo_mem_val : amo_core_val); // amomaxu
+                5'b00001: memory_write(addr_q, word_size_q, wr_data_i);
+                default: ;
+            endcase
         end
     end
 endmodule
