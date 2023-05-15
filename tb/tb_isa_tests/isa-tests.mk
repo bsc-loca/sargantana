@@ -7,9 +7,10 @@ RISCV_TESTS_DIR = $(PROJECT_DIR)/drac-bench
 $(TB_ISA_TEST_DIR)/build/Makefile: 
 		mkdir -p $(TB_ISA_TEST_DIR)/build/
 		cd $(TB_ISA_TEST_DIR)/build/ && $(RISCV_TESTS_DIR)/configure
-		$(MAKE) -C $(TB_ISA_TEST_DIR)/build isa
 
+.PHONY: build-isa-tests
 build-isa-tests: $(TB_ISA_TEST_DIR)/build/Makefile
+		$(MAKE) -C $(TB_ISA_TEST_DIR)/build isa
 
 # *** ISA Test Simulation ***
 
