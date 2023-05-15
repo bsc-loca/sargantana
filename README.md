@@ -107,6 +107,8 @@ Install Verilator using your favourite package manager (or compile it yourself, 
 | Verilator | GCC    |
 |-----------|--------|
 | 5.010     | 13.1.1 |
+| 4.224     | 13.1.1 |
+| 4.224     | 7.5.0  |
 | 4.102     | 9.4.0  |
 
 If you use a verilator and GCC version combination that works and is not in the table above, please update it.
