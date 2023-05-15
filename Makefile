@@ -7,6 +7,9 @@ include simulator/simulator.mk
 
 sim: $(SIMULATOR)
 
+# *** ISA Tests ***
+include tb/tb_isa_tests/isa-tests.mk
+
 # *** CI rules ***
 lint:
 	bash ./scripts/veri_lint.sh

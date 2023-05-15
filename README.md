@@ -35,6 +35,7 @@ For verification it is used:
 * SpyGlass for linting
 * Verific as the front-end of yosys
 * Yosys is a synthesize-map-route open-source tool
+* Verilator is "the fastest Verilog/SystemVerilog simulator", used for building a simulation model of the core
 
 ### Set Up
 
@@ -99,6 +100,16 @@ After that, you must copy your public key in the drac server:
 ssh-copy-id -i ~/.ssh/mykey.pub drac@192.168.10.38
 ```
 
+**Verilator**
+
+Install Verilator using your favourite package manager (or compile it yourself, you can find it in [github](https://github.com/verilator/verilator)). Make sure you have compatible versions of verilator and GCC as seen in the following table:
+
+| Verilator | GCC    |
+|-----------|--------|
+| 5.010     | 13.1.1 |
+
+If you use a verilator and GCC version combination that works and is not in the table above, please update it.
+
 ### Recommendations
 
 * Warnings should be zero or accurately explained why is happening
@@ -122,8 +133,8 @@ Checkout to the branch ```feature/drac-inorder```
 Initialize and update git submodules.
 Run make ```make vsim/DefaultConfig-sim```
 
-### Verilator and GCC compatibility table
+### Running verilator simulations
 
-| Verilator | GCC    |
-|-----------|--------|
-| 5.010     | 13.1.1 |
+To build the verilog simulator, run `make $(nproc) sim`. This will create an executable in the root folder named `sim`. To run a program, simply run `./sim +load=<path/to/file>`. To generate the waveforms for a simulation, run with `+vcd`.
+
+The isa tests can be run using `make run-isa-tests`. This command should take care of both the compilation of the simulation and the isa tests.
