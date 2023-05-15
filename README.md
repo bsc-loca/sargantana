@@ -36,6 +36,7 @@ For verification it is used:
 * Verific as the front-end of yosys
 * Yosys is a synthesize-map-route open-source tool
 * Verilator is "the fastest Verilog/SystemVerilog simulator", used for building a simulation model of the core
+* `riscv64-unknown-elf-gcc` for compiling the RISC-V ISA tests and benchmarks
 
 ### Set Up
 
@@ -104,14 +105,28 @@ ssh-copy-id -i ~/.ssh/mykey.pub drac@192.168.10.38
 
 Install Verilator using your favourite package manager (or compile it yourself, you can find it in [github](https://github.com/verilator/verilator)). Make sure you have compatible versions of verilator and GCC as seen in the following table:
 
-| Verilator | GCC    |
-|-----------|--------|
-| 5.010     | 13.1.1 |
-| 4.224     | 13.1.1 |
-| 4.224     | 7.5.0  |
-| 4.102     | 9.4.0  |
+| Verilator | GCC    | Works? |
+|-----------|--------|--------|
+| 5.010     | 13.1.1 | YES    |
+| 4.224     | 13.1.1 | YES    |
+| 4.224     | 7.5.0  | YES    |
+| 4.102     | 9.4.0  | YES    |
 
-If you use a verilator and GCC version combination that works and is not in the table above, please update it.
+If you use a verilator and GCC version combination and is not in the table above, please update it. Specially if it doesn't work.
+
+**RISC-V Compiler**
+
+Install the RISC-V GCC crosscompiler toolchain using your favourite package manager. You can compile it yourself, at your own risk of course ;)
+
+This table shows the RISC-V compiler versions that have been tested and are known to work:
+
+| Version | Works? |
+|---------|--------|
+| 12.2.0  | YES    |
+| 11.1.0  | YES    |
+| 7.2.0   | NO     |
+
+Again, if you have a different version, add it to the table, specially if you have trouble compiling the ISA tests.
 
 ### Recommendations
 
