@@ -113,35 +113,28 @@ module top_drac
 // PMU INTERFACE
 //-----------------------------------------------------------------------------
     input  logic                io_core_pmu_l2_hit_i        ,
-    output logic                io_core_pmu_branch_miss     ,
-    output logic                io_core_pmu_is_branch       ,
-    output logic                io_core_pmu_branch_taken    , 
-    output logic                io_core_pmu_EXE_STORE       ,
-    output logic                io_core_pmu_EXE_LOAD        ,
-    output logic  [1:0]         io_core_pmu_new_instruction ,
-    output logic                io_core_pmu_icache_req      ,
-    output logic                io_core_pmu_icache_kill     ,
-    output logic                io_core_pmu_stall_if        ,
-    output logic                io_core_pmu_stall_id        ,
-    output logic                io_core_pmu_stall_rr        ,
-    output logic                io_core_pmu_stall_exe       ,
-    output logic                io_core_pmu_stall_wb        ,           
-    output logic                io_core_pmu_buffer_miss     ,           
-    output logic                io_core_pmu_imiss_kill      ,           
-    output logic                io_core_pmu_icache_bussy    ,
-    output logic                io_core_pmu_imiss_time      ,
-    output logic                io_core_pmu_load_store      ,
-    output logic                io_core_pmu_data_depend     ,
-    output logic                io_core_pmu_struct_depend   ,
-    output logic                io_core_pmu_grad_list_full  ,
-    output logic                io_core_pmu_free_list_empty ,
-    output logic                io_core_pmu_itlb_access,
-    output logic                io_core_pmu_itlb_miss,
-    output logic                io_core_pmu_dtlb_access,
-    output logic                io_core_pmu_dtlb_miss,
-    output logic                io_core_pmu_ptw_hit,
-    output logic                io_core_pmu_ptw_miss,
-    output logic                io_core_pmu_itlb_miss_cycle,
+    //output logic                io_core_pmu_branch_miss     ,
+    //output logic                io_core_pmu_is_branch       ,
+    //output logic                io_core_pmu_branch_taken    , 
+    //output logic                io_core_pmu_EXE_STORE       ,
+    //output logic                io_core_pmu_EXE_LOAD        ,
+    //output logic  [1:0]         io_core_pmu_new_instruction ,
+    //output logic                io_core_pmu_icache_req      ,
+    //output logic                io_core_pmu_icache_kill     ,
+    //output logic                io_core_pmu_stall_if        ,
+    //output logic                io_core_pmu_stall_id        ,
+    //output logic                io_core_pmu_stall_rr        ,
+    //output logic                io_core_pmu_stall_exe       ,
+    //output logic                io_core_pmu_stall_wb        ,           
+    //output logic                io_core_pmu_buffer_miss     ,           
+    //output logic                io_core_pmu_imiss_kill      ,           
+    //output logic                io_core_pmu_icache_bussy    ,
+    //output logic                io_core_pmu_imiss_time      ,
+    //output logic                io_core_pmu_load_store      ,
+    //output logic                io_core_pmu_data_depend     ,
+    //output logic                io_core_pmu_struct_depend   ,
+    //output logic                io_core_pmu_grad_list_full  ,
+    //output logic                io_core_pmu_free_list_empty ,
 
 //-----------------------------------------------------------------------------
 // BOOTROM CONTROLER INTERFACE
@@ -224,6 +217,12 @@ logic          buffer_miss  ;
 logic imiss_time_pmu  ;
 logic imiss_kill_pmu ;
 logic imiss_l2_hit ;
+logic exe_store_pmu ;
+logic exe_load_pmu  ;
+
+logic [CSR_ADDR_SIZE-1:0] addr_csr_hpm;
+logic [63:0]              data_csr_hpm, data_hpm_csr;
+logic                     we_csr_hpm;
 
 assign debug_in.halt_valid=debug_halt_i;
 assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
@@ -309,28 +308,62 @@ assign itlb_tresp.ptw_v  = ptw_itlb_comm.resp.valid;
 assign itlb_tresp.ppn    = itlb_icache_comm.resp.ppn;
 assign itlb_tresp.xcpt   = itlb_icache_comm.resp.xcpt.fetch;
 
-//-- PMU conection
-assign io_core_pmu_icache_req       = lagarto_ireq.valid                    ; 
-assign io_core_pmu_icache_kill      = lagarto_ireq.kill                     ;
-assign io_core_pmu_stall_if         = pmu_flags.stall_if                    ;  
-assign io_core_pmu_stall_id         = pmu_flags.stall_id                    ; 
-assign io_core_pmu_stall_rr         = pmu_flags.stall_rr                    ; 
-assign io_core_pmu_stall_exe        = pmu_flags.stall_exe                   ; 
-assign io_core_pmu_stall_wb         = pmu_flags.stall_wb                    ; 
-assign io_core_pmu_branch_miss      = pmu_flags.branch_miss                 ; 
-assign io_core_pmu_is_branch        = pmu_flags.is_branch                   ; 
-assign io_core_pmu_branch_taken     = pmu_flags.branch_taken                ; 
-assign io_core_pmu_load_store       = pmu_flags.load_store                  ;
-assign io_core_pmu_data_depend      = pmu_flags.data_depend                 ;
-assign io_core_pmu_struct_depend    = pmu_flags.struct_depend               ;
-assign io_core_pmu_grad_list_full   = pmu_flags.grad_list_full              ;
-assign io_core_pmu_free_list_empty  = pmu_flags.free_list_empty             ;
-assign io_core_pmu_new_instruction  = req_datapath_csr_interface.csr_retire ;
-assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
-assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
-assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
-assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
-assign io_core_pmu_itlb_miss_cycle = itlb_icache_comm.resp.miss && !itlb_icache_comm.tlb_ready;
+//-- HPM conection
+
+hpm_counters hpm_counters_inst (
+    .clk_i(CLK),
+    .rstn_i(RST),
+
+    // Access interface
+    .addr_i(addr_csr_hpm),
+    .we_i(we_csr_hpm),
+    .data_i(data_csr_hpm),
+    .data_o(data_hpm_csr),
+
+    // Events
+    .branch_miss(pmu_flags.branch_miss),
+    .is_branch(pmu_flags.is_branch),
+    .branch_taken(pmu_flags.branch_taken),
+    .exe_store(exe_store_pmu),
+    .exe_load(exe_load_pmu),
+    .icache_req(lagarto_ireq.valid),
+    .icache_kill(lagarto_ireq.kill),
+    .stall_if(pmu_flags.stall_if),
+    .stall_id(pmu_flags.stall_id),
+    .stall_rr(pmu_flags.stall_rr),
+    .stall_exe(pmu_flags.stall_exe),
+    .stall_wb(pmu_flags.stall_wb ),
+    .buffer_miss(imiss_l2_hit),
+    .imiss_kill(imiss_kill_pmu),
+    .icache_bussy(!icache_resp.ready ),
+    .imiss_time(imiss_time_pmu),
+    .load_store(pmu_flags.load_store ),
+    .data_depend(pmu_flags.data_depend),
+    .struct_depend(pmu_flags.struct_depend),
+    .grad_list_full(pmu_flags.grad_list_full),
+    .free_list_empty(pmu_flags.free_list_empty)
+);
+
+//assign io_core_pmu_icache_req       = lagarto_ireq.valid                    ; 
+//assign io_core_pmu_icache_kill      = lagarto_ireq.kill                     ;
+//assign io_core_pmu_stall_if         = pmu_flags.stall_if                    ;  
+//assign io_core_pmu_stall_id         = pmu_flags.stall_id                    ; 
+//assign io_core_pmu_stall_rr         = pmu_flags.stall_rr                    ; 
+//assign io_core_pmu_stall_exe        = pmu_flags.stall_exe                   ; 
+//assign io_core_pmu_stall_wb         = pmu_flags.stall_wb                    ; 
+//assign io_core_pmu_branch_miss      = pmu_flags.branch_miss                 ; 
+//assign io_core_pmu_is_branch        = pmu_flags.is_branch                   ; 
+//assign io_core_pmu_branch_taken     = pmu_flags.branch_taken                ; 
+//assign io_core_pmu_load_store       = pmu_flags.load_store                  ;
+//assign io_core_pmu_data_depend      = pmu_flags.data_depend                 ;
+//assign io_core_pmu_struct_depend    = pmu_flags.struct_depend               ;
+//assign io_core_pmu_grad_list_full   = pmu_flags.grad_list_full              ;
+//assign io_core_pmu_free_list_empty  = pmu_flags.free_list_empty             ;
+//assign io_core_pmu_new_instruction  = req_datapath_csr_interface.csr_retire ;
+//assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
+//assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
+//assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
+//assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
 
 sew_t sew;
 assign sew = sew_t'(vpu_csr[37:36]);
@@ -452,8 +485,8 @@ dcache_interface dcache_interface_inst(
     .dmem_req_kill_o(datapath_req_kill),     // Kill actual memory access
 
     // PMU
-    .dmem_is_store_o ( io_core_pmu_EXE_STORE ),
-    .dmem_is_load_o  ( io_core_pmu_EXE_LOAD  ),
+    .dmem_is_store_o ( exe_store_pmu ),
+    .dmem_is_load_o  ( exe_load_pmu  ),
     
     // DCACHE Answer to cpu
     .resp_dcache_cpu_o(resp_dcache_interface_datapath) 
@@ -534,8 +567,13 @@ csr_bsc csr_inst (
 
     .evec_o(csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
-    .flush_o(csr_ptw_comm.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
-    .vpu_csr_o(vpu_csr)
+    .flush_o(tlb_flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .vpu_csr_o(vpu_csr),
+
+    .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
+    .perf_data_o(data_csr_hpm),                // write data to performance counter module
+    .perf_data_i(data_hpm_csr),                // read data from performance counter module
+    .perf_we_o(we_csr_hpm)
 );
 
 tlb itlb (

@@ -104,9 +104,15 @@ module csr_bsc#(
     output logic [addr_width_extended-1:0]  evec_o,                      // virtual address of the PC to execute after a Interrupt or exception
 
     output logic                            flush_o,                    // the core is executing a sfence.vm instruction and a tlb flush is needed
-    output logic [39:0]                     vpu_csr_o  
+    output logic [39:0]                     vpu_csr_o,
 
+    output logic [csr_addr_width-1:0]       perf_addr_o,                // read/write address to performance counter module
+    output logic [63:0]                     perf_data_o,                // write data to performance counter module
+    input  logic [63:0]                     perf_data_i,                // read data from performance counter module
+    output logic                            perf_we_o
 );
+
+    localparam int MHPM_TO_HPM_DIST = CSR_HPM_COUNTER_3 - CSR_MHPM_COUNTER_3;
 
     //////////////////////////////////////////////
     // Registers declaration
@@ -124,12 +130,14 @@ module csr_bsc#(
     logic [63:0] mideleg_q,   mideleg_d;
     logic [63:0] mip_q,       mip_d;
     logic [63:0] mie_q,       mie_d;
+    logic [63:0] mcounteren_q,mcounteren_d;
     logic [63:0] mscratch_q,  mscratch_d;
     logic [63:0] mepc_q,      mepc_d;
     logic [63:0] mcause_q,    mcause_d;
     logic [63:0] mtval_q,     mtval_d;
 
     logic [63:0] stvec_q,     stvec_d;
+    logic [63:0] scounteren_q,scounteren_d;
     logic [63:0] sscratch_q,  sscratch_d;
     logic [63:0] sepc_q,      sepc_d;
     logic [63:0] scause_q,    scause_d;
@@ -236,6 +244,7 @@ module csr_bsc#(
         read_access_exception = 1'b0;
         pcr_addr_valid = 1'b0;
         csr_rdata = 64'b0;
+        perf_addr_o = '0;
 
         if (csr_read) begin
             unique case (csr_addr.address)
@@ -277,7 +286,7 @@ module csr_bsc#(
                 riscv_pkg::CSR_SIE:                csr_rdata = mie_q & mideleg_q;
                 riscv_pkg::CSR_SIP:                csr_rdata = mip_q & mideleg_q;
                 riscv_pkg::CSR_STVEC:              csr_rdata = stvec_q;
-                riscv_pkg::CSR_SCOUNTEREN:         csr_rdata = 64'b0; // not implemented
+                riscv_pkg::CSR_SCOUNTEREN:         csr_rdata = scounteren_q;
                 riscv_pkg::CSR_SSCRATCH:           csr_rdata = sscratch_q;
                 riscv_pkg::CSR_SEPC:               csr_rdata = sepc_q;
                 riscv_pkg::CSR_SCAUSE:             csr_rdata = scause_q;
@@ -297,7 +306,7 @@ module csr_bsc#(
                 riscv_pkg::CSR_MIDELEG:            csr_rdata = mideleg_q;
                 riscv_pkg::CSR_MIE:                csr_rdata = mie_q;
                 riscv_pkg::CSR_MTVEC:              csr_rdata = mtvec_q;
-                riscv_pkg::CSR_MCOUNTEREN:         csr_rdata = 64'b0; // not implemented
+                riscv_pkg::CSR_MCOUNTEREN:         csr_rdata = mcounteren_q;
                 riscv_pkg::CSR_MSCRATCH:           csr_rdata = mscratch_q;
                 riscv_pkg::CSR_MEPC:               csr_rdata = mepc_q;
                 riscv_pkg::CSR_MCAUSE:             csr_rdata = mcause_q;
@@ -307,26 +316,23 @@ module csr_bsc#(
                 riscv_pkg::CSR_MARCHID:            csr_rdata = 64'b0; // not implemented
                 riscv_pkg::CSR_MIMPID:             csr_rdata = 64'b0; // not implemented
                 riscv_pkg::CSR_MHARTID:            csr_rdata = core_id; 
-                riscv_pkg::CSR_MCYCLE:             csr_rdata = cycle_q;
-                riscv_pkg::CSR_CYCLE:              csr_rdata = cycle_q;
-                riscv_pkg::CSR_TIME:               csr_rdata = reg_time_q;
-                riscv_pkg::CSR_MINSTRET:           csr_rdata = instret_q;
-                riscv_pkg::CSR_INSTRET:            csr_rdata = instret_q;
                 // Counters and Timers
-                riscv_pkg::CSR_ML1_ICACHE_MISS,
-                riscv_pkg::CSR_ML1_DCACHE_MISS,
-                riscv_pkg::CSR_MITLB_MISS,
-                riscv_pkg::CSR_MDTLB_MISS,
-                riscv_pkg::CSR_MLOAD,
-                riscv_pkg::CSR_MSTORE,
-                riscv_pkg::CSR_MEXCEPTION,
-                riscv_pkg::CSR_MEXCEPTION_RET,
-                riscv_pkg::CSR_MBRANCH_JUMP,
-                riscv_pkg::CSR_MCALL,
-                riscv_pkg::CSR_MRET,
-                riscv_pkg::CSR_MMIS_PREDICT,
-                riscv_pkg::CSR_MSB_FULL,
-                riscv_pkg::CSR_MIF_EMPTY,
+                riscv_pkg::CSR_MCYCLE:             csr_rdata = cycle_q;
+                riscv_pkg::CSR_MINSTRET:           csr_rdata = instret_q;
+                riscv_pkg::CSR_MHPM_COUNTER_3,
+                riscv_pkg::CSR_MHPM_COUNTER_4,
+                riscv_pkg::CSR_MHPM_COUNTER_5,
+                riscv_pkg::CSR_MHPM_COUNTER_6,
+                riscv_pkg::CSR_MHPM_COUNTER_7,
+                riscv_pkg::CSR_MHPM_COUNTER_8,
+                riscv_pkg::CSR_MHPM_COUNTER_9,
+                riscv_pkg::CSR_MHPM_COUNTER_10,
+                riscv_pkg::CSR_MHPM_COUNTER_11,
+                riscv_pkg::CSR_MHPM_COUNTER_12,
+                riscv_pkg::CSR_MHPM_COUNTER_13,
+                riscv_pkg::CSR_MHPM_COUNTER_14,
+                riscv_pkg::CSR_MHPM_COUNTER_15,
+                riscv_pkg::CSR_MHPM_COUNTER_16,
                 riscv_pkg::CSR_MHPM_COUNTER_17,
                 riscv_pkg::CSR_MHPM_COUNTER_18,
                 riscv_pkg::CSR_MHPM_COUNTER_19,
@@ -341,7 +347,80 @@ module csr_bsc#(
                 riscv_pkg::CSR_MHPM_COUNTER_28,
                 riscv_pkg::CSR_MHPM_COUNTER_29,
                 riscv_pkg::CSR_MHPM_COUNTER_30,
-                riscv_pkg::CSR_MHPM_COUNTER_31,
+                riscv_pkg::CSR_MHPM_COUNTER_31: begin
+                    perf_addr_o = csr_addr.address[11:0];
+                    csr_rdata = perf_data_i;
+                end
+
+                riscv_pkg::CSR_CYCLE:              csr_rdata = cycle_q;
+                riscv_pkg::CSR_TIME:               csr_rdata = reg_time_q;
+                riscv_pkg::CSR_INSTRET:            csr_rdata = instret_q;
+                riscv_pkg::CSR_HPM_COUNTER_3,
+                riscv_pkg::CSR_HPM_COUNTER_4,
+                riscv_pkg::CSR_HPM_COUNTER_5,
+                riscv_pkg::CSR_HPM_COUNTER_6,
+                riscv_pkg::CSR_HPM_COUNTER_7,
+                riscv_pkg::CSR_HPM_COUNTER_8,
+                riscv_pkg::CSR_HPM_COUNTER_9,
+                riscv_pkg::CSR_HPM_COUNTER_10,
+                riscv_pkg::CSR_HPM_COUNTER_11,
+                riscv_pkg::CSR_HPM_COUNTER_12,
+                riscv_pkg::CSR_HPM_COUNTER_13,
+                riscv_pkg::CSR_HPM_COUNTER_14,
+                riscv_pkg::CSR_HPM_COUNTER_15,
+                riscv_pkg::CSR_HPM_COUNTER_16,
+                riscv_pkg::CSR_HPM_COUNTER_17,
+                riscv_pkg::CSR_HPM_COUNTER_18,
+                riscv_pkg::CSR_HPM_COUNTER_19,
+                riscv_pkg::CSR_HPM_COUNTER_20,
+                riscv_pkg::CSR_HPM_COUNTER_21,
+                riscv_pkg::CSR_HPM_COUNTER_22,
+                riscv_pkg::CSR_HPM_COUNTER_23,
+                riscv_pkg::CSR_HPM_COUNTER_24,
+                riscv_pkg::CSR_HPM_COUNTER_25,
+                riscv_pkg::CSR_HPM_COUNTER_26,
+                riscv_pkg::CSR_HPM_COUNTER_27,
+                riscv_pkg::CSR_HPM_COUNTER_28,
+                riscv_pkg::CSR_HPM_COUNTER_29,
+                riscv_pkg::CSR_HPM_COUNTER_30,
+                riscv_pkg::CSR_HPM_COUNTER_31: begin
+                    perf_addr_o = csr_addr.address[11:0] - MHPM_TO_HPM_DIST;
+                    csr_rdata = perf_data_i;
+                end
+
+                riscv_pkg::CSR_MHPM_EVENT_3,
+                riscv_pkg::CSR_MHPM_EVENT_4,
+                riscv_pkg::CSR_MHPM_EVENT_5,
+                riscv_pkg::CSR_MHPM_EVENT_6,
+                riscv_pkg::CSR_MHPM_EVENT_7,
+                riscv_pkg::CSR_MHPM_EVENT_8,
+                riscv_pkg::CSR_MHPM_EVENT_9,
+                riscv_pkg::CSR_MHPM_EVENT_10,
+                riscv_pkg::CSR_MHPM_EVENT_11,
+                riscv_pkg::CSR_MHPM_EVENT_12,
+                riscv_pkg::CSR_MHPM_EVENT_13,
+                riscv_pkg::CSR_MHPM_EVENT_14,
+                riscv_pkg::CSR_MHPM_EVENT_15,
+                riscv_pkg::CSR_MHPM_EVENT_16,
+                riscv_pkg::CSR_MHPM_EVENT_17,
+                riscv_pkg::CSR_MHPM_EVENT_18,
+                riscv_pkg::CSR_MHPM_EVENT_19,
+                riscv_pkg::CSR_MHPM_EVENT_20,
+                riscv_pkg::CSR_MHPM_EVENT_21,
+                riscv_pkg::CSR_MHPM_EVENT_22,
+                riscv_pkg::CSR_MHPM_EVENT_23,
+                riscv_pkg::CSR_MHPM_EVENT_24,
+                riscv_pkg::CSR_MHPM_EVENT_25,
+                riscv_pkg::CSR_MHPM_EVENT_26,
+                riscv_pkg::CSR_MHPM_EVENT_27,
+                riscv_pkg::CSR_MHPM_EVENT_28,
+                riscv_pkg::CSR_MHPM_EVENT_29,
+                riscv_pkg::CSR_MHPM_EVENT_30,
+                riscv_pkg::CSR_MHPM_EVENT_31:   begin
+                    perf_addr_o = csr_addr.address[11:0];
+                    csr_rdata = perf_data_i;
+                end
+
                 riscv_pkg::CSR_MEM_MAP_0,
                 riscv_pkg::CSR_MEM_MAP_1,
                 riscv_pkg::CSR_MEM_MAP_2,
@@ -463,7 +542,8 @@ module csr_bsc#(
         flush                  = 1'b0;
         update_access_exception = 1'b0;
 
-        
+        perf_we_o               = 1'b0;
+        perf_data_o             = 'b0;
 
         fcsr_d                  = fcsr_q;
 
@@ -509,12 +589,14 @@ module csr_bsc#(
         mie_d                   = mie_q;
         mepc_int                = mepc_q;
         mcause_int              = mcause_q;
+        mcounteren_d            = mcounteren_q;
         mscratch_d              = mscratch_q;
         mtval_int               = mtval_q;
 
         sepc_int                = sepc_q;
         scause_int              = scause_q;
         stvec_d                 = stvec_q;
+        scounteren_d            = scounteren_q;
         sscratch_d              = sscratch_q;
         stval_int               = stval_q;
         satp_d                  = satp_q;
@@ -591,7 +673,7 @@ module csr_bsc#(
                     mip_d = (mip_q & ~mask) | (csr_wdata & mask);
                 end
 
-                riscv_pkg::CSR_SCOUNTEREN:;
+                riscv_pkg::CSR_SCOUNTEREN:         scounteren_d = {{32{1'b0}}, csr_wdata[31:0]};
                 riscv_pkg::CSR_STVEC:              stvec_d     = {csr_wdata[63:2], 1'b0, csr_wdata[0]};
                 riscv_pkg::CSR_SSCRATCH:           sscratch_d  = csr_wdata;
                 riscv_pkg::CSR_SEPC:               sepc_int    = {csr_wdata[63:1], 1'b0};
@@ -655,8 +737,8 @@ module csr_bsc#(
                     // alignment constraint of 64 * 4 bytes
                     if (csr_wdata[0]) mtvec_d = {csr_wdata[63:8], 7'b0, csr_wdata[0]};
                 end
-                riscv_pkg::CSR_MCOUNTEREN:;
 
+                riscv_pkg::CSR_MCOUNTEREN:         mcounteren_d = {{32{1'b0}}, csr_wdata[31:0]};
                 riscv_pkg::CSR_MSCRATCH:           mscratch_d  = csr_wdata;
                 riscv_pkg::CSR_MEPC:               mepc_int    = {csr_wdata[63:1], 1'b0};
                 riscv_pkg::CSR_MCAUSE:             mcause_int  = csr_wdata;
@@ -670,20 +752,21 @@ module csr_bsc#(
                 riscv_pkg::CSR_MINSTRET:           instret_d     = csr_wdata;
                 riscv_pkg::CSR_CYCLE:              cycle_d     = csr_wdata;
                 riscv_pkg::CSR_INSTRET:            instret_d     = csr_wdata;
-                riscv_pkg::CSR_ML1_ICACHE_MISS,
-                riscv_pkg::CSR_ML1_DCACHE_MISS,
-                riscv_pkg::CSR_MITLB_MISS,
-                riscv_pkg::CSR_MDTLB_MISS,
-                riscv_pkg::CSR_MLOAD,
-                riscv_pkg::CSR_MSTORE,
-                riscv_pkg::CSR_MEXCEPTION,
-                riscv_pkg::CSR_MEXCEPTION_RET,
-                riscv_pkg::CSR_MBRANCH_JUMP,
-                riscv_pkg::CSR_MCALL,
-                riscv_pkg::CSR_MRET,
-                riscv_pkg::CSR_MMIS_PREDICT,
-                riscv_pkg::CSR_MSB_FULL,
-                riscv_pkg::CSR_MIF_EMPTY,
+
+                riscv_pkg::CSR_MHPM_COUNTER_3,
+                riscv_pkg::CSR_MHPM_COUNTER_4,
+                riscv_pkg::CSR_MHPM_COUNTER_5,
+                riscv_pkg::CSR_MHPM_COUNTER_6,
+                riscv_pkg::CSR_MHPM_COUNTER_7,
+                riscv_pkg::CSR_MHPM_COUNTER_8,
+                riscv_pkg::CSR_MHPM_COUNTER_9,
+                riscv_pkg::CSR_MHPM_COUNTER_10,
+                riscv_pkg::CSR_MHPM_COUNTER_11,
+                riscv_pkg::CSR_MHPM_COUNTER_12,
+                riscv_pkg::CSR_MHPM_COUNTER_13,
+                riscv_pkg::CSR_MHPM_COUNTER_14,
+                riscv_pkg::CSR_MHPM_COUNTER_15,
+                riscv_pkg::CSR_MHPM_COUNTER_16,
                 riscv_pkg::CSR_MHPM_COUNTER_17,
                 riscv_pkg::CSR_MHPM_COUNTER_18,
                 riscv_pkg::CSR_MHPM_COUNTER_19,
@@ -698,7 +781,44 @@ module csr_bsc#(
                 riscv_pkg::CSR_MHPM_COUNTER_28,
                 riscv_pkg::CSR_MHPM_COUNTER_29,
                 riscv_pkg::CSR_MHPM_COUNTER_30,
-                riscv_pkg::CSR_MHPM_COUNTER_31,
+                riscv_pkg::CSR_MHPM_COUNTER_31: begin
+                    perf_we_o = 1'b1;
+                    perf_data_o = csr_wdata;
+                end
+
+                riscv_pkg::CSR_MHPM_EVENT_3,
+                riscv_pkg::CSR_MHPM_EVENT_4,
+                riscv_pkg::CSR_MHPM_EVENT_5,
+                riscv_pkg::CSR_MHPM_EVENT_6,
+                riscv_pkg::CSR_MHPM_EVENT_7,
+                riscv_pkg::CSR_MHPM_EVENT_8,
+                riscv_pkg::CSR_MHPM_EVENT_9,
+                riscv_pkg::CSR_MHPM_EVENT_10,
+                riscv_pkg::CSR_MHPM_EVENT_11,
+                riscv_pkg::CSR_MHPM_EVENT_12,
+                riscv_pkg::CSR_MHPM_EVENT_13,
+                riscv_pkg::CSR_MHPM_EVENT_14,
+                riscv_pkg::CSR_MHPM_EVENT_15,
+                riscv_pkg::CSR_MHPM_EVENT_16,
+                riscv_pkg::CSR_MHPM_EVENT_17,
+                riscv_pkg::CSR_MHPM_EVENT_18,
+                riscv_pkg::CSR_MHPM_EVENT_19,
+                riscv_pkg::CSR_MHPM_EVENT_20,
+                riscv_pkg::CSR_MHPM_EVENT_21,
+                riscv_pkg::CSR_MHPM_EVENT_22,
+                riscv_pkg::CSR_MHPM_EVENT_23,
+                riscv_pkg::CSR_MHPM_EVENT_24,
+                riscv_pkg::CSR_MHPM_EVENT_25,
+                riscv_pkg::CSR_MHPM_EVENT_26,
+                riscv_pkg::CSR_MHPM_EVENT_27,
+                riscv_pkg::CSR_MHPM_EVENT_28,
+                riscv_pkg::CSR_MHPM_EVENT_29,
+                riscv_pkg::CSR_MHPM_EVENT_30,
+                riscv_pkg::CSR_MHPM_EVENT_31: begin
+                    perf_we_o = 1'b1;
+                    perf_data_o = csr_wdata;
+                end
+
                 riscv_pkg::CSR_MEM_MAP_0,
                 riscv_pkg::CSR_MEM_MAP_1,
                 riscv_pkg::CSR_MEM_MAP_2,
@@ -1040,6 +1160,13 @@ module csr_bsc#(
             if (rw_addr_i[11:4] == 8'h7b ) begin
                 privilege_violation = 1'b1;
             end
+            if (csr_addr.address inside {[riscv_pkg::CSR_CYCLE:riscv_pkg::CSR_HPM_COUNTER_31]}) begin
+                unique case (priv_lvl_o)
+                    riscv_pkg::PRIV_LVL_M: privilege_violation = 1'b0;
+                    riscv_pkg::PRIV_LVL_S: privilege_violation = ~mcounteren_q[csr_addr.address[4:0]];
+                    riscv_pkg::PRIV_LVL_U: privilege_violation = ~mcounteren_q[csr_addr.address[4:0]] & ~scounteren_q[csr_addr.address[4:0]];
+                endcase
+            end
         end
         //checks the level of the system instruction or sfence with tvm = 1 or sret and tsr = 1
         if (system_insn && !priv_sufficient || insn_sfence_vm && priv_lvl_q == riscv_pkg::PRIV_LVL_S && mstatus_q.tvm == 1'b1
@@ -1257,12 +1384,14 @@ module csr_bsc#(
             mie_q                  <= 64'b0;
             mepc_q                 <= 64'b0;
             mcause_q               <= 64'b0;
+            mcounteren_q           <= 64'b0;
             mscratch_q             <= 64'b0;
             mtval_q                <= 64'b0;
             // supervisor mode registers
             sepc_q                 <= 64'b0;
             scause_q               <= 64'b0;
             stvec_q                <= 64'b0;
+            scounteren_q           <= 64'b0;
             sscratch_q             <= 64'b0;
             stval_q                <= 64'b0;
             satp_q                 <= 64'b0;
@@ -1298,12 +1427,14 @@ module csr_bsc#(
             mie_q                  <= mie_d;
             mepc_q                 <= mepc_d;
             mcause_q               <= mcause_d;
+            mcounteren_q           <= mcounteren_d;
             mscratch_q             <= mscratch_d;
             mtval_q                <= mtval_d;
             // supervisor mode registers
             sepc_q                 <= sepc_d;
             scause_q               <= scause_d;
             stvec_q                <= stvec_d;
+            scounteren_q           <= scounteren_d;
             sscratch_q             <= sscratch_d;
             stval_q                <= stval_d;
             satp_q                 <= satp_d;
