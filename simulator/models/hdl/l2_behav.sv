@@ -1,53 +1,98 @@
-/* -----------------------------------------------
-* Project Name   : DRAC
-* File           : perfect_memory_hex.sv
-* Organization   : Barcelona Supercomputing Center
-* Author(s)      : Guillem Lopez Paradis
-* Email(s)       : guillem.lopez@bsc.es
-* References     : 
-* -----------------------------------------------
-* Revision History
-*  Revision   | Author     | Commit | Description
-*  0.1        | Guillem.LP |        |
-*  0.2        | Gerard.C   |        | Added FSM
-* -----------------------------------------------
-*/
-//`include "drac_pkg.sv"
 import drac_pkg::*;
 
-// this is a specific module to read hexdumps of riscv tests 
-module perfect_dmem #(
-    parameter SIZE = 32*1024 * 8,
+module l2_behav #(
     parameter LINE_SIZE = 128,
     parameter ADDR_SIZE = 32,
-    parameter DELAY = 2,
-    localparam HEX_LOAD_ADDR = 'h0F0
+    parameter INST_DELAY = 20,
+    parameter DATA_DELAY = 2
 
 ) (
     input logic                     clk_i,
     input logic                     rstn_i,
-    input addr_t                    addr_i,
-    input logic                     valid_i,
-    input logic [7:0]               tag_i,
-    input logic [4:0]               cmd_i,
-    input bus_simd_t                wr_data_i,
-    input logic [3:0]               word_size_i,
-    output logic [LINE_SIZE-1:0]    line_o,
-    output logic                    ready_o,
-    output logic                    valid_o,
-    output logic [7:0]              tag_o
+
+    // *** iCache Interface ***
+
+    input logic  [25:0]             ic_addr_i,
+    input logic                     ic_valid_i,
+    output logic [LINE_SIZE-1:0]    ic_line_o,
+    output logic                    ic_ready_o,
+    output logic                    ic_valid_o,
+    output logic [1:0]              ic_seq_num_o,
+
+    // *** dCache Interface ***
+
+    input addr_t                    dc_addr_i,
+    input logic                     dc_valid_i,
+    input logic [7:0]               dc_tag_i,
+    input logic [4:0]               dc_cmd_i,
+    input bus_simd_t                dc_wr_data_i,
+    input logic [3:0]               dc_word_size_i,
+    output logic [LINE_SIZE-1:0]    dc_line_o,
+    output logic                    dc_ready_o,
+    output logic                    dc_valid_o,
+    output logic [7:0]              dc_tag_o
 );
+
+    import "DPI-C" function bit memory_read (input bit [31:0] addr, output bit [LINE_SIZE-1:0] data);
+    import "DPI-C" function bit memory_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
+
+    // *** iCache memory channel logic ***
+
+    logic [$clog2(INST_DELAY)+1:0] ic_counter;
+    logic [$clog2(INST_DELAY)+1:0] ic_next_counter;
+
+    logic  [25:0] ic_addr_int;
+    logic request_q;
+
+    // ic_counter stuff
+    assign ic_next_counter = (ic_counter > 0) ? ic_counter-1 : 0;
+    assign ic_seq_num_o = 2'b11 - ic_counter[1:0];
+
+    // ic_counter procedure
+    always_ff @(posedge clk_i, negedge rstn_i) begin : proc_ic_counter
+        if(~rstn_i) begin
+            ic_counter <= 'h0;
+            request_q <= 1'b0;
+	        ic_valid_o <= 1'b0;
+        end else if (ic_valid_i && !request_q) begin
+            ic_counter <= INST_DELAY + 4;
+	        ic_valid_o  <= 1'b0;
+	        request_q <= 1'b1;
+   	        ic_addr_int <= ic_addr_i;
+        end else if (request_q && ic_counter > 0) begin
+            ic_counter <= ic_next_counter;
+	        ic_addr_int <= ic_addr_i;
+   	        request_q <= 1'b1;
+	        if ((ic_next_counter < 4) && (!ic_valid_i)) begin
+	            ic_valid_o <= 1'b1;
+	        end else begin
+	            ic_valid_o <= 1'b0;
+	        end
+        end else begin
+        	ic_valid_o  <= 1'b0;
+	        request_q <= 1'b0;
+        end
+    end 
+
+    always_comb begin
+        if (ic_valid_o) begin
+            memory_read({ic_addr_int[25:0], 2'b11 - ic_counter[1:0], 4'h0}, ic_line_o);
+        end else begin
+            ic_line_o = 0;
+        end
+    end
+
+    // *** dCache memory channel logic ***
+
     typedef enum {
         IDLE, STORE_WRITE, WAIT
     } perfect_memory_state_t;
 
-    localparam BASE = 128;
-    logic [BASE-1:0] memory [SIZE/BASE];
-    logic [$clog2(DELAY):0] counter;
-    logic [$clog2(DELAY):0] next_counter;
+    logic [$clog2(DATA_DELAY):0] counter;
+    logic [$clog2(DATA_DELAY):0] next_counter;
 
     logic  [ADDR_SIZE-1:0]    addr_int;
-    assign addr_int = 'h100+({4'b0,addr_i[31:4]}-'h010);
+    assign addr_int = 'h100+({4'b0,dc_addr_i[31:4]}-'h010);
 
     logic [LINE_SIZE-1:0] line_d, line_q;
     logic [LINE_SIZE-1:0] mem_out;
@@ -63,30 +108,30 @@ module perfect_dmem #(
     logic [31:0] mem_word;
     logic [63:0] mem_dword;
 
-    assign mem_byte  = mem_out[{addr_i[3:0], 3'b0} +: 8];
-    assign mem_half  = mem_out[{addr_i[3:1], 4'b0} +: 16];
-    assign mem_word  = mem_out[{addr_i[3:2], 5'b0} +: 32];
-    assign mem_dword = mem_out[{addr_i[3], 6'b0}   +: 64];
+    assign mem_byte  = mem_out[{dc_addr_i[3:0], 3'b0} +: 8];
+    assign mem_half  = mem_out[{dc_addr_i[3:1], 4'b0} +: 16];
+    assign mem_word  = mem_out[{dc_addr_i[3:2], 5'b0} +: 32];
+    assign mem_dword = mem_out[{dc_addr_i[3], 6'b0}   +: 64];
 
     logic wr_ena;
 
-    assign wr_ena = cmd_i != 5'b00000 && cmd_i != 5'b00110;
+    assign wr_ena = dc_cmd_i != 5'b00000 && dc_cmd_i != 5'b00110;
 
     logic [63:0] amo_mem_val, amo_core_val;
     addr_t lr_addr_d, lr_addr_q;
     logic reserved_d, reserved_q;
 
     assign amo_mem_val = word_size_q == 3 ? mem_dword : {{32{mem_word[31]}}, mem_word};
-    assign amo_core_val = word_size_q == 3 ? wr_data_i[63:0] : {{32{wr_data_i[31]}}, wr_data_i[31:0]};
+    assign amo_core_val = word_size_q == 3 ? dc_wr_data_i[63:0] : {{32{dc_wr_data_i[31]}}, dc_wr_data_i[31:0]};
 
     perfect_memory_state_t state, next_state;
 
-    assign ready_o = (counter == 0);
-    assign line_o = line_q;
-    assign tag_o = tag_q;
-    assign valid_o = (counter == 1) ? valid_q : 1'b0;
+    assign dc_ready_o = (counter == 0);
+    assign dc_line_o = line_q;
+    assign dc_tag_o = tag_q;
+    assign dc_valid_o = (counter == 1) ? valid_q : 1'b0;
 
-    always_ff @(posedge clk_i, negedge rstn_i) begin : proc_counter
+    always_ff @(posedge clk_i, negedge rstn_i) begin : proc_dc_counter
         if(~rstn_i) begin
             counter     <= 0;
             line_q      <= 0;
@@ -114,9 +159,6 @@ module perfect_dmem #(
         end
     end 
 
-    import "DPI-C" function bit memory_read (input bit [31:0] addr, output bit [LINE_SIZE-1:0] data);
-    import "DPI-C" function bit memory_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
-
     always_comb begin
         case (state)
             IDLE: begin
@@ -129,15 +171,15 @@ module perfect_dmem #(
                 //  to send the data.
                 
                 //Hold output signals and initialize counter
-                if (ready_o && valid_i) begin
-                    next_counter = DELAY;
+                if (dc_ready_o && dc_valid_i) begin
+                    next_counter = DATA_DELAY;
                     valid_d      = 1'b1;
-                    tag_d        = tag_i;
-                    addr_d       = addr_i;
+                    tag_d        = dc_tag_i;
+                    addr_d       = dc_addr_i;
                     addr_int_d   = addr_int;
-                    word_size_d  = word_size_i;
+                    word_size_d  = dc_word_size_i;
                     next_state   = wr_ena ? STORE_WRITE : WAIT;
-                    cmd_d = cmd_i;
+                    cmd_d = dc_cmd_i;
                 end else begin
                     next_counter = 0;
                     valid_d      = 0'b0;
@@ -150,14 +192,14 @@ module perfect_dmem #(
                 end
 
                 //Hold line output
-                if (ready_o && valid_i) begin
-                    if (cmd_i == 5'b00111) begin // Store Conditional
-                        line_d = reserved_q == 1'b1 && addr_i == lr_addr_q ? 1'b0 : 1'b1;
+                if (dc_ready_o && dc_valid_i) begin
+                    if (dc_cmd_i == 5'b00111) begin // Store Conditional
+                        line_d = reserved_q == 1'b1 && dc_addr_i == lr_addr_q ? 1'b0 : 1'b1;
                         reserved_d = 1'b0;
                         lr_addr_d = 0;
                     end else begin
-                        memory_read({addr_i[31:4], 4'b0}, mem_out);
-                        case (word_size_i)
+                        memory_read({dc_addr_i[31:4], 4'b0}, mem_out);
+                        case (dc_word_size_i)
                             4'b0000: line_d = {{120{mem_byte[7]}},mem_byte};
                             4'b0001: line_d = {{112{mem_half[15]}},mem_half};
                             4'b0010: line_d = {{96{mem_word[31]}},mem_word};
@@ -168,9 +210,9 @@ module perfect_dmem #(
                             4'b0111: line_d = {64'b0,mem_dword};
                             4'b1000: line_d = mem_out;
                         endcase
-                        if (cmd_i == 5'b00110) begin // Load reserve
+                        if (dc_cmd_i == 5'b00110) begin // Load reserve
                             reserved_d = 1'b1;
-                            lr_addr_d = addr_i;
+                            lr_addr_d = dc_addr_i;
                         end
                     end
                 end else begin
@@ -224,7 +266,7 @@ module perfect_dmem #(
                 5'b01101: memory_write(addr_q, word_size_q, $signed(amo_mem_val) > $signed(amo_core_val) ? amo_mem_val : amo_core_val); // amomax
                 5'b01110: memory_write(addr_q, word_size_q, amo_mem_val < amo_core_val ? amo_mem_val : amo_core_val); // amominu
                 5'b01111: memory_write(addr_q, word_size_q, amo_mem_val > amo_core_val ? amo_mem_val : amo_core_val); // amomaxu
-                5'b00001: memory_write(addr_q, word_size_q, wr_data_i);
+                5'b00001: memory_write(addr_q, word_size_q, dc_wr_data_i);
                 default: ;
             endcase
         end

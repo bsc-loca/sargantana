@@ -120,29 +120,30 @@ module veri_top
         .brom_resp_valid_o(brom_resp_valid)
     );
 
-    perfect_imem imem (
+    l2_behav l2_inst (
         .clk_i(clk_p),
         .rstn_i(~rst_top),
-        .addr_i(l1_request_paddr),
-        .valid_i(l1_request_valid),
-        .valid_o(l2_response_valid),
-        .line_o(l2_response_data),
-	    .seq_num_o(l2_response_seqnum)
-    );
 
-    perfect_dmem dmem (
-        .clk_i(clk_p),
-        .rstn_i(~rst_top),
-        .addr_i(dmem_req_addr_o),
-        .valid_i(dmem_req_valid_o),
-        .tag_i(dmem_req_tag_o),
-        .cmd_i(dmem_req_cmd_o),
-        .wr_data_i(dmem_req_data_o),
-        .word_size_i(dmem_op_type_o),
-        .line_o(dmem_resp_data_i),
-        .ready_o(dmem_req_ready_i),
-        .valid_o(dmem_resp_valid_i),
-        .tag_o(dmem_resp_tag_i)
+        // *** Instruction Cache Interface ***
+
+        .ic_addr_i(l1_request_paddr),
+        .ic_valid_i(l1_request_valid),
+        .ic_valid_o(l2_response_valid),
+        .ic_line_o(l2_response_data),
+	    .ic_seq_num_o(l2_response_seqnum),
+
+        // *** Data Cache Interface ***
+
+        .dc_addr_i(dmem_req_addr_o),
+        .dc_valid_i(dmem_req_valid_o),
+        .dc_tag_i(dmem_req_tag_o),
+        .dc_cmd_i(dmem_req_cmd_o),
+        .dc_wr_data_i(dmem_req_data_o),
+        .dc_word_size_i(dmem_op_type_o),
+        .dc_line_o(dmem_resp_data_i),
+        .dc_ready_o(dmem_req_ready_i),
+        .dc_valid_o(dmem_resp_valid_i),
+        .dc_tag_o(dmem_resp_tag_i)
     );
 
     host_behav host_behav_inst (
