@@ -16,14 +16,14 @@ VERI_FLAGS = \
 	+incdir+$(PROJECT_DIR)/rtl \
 	--top-module $(TOP_MODULE) \
 	--unroll-count 256 \
-	--trace \
-	--trace-max-array 512 \
-	--trace-max-width 256 \
 	-Wno-lint -Wno-style -Wno-STMTDLY -Wno-fatal \
 	-CFLAGS "-std=c++11" \
 	-CFLAGS "$(foreach CXX,$(SOC_MODELS_CXX),-I$(CXX)) " \
 	-LDFLAGS "-pthread" \
 	--exe \
+	--trace-fst \
+	--trace-max-array 512 \
+	--trace-max-width 256 \
 	--trace-structs \
 	--trace-params \
 	--trace-underscore \

@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 
 #include <verilated.h>
-#include <verilated_vcd_c.h>
+#include <verilated_fst_c.h>
 #include "Vveri_top.h"
 #include "globals.h"
 #include "dpi_perfect_memory.h"
@@ -12,6 +12,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <memory>
+#include <csignal>
 
 #include <chrono>
 #include <thread>
@@ -127,6 +128,20 @@ void restore_model(const char* filename) {
     os >> *top;
 }
 
+VerilatedFstC* fst;
+bool vcd_enable = false;
+
+void signalHandler( int signum ) {
+   std::cout << "Interrupt signal (" << signum << ") received." << std::endl;
+
+   if (vcd_enable) {
+        std::cout << "Saving waveform..." << std::endl;
+        fst->close();
+   } 
+
+   exit(signum);
+}
+
 int main(int argc, char** argv) {
   Verilated::commandArgs(argc, argv);
 
@@ -140,7 +155,6 @@ int main(int argc, char** argv) {
     rename_checking_init();
 
   // handle arguements
-  bool vcd_enable = false;
   string vcd_name = "verilated.vcd";
 
     //  handle arguments
@@ -297,12 +311,14 @@ int main(int argc, char** argv) {
   top->eval();
 
   // VCD dump
-  VerilatedVcdC* vcd = new VerilatedVcdC;
   if(vcd_enable) {
+    fst = new VerilatedFstC;
     Verilated::traceEverOn(true);
-    top->trace(vcd, 99);
-    vcd->open(vcd_name.c_str());
+    top->trace(fst, 99);
+    fst->open(vcd_name.c_str());
   }
+
+  signal(SIGINT, signalHandler); 
 
     // torture signature print options
     torture_signature->set_dump_file_name(tortureSignatureFileName);
@@ -371,7 +387,7 @@ int main(int argc, char** argv) {
 
         //if((main_time % 10) == 0) memory_controller->step();
 
-        if (vcd_enable && main_time > start_vcd_time) vcd->dump(main_time);
+        if (vcd_enable && main_time > start_vcd_time) fst->dump(main_time);
 
         if(main_time < 140)
         main_time++;
@@ -392,7 +408,7 @@ int main(int argc, char** argv) {
     }
 
     top->final();
-    if(vcd_enable) vcd->close();
+    if(vcd_enable) fst->close();
 
     #if VM_COVERAGE
         VerilatedCov::write("logs/coverage.dat");

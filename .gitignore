@@ -18,3 +18,5 @@ doc/specifications/*/*synctex.gz
 sim
 bootrom.hex
 signature.txt
+.svls.toml
+*.gtkw
