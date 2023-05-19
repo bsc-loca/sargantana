@@ -14,6 +14,7 @@
 module mem_unit 
     import drac_pkg::*;
     import riscv_pkg::*;
+    import mmu_pkg::*;
 (
     input  wire                  clk_i,                  // Clock signal
     input  wire                  rstn_i,                 // Reset signal
@@ -26,6 +27,7 @@ module mem_unit
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
     input wire                   commit_store_or_amo_i,  // Signal from commit enables writes.
     input gl_index_t             commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
+    input tlb_cache_comm_t       dtlb_comm_i,
 
 
     output req_cpu_dcache_t      req_cpu_dcache_o,       // Request to dcache
@@ -38,7 +40,11 @@ module mem_unit
     output gl_index_t            mem_gl_index_o,         // GL Index of the memory instruction
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
     output logic                 empty_o,                // Mem unit has no pending Ops
-    
+    output cache_tlb_comm_t      dtlb_comm_o,
+
+    input logic vm_enable_i,
+    input logic [1:0] priv_lvl_i,
+
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
@@ -110,19 +116,6 @@ logic io_s2_q;
 logic [6:0] tag_id;
 logic [6:0] tag_id_s1_q;
 logic [6:0] tag_id_s2_q;
-
-// Exception pipeline
-logic xcpt;
-logic xcpt_s1_q;
-logic xcpt_s2_q;
-logic xcpt_ma_st_s2_q; 
-logic xcpt_ma_ld_s2_q;
-logic xcpt_pf_st_s2_q;
-logic xcpt_pf_ld_s2_q;
-bus64_t xcpt_addr_s1_q;
-bus64_t xcpt_addr_s2_q;
-exception_t exception_to_wb;
-
 
 rr_exe_mem_instr_t instruction_to_pmrq;
 rr_exe_mem_instr_t instruction_from_pmrq;
@@ -198,6 +191,10 @@ load_store_queue load_store_queue_inst (
     .full_o             (full_lsq),
     .empty_o            (empty_lsq),
     .blocked_store_o    (blocked_store),
+    .dtlb_comm_i(dtlb_comm_i),
+    .dtlb_comm_o(dtlb_comm_o),
+    .vm_enable_i(vm_enable_i),
+    .priv_lvl_i(priv_lvl_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
@@ -283,9 +280,10 @@ always_comb begin
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         next_state             = WaitReady;
+                        instruction_s1_d        = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_or_store) begin
                         // If the instruction is not a Store or AMO
-                        req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready;
+                        req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready & ~instruction_to_dcache.ex.valid;
                         mem_commit_stall_s0    = 1'b0;
                         next_state  = (!resp_dcache_cpu_i.ready) ? WaitReady : 
                                   (|instruction_to_dcache.data_rs1[3:0] &
@@ -294,6 +292,7 @@ always_comb begin
                                            (|instruction_to_dcache.data_rs1[3:0] &
                                              instruction_to_dcache.instr.instr_type == VLE);
                         is_unalign2_s1_d       = 1'b0;
+                        instruction_s1_d = resp_dcache_cpu_i.ready | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else if (!(store_on_fly | amo_on_fly) |
                                  (mem_gl_index_o == instruction_to_dcache.gl_index)) begin
                         // If there is not a Store or AMO on fly or the current instruction
@@ -302,7 +301,8 @@ always_comb begin
                         // Make request If L1 ready and current instruction is either load
                         //  or store with commit permission
                         req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready &
-                                          (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i);
+                                          (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)
+                                           & ~instruction_to_dcache.ex.valid;
                        
                         // Stall the commit stage if it is a commiting store or amo
                         mem_commit_stall_s0 = req_cpu_dcache_o.is_amo_or_store & commit_store_or_amo_i;
@@ -314,19 +314,14 @@ always_comb begin
                                            WaitCommit : ReadHead;
                         is_unalign1_s1_d       = 1'b0;
                         is_unalign2_s1_d       = 1'b0;
+                        instruction_s1_d = (resp_dcache_cpu_i.ready & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)) | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else begin
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         is_unalign1_s1_d       = 1'b0;
                         is_unalign2_s1_d       = 1'b0;
-                        next_state  = WaitReady;
-                    end
-                   
-                    // Next Stage Logic
-                    if (!req_cpu_dcache_o.valid) begin
                         instruction_s1_d = 'h0;
-                    end else begin
-                        instruction_s1_d = instruction_to_dcache;
+                        next_state  = WaitReady;
                     end
                 end
             end
@@ -552,18 +547,12 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_unalign2_s1_q     <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
-        xcpt_addr_s1_q       <=   '0;
         
         instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
         is_STORE_s2_q        <= 1'b0;
         is_unalign1_s2_q     <= 1'b0;
         is_unalign2_s2_q     <= 1'b0;
-        xcpt_ma_st_s2_q      <= 1'b0;
-        xcpt_ma_ld_s2_q      <= 1'b0;
-        xcpt_pf_st_s2_q      <= 1'b0;
-        xcpt_pf_ld_s2_q      <= 1'b0;
-        xcpt_addr_s2_q       <=  'h0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <=  'h0;
         
@@ -581,11 +570,6 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s2_q        <= 1'b0;
         is_unalign1_s2_q     <= 1'b0;
         is_unalign2_s2_q     <= 1'b0;
-        xcpt_ma_st_s2_q      <= 1'b0;
-        xcpt_ma_ld_s2_q      <= 1'b0;
-        xcpt_pf_st_s2_q      <= 1'b0;
-        xcpt_pf_ld_s2_q      <= 1'b0;
-        xcpt_addr_s2_q       <=  'h0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <=  'h0;
         
@@ -595,7 +579,6 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s1_q        <= req_cpu_dcache_o.is_store;
         is_unalign1_s1_q     <= is_unalign1_s1_d;
         is_unalign2_s1_q     <= is_unalign2_s1_d;
-        xcpt_addr_s1_q       <= resp_dcache_cpu_i.addr;
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
                 
@@ -604,11 +587,6 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s2_q        <= is_STORE_s1_q;
         is_unalign1_s2_q     <= is_unalign1_s1_q;
         is_unalign2_s2_q     <= is_unalign2_s1_q;
-        xcpt_ma_st_s2_q      <= resp_dcache_cpu_i.xcpt_ma_st;
-        xcpt_ma_ld_s2_q      <= resp_dcache_cpu_i.xcpt_ma_ld;
-        xcpt_pf_st_s2_q      <= resp_dcache_cpu_i.xcpt_pf_st;
-        xcpt_pf_ld_s2_q      <= resp_dcache_cpu_i.xcpt_pf_ld;
-        xcpt_addr_s2_q       <= xcpt_addr_s1_q;
         io_s2_q              <= io_s1_q;
         tag_id_s2_q          <= tag_id_s1_q;
     end
@@ -619,12 +597,6 @@ assign req_cpu_dcache_o.data_rs2 = instruction_s1_q.data_rs2;
 
 //// Keep tracking an AMO or STORE if it is in the pipeline to stall the commit until access finished
 assign mem_commit_stall_s1 = instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q;
-
-//// Check if there has been an exception, to send the instruction with the exception to writeback
-assign xcpt_s2_q = instruction_s2_q.instr.valid & (xcpt_ma_st_s2_q 
-                         | xcpt_ma_ld_s2_q | xcpt_pf_st_s2_q | xcpt_pf_ld_s2_q |
-                        (|xcpt_addr_s2_q[63:40] != 0 && !xcpt_addr_s2_q[39]) |
-                        (!(&xcpt_addr_s2_q[63:40]) && xcpt_addr_s2_q[39] )   );
 
 //// Decide if the pipeline needs to be flushed.
 always_comb begin
@@ -658,7 +630,7 @@ always_comb begin
             flush_store         = is_STORE_s2_q;
             flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q;  
         end
-    end else if (instruction_s2_q.instr.valid & xcpt_s2_q) begin 
+    end else if (instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin 
         advance_head_lsq    = 1'b1;
         instruction_to_pmrq =  'h0;
         flush_store         = is_STORE_s2_q;
@@ -676,55 +648,6 @@ always_comb begin
         flush_store         = 1'b1;
     end
 end
-
-///////////////////////////////////////////////////////////////////////////////
-///// Exception Treatment for Loads (to WB) and Stores (to Commit)
-///////////////////////////////////////////////////////////////////////////////
-
-always_comb begin
-    exception_to_wb.cause  = INSTR_ADDR_MISALIGNED;
-    exception_to_wb.origin = 'h0;
-    exception_to_wb.valid  = 1'b0;
-    if(xcpt_ma_st_s2_q & instruction_s2_q.instr.valid) begin // Misaligned store
-        exception_to_wb.cause       = ST_AMO_ADDR_MISALIGNED;
-        exception_to_wb.origin      = xcpt_addr_s2_q;
-        exception_to_wb.valid       = 1'b1;
-    end else if (xcpt_ma_ld_s2_q & instruction_s2_q.instr.valid) begin // Misaligned load
-        exception_to_wb.cause       = LD_ADDR_MISALIGNED;
-        exception_to_wb.origin      = xcpt_addr_s2_q;
-        exception_to_wb.valid       = 1'b1;
-    end else if (xcpt_pf_st_s2_q & instruction_s2_q.instr.valid) begin // Page fault store
-        exception_to_wb.cause       = ST_AMO_PAGE_FAULT;
-        exception_to_wb.origin      = xcpt_addr_s2_q;
-        exception_to_wb.valid       = 1'b1;
-    end else if (xcpt_pf_ld_s2_q & instruction_s2_q.instr.valid) begin // Page fault load
-        exception_to_wb.cause       = LD_PAGE_FAULT;
-        exception_to_wb.origin      = xcpt_addr_s2_q;
-        exception_to_wb.valid       = 1'b1;
-    end else if (instruction_s2_q.instr.valid && 
-                  (en_ld_st_translation_i && (xcpt_addr_s2_q[38] ? !(&xcpt_addr_s2_q[63:39]) : |xcpt_addr_s2_q[63:39]) ||
-                  ~en_ld_st_translation_i && (( xcpt_addr_s2_q >= UNMAPPED_ADDR_LOWER 
-                                             && xcpt_addr_s2_q < UNMAPPED_ADDR_UPPER )
-                                             || xcpt_addr_s2_q >= PHISIC_MEM_LIMIT))) begin // invalid address
-        case(instruction_s2_q.instr.instr_type)
-            SD, SW, SH, SB, VSE, AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
-            AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW,
-            AMO_MAXWU, AMO_MINW, AMO_MINWU, AMO_SWAPD, AMO_ADDD,
-            AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU,
-            FSD, FSW: begin
-                exception_to_wb.cause  = ST_AMO_ACCESS_FAULT;
-                exception_to_wb.origin = xcpt_addr_s2_q;
-                exception_to_wb.valid  = 1'b1;
-            end
-            LD,LW,LWU,LH,LHU,LB,LBU,VLE,FLD,FLW: begin
-                exception_to_wb.cause  = LD_ACCESS_FAULT;
-                exception_to_wb.origin = xcpt_addr_s2_q;
-                exception_to_wb.valid  = 1'b1;
-            end
-        endcase
-    end
-end
-
 
 // Pending Memory Request Table (PMRQ)
 pending_mem_req_queue pending_mem_req_queue_inst (
@@ -763,7 +686,7 @@ always_comb begin
         advance_head_prmq      = 1'b0;
         data_to_wb             = resp_dcache_cpu_i.data;
     end
-    else if(instruction_s2_q.instr.valid & xcpt_s2_q) begin
+    else if(instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin
         instruction_to_wb      = instruction_s2_q;
         advance_head_prmq      = 1'b0;
     end
@@ -845,7 +768,7 @@ assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
 assign instruction_scalar_o.result        = data_to_wb;
-assign instruction_scalar_o.ex            = exception_to_wb;
+assign instruction_scalar_o.ex            = instruction_to_wb.ex;
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
 
@@ -870,7 +793,7 @@ assign instruction_fp_o.gl_index          = instruction_to_wb.gl_index;
 assign instruction_fp_o.branch_taken      = 1'b0;
 assign instruction_fp_o.result_pc         = 0;
 assign instruction_fp_o.result            = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
-assign instruction_fp_o.ex                = exception_to_wb;
+assign instruction_fp_o.ex                = instruction_to_wb.ex;
 assign instruction_fp_o.fp_status         = 'h0;
 
 // Output SIMD Instruction
@@ -894,9 +817,9 @@ assign instruction_simd_o.gl_index        = instruction_to_wb.gl_index;
 assign instruction_simd_o.branch_taken    = 1'b0;
 assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
-assign instruction_simd_o.ex              = exception_to_wb;
+assign instruction_simd_o.ex              = instruction_to_wb.ex;
 
-assign exception_mem_commit_o = (exception_to_wb.valid & is_STORE_or_AMO_s2_q) ? exception_to_wb : 'h0;
+assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///// Outputs for the execution module or Dcache interface

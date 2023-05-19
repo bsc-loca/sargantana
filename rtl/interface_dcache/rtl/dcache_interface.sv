@@ -34,10 +34,6 @@ module dcache_interface
     input  logic [7:0]  dmem_resp_tag_i,     // Tag 
     input  logic        dmem_resp_nack_i,    // Cache request not accepted
     input  logic        dmem_resp_has_data_i,// Dcache response contains data
-    input  logic        dmem_xcpt_ma_st_i,   // Missaligned store
-    input  logic        dmem_xcpt_ma_ld_i,   // Missaligned load
-    input  logic        dmem_xcpt_pf_st_i,   // DTLB miss on store
-    input  logic        dmem_xcpt_pf_ld_i,   // DTLB miss on load
     input  logic        dmem_ordered_i,
 
     // Request TO DCACHE
@@ -70,12 +66,6 @@ bus64_t dmem_req_addr_64;
 
 logic [1:0] type_of_op;
 
-// registers of tlb exceptions to not propagate the stall signal
-logic dmem_xcpt_ma_st_reg;
-logic dmem_xcpt_ma_ld_reg; 
-logic dmem_xcpt_pf_st_reg;
-logic dmem_xcpt_pf_ld_reg;
-
 // Possible states of the control automata
 /*parameter ResetState  = 2'b00,
           Idle = 2'b01,
@@ -91,14 +81,11 @@ parameter MEM_NOP   = 3'b00,
 // CONTROL SIGNALS
 //-------------------------------------------------------------
 
-// There has been a memory exception
-assign mem_xcpt = dmem_xcpt_ma_st_i | dmem_xcpt_ma_ld_i | dmem_xcpt_pf_st_i | dmem_xcpt_pf_ld_i;
-
 // The address is in the INPUT/OUTPUT space
 assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) && (dmem_req_addr_o < 40'h80000000) && !en_ld_st_translation_i;
 
 // There has been a exception
-assign kill_mem_ope = mem_xcpt | req_cpu_dcache_i.kill;
+assign kill_mem_ope = req_cpu_dcache_i.kill;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -206,10 +193,6 @@ assign resp_dcache_cpu_o.rd = dmem_resp_tag_i;
 assign resp_dcache_cpu_o.data = dmem_resp_data_i;
 
 // Fill exceptions for exe stage
-assign resp_dcache_cpu_o.xcpt_ma_st = dmem_xcpt_ma_st_i;
-assign resp_dcache_cpu_o.xcpt_ma_ld = dmem_xcpt_ma_ld_i;
-assign resp_dcache_cpu_o.xcpt_pf_st = dmem_xcpt_pf_st_i;
-assign resp_dcache_cpu_o.xcpt_pf_ld = dmem_xcpt_pf_ld_i;
 assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
 assign resp_dcache_cpu_o.ordered = dmem_ordered_i;
 

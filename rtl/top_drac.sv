@@ -13,7 +13,7 @@
 */
 
 module top_drac
-    import drac_pkg::*, sargantana_icache_pkg::*;
+    import drac_pkg::*, sargantana_icache_pkg::*, mmu_pkg::*;
 (
 //------------------------------------------------------------------------------------
 // ORIGINAL INPUTS OF LAGARTO 
@@ -43,13 +43,6 @@ module top_drac
 // I-CANCHE INPUT INTERFACE
 //------------------------------------------------------------------------------------
     
-    input logic                 PTWINVALIDATE     ,
-    input logic                 TLB_RESP_MISS     ,
-    input logic                 TLB_RESP_XCPT_IF  ,
-    input logic [PPN_BIT_SIZE-1:0] itlb_resp_ppn_i ,   
-    input logic                 iptw_resp_valid_i ,
-    //==============================================================
-    
     //- From L2
     input  logic         io_mem_grant_valid                 ,
     input  logic [127:0] io_mem_grant_bits_data             ,
@@ -66,18 +59,11 @@ module top_drac
     input logic                 DMEM_RESP_VALID,
     input logic  [7:0]          DMEM_RESP_TAG,
     input logic                 DMEM_RESP_BITS_HAS_DATA,
-    input logic                 DMEM_XCPT_MA_ST,
-    input logic                 DMEM_XCPT_MA_LD,
-    input logic                 DMEM_XCPT_PF_ST,
-    input logic                 DMEM_XCPT_PF_LD,
     input logic                 DMEM_ORDERED, // TODO: remove if we dont used
 
 //-----------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
 //-----------------------------------------------------------------------------------
-    
-    output logic [27:0]         TLB_REQ_BITS_VPN,
-    output logic                TLB_REQ_VALID,
 
     //- To L2
     output logic         io_mem_acquire_valid               ,
@@ -149,6 +135,13 @@ module top_drac
     output logic                io_core_pmu_struct_depend   ,
     output logic                io_core_pmu_grad_list_full  ,
     output logic                io_core_pmu_free_list_empty ,
+    output logic                io_core_pmu_itlb_access,
+    output logic                io_core_pmu_itlb_miss,
+    output logic                io_core_pmu_dtlb_access,
+    output logic                io_core_pmu_dtlb_miss,
+    output logic                io_core_pmu_ptw_hit,
+    output logic                io_core_pmu_ptw_miss,
+    output logic                io_core_pmu_itlb_miss_cycle,
 
 //-----------------------------------------------------------------------------
 // BOOTROM CONTROLER INTERFACE
@@ -285,13 +278,36 @@ assign io_mem_acquire_bits_a_type          =   3'b001               ;
 assign io_mem_acquire_bits_union           =  17'b00000000111000001 ;
 assign io_mem_grant_ready                  =   1'b1                 ;
 
-//TLB conection
-assign itlb_tresp.miss   = TLB_RESP_MISS     ;
-assign itlb_tresp.ptw_v  = iptw_resp_valid_i ;
-assign itlb_tresp.ppn    = itlb_resp_ppn_i   ;
-assign itlb_tresp.xcpt   = TLB_RESP_XCPT_IF  ;
-assign TLB_REQ_BITS_VPN  = itlb_treq.vpn     ;
-assign TLB_REQ_VALID     = itlb_treq.valid   ;
+// *** Memory Management Unit ***
+
+// Page Table Walker - iTLB/dTLB - dCache Connections
+tlb_ptw_comm_t itlb_ptw_comm, dtlb_ptw_comm;
+ptw_tlb_comm_t ptw_itlb_comm, ptw_dtlb_comm;
+ptw_dmem_comm_t ptw_dmem_comm;
+dmem_ptw_comm_t dmem_ptw_comm;
+
+csr_ptw_comm_t csr_ptw_comm;
+logic [31:0] csr_satp;
+assign csr_ptw_comm.satp = {32'b0, csr_satp}; // PTW expects 64 bits
+
+// Page Table Walker - iCache/dCache Connections
+
+cache_tlb_comm_t icache_itlb_comm, core_dtlb_comm;
+tlb_cache_comm_t itlb_icache_comm, dtlb_core_comm;
+
+assign icache_itlb_comm.req.valid = itlb_treq.valid;
+assign icache_itlb_comm.req.asid = 1'b0;
+assign icache_itlb_comm.req.vpn = itlb_treq.vpn;
+assign icache_itlb_comm.req.passthrough = 1'b0;
+assign icache_itlb_comm.req.instruction = 1'b1;
+assign icache_itlb_comm.req.store = 1'b0;
+assign icache_itlb_comm.priv_lvl = csr_priv_lvl;
+assign icache_itlb_comm.vm_enable = en_translation;
+
+assign itlb_tresp.miss   = itlb_icache_comm.resp.miss;
+assign itlb_tresp.ptw_v  = ptw_itlb_comm.resp.valid;
+assign itlb_tresp.ppn    = itlb_icache_comm.resp.ppn;
+assign itlb_tresp.xcpt   = itlb_icache_comm.resp.xcpt.fetch;
 
 //-- PMU conection
 assign io_core_pmu_icache_req       = lagarto_ireq.valid                    ; 
@@ -314,6 +330,7 @@ assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
 assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
 assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
 assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
+assign io_core_pmu_itlb_miss_cycle = itlb_icache_comm.resp.miss && !itlb_icache_comm.tlb_ready;
 
 sew_t sew;
 assign sew = sew_t'(vpu_csr[37:36]);
@@ -331,6 +348,7 @@ datapath datapath_inst(
     .en_translation_i( en_translation ), 
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready),
+    .dtlb_comm_i(dtlb_core_comm),
     // Output datapath
     .req_cpu_dcache_o(req_datapath_dcache_interface),
     .req_cpu_icache_o(req_datapath_icache_interface),
@@ -340,6 +358,7 @@ datapath datapath_inst(
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .en_ld_st_translation_i(en_ld_st_translation),
+    .dtlb_comm_o(core_dtlb_comm),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -383,6 +402,27 @@ icache_interface icache_interface_inst(
     .buffer_miss_o (buffer_miss )
 );
 
+// DCACHE Answer
+logic        datapath_resp_replay;  // Miss ready
+bus_simd_t   datapath_resp_data;    // Readed data from Cache
+logic        datapath_req_ready;    // Dcache ready to accept request
+logic        datapath_resp_valid;   // Response is valid
+logic [7:0]  datapath_resp_tag;     // Tag 
+logic        datapath_resp_nack;    // Cache request not accepted
+logic        datapath_resp_has_data;// Dcache response contains data
+logic        datapath_ordered;
+
+// Request TO DCACHE
+
+logic        datapath_req_valid;    // Sending valid request
+logic [4:0]  datapath_req_cmd;      // Type of memory access
+addr_t       datapath_req_addr;     // Address of memory access
+logic [3:0]  datapath_op_type;      // Granularity of memory access
+bus_simd_t   datapath_req_data;     // Data to store
+logic [7:0]  datapath_req_tag;      // Tag for the MSHR
+logic        datapath_req_invalidate_lr; // Reset load-reserved/store-conditional
+logic        datapath_req_kill;     // Kill actual memory access
+
 dcache_interface dcache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
@@ -391,28 +431,25 @@ dcache_interface dcache_interface_inst(
     .en_ld_st_translation_i(en_ld_st_translation_i),
 
     // DCACHE Answer
-    .dmem_resp_replay_i(DMEM_RESP_BITS_REPLAY),
-    .dmem_resp_data_i(DMEM_RESP_BITS_DATA_SUBW),
-    .dmem_req_ready_i(DMEM_REQ_READY),
-    .dmem_resp_valid_i(DMEM_RESP_VALID),
-    .dmem_resp_tag_i(DMEM_RESP_TAG),
-    .dmem_resp_nack_i(DMEM_RESP_BITS_NACK),
-    .dmem_resp_has_data_i(DMEM_RESP_BITS_HAS_DATA),
-    .dmem_xcpt_ma_st_i(DMEM_XCPT_MA_ST),
-    .dmem_xcpt_ma_ld_i(DMEM_XCPT_MA_LD),
-    .dmem_xcpt_pf_st_i(DMEM_XCPT_PF_ST),
-    .dmem_xcpt_pf_ld_i(DMEM_XCPT_PF_LD),
-    .dmem_ordered_i(DMEM_ORDERED),
+    .dmem_resp_replay_i(datapath_resp_replay),  // Miss ready
+    .dmem_resp_data_i(datapath_resp_data),    // Readed data from Cache
+    .dmem_req_ready_i(datapath_req_ready),    // Dcache ready to accept request
+    .dmem_resp_valid_i(datapath_resp_valid),   // Response is valid
+    .dmem_resp_tag_i(datapath_resp_tag),     // Tag 
+    .dmem_resp_nack_i(datapath_resp_nack),    // Cache request not accepted
+    .dmem_resp_has_data_i(datapath_resp_has_data),// Dcache response contains data
+    .dmem_ordered_i(datapath_ordered),
 
-    // Interface request
-    .dmem_req_valid_o(DMEM_REQ_VALID),
-    .dmem_req_cmd_o(DMEM_REQ_CMD),
-    .dmem_req_addr_o(DMEM_REQ_BITS_ADDR),
-    .dmem_op_type_o(DMEM_OP_TYPE),
-    .dmem_req_data_o(DMEM_REQ_BITS_DATA),
-    .dmem_req_tag_o(DMEM_REQ_BITS_TAG),
-    .dmem_req_invalidate_lr_o(DMEM_REQ_INVALIDATE_LR),
-    .dmem_req_kill_o(DMEM_REQ_BITS_KILL),
+    // Request TO DCACHE
+
+    .dmem_req_valid_o(datapath_req_valid),    // Sending valid request
+    .dmem_req_cmd_o(datapath_req_cmd),      // Type of memory access
+    .dmem_req_addr_o(datapath_req_addr),     // Address of memory access
+    .dmem_op_type_o(datapath_op_type),      // Granularity of memory access
+    .dmem_req_data_o(datapath_req_data),     // Data to store
+    .dmem_req_tag_o(datapath_req_tag),      // Tag for the MSHR
+    .dmem_req_invalidate_lr_o(datapath_req_invalidate_lr), // Reset load-reserved/store-conditional
+    .dmem_req_kill_o(datapath_req_kill),     // Kill actual memory access
 
     // PMU
     .dmem_is_store_o ( io_core_pmu_EXE_STORE ),
@@ -444,8 +481,6 @@ sargantana_top_icache icache (
 
 bus64_t csr_evec;
 assign resp_csr_interface_datapath.csr_evec = {{25{csr_evec[39]}},csr_evec[38:0]};
-
-logic tlb_flush; //TODO
 
 csr_bsc csr_inst (
     .clk_i(CLK),
@@ -489,18 +524,114 @@ csr_bsc csr_inst (
     .csr_tval_o(resp_csr_interface_datapath.csr_tval),                 // Value written to the tval registers
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
-    //.status_o(),                   //actual mstatus of the core
+    .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
     //.ld_st_priv_lvl_o(),
     .en_ld_st_translation_o(en_ld_st_translation),
     .en_translation_o(en_translation),
 
-    .satp_ppn_o(ptw_base_ptr),                 // Page table base pointer for the PTW
+    .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
 
     .evec_o(csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
-    .flush_o(tlb_flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .flush_o(csr_ptw_comm.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr)
+);
+
+tlb itlb (
+    .clk_i(CLK),
+    .rstn_i(RST),
+    .cache_tlb_comm_i(icache_itlb_comm),
+    .tlb_cache_comm_o(itlb_icache_comm),
+    .ptw_tlb_comm_i(ptw_itlb_comm),
+    .tlb_ptw_comm_o(itlb_ptw_comm),
+    .pmu_tlb_access_o(pmu_itlb_access),
+    .pmu_tlb_miss_o(pmu_itlb_miss)
+);
+
+tlb dtlb (
+    .clk_i(CLK),
+    .rstn_i(RST),
+    .cache_tlb_comm_i(core_dtlb_comm),
+    .tlb_cache_comm_o(dtlb_core_comm),
+    .ptw_tlb_comm_i(ptw_dtlb_comm),
+    .tlb_ptw_comm_o(dtlb_ptw_comm),
+    .pmu_tlb_access_o(pmu_dtlb_access),
+    .pmu_tlb_miss_o(pmu_dtlb_miss)
+);
+
+ptw ptw_inst (
+    .clk_i(CLK),
+    .rstn_i(RST),
+
+    // iTLB request-response
+    .itlb_ptw_comm_i(itlb_ptw_comm), 
+    .ptw_itlb_comm_o(ptw_itlb_comm),
+
+    // dTLB request-response
+    .dtlb_ptw_comm_i(dtlb_ptw_comm),
+    .ptw_dtlb_comm_o(ptw_dtlb_comm),
+
+    // dmem request-response
+    .dmem_ptw_comm_i(dmem_ptw_comm),
+    .ptw_dmem_comm_o(ptw_dmem_comm),
+
+    // csr interface
+    .csr_ptw_comm_i(csr_ptw_comm),
+
+    // pmu interface
+    .pmu_ptw_hit_o(pmu_ptw_hit),
+    .pmu_ptw_miss_o(pmu_ptw_miss)
+);
+
+dmem_arbiter arbiter (
+    .clk_i(CLK),
+    .rstn_i(RST),
+    
+    // DCACHE Answer
+    .datapath_resp_replay_o(datapath_resp_replay),  // Miss ready
+    .datapath_resp_data_o(datapath_resp_data),    // Readed data from Cache
+    .datapath_req_ready_o(datapath_req_ready),    // Dcache ready to accept request
+    .datapath_resp_valid_o(datapath_resp_valid),   // Response is valid
+    .datapath_resp_tag_o(datapath_resp_tag),     // Tag 
+    .datapath_resp_nack_o(datapath_resp_nack),    // Cache request not accepted
+    .datapath_resp_has_data_o(datapath_resp_has_data),// Dcache response contains data
+    .datapath_ordered_o(datapath_ordered),
+
+    // Request TO DCACHE
+
+    .datapath_req_valid_i(datapath_req_valid),    // Sending valid request
+    .datapath_req_cmd_i(datapath_req_cmd),      // Type of memory access
+    .datapath_req_addr_i(datapath_req_addr),     // Address of memory access
+    .datapath_op_type_i(datapath_op_type),      // Granularity of memory access
+    .datapath_req_data_i(datapath_req_data),     // Data to store
+    .datapath_req_tag_i(datapath_req_tag),      // Tag for the MSHR
+    .datapath_req_invalidate_lr_i(datapath_req_invalidate_lr), // Reset load-reserved/store-conditional
+    .datapath_req_kill_i(datapath_req_kill),     // Kill actual memory access
+
+    // PTW interface
+    .ptw_req_i(ptw_dmem_comm),
+    .ptw_resp_o(dmem_ptw_comm),
+
+    // DCACHE Answer
+    .dmem_resp_replay_i(DMEM_RESP_BITS_REPLAY),
+    .dmem_resp_data_i(DMEM_RESP_BITS_DATA_SUBW),
+    .dmem_req_ready_i(DMEM_REQ_READY),
+    .dmem_resp_valid_i(DMEM_RESP_VALID),
+    .dmem_resp_tag_i(DMEM_RESP_TAG),
+    .dmem_resp_nack_i(DMEM_RESP_BITS_NACK),
+    .dmem_resp_has_data_i(DMEM_RESP_BITS_HAS_DATA),
+    .dmem_ordered_i(DMEM_ORDERED),
+
+    // Interface request
+    .dmem_req_valid_o(DMEM_REQ_VALID),
+    .dmem_req_cmd_o(DMEM_REQ_CMD),
+    .dmem_req_addr_o(DMEM_REQ_BITS_ADDR),
+    .dmem_op_type_o(DMEM_OP_TYPE),
+    .dmem_req_data_o(DMEM_REQ_BITS_DATA),
+    .dmem_req_tag_o(DMEM_REQ_BITS_TAG),
+    .dmem_req_invalidate_lr_o(DMEM_REQ_INVALIDATE_LR),
+    .dmem_req_kill_o(DMEM_REQ_BITS_KILL)
 );
 
 //PMU  

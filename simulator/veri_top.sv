@@ -8,9 +8,6 @@ module veri_top
     input         rst_top
     );
 
-    // TLB wires
-    logic [27:0] vpn;
-
     // Bootrom wiressd
     logic [23:0] brom_req_address;
     logic brom_req_valid;
@@ -26,11 +23,11 @@ module veri_top
     logic [1:0] l2_response_seqnum;
 
     // dmem wires
-    bus_simd_t dmem_resp_data_i;
-    logic dmem_resp_valid_i;
-    logic [7:0] dmem_resp_tag_i;
+    bus_simd_t dmem_resp_data;
+    logic dmem_resp_valid;
+    logic [7:0] dmem_resp_tag;
 
-    logic dmem_req_ready_i;
+    logic dmem_req_ready;
     logic dmem_req_valid_o;
     logic [4:0] dmem_req_cmd_o;
     addr_t  dmem_req_addr_o;
@@ -68,10 +65,6 @@ module veri_top
         .brom_req_address_o(brom_req_address),
         .brom_req_valid_o(brom_req_valid),
 
-        // TLB ports
-        .TLB_REQ_BITS_VPN(vpn),
-        .itlb_resp_ppn_i(vpn[19:0]),
-
         // icache ports
         .io_mem_acquire_valid(l1_request_valid),               
         .io_mem_acquire_bits_addr_block(l1_request_paddr),   
@@ -80,16 +73,12 @@ module veri_top
         .io_mem_grant_bits_addr_beat(l2_response_seqnum),
 
         // dmem ports
-        .DMEM_REQ_READY(dmem_req_ready_i),
-        .DMEM_RESP_BITS_DATA_SUBW(dmem_resp_data_i),
+        .DMEM_REQ_READY(dmem_req_ready),
+        .DMEM_RESP_BITS_DATA_SUBW(dmem_resp_data),
         .DMEM_RESP_BITS_NACK(1'b0),
         .DMEM_RESP_BITS_REPLAY(1'b0),
-        .DMEM_RESP_VALID(1'b1),
-        .DMEM_RESP_TAG(dmem_resp_tag_i),
-        .DMEM_XCPT_MA_ST(1'b0),
-        .DMEM_XCPT_MA_LD(1'b0),
-        .DMEM_XCPT_PF_ST(1'b0),
-        .DMEM_XCPT_PF_LD(1'b0),
+        .DMEM_RESP_VALID(dmem_resp_valid),
+        .DMEM_RESP_TAG(dmem_resp_tag),
         .DMEM_ORDERED(1'b1),
         .DMEM_REQ_VALID(dmem_req_valid_o),
         .DMEM_OP_TYPE(dmem_op_type_o),
@@ -140,10 +129,10 @@ module veri_top
         .dc_cmd_i(dmem_req_cmd_o),
         .dc_wr_data_i(dmem_req_data_o),
         .dc_word_size_i(dmem_op_type_o),
-        .dc_line_o(dmem_resp_data_i),
-        .dc_ready_o(dmem_req_ready_i),
-        .dc_valid_o(dmem_resp_valid_i),
-        .dc_tag_o(dmem_resp_tag_i)
+        .dc_line_o(dmem_resp_data),
+        .dc_ready_o(dmem_req_ready),
+        .dc_valid_o(dmem_resp_valid),
+        .dc_tag_o(dmem_resp_tag)
     );
 
     host_behav host_behav_inst (

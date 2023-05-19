@@ -15,6 +15,7 @@
 module datapath
     import drac_pkg::*;
     import riscv_pkg::*;
+    import mmu_pkg::*;
 (
     input logic             clk_i,
     input logic             rstn_i,
@@ -32,11 +33,13 @@ module datapath
     input [1:0]             csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
+    input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
     output debug_out_t      debug_o,
+    output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
@@ -1135,6 +1138,10 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
         .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),
+        .dtlb_comm_i(dtlb_comm_i),
+        .dtlb_comm_o(dtlb_comm_o),
+        .vm_enable_i(en_translation_i),
+        .priv_lvl_i(csr_priv_lvl_i),
     
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
         .correct_branch_pred_o(correct_branch_pred),

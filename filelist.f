@@ -3,7 +3,7 @@
 ./includes/riscv_pkg.sv
 ./includes/def_pkg.sv
 ./includes/drac_pkg.sv
-
+./rtl/mmu/includes/mmu_pkg.sv
 ./includes/sargantana_icache_pkg.sv
 ./rtl/interface_icache/rtl/icache_interface.sv
 ./rtl/control_unit/rtl/control_unit.sv
@@ -85,4 +85,9 @@
 ./rtl/datapath/rtl/wb_stage/rtl/graduation_list.sv
 ./rtl/interface_dcache/rtl/dcache_interface.sv
 ./rtl/csr/rtl/csr_bsc.sv
+./rtl/mmu/src/rtl/pseudoLRU.sv
+./rtl/mmu/src/rtl/ptw_arb.sv
+./rtl/mmu/src/rtl/ptw.sv
+./rtl/mmu/src/rtl/tlb.sv
+./rtl/dmem_arbiter.sv
 ./rtl/top_drac.sv

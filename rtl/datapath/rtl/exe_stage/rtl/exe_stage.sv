@@ -15,6 +15,7 @@ module exe_stage
     import drac_pkg::*;
     import riscv_pkg::*;
     import fpuv_wrapper_pkg::*;
+    import mmu_pkg::*;
 (
     input logic                         clk_i,
     input logic                         rstn_i,
@@ -32,6 +33,7 @@ module exe_stage
 
     input wire                          commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
+    input tlb_cache_comm_t              dtlb_comm_i,
     // OUTPUTS
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
@@ -54,6 +56,10 @@ module exe_stage
     output req_cpu_dcache_t             req_cpu_dcache_o,       // Request to dcache interface 
     output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
     output exe_if_branch_pred_t         exe_if_branch_pred_o,   // Branch prediction (taken, target) and result (take, target)
+    output cache_tlb_comm_t             dtlb_comm_o,
+
+    input logic vm_enable_i,
+    input logic [1:0] priv_lvl_i,
 
     //--PMU
     output logic                        pmu_is_branch_o,
@@ -215,6 +221,8 @@ always_comb begin
     mem_instr.old_prd             = from_rr_i.old_prd;
     mem_instr.old_pvd             = from_rr_i.old_pvd;
     mem_instr.old_fprd            = from_rr_i.old_fprd;
+    mem_instr.translated          = 1'b0;
+    mem_instr.ex                  = 0;
 
 
     fp_instr.data_rs1            = rs1_data_def;
@@ -324,6 +332,10 @@ mem_unit mem_unit_inst(
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
     .commit_store_or_amo_i  (commit_store_or_amo_i),
     .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
+    .dtlb_comm_i(dtlb_comm_i),
+    .dtlb_comm_o(dtlb_comm_o),
+    .vm_enable_i(vm_enable_i),
+    .priv_lvl_i(priv_lvl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),

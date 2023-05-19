@@ -14,6 +14,7 @@
 
 module load_store_queue
     import drac_pkg::*;
+    import mmu_pkg::*;
 (
     input logic                clk_i,            // Clock Singal
     input logic                rstn_i,           // Negated Reset Signal
@@ -33,6 +34,12 @@ module load_store_queue
        
     output logic               full_o,           // Lsq is full
     output logic               empty_o,          // Lsq is empty
+    
+    input tlb_cache_comm_t       dtlb_comm_i,
+    output cache_tlb_comm_t      dtlb_comm_o,
+
+    input logic vm_enable_i,
+    input logic [1:0] priv_lvl_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -54,11 +61,15 @@ lsq_entry_pointer tail;
 // Points to the oldest executed entry
 lsq_entry_pointer head;
 
+// Points to the next entry to translate
+lsq_entry_pointer tlb_tail;
+
 //Num must be 1 bit bigger than head an tail
 logic [$clog2(LSQ_NUM_ENTRIES):0] num;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_exe;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_on_fly;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_recover;
+logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
 // Internal Control Signals
 logic write_enable;
@@ -68,6 +79,7 @@ logic read_enable_sb;
 logic advance_head_enable;
 logic bypass_lsq;
 logic empty_int;
+logic translate_enable;
 
 logic io_address_space;
 
@@ -77,12 +89,58 @@ assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES)
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD)) & (~reset_next_i);
+//assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD)) & (~reset_next_i);
+assign read_enable = read_next_i & !empty_int & (~reset_next_i);
 
 // User can advance the head of the buffer if there is data stored in the queue
 assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
 
-assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
+//assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
+assign bypass_lsq = 1'b0;
+
+// A translation can be done if there is a hit in the dTLB
+assign translate_enable = dtlb_comm_i.tlb_ready & !dtlb_comm_i.resp.miss & (num_to_translate > 0);
+
+rr_exe_mem_instr_t instr_to_translate;
+assign instr_to_translate = control_table[tlb_tail];
+
+rr_exe_mem_instr_t translated_instr;
+
+always_comb begin 
+    translated_instr = instr_to_translate;
+
+    // Translation from TLB
+    translated_instr.translated = translate_enable;
+    translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
+    
+    // Exception treatment
+    if ((instr_to_translate.instr.mem_size == 4'b0001 & |instr_to_translate.data_rs1[0:0]) |
+        (instr_to_translate.instr.mem_size == 4'b0010 & |instr_to_translate.data_rs1[1:0]) |
+        (instr_to_translate.instr.mem_size == 4'b0011 & |instr_to_translate.data_rs1[2:0]) |
+        (instr_to_translate.instr.mem_size == 4'b0101 & |instr_to_translate.data_rs1[0:0]) |
+        (instr_to_translate.instr.mem_size == 4'b0110 & |instr_to_translate.data_rs1[1:0]) |
+        (instr_to_translate.instr.mem_size == 4'b0111 & |instr_to_translate.data_rs1[2:0])) begin // Misaligned address
+        translated_instr.ex.cause       = instr_to_translate.is_amo_or_store ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
+        translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.valid       = 1'b1;
+    end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_store) begin // Page fault store
+        translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
+        translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.valid       = 1'b1;
+    end else if (dtlb_comm_i.resp.xcpt.load) begin // Page fault load
+        translated_instr.ex.cause       = LD_PAGE_FAULT;
+        translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.valid       = 1'b1;
+    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[38] ? !(&instr_to_translate.data_rs1[63:39]) : |instr_to_translate.data_rs1[63:39]) ||
+                  ~en_ld_st_translation_i && (( instr_to_translate.data_rs1 >= UNMAPPED_ADDR_LOWER 
+                                             && instr_to_translate.data_rs1 < UNMAPPED_ADDR_UPPER )
+                                             || instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) begin // invalid address
+
+        translated_instr.ex.cause  = instr_to_translate.is_amo_or_store ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
+        translated_instr.ex.origin = instr_to_translate.data_rs1;
+        translated_instr.ex.valid  = 1'b1;
+    end
+end
 
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
@@ -96,6 +154,10 @@ begin
     // Write tail
     if (write_enable) begin
         control_table[tail] <= instruction_i;
+    end
+    // Update entry to be translated
+    if (translate_enable) begin
+        control_table[tlb_tail] <= translated_instr;
     end
 end
 
@@ -114,8 +176,10 @@ begin
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
         num_to_recover  <= 4'b0;
+        num_to_translate <= 4'b0;
         recover_head <= 1'b0;
         recover_tail <= 1'b0;
+        tlb_tail <= 3'b0;
     end
     else if (flush_i) begin
         head <= 3'h0;
@@ -123,26 +187,32 @@ begin
         num_to_exe   <= 4'b0;
         num_on_fly   <= 4'b0;
         num_to_recover  <= 4'b0;
+        num_to_translate <= 4'b0;
         recover_head <= 1'b0;
         recover_tail <= 1'b0;
+        tlb_tail <= 3'b0;
     end
     else if (reset_next_i) begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num_to_exe <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable_lsq};
+        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable};
+        num_to_exe <= num_to_exe + {3'b0, translate_enable} - {3'b0, read_enable_lsq};
         num_on_fly <= 4'b0;
         num_to_recover  <= num_on_fly + num_to_recover;
         recover_head <= recover_head;
         recover_tail <= recover_head;
+        tlb_tail <= tlb_tail + {2'b00, translate_enable};
     end
     else begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num_to_exe      <= num_to_exe + {3'b0, write_enable} - {3'b0, read_enable_lsq};
+        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable};
+        num_to_exe      <= num_to_exe + {3'b0, translate_enable} - {3'b0, read_enable_lsq};
         num_on_fly      <= num_on_fly + {2'b00, read_enable} - {3'b0, advance_head_enable};
         num_to_recover  <= num_to_recover > 0 ? num_to_recover - {3'b0, read_enable} : 4'b0;
         recover_head <= recover_head + advance_head_enable;
         recover_tail <= recover_tail + read_enable;
+        tlb_tail <= tlb_tail + {2'b00, translate_enable};
     end
 end
 
@@ -170,9 +240,9 @@ always_comb begin
         next_instr_exe_o = recover_table[recover_tail];
     end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
         next_instr_exe_o = st_buff_inst_out;
-    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin
+    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i & control_table[head].translated) begin
         next_instr_exe_o = control_table[head];
-    end else if (read_enable && is_next_load && !st_buff_collision) begin
+    end else if (read_enable && is_next_load && !st_buff_collision & control_table[head].translated) begin
         next_instr_exe_o = control_table[head];
     end else if (read_enable && bypass_lsq) begin
         next_instr_exe_o = instruction_i;
@@ -200,9 +270,18 @@ always_comb begin
     end
 end
 
-assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_recover == '0;
+assign dtlb_comm_o.vm_enable = vm_enable_i;
+assign dtlb_comm_o.priv_lvl = priv_lvl_i;
+assign dtlb_comm_o.req.valid = num_to_translate > 0;
+assign dtlb_comm_o.req.vpn = control_table[tlb_tail].data_rs1[63:12];
+assign dtlb_comm_o.req.passthrough = 1'b0;
+assign dtlb_comm_o.req.instruction = 1'b0;
+assign dtlb_comm_o.req.asid = '0;
+assign dtlb_comm_o.req.store = control_table[tlb_tail].is_amo_or_store; // TODO: Check this, might not be exactly right...
+
+assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_recover == '0 && num_to_translate == '0;
 assign empty_o = empty_int && !bypass_lsq;
-assign full_o  = ((num_to_exe == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
+assign full_o  = (((num_to_exe + num_to_translate) == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
 assign is_next_load = num_to_exe > '0 && (control_table[head].instr.mem_type == LOAD);
 

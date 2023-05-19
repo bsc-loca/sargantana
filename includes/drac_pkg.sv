@@ -302,10 +302,6 @@ typedef struct packed {
     logic    has_data;      // Dcache response contains data
     bus_simd_t   data;      // Data from load
     logic[6:0]     rd;      // Tag of the mem access
-    logic  xcpt_ma_st;      // Misaligned store exception
-    logic  xcpt_ma_ld;      // Misaligned load exception
-    logic  xcpt_pf_st;      // Page fault store
-    logic  xcpt_pf_ld;      // Page fault load 
     bus64_t      addr;      // Requested Address
     logic io_address_space; // Request in Input/Output Address Space
     logic     ordered;    
@@ -524,6 +520,9 @@ typedef struct packed {
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
 
+    logic translated;                   // Has been translated to a physical address
+    exception_t ex;
+
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
 
@@ -553,6 +552,7 @@ typedef struct packed {
 
     logic is_vmul;                      // Is a vmul instruction type (more than 1 cycle)
     logic is_vred;                      // Is a vred instruction type (2 cycles)
+    logic translated;                   // Has been translated by the MMU
 } rr_exe_simd_instr_t;
 
 

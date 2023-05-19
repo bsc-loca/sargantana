@@ -2,3 +2,7 @@
 	path = drac-bench
 	url = ../drac-bench.git
 	branch = sargantana
+[submodule "rtl/mmu"]
+	path = rtl/mmu
+	url = ../mmu.git
+	branch = sargantana
