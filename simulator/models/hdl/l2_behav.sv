@@ -100,7 +100,7 @@ module l2_behav #(
     logic [ADDR_SIZE-1:0] addr_int_d, addr_int_q;
     logic [3:0] word_size_d, word_size_q;
     logic valid_d, valid_q;
-    logic tag_d, tag_q;
+    logic [7:0] tag_d, tag_q;
     logic [4:0] cmd_d, cmd_q;
 
     logic [7:0]  mem_byte;
