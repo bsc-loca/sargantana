@@ -5,7 +5,12 @@ ISA_DIR=$2
 TEST_TIMEOUT=100000
 
 TESTS_TO_SKIP=(
-    rv64ui-p-ma_data # Core doesn't support misaligned load/stores
+    # Core doesn't support misaligned load/stores
+    rv64ui-p-ma_data
+    rv64ui-v-ma_data
+
+    # TODO: Oscar is fixing this
+    rv64mi-p-csr 
 )
 
 print_padded() {
@@ -18,18 +23,25 @@ print_padded() {
 failed_tests=()
 passed_tests=0
 
-for test in $ISA_DIR/rv64u{f,i,d,m,a}-p-*; do
+for test in $ISA_DIR/{rv64u{i,m,f,d,a}-{p,v}-*,rv64mi-p-*}; do
     test_name=$(basename $test)
 
     if [[ "$test_name" != *dump ]]; then
         print_padded "Testing $test_name" 
 
         if [[ ! ${TESTS_TO_SKIP[*]} =~ "$test_name" ]]; then
-            if $SIMULATOR +max-cycles=$TEST_TIMEOUT +load=$test &> /dev/null; then
+            $SIMULATOR +max-cycles=$TEST_TIMEOUT +load=$test &> /dev/null
+            result=$?
+            if [[ result -eq 0 ]]; then
                 printf "\e[32mOK\e[0m\n"
                 ((passed_tests++))
             else
-                printf "\e[31mFAILED\e[0m\n"
+                if [[ result -eq 255 ]]; then
+                    printf "\e[31mTIMED OUT\e[0m\n"
+                else
+                    printf "\e[31mFAILED\e[0m (Test case %d)\n" "$result"
+                fi
+                
                 failed_tests[${#failed_tests[@]}]=$test_name
             fi
         else
