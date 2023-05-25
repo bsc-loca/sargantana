@@ -10,6 +10,9 @@ sim: $(SIMULATOR)
 # *** ISA Tests ***
 include tb/tb_isa_tests/isa-tests.mk
 
+# *** Benchmarks ***
+include benchmarks.mk
+
 # *** CI rules ***
 lint:
 	bash ./scripts/veri_lint.sh

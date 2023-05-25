@@ -20,3 +20,4 @@ bootrom.hex
 signature.txt
 .svls.toml
 *.gtkw
+benchmarks/
