@@ -5,7 +5,6 @@
 #include "Vveri_top.h"
 #include "globals.h"
 #include "dpi_perfect_memory.h"
-#include "dpi_host_behav.h"
 #include <string>
 #include <sstream>
 #include <vector>
@@ -328,10 +327,6 @@ int main(int argc, char** argv) {
         torture_signature->disable();
     else
         torture_signature->clear_output(); // reset the output file
-
-
-    if(host_interface_enable == true)
-        host_init_interface();
     
     konata_signature->set_dump_file_name(konataSignatureFileName);
     if (konata_dump_valid == false)

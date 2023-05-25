@@ -3,8 +3,11 @@
 #include <map>
 #include <cstdint>
 #include <cassert>
+#include <iostream>
+#include <unistd.h>
 
 #include "loadelf.hpp"
+#include "globals.h"
 
 class Memory32 {                    // data width = 32-bit
     std::map<uint32_t, uint32_t> mem; // memory storage
@@ -29,9 +32,15 @@ class Memory32 {                    // data width = 32-bit
 };
 
 static Memory32 memoryContents;
+static uint64_t tohostAddr;
+static uint64_t fromhostAddr;
 
 svBit memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     uint32_t baseAddress = addr[0];
+
+    /*if (baseAddress ==  ((uint32_t) fromhostAddr)) {
+        printf("Fromhost!!!\n");
+    }*/
 
     for (unsigned int i = 0; i < BUS_WIDTH / 32; i++) {
         uint32_t dataRead;
@@ -42,8 +51,16 @@ svBit memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     return sv_1;
 }
 
+void tohost(unsigned int id, unsigned long long data);
+
 svBit memory_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data) {
     uint32_t baseAddress = addr[0];
+
+    if (baseAddress == ((uint32_t) tohostAddr)) {
+        //printf("Tohost!!!\n");
+        tohost(0, ((uint64_t) data[1]) << 32 | data[0]);
+        return sv_1;
+    }
 
     uint32_t alignedAddress = baseAddress & ~0b11;
     unsigned int offset = baseAddress & 0b11;
@@ -83,7 +100,14 @@ void memory_init(std::string filename) {
         std::bind(&Memory32::write_block, &memoryContents, _1, _2, _3);
 
     elfLoader loader = elfLoader(f);
-    loader(filename);
+    std::map<std::string, uint64_t> symbols = loader(filename);
+
+    /*for (auto const& [sym, addr] : symbols) {
+        printf("Symbol %s at 0x%x\n", sym.c_str(), addr);
+    }*/
+
+    tohostAddr = symbols["tohost"];
+    fromhostAddr = symbols["fromhost"];
 }
 
 static bool debug_read = false;
@@ -108,7 +132,7 @@ bool Memory32::write(const uint32_t addr, const uint32_t &data,
     }
     mem[addr] = data_m;
 
-    if (debug_read) printf("MemoryModel::read Address = 0x%x, data = 0x%x\n", addr, data_m);
+    if (debug_read) printf("MemoryModel::write Address = 0x%x, data = 0x%x\n", addr, data_m);
     return true;
 }
 
@@ -154,4 +178,54 @@ bool Memory32::read(const uint32_t addr, uint32_t &data) {
     if (debug_read) printf("MemoryModel::read Address = 0x%x, data = 0x%x\n", addr, data);
 
     return true;
+}
+
+
+// Commands definition
+#define SYS_write 64
+
+void tohost(unsigned int id, unsigned long long data) {
+  if(data & 1) {
+    uint64_t payload = data << 16 >>16;
+    // test pass/fail
+    if(payload != 1) {
+      std::cout << "Core " << id << " exit with error code " << (payload >> 1) << std::endl;
+      exit_code = payload >> 1;
+      exit_delay = 1;
+    }
+    else {
+      std::cout << "Run finished correctly" << std::endl;
+      exit_code = 0;
+      exit_delay = 1;
+    }
+    std::cout << "Run time is : " << main_time << std::endl;
+  } else {
+    uint64_t magicmem[8];
+    uint32_t upper, lower;
+
+    for (unsigned int i = 0; i < 8; i++) {
+        memoryContents.read((data + i*8), lower);
+        memoryContents.read((data + i*8) + 4, upper);
+        magicmem[i] = ((uint64_t) upper) << 32 | lower;
+    }
+
+    switch (magicmem[0]) {
+        case SYS_write:
+        {
+            uint64_t length = magicmem[3];
+            char buf[length];
+            for (unsigned int i = 0; i < length; i++) {
+                uint32_t data;
+                memoryContents.read(magicmem[2] + (i & ~0b11), data);
+                buf[i] = data >> ((i%4) * 8);
+            }
+            uint64_t result = write(magicmem[1], buf, length);
+            memoryContents.write(fromhostAddr, result & 0xffffffff, 0b1111);
+            memoryContents.write(fromhostAddr + 4, (result >> 32) & 0xffffffff, 0b1111);
+            break;
+        }
+        default:
+            std::cerr << "Unknown tohost syscall " << std::hex << magicmem[0] << std::endl;
+    }
+  }
 }

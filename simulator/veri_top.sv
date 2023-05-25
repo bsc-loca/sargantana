@@ -35,22 +35,6 @@ module veri_top
     bus_simd_t dmem_req_data_o;
     logic [7:0] dmem_req_tag_o;
 
-    // PCR wires (tohost)
-    //PCR req inputs
-    logic                            pcr_req_ready;            // ready bit of the pcr
-
-    //PCR resp inputs
-    logic                            pcr_resp_valid;           // ready bit of the pcr
-    logic [63:0]           pcr_resp_data;            // read data from performance counter module
-    logic                            pcr_resp_core_id;         // core id of the tile that the date is sended
-
-    //PCR outputs request
-    logic                            pcr_req_valid;            // valid bit to make a pcr request
-    logic  [11:0]      pcr_req_addr;             // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
-    logic  [63:0]                    pcr_req_data;             // write data to performance counter module
-    logic  [2:0]                     pcr_req_we;               // Cmd of the petition
-    logic                            pcr_req_core_id;          // core id of the tile
-
     top_drac DUT(
         .CLK(clk_p),
         .RST(~rst_top),
@@ -85,18 +69,8 @@ module veri_top
         .DMEM_REQ_CMD(dmem_req_cmd_o),
         .DMEM_REQ_BITS_DATA(dmem_req_data_o),
         .DMEM_REQ_BITS_ADDR(dmem_req_addr_o),
-        .DMEM_REQ_BITS_TAG(dmem_req_tag_o),
+        .DMEM_REQ_BITS_TAG(dmem_req_tag_o)
 
-        // PCR (tohost)
-        .pcr_req_ready_i(pcr_req_ready),            // ready bit of the pcr
-        .pcr_resp_valid_i(pcr_resp_valid),           // ready bit of the pcr
-        .pcr_resp_data_i(pcr_resp_data),            // read data from performance counter module
-        .pcr_resp_core_id_i(pcr_resp_core_id),         // core id of the tile that the date is sended
-        .pcr_req_valid_o(pcr_req_valid),            // valid bit to make a pcr request
-        .pcr_req_addr_o(pcr_req_addr),             // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
-        .pcr_req_data_o(pcr_req_data),             // write data to performance counter module
-        .pcr_req_we_o(pcr_req_we),               // Cmd of the petition
-        .pcr_req_core_id_o(pcr_req_core_id)          // core id of the tile
     );
 
     bootrom_behav brom(
@@ -133,19 +107,6 @@ module veri_top
         .dc_ready_o(dmem_req_ready),
         .dc_valid_o(dmem_resp_valid),
         .dc_tag_o(dmem_resp_tag)
-    );
-
-    host_behav host_behav_inst (
-        .clk(clk_p),
-        .rstn(~rst_top),
-        .req_valid(pcr_req_valid),
-        .resp_ready(1'b1),
-        .req_ready(pcr_req_ready),
-        .resp_valid(pcr_resp_valid),
-        .req_id(pcr_req_core_id),
-        .resp_id(pcr_resp_core_id),
-        .req(pcr_req_data),
-        .resp(pcr_resp_data)
     );
 
 endmodule // veri_top
