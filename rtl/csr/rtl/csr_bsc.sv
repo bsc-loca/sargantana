@@ -750,8 +750,6 @@ module csr_bsc#(
                 // performance counters
                 riscv_pkg::CSR_MCYCLE:             cycle_d     = csr_wdata;
                 riscv_pkg::CSR_MINSTRET:           instret_d     = csr_wdata;
-                riscv_pkg::CSR_CYCLE:              cycle_d     = csr_wdata;
-                riscv_pkg::CSR_INSTRET:            instret_d     = csr_wdata;
 
                 riscv_pkg::CSR_MHPM_COUNTER_3,
                 riscv_pkg::CSR_MHPM_COUNTER_4,
@@ -818,6 +816,40 @@ module csr_bsc#(
                     perf_we_o = 1'b1;
                     perf_data_o = csr_wdata;
                 end
+
+                riscv_pkg::CSR_CYCLE,
+                riscv_pkg::CSR_TIME,
+                riscv_pkg::CSR_INSTRET,
+                riscv_pkg::CSR_HPM_COUNTER_3,
+                riscv_pkg::CSR_HPM_COUNTER_4,
+                riscv_pkg::CSR_HPM_COUNTER_5,
+                riscv_pkg::CSR_HPM_COUNTER_6,
+                riscv_pkg::CSR_HPM_COUNTER_7,
+                riscv_pkg::CSR_HPM_COUNTER_8,
+                riscv_pkg::CSR_HPM_COUNTER_9,
+                riscv_pkg::CSR_HPM_COUNTER_10,
+                riscv_pkg::CSR_HPM_COUNTER_11,
+                riscv_pkg::CSR_HPM_COUNTER_12,
+                riscv_pkg::CSR_HPM_COUNTER_13,
+                riscv_pkg::CSR_HPM_COUNTER_14,
+                riscv_pkg::CSR_HPM_COUNTER_15,
+                riscv_pkg::CSR_HPM_COUNTER_16,
+                riscv_pkg::CSR_HPM_COUNTER_17,
+                riscv_pkg::CSR_HPM_COUNTER_18,
+                riscv_pkg::CSR_HPM_COUNTER_19,
+                riscv_pkg::CSR_HPM_COUNTER_20,
+                riscv_pkg::CSR_HPM_COUNTER_21,
+                riscv_pkg::CSR_HPM_COUNTER_22,
+                riscv_pkg::CSR_HPM_COUNTER_23,
+                riscv_pkg::CSR_HPM_COUNTER_24,
+                riscv_pkg::CSR_HPM_COUNTER_25,
+                riscv_pkg::CSR_HPM_COUNTER_26,
+                riscv_pkg::CSR_HPM_COUNTER_27,
+                riscv_pkg::CSR_HPM_COUNTER_28,
+                riscv_pkg::CSR_HPM_COUNTER_29,
+                riscv_pkg::CSR_HPM_COUNTER_30,
+                riscv_pkg::CSR_HPM_COUNTER_31:
+                    update_access_exception = 1'b1;
 
                 riscv_pkg::CSR_MEM_MAP_0,
                 riscv_pkg::CSR_MEM_MAP_1,

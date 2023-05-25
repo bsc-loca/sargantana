@@ -15,7 +15,6 @@ IMPLEMENTED_EXTENSIONS = ['i', 'm', 'f', 'd', 'a']
 TESTS_TO_SKIP = {
     "rv64ui-p-ma_data": "Core doesn't support misaligned load/stores",
     "rv64ui-v-ma_data": "Core doesn't support misaligned load/stores",
-    "rv64mi-p-csr":     "TODO: Oscar is fixing the cycle CSR",
 }
 
 def format_padded(text):
