@@ -23,6 +23,13 @@ Each of the 29 generic performance counters can be configured to count events fr
 19. Stalls by Structural Risks
 20. Stalls by Graduation List Full
 21. Stalls by Free List Empty
+22. iTLB access
+23. iTLB miss
+24. dTLB access
+25. dTLB miss
+26. PTW cache hit
+27. PTW cache miss
+28. Stalls by iTLB miss
 
 **If any change is made to hpm_counters.sv event order, please change this file accordingly!**
 

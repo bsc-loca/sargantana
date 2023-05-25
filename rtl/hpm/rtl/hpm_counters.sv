@@ -26,30 +26,37 @@ module hpm_counters
     output  bus64_t                     data_o,
 
     // Events
-    input   logic           branch_miss,
-    input   logic           is_branch,
-    input   logic           branch_taken,
-    input   logic           exe_store,
-    input   logic           exe_load,
-    input   logic           icache_req,
-    input   logic           icache_kill,
-    input   logic           stall_if,
-    input   logic           stall_id,
-    input   logic           stall_rr,
-    input   logic           stall_exe,
-    input   logic           stall_wb,
-    input   logic           buffer_miss,
-    input   logic           imiss_kill,
-    input   logic           icache_bussy,
-    input   logic           imiss_time,
-    input   logic           load_store,
-    input   logic           data_depend,
-    input   logic           struct_depend,
-    input   logic           grad_list_full,
-    input   logic           free_list_empty
+    input   logic           branch_miss_i,
+    input   logic           is_branch_i,
+    input   logic           branch_taken_i,
+    input   logic           exe_store_i,
+    input   logic           exe_load_i,
+    input   logic           icache_req_i,
+    input   logic           icache_kill_i,
+    input   logic           stall_if_i,
+    input   logic           stall_id_i,
+    input   logic           stall_rr_i,
+    input   logic           stall_exe_i,
+    input   logic           stall_wb_i,
+    input   logic           buffer_miss_i,
+    input   logic           imiss_kill_i,
+    input   logic           icache_bussy_i,
+    input   logic           imiss_time_i,
+    input   logic           load_store_i,
+    input   logic           data_depend_i,
+    input   logic           struct_depend_i,
+    input   logic           grad_list_full_i,
+    input   logic           free_list_empty_i,
+    input   logic           itlb_access_i,
+    input   logic           itlb_miss_i,
+    input   logic           dtlb_access_i,
+    input   logic           dtlb_miss_i,
+    input   logic           ptw_hit_i,
+    input   logic           ptw_miss_i,
+    input   logic           itlb_miss_cycle_i
 );
     localparam HPM_NUM_COUNTERS = 29; // TODO: Constant
-    localparam HPM_NUM_EVENTS   = 21; // TODO: Constant
+    localparam HPM_NUM_EVENTS   = 28; // TODO: Constant
 
     localparam HPM_NUM_EVENTS_BITS   = $clog2(HPM_NUM_EVENTS);
     localparam HPM_NUM_COUNTERS_BITS = $clog2(HPM_NUM_COUNTERS);
@@ -72,27 +79,34 @@ module hpm_counters
         // Check if the selected event is triggered for a given counter
         for (int unsigned i = 1; i <= HPM_NUM_COUNTERS; i++) begin
             case (mhpmevent_q[i])
-                1:  events[i] = branch_miss;
-                2:  events[i] = is_branch;
-                3:  events[i] = branch_taken;
-                4:  events[i] = exe_store;
-                5:  events[i] = exe_load;
-                6:  events[i] = icache_req;
-                7:  events[i] = icache_kill;
-                8:  events[i] = stall_if;
-                9:  events[i] = stall_id;
-                10: events[i] = stall_rr;
-                11: events[i] = stall_exe;
-                12: events[i] = stall_wb;
-                13: events[i] = buffer_miss;
-                14: events[i] = imiss_kill;
-                15: events[i] = icache_bussy;
-                16: events[i] = imiss_time;
-                17: events[i] = load_store;
-                18: events[i] = data_depend;
-                19: events[i] = struct_depend;
-                20: events[i] = grad_list_full;
-                21: events[i] = free_list_empty;
+                1:  events[i] = branch_miss_i;
+                2:  events[i] = is_branch_i;
+                3:  events[i] = branch_taken_i;
+                4:  events[i] = exe_store_i;
+                5:  events[i] = exe_load_i;
+                6:  events[i] = icache_req_i;
+                7:  events[i] = icache_kill_i;
+                8:  events[i] = stall_if_i;
+                9:  events[i] = stall_id_i;
+                10: events[i] = stall_rr_i;
+                11: events[i] = stall_exe_i;
+                12: events[i] = stall_wb_i;
+                13: events[i] = buffer_miss_i;
+                14: events[i] = imiss_kill_i;
+                15: events[i] = icache_bussy_i;
+                16: events[i] = imiss_time_i;
+                17: events[i] = load_store_i;
+                18: events[i] = data_depend_i;
+                19: events[i] = struct_depend_i;
+                20: events[i] = grad_list_full_i;
+                21: events[i] = free_list_empty_i;
+                22: events[i] = itlb_access_i;
+                23: events[i] = itlb_miss_i;
+                24: events[i] = dtlb_access_i;
+                25: events[i] = dtlb_miss_i;
+                26: events[i] = ptw_hit_i;
+                27: events[i] = ptw_miss_i;
+                28: events[i] = itlb_miss_cycle_i;
                 default: events[i] = 0;
             endcase
         end

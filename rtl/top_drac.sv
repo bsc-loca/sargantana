@@ -113,28 +113,6 @@ module top_drac
 // PMU INTERFACE
 //-----------------------------------------------------------------------------
     input  logic                io_core_pmu_l2_hit_i        ,
-    //output logic                io_core_pmu_branch_miss     ,
-    //output logic                io_core_pmu_is_branch       ,
-    //output logic                io_core_pmu_branch_taken    , 
-    //output logic                io_core_pmu_EXE_STORE       ,
-    //output logic                io_core_pmu_EXE_LOAD        ,
-    //output logic  [1:0]         io_core_pmu_new_instruction ,
-    //output logic                io_core_pmu_icache_req      ,
-    //output logic                io_core_pmu_icache_kill     ,
-    //output logic                io_core_pmu_stall_if        ,
-    //output logic                io_core_pmu_stall_id        ,
-    //output logic                io_core_pmu_stall_rr        ,
-    //output logic                io_core_pmu_stall_exe       ,
-    //output logic                io_core_pmu_stall_wb        ,           
-    //output logic                io_core_pmu_buffer_miss     ,           
-    //output logic                io_core_pmu_imiss_kill      ,           
-    //output logic                io_core_pmu_icache_bussy    ,
-    //output logic                io_core_pmu_imiss_time      ,
-    //output logic                io_core_pmu_load_store      ,
-    //output logic                io_core_pmu_data_depend     ,
-    //output logic                io_core_pmu_struct_depend   ,
-    //output logic                io_core_pmu_grad_list_full  ,
-    //output logic                io_core_pmu_free_list_empty ,
 
 //-----------------------------------------------------------------------------
 // BOOTROM CONTROLER INTERFACE
@@ -310,6 +288,14 @@ assign itlb_tresp.xcpt   = itlb_icache_comm.resp.xcpt.fetch;
 
 //-- HPM conection
 
+logic pmu_itlb_access;
+logic pmu_itlb_miss;
+logic pmu_dtlb_access;
+logic pmu_dtlb_miss;
+logic pmu_ptw_hit;
+logic pmu_ptw_miss;
+logic pmu_itlb_miss_cycle;
+
 hpm_counters hpm_counters_inst (
     .clk_i(CLK),
     .rstn_i(RST),
@@ -321,49 +307,37 @@ hpm_counters hpm_counters_inst (
     .data_o(data_hpm_csr),
 
     // Events
-    .branch_miss(pmu_flags.branch_miss),
-    .is_branch(pmu_flags.is_branch),
-    .branch_taken(pmu_flags.branch_taken),
-    .exe_store(exe_store_pmu),
-    .exe_load(exe_load_pmu),
-    .icache_req(lagarto_ireq.valid),
-    .icache_kill(lagarto_ireq.kill),
-    .stall_if(pmu_flags.stall_if),
-    .stall_id(pmu_flags.stall_id),
-    .stall_rr(pmu_flags.stall_rr),
-    .stall_exe(pmu_flags.stall_exe),
-    .stall_wb(pmu_flags.stall_wb ),
-    .buffer_miss(imiss_l2_hit),
-    .imiss_kill(imiss_kill_pmu),
-    .icache_bussy(!icache_resp.ready ),
-    .imiss_time(imiss_time_pmu),
-    .load_store(pmu_flags.load_store ),
-    .data_depend(pmu_flags.data_depend),
-    .struct_depend(pmu_flags.struct_depend),
-    .grad_list_full(pmu_flags.grad_list_full),
-    .free_list_empty(pmu_flags.free_list_empty)
+    .branch_miss_i(pmu_flags.branch_miss),
+    .is_branch_i(pmu_flags.is_branch),
+    .branch_taken_i(pmu_flags.branch_taken),
+    .exe_store_i(exe_store_pmu),
+    .exe_load_i(exe_load_pmu),
+    .icache_req_i(lagarto_ireq.valid),
+    .icache_kill_i(lagarto_ireq.kill),
+    .stall_if_i(pmu_flags.stall_if),
+    .stall_id_i(pmu_flags.stall_id),
+    .stall_rr_i(pmu_flags.stall_rr),
+    .stall_exe_i(pmu_flags.stall_exe),
+    .stall_wb_i(pmu_flags.stall_wb ),
+    .buffer_miss_i(imiss_l2_hit),
+    .imiss_kill_i(imiss_kill_pmu),
+    .icache_bussy_i(!icache_resp.ready ),
+    .imiss_time_i(imiss_time_pmu),
+    .load_store_i(pmu_flags.load_store ),
+    .data_depend_i(pmu_flags.data_depend),
+    .struct_depend_i(pmu_flags.struct_depend),
+    .grad_list_full_i(pmu_flags.grad_list_full),
+    .free_list_empty_i(pmu_flags.free_list_empty),
+    .itlb_access_i(pmu_itlb_access),
+    .itlb_miss_i(pmu_itlb_miss),
+    .dtlb_access_i(pmu_dtlb_access),
+    .dtlb_miss_i(pmu_dtlb_miss),
+    .ptw_hit_i(pmu_ptw_hit),
+    .ptw_miss_i(pmu_ptw_miss),
+    .itlb_miss_cycle_i(pmu_itlb_miss_cycle)
 );
 
-//assign io_core_pmu_icache_req       = lagarto_ireq.valid                    ; 
-//assign io_core_pmu_icache_kill      = lagarto_ireq.kill                     ;
-//assign io_core_pmu_stall_if         = pmu_flags.stall_if                    ;  
-//assign io_core_pmu_stall_id         = pmu_flags.stall_id                    ; 
-//assign io_core_pmu_stall_rr         = pmu_flags.stall_rr                    ; 
-//assign io_core_pmu_stall_exe        = pmu_flags.stall_exe                   ; 
-//assign io_core_pmu_stall_wb         = pmu_flags.stall_wb                    ; 
-//assign io_core_pmu_branch_miss      = pmu_flags.branch_miss                 ; 
-//assign io_core_pmu_is_branch        = pmu_flags.is_branch                   ; 
-//assign io_core_pmu_branch_taken     = pmu_flags.branch_taken                ; 
-//assign io_core_pmu_load_store       = pmu_flags.load_store                  ;
-//assign io_core_pmu_data_depend      = pmu_flags.data_depend                 ;
-//assign io_core_pmu_struct_depend    = pmu_flags.struct_depend               ;
-//assign io_core_pmu_grad_list_full   = pmu_flags.grad_list_full              ;
-//assign io_core_pmu_free_list_empty  = pmu_flags.free_list_empty             ;
-//assign io_core_pmu_new_instruction  = req_datapath_csr_interface.csr_retire ;
-//assign io_core_pmu_buffer_miss      = imiss_l2_hit                          ;
-//assign io_core_pmu_imiss_time       = imiss_time_pmu                        ;
-//assign io_core_pmu_imiss_kill       = imiss_kill_pmu                        ;
-//assign io_core_pmu_icache_bussy     = !icache_resp.ready                    ;
+assign pmu_itlb_miss_cycle = itlb_icache_comm.resp.miss && !itlb_icache_comm.tlb_ready;
 
 sew_t sew;
 assign sew = sew_t'(vpu_csr[37:36]);
