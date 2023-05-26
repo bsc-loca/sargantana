@@ -38,7 +38,6 @@ module load_store_queue
     input tlb_cache_comm_t       dtlb_comm_i,
     output cache_tlb_comm_t      dtlb_comm_o,
 
-    input logic vm_enable_i,
     input logic [1:0] priv_lvl_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
@@ -270,7 +269,7 @@ always_comb begin
     end
 end
 
-assign dtlb_comm_o.vm_enable = vm_enable_i;
+assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;
 assign dtlb_comm_o.priv_lvl = priv_lvl_i;
 assign dtlb_comm_o.req.valid = num_to_translate > 0;
 assign dtlb_comm_o.req.vpn = control_table[tlb_tail].data_rs1[63:12];

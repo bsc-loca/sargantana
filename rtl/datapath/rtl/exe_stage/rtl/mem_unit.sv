@@ -42,7 +42,6 @@ module mem_unit
     output logic                 empty_o,                // Mem unit has no pending Ops
     output cache_tlb_comm_t      dtlb_comm_o,
 
-    input logic vm_enable_i,
     input logic [1:0] priv_lvl_i,
 
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
@@ -193,7 +192,6 @@ load_store_queue load_store_queue_inst (
     .blocked_store_o    (blocked_store),
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
-    .vm_enable_i(vm_enable_i),
     .priv_lvl_i(priv_lvl_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );

@@ -113,7 +113,7 @@ def run_test(test_path):
 futures = []
 
 with ThreadPoolExecutor(max_workers=4) as executor:
-    for mode in ['u', 'm']:
+    for mode in ['u', 's', 'm']:
         for mem in ['p', 'v']:
             for ext in IMPLEMENTED_EXTENSIONS:
                 paths = glob(f'{ISA_DIR}/rv64{mode}{ext}-{mem}-*')

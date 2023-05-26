@@ -166,7 +166,7 @@ req_cpu_dcache_t req_datapath_dcache_interface;
 
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
-logic [1:0] csr_priv_lvl;
+logic [1:0] csr_priv_lvl, ld_st_priv_lvl;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
 logic en_ld_st_translation;
@@ -361,7 +361,7 @@ datapath datapath_inst(
     .req_cpu_icache_o(req_datapath_icache_interface),
     .req_cpu_csr_o(req_datapath_csr_interface),
     .debug_o(debug_out),
-    .csr_priv_lvl_i(csr_priv_lvl),
+    .csr_priv_lvl_i(ld_st_priv_lvl),
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .en_ld_st_translation_i(en_ld_st_translation),
@@ -533,7 +533,7 @@ csr_bsc csr_inst (
 
     .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
-    //.ld_st_priv_lvl_o(),
+    .ld_st_priv_lvl_o(ld_st_priv_lvl),
     .en_ld_st_translation_o(en_ld_st_translation),
     .en_translation_o(en_translation),
 

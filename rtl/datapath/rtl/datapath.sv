@@ -1140,7 +1140,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),
         .dtlb_comm_i(dtlb_comm_i),
         .dtlb_comm_o(dtlb_comm_o),
-        .vm_enable_i(en_translation_i),
         .priv_lvl_i(csr_priv_lvl_i),
     
         .exe_if_branch_pred_o(exe_if_branch_pred_int),

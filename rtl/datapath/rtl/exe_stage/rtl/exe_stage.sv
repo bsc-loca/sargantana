@@ -58,7 +58,6 @@ module exe_stage
     output exe_if_branch_pred_t         exe_if_branch_pred_o,   // Branch prediction (taken, target) and result (take, target)
     output cache_tlb_comm_t             dtlb_comm_o,
 
-    input logic vm_enable_i,
     input logic [1:0] priv_lvl_i,
 
     //--PMU
@@ -334,7 +333,6 @@ mem_unit mem_unit_inst(
     .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
-    .vm_enable_i(vm_enable_i),
     .priv_lvl_i(priv_lvl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
