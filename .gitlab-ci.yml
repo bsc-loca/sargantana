@@ -1,42 +1,47 @@
-image: localhost:5000/drac-vpu
+image: localhost:5000/ubu20_verilator_riscv:5.010
+
+workflow:
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "merge_request_event") # Merge requests 
+      variables: 
+        PIPELINE_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME 
+    - if: ($CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS) # Fix detached merge request pipelines
+      when: never 
+    - if: ($CI_COMMIT_BRANCH) # All branches
+      variables: 
+        PIPELINE_BRANCH: $CI_COMMIT_BRANCH
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_SOURCES_ATTEMPTS: 4
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_CLEAN_FLAGS: -ffdx
+  GIT_DEPTH: 1
+  GIT_SUBMODULE_DEPTH: 1
+  RISCV_GCC: /opt/riscv-gnu-toolchain/rvv-1.0.0/bin/riscv64-unknown-elf-gcc 
+  RISCV_OBJDUMP: /opt/riscv-gnu-toolchain/rvv-1.0.0/bin/riscv64-unknown-elf-objcopy 
 
 before_script:
-    # SSH Stuff
-    - mkdir -p ~/.ssh
-    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
-    ## Run ssh-agent (inside the build environment)
-    - eval $(ssh-agent -s)
-    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
-    - echo "$SSH_PRIVATE_KEY1" | tr -d '\r' | ssh-add -
-    ## Add the host to known_hosts
-    - touch ~/.ssh/known_hosts
-    - ssh-keyscan repo.hca.bsc.es >> ~/.ssh/known_hosts
-    - ssh-keyscan gitlab-internal.bsc.es >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+  #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "https://gitlab.bsc.es/"
+  #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "git@gitlab-internal.bsc.es/"
 
-    ## set enviroment
-    - git config --global user.name "${GITLAB_USER_NAME}"
-    - git config --global user.email "${GITLAB_USER_EMAIL}"
-
-    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    - ssh -T git@gitlab-internal.bsc.es
-    - ssh -T git@repo.hca.bsc.es
-
-    # Clone repos
-    - rm -rf rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine
-    - git clone git@gitlab-internal.bsc.es:drac/mixgemm_uengine.git rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine -b main
-
-
-
+  # Clone repos
+  #- rm -rf rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine
+  #- git clone git@gitlab-internal.bsc.es:drac/mixgemm_uengine.git rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine -b main
+  #- rm -rf rtl/mmu
+  #- git clone --recurse-submodules git@gitlab-internal.bsc.es:drac/mmu.git rtl/mmu -b sargantana
+  #- rm -rf drac-bench
+  #- git clone --recurse-submodules git@gitlab-internal.bsc.es:drac/drac-bench.git drac-bench -b sargantana
 
 stages:
   - linting
+  - building
   - simulation
 
-
 verilator:verilog:
-  image: localhost:5000/lagarto_rtl 
   stage: linting
+  tags:
+    - verilator
   script:
     - verilator --version
     - make lint
@@ -50,11 +55,58 @@ spyglass:verilog:
   script:
     - make local_spyglass
   allow_failure: true
-
   artifacts:
     paths:
     - top_drac/consolidated_reports/top_drac_lint_lint_rtl/
     expire_in: 1 week
+
+build-isa-tests:
+  stage: building
+  script:
+    - $RISCV_GCC --version
+    - make build-isa-tests
+  artifacts:
+    paths:
+    - tb/tb_isa_tests/build
+    expire_in: 1 week
+
+build-benchmarks:
+  stage: building
+  script:
+    - $RISCV_GCC --version
+    - make build-benchmarks
+  artifacts:
+    paths:
+    - benchmarks
+    expire_in: 1 week
+
+build-simulator:
+  stage: building
+  script:
+    - verilator --version
+    - gcc --version
+    - make sim
+  artifacts:
+    paths:
+    - sim
+    - bootrom.hex
+    expire_in: 1 week
+
+isa-tests:
+  stage: simulation
+  dependencies:
+    - build-simulator
+    - build-isa-tests
+  script:
+    - ./tb/tb_isa_tests/run-tests.py ./sim tb/tb_isa_tests/build/isa
+
+benchmarks:
+  stage: simulation
+  dependencies:
+    - build-simulator
+    - build-benchmarks
+  script:
+    - ./run-benchmarks.sh
 
 #questa:verilog:
 #  image: localhost:5000/epi_rtl-vsim
@@ -64,9 +116,7 @@ spyglass:verilog:
 #  script:
 #    - make questa
 #  allow_failure: true
-#
 #  artifacts:
 #    paths:
 #    - artifact_questa.log
 #    expire_in: 1 week
-
