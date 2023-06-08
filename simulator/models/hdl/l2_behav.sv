@@ -35,6 +35,7 @@ module l2_behav #(
 
     import "DPI-C" function bit memory_read (input bit [31:0] addr, output bit [LINE_SIZE-1:0] data);
     import "DPI-C" function bit memory_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
+    import "DPI-C" function void torture_dump_amo_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
 
     // *** iCache memory channel logic ***
 
@@ -117,11 +118,10 @@ module l2_behav #(
 
     assign wr_ena = dc_cmd_i != 5'b00000 && dc_cmd_i != 5'b00110;
 
-    logic [63:0] amo_mem_val, amo_core_val;
+    logic [63:0] amo_mem_val_d, amo_mem_val_q, amo_core_val;
     addr_t lr_addr_d, lr_addr_q;
     logic reserved_d, reserved_q;
 
-    assign amo_mem_val = word_size_q == 3 ? mem_dword : {{32{mem_word[31]}}, mem_word};
     assign amo_core_val = word_size_q == 3 ? dc_wr_data_i[63:0] : {{32{dc_wr_data_i[31]}}, dc_wr_data_i[31:0]};
 
     perfect_memory_state_t state, next_state;
@@ -144,6 +144,7 @@ module l2_behav #(
             cmd_q       <= 0;
             reserved_q  <= 0;
             lr_addr_q   <= 0;
+            amo_mem_val_q <= 0;
         end else begin
             counter     <= next_counter;
             line_q      <= line_d;
@@ -156,6 +157,7 @@ module l2_behav #(
             cmd_q       <= cmd_d;
             reserved_q  <= reserved_d;
             lr_addr_q   <= lr_addr_d;
+            amo_mem_val_q <= amo_mem_val_d;
         end
     end 
 
@@ -214,9 +216,11 @@ module l2_behav #(
                             reserved_d = 1'b1;
                             lr_addr_d = dc_addr_i;
                         end
+                        amo_mem_val_d = dc_word_size_i == 3 ? mem_dword : {{32{mem_word[31]}}, mem_word};
                     end
                 end else begin
                     line_d = line_q;
+                    amo_mem_val_d = amo_mem_val_q;
                 end
             end
             STORE_WRITE: begin
@@ -252,20 +256,25 @@ module l2_behav #(
         endcase    
     end
 
+    function void amo_write(input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
+        memory_write(addr, size, data);
+        torture_dump_amo_write(addr, size, data);
+    endfunction
+
     // Here we could add a write in order to also check the saving of data
     always_ff @(posedge clk_i, negedge rstn_i) begin : proc_load_memory
         if (rstn_i && state == STORE_WRITE) begin
             case(cmd_q)
-                5'b00111: if (line_q == 0) memory_write(addr_q, word_size_q, amo_core_val); // sc
-                5'b00100: memory_write(addr_q, word_size_q, amo_core_val); // amoswap
-                5'b01000: memory_write(addr_q, word_size_q, amo_mem_val + amo_core_val); // amoadd
-                5'b01001: memory_write(addr_q, word_size_q, amo_mem_val ^ amo_core_val); // amoxor
-                5'b01011: memory_write(addr_q, word_size_q, amo_mem_val & amo_core_val); // amoand
-                5'b01010: memory_write(addr_q, word_size_q, amo_mem_val | amo_core_val); // amoor
-                5'b01100: memory_write(addr_q, word_size_q, $signed(amo_mem_val) < $signed(amo_core_val) ? amo_mem_val : amo_core_val); // amomin
-                5'b01101: memory_write(addr_q, word_size_q, $signed(amo_mem_val) > $signed(amo_core_val) ? amo_mem_val : amo_core_val); // amomax
-                5'b01110: memory_write(addr_q, word_size_q, amo_mem_val < amo_core_val ? amo_mem_val : amo_core_val); // amominu
-                5'b01111: memory_write(addr_q, word_size_q, amo_mem_val > amo_core_val ? amo_mem_val : amo_core_val); // amomaxu
+                5'b00111: if (line_q == 0) amo_write(addr_q, word_size_q, amo_core_val); // sc
+                5'b00100: amo_write(addr_q, word_size_q, amo_core_val); // amoswap
+                5'b01000: amo_write(addr_q, word_size_q, amo_mem_val_q + amo_core_val); // amoadd
+                5'b01001: amo_write(addr_q, word_size_q, amo_mem_val_q ^ amo_core_val); // amoxor
+                5'b01011: amo_write(addr_q, word_size_q, amo_mem_val_q & amo_core_val); // amoand
+                5'b01010: amo_write(addr_q, word_size_q, amo_mem_val_q | amo_core_val); // amoor
+                5'b01100: amo_write(addr_q, word_size_q, $signed(amo_mem_val_q) < $signed(amo_core_val) ? amo_mem_val_q : amo_core_val); // amomin
+                5'b01101: amo_write(addr_q, word_size_q, $signed(amo_mem_val_q) > $signed(amo_core_val) ? amo_mem_val_q : amo_core_val); // amomax
+                5'b01110: amo_write(addr_q, word_size_q, amo_mem_val_q < amo_core_val ? amo_mem_val_q : amo_core_val); // amominu
+                5'b01111: amo_write(addr_q, word_size_q, amo_mem_val_q > amo_core_val ? amo_mem_val_q : amo_core_val); // amomaxu
                 5'b00001: memory_write(addr_q, word_size_q, dc_wr_data_i);
                 default: ;
             endcase

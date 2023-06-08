@@ -88,6 +88,8 @@ build-simulator:
     - make sim
   artifacts:
     paths:
+    - simulator/build
+    - simulator/riscv-isa-sim/build
     - sim
     - bootrom.hex
     expire_in: 1 week

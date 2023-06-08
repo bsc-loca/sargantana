@@ -13,6 +13,9 @@ include tb/tb_isa_tests/isa-tests.mk
 # *** Benchmarks ***
 include benchmarks.mk
 
+# *** Torture Tests ***
+include tb/tb_torture/torture.mk
+
 # *** CI rules ***
 lint:
 	bash ./scripts/veri_lint.sh

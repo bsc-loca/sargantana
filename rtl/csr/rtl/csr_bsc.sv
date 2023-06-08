@@ -1491,6 +1491,50 @@ module csr_bsc#(
         end
     end
 
+    `ifdef VERILATOR_TORTURE_TESTS
+        import "DPI-C" function void csr_change (input longint unsigned addr, input longint unsigned value);
+
+        // Very important!!! Must be negedge to execute it before torture_dump when an instruction commits in datapath!
+        always_ff @(negedge clk_i) begin
+            automatic logic [63:0] mstatus_fix, mstatus_clear ,mstatus_set;
+
+            mstatus_clear = riscv_pkg::MSTATUS_UXL | riscv_pkg::MSTATUS_SXL | riscv_pkg::MSTATUS64_SD;
+            mstatus_set =   ((mstatus_d.xs == riscv_pkg::Dirty) | (mstatus_d.fs == riscv_pkg::Dirty))<<63 |
+                            riscv_pkg::XLEN_64 << 32|
+                            riscv_pkg::XLEN_64 << 34;
+            mstatus_fix = (mstatus_d & ~mstatus_clear) | mstatus_set;
+
+            if (rstn_i & (|retire_i)) begin
+                // CSRs which can change due to side-effects etc
+
+                // For some reason mstatus is updated in multiple cycles, but at commit we need the value that will be set later
+                // This might break in some random tests.....
+                if (mstatus_q != mstatus_fix) csr_change(riscv_pkg::CSR_MSTATUS, mstatus_fix);
+
+                if (fcsr_flags_valid_i && fcsr_flags_bits_i) csr_change(riscv_pkg::CSR_FFLAGS, fcsr_d.fflags);
+
+                // CSRs which only change when written to
+                if (csr_we) begin
+                    case(csr_addr)
+                        riscv_pkg::CSR_MSTATUS, riscv_pkg::CSR_SSTATUS:
+                            ; // Covered by previous mstatus check
+                        riscv_pkg::CSR_MTVEC: csr_change(csr_addr, mtvec_d);
+                        riscv_pkg::CSR_MEPC: csr_change(csr_addr, mepc_d);
+                        riscv_pkg::CSR_MCAUSE: csr_change(csr_addr, mcause_d);
+                        riscv_pkg::CSR_MSCRATCH: csr_change(csr_addr, mscratch_d);
+                        riscv_pkg::CSR_MEDELEG: csr_change(csr_addr, medeleg_d);
+                        riscv_pkg::CSR_MIE: csr_change(csr_addr, mie_d);
+                        riscv_pkg::CSR_SATP: csr_change(csr_addr, satp_d);
+                        riscv_pkg::CSR_STVEC: csr_change(csr_addr, stvec_d);
+                        riscv_pkg::CSR_SSCRATCH: csr_change(csr_addr, sscratch_d);
+                        riscv_pkg::CSR_SEPC: csr_change(csr_addr, sepc_d);
+                        default: csr_change(csr_addr, csr_wdata);
+                    endcase
+                end
+            end
+        end
+    `endif
+
     //-------------
     // Assertions
     //-------------

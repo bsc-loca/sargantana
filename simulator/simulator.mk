@@ -2,6 +2,7 @@ VERILATOR = verilator
 SIM_DIR = $(PROJECT_DIR)/simulator
 
 include $(SIM_DIR)/bootrom/bootrom.mk
+include $(SIM_DIR)/spike.mk
 
 TOP_MODULE = veri_top
 
@@ -17,9 +18,8 @@ VERI_FLAGS = \
 	--top-module $(TOP_MODULE) \
 	--unroll-count 256 \
 	-Wno-lint -Wno-style -Wno-STMTDLY -Wno-fatal \
-	-CFLAGS "-std=c++11" \
-	-CFLAGS "$(foreach CXX,$(SOC_MODELS_CXX),-I$(CXX)) " \
-	-LDFLAGS "-pthread" \
+	-CFLAGS "-std=c++11 -I$(SIM_DIR)/riscv-isa-sim/" \
+	-LDFLAGS "-pthread -L$(SIM_DIR)/riscv-isa-sim/build/ -lriscv -Wl,-rpath=$(SIM_DIR)/riscv-isa-sim/build/" \
 	--exe \
 	--trace-fst \
 	--trace-max-array 512 \
@@ -36,7 +36,7 @@ VERI_OPTI_FLAGS = -O2 -CFLAGS "-O2"
 SIM_CPP_SRCS = $(wildcard $(SIM_DIR)/models/cxx/*.cpp)
 SIM_VERILOG_SRCS = $(shell cat $(FILELIST)) $(wildcard $(SIM_DIR)/models/hdl/*.sv) $(SIM_DIR)/veri_top.sv
  
-$(SIMULATOR): $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) bootrom.hex
+$(SIMULATOR): $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) bootrom.hex $(SPIKE_DIR)/build/libriscv.so
 		$(VERILATOR) --cc $(VERI_FLAGS) $(VERI_OPTI_FLAGS) $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) -o $(SIMULATOR)
 		$(MAKE) -C $(SIM_DIR)/build -f V$(TOP_MODULE).mk $(SIMULATOR)
 

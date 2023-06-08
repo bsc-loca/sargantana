@@ -1,4 +1,8 @@
 #include "dpi_torture.h"
+#include "dpi_perfect_memory.h"
+#include "riscv/disasm.h"
+#include <cassert>
+#include <stack>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -7,15 +11,20 @@
 #include "spike.h"
 #endif
 
-#define HEX_PC( x ) "0x" << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
-#define HEX_INST( x ) "0x" << std::setw(8) << std::setfill('0') << std::hex << (long)( x )
-#define HEX_DATA( x ) "0x" << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
+#define HEX_PC( x ) "0x" << std::right << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
+#define HEX_INST( x ) "0x" << std::right << std::setw(8) << std::setfill('0') << std::hex << (long)( x )
+#define HEX_DATA( x ) "0x" << std::right << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
+#define HEX_ADDR( x ) "0x" << std::right << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
+#define HEX_WORD( x ) "0x" << std::right << std::setw(8) << std::setfill('0') << std::hex << (uint32_t)( x )
+#define HEX_HALF( x ) "0x" << std::right << std::setw(4) << std::setfill('0') << std::hex << (uint16_t)( x )
+#define HEX_BYTE( x ) "0x" << std::right << std::setw(2) << std::setfill('0') << std::hex << (long)( ( x ) & 0xff )
 #define DEC_DATA( x )  std::dec << (long)( x )
-#define HEX_VDATA( x ) std::setw(8) << std::setfill('0') << std::hex << (long)( x )
-#define DEC_DST( x ) "x" << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
-#define DEC_FDST( x ) "f" << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
-#define DEC_VDST( x ) "v" << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
+#define HEX_VDATA( x ) std::right << std::setw(8) << std::setfill('0') << std::hex << (long)( x )
+#define DEC_DST( x ) "x" << std::left << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
+#define DEC_FDST( x ) "f" << std::left << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
+#define DEC_VDST( x ) "v" << std::left << std::setw(2) << std::setfill(' ') << std::dec << (long)( x )
 #define DEC_PRIV( x ) std::setw(1) << std::dec << (long)( x )
+#define DEC_CSR( x ) "c" << std::right << std::setw(3) << std::dec << (long)( x )
 
 // Global objects
 tortureSignature *torture_signature;
@@ -94,55 +103,51 @@ int get_memory_data(uint64_t* data, uint64_t direction){
 #endif
 
 // System Verilog DPI
-void torture_dump (unsigned long long cycles, unsigned long long PC, unsigned long long inst, unsigned long long dst, unsigned long long fdst,unsigned long long vdst,
-                   unsigned long long reg_wr_valid, unsigned long long freg_wr_valid, unsigned long long vreg_wr_valid, 
-                   unsigned int data0, unsigned int data1, unsigned int data2, unsigned int data3,
-                   unsigned long long sew, unsigned long long xcpt, unsigned long long xcpt_cause, unsigned long long csr_priv_lvl,
-                   unsigned long long csr_rw_data, unsigned long long csr_xcpt, unsigned long long csr_xcpt_cause, unsigned long long csr_tval){
+void torture_dump (unsigned long long cycles, const commit_data_t *commit_data){
     
     //std::cout << data0 << " " << data1 << " " << data2 << " " << data3 << std::endl;
     //std::cout << data << std::endl;
-    uint64_t scalar_data = ((uint64_t)(data1) << 32) | (data0);
+    uint64_t scalar_data = ((uint64_t)(commit_data->data[1]) << 32) | (commit_data->data[0]);
     uint64_t max_miss = torture_signature->get_max_miss();
         
     //Exceptions can come from the core (xcpt) or from the csrs (csr_xcpt)
     //And cannot happen both at once, so a simple OR suffices
-    unsigned long long var_xcpt = xcpt | csr_xcpt;
-    unsigned long long var_xcpt_cause = xcpt_cause | csr_xcpt_cause;
+    unsigned long long var_xcpt = commit_data->xcpt | commit_data->csr_xcpt;
+    unsigned long long var_xcpt_cause = commit_data->xcpt_cause | commit_data->csr_xcpt_cause;
     //We need to extend the PC sign
-    signed long long signedPC = PC;
+    signed long long signedPC = commit_data->pc;
     signedPC = signedPC << 24;
     signedPC = signedPC >> 24;
     
     cycl = cycles;
 
     if(torture_signature->dump_check()){
-        if(reg_wr_valid || freg_wr_valid) {
-            torture_signature->update_signature(dst, scalar_data);
+        if(commit_data->reg_wr_valid || commit_data->freg_wr_valid) {
+            torture_signature->update_signature(commit_data->dst, scalar_data);
         }
-        if((last_PC == signedPC) && (last_inst == inst) && (last_dst == dst) && (last_data == scalar_data))
+        if((last_PC == signedPC) && (last_inst == commit_data->inst) && (last_dst == commit_data->dst) && (last_data == scalar_data))
         {
 
         }else{
 
-            if (inst == 0x00000073) { //ecall
+            if (commit_data->inst == 0x00000073) { //ecall
                 var_xcpt = 1;
-                if (csr_priv_lvl == 0) var_xcpt_cause = CAUSE_USER_ECALL;
-                else if (csr_priv_lvl == 1) var_xcpt_cause = CAUSE_SUPERVISOR_ECALL;
+                if (commit_data->csr_priv_lvl == 0) var_xcpt_cause = CAUSE_USER_ECALL;
+                else if (commit_data->csr_priv_lvl == 1) var_xcpt_cause = CAUSE_SUPERVISOR_ECALL;
                 //else if (csr_priv_lvl == 3) var_xcpt_cause = CAUSE_MACHINE_ECALL;
             }
-            else if (inst == 0x00100073) { //ebreak
+            else if (commit_data->inst == 0x00100073) { //ebreak
                 var_xcpt = 1;
                 var_xcpt_cause = CAUSE_BREAKPOINT;
             }
-            else if (inst == 0x9f019073) { //hardcoded tohost exception
+            else if (commit_data->inst == 0x9f019073) { //hardcoded tohost exception
                 var_xcpt = 1;
                 var_xcpt_cause = CAUSE_ILLEGAL_INSTRUCTION;
             }
 
             last_PC = signedPC;
-            last_inst = inst;
-            last_dst = dst;
+            last_inst = commit_data->inst;
+            last_dst = commit_data->dst;
             last_data = scalar_data;
 
 #ifdef COSIM
@@ -231,7 +236,7 @@ void torture_dump (unsigned long long cycles, unsigned long long PC, unsigned lo
                 }
             }
 #else
-        torture_signature->dump_file(signedPC, inst, dst, fdst, vdst, reg_wr_valid, freg_wr_valid, vreg_wr_valid, var_xcpt, var_xcpt_cause, data0,data1,data2,data3, sew, csr_priv_lvl, csr_rw_data, csr_tval);
+        torture_signature->dump_file(cycles, commit_data);
 #endif
         }
     }
@@ -241,6 +246,22 @@ void torture_dump (unsigned long long cycles, unsigned long long PC, unsigned lo
             std::cout << "Debug PC: " << HEX_PC(signedPC) << " executed on cycle: " << DEC_DATA(cycles);
         }
     }
+}
+
+std::vector<std::pair<uint64_t, uint64_t>> csr_changes;
+
+void csr_change(unsigned long long addr, unsigned long long value) {
+    csr_changes.push_back(std::make_pair(addr, value));
+}
+
+std::stack<uint64_t> amo_writes;
+
+void torture_dump_amo_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data) {
+    uint32_t baseAddress = addr[0];
+
+    if (size[0] == 2) amo_writes.push(data[0]);
+    else if (size[0] == 3) amo_writes.push(((uint64_t) data[1]) << 32 | data[0]);
+    else assert(false);
 }
 
 #ifndef INCISIVE_SIMULATION
@@ -314,53 +335,85 @@ void tortureSignature::update_signature(uint64_t dst, uint64_t data){
     signature[dst] = data;
 }
 
-void tortureSignature::dump_file(uint64_t PC, uint64_t inst, uint64_t dst, uint64_t fdst, uint64_t vdst, uint64_t reg_wr_valid, uint64_t freg_wr_valid,
-                                uint64_t vreg_wr_valid, uint64_t xcpt, uint64_t xcpt_cause,
-                                uint32_t data0, uint32_t data1, uint32_t data2, uint32_t data3,
-                                uint64_t sew, uint64_t csr_priv_lvl, uint64_t csr_rw_data, uint64_t csr_tval){
+uint64_t last_fflags;
+
+void tortureSignature::dump_file(unsigned long long cycles, const commit_data_t *commit_data){
 
     //DPI data unpadding
-    uint64_t scalar_data = (uint64_t)data1 << 32 | (data0);
-    uint32_t data_int[VVLEN/32];
-    //for (int i = 0; i < VVLEN/32; ++i) {
-        data_int[0]   = data0;
-        data_int[1]   = data1;
-        data_int[2]   = data2;
-        data_int[3]   = data3;
-    //}
+    uint64_t scalar_data = (uint64_t)commit_data->data[1] << 32 | (commit_data->data[0]);
 
     // file dumping
     
     signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
-    if ( xcpt_cause != CAUSE_INSTR_PAGE_FAULT || !xcpt){  // Neiel-leyva
-        signatureFile << "core   0: " << HEX_PC(PC) << " (" << HEX_INST(inst) << ") " << "DASM(" << HEX_INST(inst) << ")" << "\n";
+
+    std::string symbol = memory_symbol_from_addr(commit_data->pc);
+    if (!symbol.empty()) signatureFile << "core   0: >>>>  " << symbol << std::endl;
+
+    if ( commit_data->xcpt_cause != CAUSE_INSTR_PAGE_FAULT || !commit_data->xcpt){  // Neiel-leyva
+        signatureFile << "core   0: " << HEX_PC(commit_data->pc) << " (" << HEX_INST(commit_data->inst) << ") " << disassembler->disassemble(insn_t(commit_data->inst)) << "\n";
     }
 
     //exceptions
-    if (xcpt) {
+    if (commit_data->xcpt) {
         signatureFile.close();
-        if (inst == 0x9f019073) dump_xcpt(xcpt_cause, PC, 0); //Write tohost, 0 in tval
-        else dump_xcpt(xcpt_cause, PC, csr_tval);
+        if (commit_data->inst == 0x9f019073) dump_xcpt(commit_data->xcpt_cause, commit_data->pc, 0); //Write tohost, 0 in tval
+        else dump_xcpt(commit_data->xcpt_cause, commit_data->pc, commit_data->csr_tval);
         signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
-    }
-    else {
-        int opcode = inst & 0x7f;
-        int func3 = (inst >> 12) & 0x7;
-        int func6 = (inst >> 26) & 0x3f;
+    } else if (commit_data->csr_xcpt) {
+        signatureFile.close();
+        // TODO: DIRTY HACK! tval should be set properly in the core!
+        dump_xcpt(commit_data->csr_xcpt_cause, commit_data->pc, commit_data->csr_tval ? commit_data->csr_tval : commit_data->inst);
+        csr_changes.clear();
+        signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
+    } else {
+        int opcode = commit_data->inst & 0x7f;
+        int func3 = (commit_data->inst >> 12) & 0x7;
+        int func6 = (commit_data->inst >> 26) & 0x3f;
+        int func7 = (commit_data->inst >> 25) & 0x5f;
         int is_vext = 0;
         int is_vse = 0;
         if (opcode == 0x57 && func3 == 0x2 && func6 == 0x0c) is_vext = 1;
         if (opcode == 0x27 && func3 == 0x7) is_vse = 1;
 
-        signatureFile << DEC_PRIV(csr_priv_lvl) << " " << HEX_PC(PC) << " (" << HEX_INST(inst) << ")";
-        if (reg_wr_valid) {
-            signatureFile << " " << DEC_DST(dst) << " " << HEX_DATA(signature[dst]);
+        signed long long signedAddr = commit_data->mem_addr;
+        signedAddr = signedAddr << 24;
+        signedAddr = signedAddr >> 24;
+
+        signatureFile << "core   0: " << DEC_PRIV(commit_data->csr_priv_lvl) << " " << HEX_PC(commit_data->pc) << " (" << HEX_INST(commit_data->inst) << ")";
+
+        // Print fflags
+        bool fflags_found = false;
+        for (auto it = csr_changes.begin(); it != csr_changes.end();) {
+            uint64_t csr = (*it).first;
+            uint64_t value = (*it).second;
+
+            if (csr == 0x001 && commit_data->fflags_wr_valid) { // CSR is fflags
+                signatureFile << " c1_fflags " << HEX_DATA(value);
+                last_fflags = value;
+                fflags_found = true;
+                it = csr_changes.erase(it); // Remove it so it isn't printed later
+            } else {
+                ++it;
+            }
         }
-        if (freg_wr_valid) {
-            signatureFile << " " << DEC_FDST(dst) << " " << HEX_DATA(signature[dst]);
+
+        // In the case two back-to-back floating point operations are executed
+        // in the same cycle, both setting the fflags, the later one will have
+        // the flags active but they won't be in the list anymore because the
+        // first instruction will have removed it.
+        if (commit_data->fflags_wr_valid && !fflags_found) {
+            signatureFile << " c1_fflags " << HEX_DATA(last_fflags);
         }
-        if (vreg_wr_valid || is_vext || is_vse) {
-            switch (sew) {
+
+        // Print register writebacks
+        if (commit_data->reg_wr_valid) {
+            signatureFile << " " << DEC_DST(commit_data->dst) << " " << HEX_DATA(signature[commit_data->dst]);
+        }
+        if (commit_data->freg_wr_valid) {
+            signatureFile << " " << DEC_FDST(commit_data->dst) << " " << HEX_DATA(signature[commit_data->dst]);
+        }
+        if (commit_data->vreg_wr_valid || is_vext || is_vse) {
+            switch (commit_data->sew) {
                 case 0:
                     signatureFile << " e8 m1 l16";
                     break;
@@ -374,12 +427,80 @@ void tortureSignature::dump_file(uint64_t PC, uint64_t inst, uint64_t dst, uint6
                     signatureFile << " e64 m1 l2";
                     break;
             }
-            if (vreg_wr_valid) {
-                signatureFile << " " << DEC_VDST(vdst) << " 0x";
+            if (commit_data->vreg_wr_valid) {
+                signatureFile << " " << DEC_VDST(commit_data->vdst) << " 0x";
                 for (int i = (VVLEN/32)-1; i >= 0; --i) {
-                    signatureFile << HEX_VDATA(data_int[i]);
+                    signatureFile << HEX_VDATA(commit_data->data[i]);
                 }
             }
+        }
+
+        // Print CSR changes
+        for (auto& change : csr_changes) {
+            uint64_t csr = change.first;
+            uint64_t value = change.second;
+            switch(csr) {
+                case 0x001: break; // Ignore fflags
+                case 0x300: // Fixes for RISC-V Privilege ISA 1.11 (from core) to 1.12 (from Spike simulator)
+                    signatureFile << " " << DEC_CSR(csr) << "_" << csr_name(csr) << " " << HEX_DATA(value & ~0x600);
+                    break;
+                case 0x003: // Spike prints changes to FCSR individually by bit fields
+                    signatureFile << " c1_fflags " << HEX_DATA(change.second & 0b11111);
+                    signatureFile << " c2_frm " << HEX_DATA((change.second >> 5) & 0b111);
+                    break;
+                default:
+                    signatureFile << " " << DEC_CSR(csr) << "_" << csr_name(csr) << " " << HEX_DATA(value);
+                    break;
+            }
+        }
+
+        // Delete all CSR changes except for fflags. This is done because the
+        // next instruction commited in the same cycle might have produced the
+        // change in the fflags, and so mustn't be deleted. They will be deleted
+        // once that instruction performs the dump.
+        for (auto it = csr_changes.begin(); it != csr_changes.end();) {
+            uint64_t csr = (*it).first;
+            uint64_t value = (*it).second;
+
+            if (csr != 0x001) it = csr_changes.erase(it);
+            else ++it;
+        }
+
+        // Print memory operations
+        switch (commit_data->mem_type) {
+            default:
+            case 0:
+                break;
+            case 1: // Load
+                signatureFile << " mem " << HEX_DATA(signedAddr);
+                break;
+            case 2: // Store
+                signatureFile << " mem " << HEX_DATA(signedAddr) << " ";
+                switch (func3) {
+                    case 0b000: 
+                    case 0b100:
+                        signatureFile << HEX_BYTE(scalar_data);
+                        break;
+                    case 0b001:
+                    case 0b101:
+                        signatureFile << HEX_HALF(scalar_data);
+                        break;
+                    case 0b010:
+                        signatureFile << HEX_WORD(scalar_data);
+                        break;
+                    default:
+                        signatureFile << HEX_DATA(scalar_data);
+                        break;
+                }
+                break;
+            case 3: // AMO
+                signatureFile << " mem " << HEX_DATA(signedAddr);
+                uint64_t amo = amo_writes.top();
+                signatureFile << " mem " << HEX_DATA(signedAddr) << " ";
+                if (func3 == 0b010) signatureFile << HEX_WORD((uint32_t) amo);
+                else signatureFile << HEX_DATA(amo);
+                amo_writes.pop();
+                break;
         }
 #ifdef COSIM
         signatureFile << " Cycles " << cycl << "\n";
@@ -455,7 +576,7 @@ void tortureSignature::dump_xcpt(uint64_t xcpt_cause, uint64_t epc, uint64_t tva
 
 void tortureSignature::dump_spike(uint64_t PC, uint64_t inst, uint64_t dst, uint64_t dst_value) {
     signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
-    signatureFile << "spike: " << HEX_PC(PC) << " (" << HEX_INST(inst) << ") " << "DASM(" << HEX_INST(inst) << ")" << "\n";
+    signatureFile << "spike: " << HEX_PC(PC) << " (" << HEX_INST(inst) << ") " << disassembler->disassemble(insn_t(inst)) << "\n";
     signatureFile << " " << DEC_DST(dst) << " " << HEX_DATA(dst_value) << "\n";
     signatureFile.close();
 }

@@ -523,6 +523,10 @@ typedef struct packed {
     logic translated;                   // Has been translated to a physical address
     exception_t ex;
 
+    `ifdef VERILATOR
+    bus64_t vaddr;
+    `endif
+
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_mem_instr_t;       //  Read Regfile to Execution stage for memory pipeline
 
@@ -595,6 +599,7 @@ typedef struct packed {
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
     bus64_t id;
+    addr_t addr;
     `endif
     phreg_t prd;                        // Physical register destination
 
@@ -624,6 +629,7 @@ typedef struct packed {
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
+    addr_t addr;
     bus64_t id;
     `endif
     phvreg_t pvd;                       // Physical vregister destination
@@ -652,6 +658,7 @@ typedef struct packed {
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef VERILATOR
     riscv_pkg::instruction_t inst;      // Bits of the instruction
+    addr_t addr;
     bus64_t id;
     `endif
     phreg_t fprd;                       // Physical register destination
@@ -937,6 +944,7 @@ typedef struct packed {
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
+    addr_t          addr;
     `endif
     logic           ex_valid;
     logic           stall_csr_fence;        // CSR or fence
@@ -962,6 +970,7 @@ typedef struct packed {
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
+    addr_t addr;
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
 } gl_wb_data_t;
 
@@ -1026,5 +1035,34 @@ typedef enum logic [SEW_WIDTH - 1 : 0] {
     BINARY32 = 'b010,
     BINARY64 = 'b011
 } std_element_width_e;
+
+
+`ifdef VERILATOR
+typedef struct packed {
+    longint unsigned pc;
+    longint unsigned inst;
+    longint unsigned dst;
+    longint unsigned fdst;
+    longint unsigned vdst;
+    longint unsigned reg_wr_valid;
+    longint unsigned freg_wr_valid;
+    longint unsigned vreg_wr_valid;
+    bit[riscv_pkg::VLEN-1:0] data;
+    longint unsigned csr_wr_valid;
+    longint unsigned csr_dst;
+    longint unsigned csr_data;
+    longint unsigned sew;
+    longint unsigned xcpt;
+    longint unsigned xcpt_cause;
+    longint unsigned csr_priv_lvl;
+    longint unsigned csr_rw_data;
+    longint unsigned csr_xcpt;
+    longint unsigned csr_xcpt_cause;
+    longint unsigned csr_tval;
+    longint unsigned mem_type;
+    longint unsigned mem_addr;
+    longint unsigned fflags_wr_valid;
+} commit_data_t;
+`endif
 
 endpackage

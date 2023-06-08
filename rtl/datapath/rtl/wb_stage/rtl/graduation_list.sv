@@ -138,6 +138,7 @@ begin
                     entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
                     entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
                     entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
+                    entries[instruction_writeback_i[i]].addr      <= instruction_writeback_data_i[i].addr;
                 `endif
                 entries[instruction_writeback_i[i]].ex_valid  <= instruction_writeback_data_i[i].exception.valid | entries[instruction_writeback_i[i]].ex_valid;
             end
@@ -150,6 +151,7 @@ begin
                     entries[instruction_simd_writeback_i[i]].csr_addr  <= instruction_simd_writeback_data_i[i].csr_addr;
                     entries[instruction_simd_writeback_i[i]].exception <= instruction_simd_writeback_data_i[i].exception;
                     entries[instruction_simd_writeback_i[i]].result    <= instruction_simd_writeback_data_i[i].result;
+                    entries[instruction_simd_writeback_i[i]].addr    <= instruction_simd_writeback_data_i[i].addr;
                 `endif
                 entries[instruction_simd_writeback_i[i]].ex_valid  <= instruction_simd_writeback_data_i[i].exception.valid | entries[instruction_simd_writeback_i[i]].ex_valid;
             end
@@ -163,6 +165,7 @@ begin
                 entries[instruction_fp_writeback_i[i]].csr_addr  <= instruction_fp_writeback_data_i[i].csr_addr;
                 entries[instruction_fp_writeback_i[i]].exception <= instruction_fp_writeback_data_i[i].exception;
                 entries[instruction_fp_writeback_i[i]].result    <= instruction_fp_writeback_data_i[i].result;
+                entries[instruction_fp_writeback_i[i]].addr    <= instruction_fp_writeback_data_i[i].addr;
                 `endif
                 entries[instruction_fp_writeback_i[i]].ex_valid  <= instruction_fp_writeback_data_i[i].exception.valid | entries[instruction_fp_writeback_i[i]].ex_valid;
             end

@@ -24,4 +24,6 @@ void memory_init(std::string filename);
 
 void memory_enable_read_debug();
 
+std::string memory_symbol_from_addr(uint64_t addr);
+
 #endif //DPI_PERFECT_MEMORY_H

@@ -60,6 +60,11 @@ module exe_stage
 
     input logic [1:0] priv_lvl_i,
 
+    `ifdef VERILATOR
+    output addr_t                store_addr_o,
+    output bus64_t               store_data_o,
+    `endif
+
     //--PMU
     output logic                        pmu_is_branch_o,
     output logic                        pmu_branch_taken_o,                    
@@ -344,6 +349,12 @@ mem_unit mem_unit_inst(
     .mem_gl_index_o         (mem_gl_index_o),
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem),
+
+    `ifdef VERILATOR
+    .store_addr_o(store_addr_o),
+    .store_data_o(store_data_o),
+    `endif
+    
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 

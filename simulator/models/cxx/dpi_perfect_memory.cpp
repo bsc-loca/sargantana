@@ -34,6 +34,8 @@ class Memory32 {                    // data width = 32-bit
 static Memory32 memoryContents;
 static uint64_t tohostAddr;
 static uint64_t fromhostAddr;
+static std::map<std::string, uint64_t> symbols;
+static std::map<uint64_t, std::string> reverseSymbols;
 
 svBit memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     uint32_t baseAddress = addr[0];
@@ -100,12 +102,11 @@ void memory_init(std::string filename) {
         std::bind(&Memory32::write_block, &memoryContents, _1, _2, _3);
 
     elfLoader loader = elfLoader(f);
-    std::map<std::string, uint64_t> symbols = loader(filename);
+    symbols = loader(filename);
 
-    /*for (auto const& [sym, addr] : symbols) {
-        printf("Symbol %s at 0x%x\n", sym.c_str(), addr);
-    }*/
-
+    for (const auto& kv : symbols)
+        reverseSymbols[kv.second] = kv.first;
+        
     tohostAddr = symbols["tohost"];
     fromhostAddr = symbols["fromhost"];
 }
@@ -171,6 +172,7 @@ bool Memory32::read(const uint32_t addr, uint32_t &data) {
     assert((addr & 0x3) == 0);
     if (addr_max != 0 && addr >= addr_max || !mem.count(addr)) {
         if (debug_read) printf("WARN: Memory access outside of range: 0x%8x\n", addr);
+        data = 0;
         return false;
     }
 
@@ -228,4 +230,10 @@ void tohost(unsigned int id, unsigned long long data) {
             std::cerr << "Unknown tohost syscall " << std::hex << magicmem[0] << std::endl;
     }
   }
+}
+
+std::string memory_symbol_from_addr(uint64_t addr) {
+    auto symbol = reverseSymbols.find(addr);
+
+    return symbol == reverseSymbols.end() ? std::string("") : symbol->second;
 }

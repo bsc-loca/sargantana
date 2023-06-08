@@ -44,6 +44,11 @@ module mem_unit
 
     input logic [1:0] priv_lvl_i,
 
+    `ifdef VERILATOR
+    output addr_t                store_addr_o,
+    output bus64_t               store_data_o,
+    `endif
+
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
@@ -173,6 +178,9 @@ assign instruction_to_lsq.is_store  = instruction_i.instr.mem_type == STORE;
                                       
 assign instruction_to_lsq.is_amo  = (instruction_to_lsq.is_amo_or_store & !instruction_to_lsq.is_store);
 
+`ifdef VERILATOR
+assign instruction_to_lsq.vaddr = instruction_to_lsq.data_rs1;
+`endif
 
 // LSQ
 load_store_queue load_store_queue_inst (
@@ -756,6 +764,7 @@ assign instruction_scalar_o.regfile_we    = instruction_to_wb.instr.regfile_we;
 assign instruction_scalar_o.instr_type    = instruction_to_wb.instr.instr_type;
 `ifdef VERILATOR
 assign instruction_scalar_o.id	          = instruction_to_wb.instr.id;
+assign instruction_scalar_o.addr          = instruction_to_wb.vaddr;
 `endif
 assign instruction_scalar_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
 assign instruction_scalar_o.csr_addr      = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
@@ -781,6 +790,7 @@ assign instruction_fp_o.regfile_we        = instruction_to_wb.instr.fregfile_we;
 assign instruction_fp_o.instr_type        = instruction_to_wb.instr.instr_type;
 `ifdef VERILATOR
 assign instruction_fp_o.id	              = instruction_to_wb.instr.id;
+assign instruction_fp_o.addr              = instruction_to_wb.vaddr;
 `endif
 assign instruction_fp_o.stall_csr_fence   = instruction_to_wb.instr.stall_csr_fence;
 assign instruction_fp_o.csr_addr          = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
@@ -805,6 +815,7 @@ assign instruction_simd_o.vregfile_we     = instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.instr_type      = instruction_to_wb.instr.instr_type;
 `ifdef VERILATOR
 assign instruction_simd_o.id	          = instruction_to_wb.instr.id;
+assign instruction_simd_o.addr            = instruction_to_wb.vaddr;
 `endif
 assign instruction_simd_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
 assign instruction_simd_o.csr_addr        = instruction_to_wb.instr.imm[CSR_ADDR_SIZE-1:0];
@@ -837,5 +848,10 @@ assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 //// Block incoming Mem instructions
 assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
+
+`ifdef VERILATOR
+assign store_addr_o = instruction_s2_q.vaddr;
+assign store_data_o = instruction_s2_q.data_rs2;
+`endif
 
 endmodule

@@ -6,3 +6,9 @@
 	path = rtl/mmu
 	url = ../mmu.git
 	branch = sargantana
+[submodule "tb/tb_torture/riscv-torture"]
+	path = tb/tb_torture/riscv-torture
+	url = https://github.com/ucb-bar/riscv-torture.git
+[submodule "simulator/riscv-isa-sim"]
+	path = simulator/riscv-isa-sim
+	url = ../riscv-isa-sim.git
