@@ -69,8 +69,8 @@ end
 
 // next_source selection
 always_comb begin
-    if (datapath_req_valid_i) next_source = SERVING_DATAPATH;
-    else if (ptw_req_i.req.valid) next_source = SERVING_PTW;
+    if (current_source == NONE && datapath_req_valid_i) next_source = SERVING_DATAPATH;
+    else if (current_source == NONE && ptw_req_i.req.valid) next_source = SERVING_PTW;
     else if (current_source == SERVING_DATAPATH && dmem_resp_valid_i == 1'b1) next_source = NONE;
     else if (current_source == SERVING_PTW && dmem_resp_valid_i == 1'b1) next_source = NONE;
     else next_source = current_source;
