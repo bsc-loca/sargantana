@@ -19,8 +19,6 @@ TORTURE_DIFFS			 = $(patsubst $(TORTURE_CONFIG)/%.config,$(TORTURE_SIGNATURES)/%
 
 # Compilation settings
 
-RISCV_PREFIX=$(RISCV)/bin/riscv64-unknown-elf-
-RISCV_GCC = $(RISCV_PREFIX)gcc
 ENTROPY = -DENTROPY=$(shell echo $$$$)
 RISCV_GCC_VMEM_OPTS = $(ENTROPY) -static -mcmodel=medany -fvisibility=hidden \
 	-nostdlib -nostartfiles -lm -lgcc -march=rv64g -mabi=lp64 -std=gnu99 -O2 \
