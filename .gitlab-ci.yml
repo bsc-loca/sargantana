@@ -88,11 +88,22 @@ build-simulator:
     - make sim
   artifacts:
     paths:
-    - simulator/build
-    - simulator/riscv-isa-sim/build
+    - simulator/riscv-isa-sim/build/spike
     - sim
     - bootrom.hex
     expire_in: 1 week
+
+build-torture:
+  stage: building
+  only:
+    refs:
+      - schedules
+  script:
+    - $RISCV_GCC --version
+    - make build-torture
+  artifacts:
+    paths:
+    - tb/tb_torture/riscv-torture/output
 
 isa-tests:
   stage: simulation
@@ -109,6 +120,17 @@ benchmarks:
     - build-benchmarks
   script:
     - ./run-benchmarks.sh
+
+torture:
+  stage: simulation
+  only:
+    refs:
+      - schedules
+  dependencies:
+    - build-torture
+  script:
+    - $RISCV_GCC --version
+    - make run-torture
 
 #questa:verilog:
 #  image: localhost:5000/epi_rtl-vsim

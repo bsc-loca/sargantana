@@ -29,7 +29,7 @@ RISCV_GCC_PMEM_OPTS = $(ENTROPY) -static -mcmodel=medany -fvisibility=hidden \
 	-nostdlib -nostartfiles -lm -lgcc -march=rv64g -mabi=lp64 -std=gnu99 -O2 \
 	-I$(TORTURE_ENV)/p -T$(TORTURE_ENV)/p/link.ld
 
-RISCV_GCC_OPTS = $(RISCV_GCC_VMEM_OPTS)
+TORTURE_RISCV_GCC_OPTS = $(RISCV_GCC_VMEM_OPTS)
 
 define get_config
 $(patsubst test_%,%,$(firstword $(subst -, ,$(basename $(notdir $(1))))))
@@ -58,7 +58,7 @@ $(TORTURE_OUTPUT)/%.S:
 		$(MAKE) -C $(RISCV_TORTURE) gen OPTIONS="-C ../config/$(call get_config, $@).config -o test_$(call get_config, $@)"
 
 $(TORTURE_OUTPUT)/%.riscv: $(TORTURE_OUTPUT)/%.S
-		$(RISCV_GCC) $(RISCV_GCC_OPTS) $< -o $@
+		$(RISCV_GCC) $(TORTURE_RISCV_GCC_OPTS) $< -o $@
 
 $(TORTURE_SIGNATURES):
 		mkdir -p $@

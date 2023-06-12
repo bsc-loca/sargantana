@@ -19,7 +19,7 @@ VERI_FLAGS = \
 	--unroll-count 256 \
 	-Wno-lint -Wno-style -Wno-STMTDLY -Wno-fatal \
 	-CFLAGS "-std=c++11 -I$(SIM_DIR)/riscv-isa-sim/" \
-	-LDFLAGS "-pthread -L$(SIM_DIR)/riscv-isa-sim/build/ -lriscv -Wl,-rpath=$(SIM_DIR)/riscv-isa-sim/build/" \
+	-LDFLAGS "-pthread -L$(SIM_DIR)/riscv-isa-sim/build/ -l:libriscv.a -l:libdisasm.a" \
 	--exe \
 	--trace-fst \
 	--trace-max-array 512 \
