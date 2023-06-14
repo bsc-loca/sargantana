@@ -1,4 +1,5 @@
-image: localhost:5000/ubu20_verilator_riscv:5.010
+#image: localhost:5000/ubu20_verilator_riscv:5.010
+image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
 
 workflow:
   rules:
@@ -48,7 +49,8 @@ verilator:verilog:
   allow_failure: true
 
 spyglass:verilog:
-  image: localhost:5000/epi_rtl-spyglass-lint
+  #image: localhost:5000/epi_rtl-spyglass-lint
+  image: registry.gitlab.bsc.es/hwdesign/containerhub/spyglass:latest
   stage: linting
   tags:
     - spyglass
