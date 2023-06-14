@@ -1,4 +1,3 @@
-#image: localhost:5000/ubu20_verilator_riscv:5.010
 image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
 
 workflow:
@@ -49,7 +48,6 @@ verilator:verilog:
   allow_failure: true
 
 spyglass:verilog:
-  #image: localhost:5000/epi_rtl-spyglass-lint
   image: registry.gitlab.bsc.es/hwdesign/containerhub/spyglass:latest
   stage: linting
   tags:
@@ -97,9 +95,9 @@ build-simulator:
 
 build-torture:
   stage: building
-  only:
-    refs:
-      - schedules
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
   script:
     - $RISCV_GCC --version
     - make build-torture
@@ -125,9 +123,9 @@ benchmarks:
 
 torture:
   stage: simulation
-  only:
-    refs:
-      - schedules
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
   dependencies:
     - build-torture
   script:
