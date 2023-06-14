@@ -1,4 +1,7 @@
-image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
+## This workflow avoids duplicate pipelines when there is an open merge request (commit_branch + merge_request) 
+## so only the open merge request will be executed and not the commit_branch. PIPELINE_BRANCH will be used to refer to
+## CI_COMMIT_BRANCH or CI_MERGE_REQUEST_SOURCE_BRANCH_NAME, we will not differentiate between them.
+## If a rule matches, when: always is the default, and when: never is the default if nothing matches
 
 workflow:
   rules:
@@ -10,7 +13,9 @@ workflow:
     - if: ($CI_COMMIT_BRANCH) # All branches
       variables: 
         PIPELINE_BRANCH: $CI_COMMIT_BRANCH
-    - when: always
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+
+image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
 
 variables:
   GIT_STRATEGY: clone
@@ -25,6 +30,10 @@ variables:
 before_script:
   #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "https://gitlab.bsc.es/"
   #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "git@gitlab-internal.bsc.es/"
+  - echo $CI_PIPELINE_SOURCE
+  - echo $CI_COMMIT_BRANCH
+  - echo $CI_OPEN_MERGE_REQUESTS
+  - echo $CI_PIPELINE_SOURCE
 
   # Clone repos
   #- rm -rf rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine
