@@ -1,25 +1,19 @@
+image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
+
 ## This workflow avoids duplicate pipelines when there is an open merge request (commit_branch + merge_request) 
 ## so only the open merge request will be executed and not the commit_branch. PIPELINE_BRANCH will be used to refer to
 ## CI_COMMIT_BRANCH or CI_MERGE_REQUEST_SOURCE_BRANCH_NAME, we will not differentiate between them.
 ## If a rule matches, when: always is the default, and when: never is the default if nothing matches
-
-#workflow:
-#  rules:
-#    - if: ($CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS) # Fix detached merge request pipelines
-#      when: never 
-#    - if: ($CI_PIPELINE_SOURCE == "merge_request_event") # Merge requests 
-#      variables: 
-#        PIPELINE_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
-#      when: always
-#    - if: ($CI_COMMIT_BRANCH) # All branches
-#      variables: 
-#        PIPELINE_BRANCH: $CI_COMMIT_BRANCH
-#      when: always
-#    - if: ($CI_PIPELINE_SOURCE == "schedule")
-#      when: always
-#    - when: always
-
-image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
+workflow:
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "merge_request_event") # Merge requests 
+      variables: 
+        PIPELINE_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME 
+    - if: ($CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE != "schedule") # Fix detached merge request pipelines
+      when: never 
+    - if: ($CI_COMMIT_BRANCH) # All branches
+      variables: 
+        PIPELINE_BRANCH: $CI_COMMIT_BRANCH
 
 variables:
   GIT_STRATEGY: clone
@@ -55,8 +49,6 @@ verilator:verilog:
   stage: linting
   tags:
     - verilator
-  rules:
-    - when: always
   script:
     - verilator --version
     - make lint
@@ -67,8 +59,6 @@ spyglass:verilog:
   stage: linting
   tags:
     - spyglass
-  rules:
-    - when: always
   script:
     - make local_spyglass
   allow_failure: true
@@ -79,8 +69,6 @@ spyglass:verilog:
 
 build-isa-tests:
   stage: building
-  rules:
-    - when: always
   script:
     - $RISCV_GCC --version
     - make build-isa-tests
@@ -91,8 +79,6 @@ build-isa-tests:
 
 build-benchmarks:
   stage: building
-  rules:
-    - when: always
   script:
     - $RISCV_GCC --version
     - make build-benchmarks
@@ -103,8 +89,6 @@ build-benchmarks:
 
 build-simulator:
   stage: building
-  rules:
-    - when: always
   script:
     - verilator --version
     - gcc --version
@@ -130,8 +114,6 @@ build-torture:
 
 isa-tests:
   stage: simulation
-  rules:
-    - when: always
   dependencies:
     - build-simulator
     - build-isa-tests
@@ -140,8 +122,6 @@ isa-tests:
 
 benchmarks:
   stage: simulation
-  rules:
-    - when: always
   dependencies:
     - build-simulator
     - build-benchmarks
