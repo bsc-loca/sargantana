@@ -10,8 +10,7 @@ workflow:
     - if: ($CI_COMMIT_BRANCH) # All branches
       variables: 
         PIPELINE_BRANCH: $CI_COMMIT_BRANCH
-    - if: ($CI_PIPELINE_SOURCE == "schedule")
-      when: always
+    - when: always
 
 variables:
   GIT_STRATEGY: clone
