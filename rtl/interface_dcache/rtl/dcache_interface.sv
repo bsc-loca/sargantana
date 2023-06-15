@@ -12,193 +12,119 @@
  *  Revision   | Author     | Description
  *  0.1        | Ruben. L   |
  *  0.2        | Victor. SP | Improve Doc. and pass tb
+ *  0.3        | Arnau B.   | Modify to work with HPDC
  * -----------------------------------------------
  */
  
 // Interface with Data Cache. Stores a Memory request until it finishes
 
 module dcache_interface 
-    import drac_pkg::*;
+    import drac_pkg::*, hpdcache_pkg::*;
 (
     input  wire         clk_i,               // Clock
     input  wire         rstn_i,              // Negative Reset Signal
 
-    input req_cpu_dcache_t req_cpu_dcache_i, // Interface with cpu
     input logic         en_ld_st_translation_i, // Virtualization enable
 
-    // DCACHE Answer
-    input  logic        dmem_resp_replay_i,  // Miss ready
-    input  bus_simd_t   dmem_resp_data_i,    // Readed data from Cache
-    input  logic        dmem_req_ready_i,    // Dcache ready to accept request
-    input  logic        dmem_resp_valid_i,   // Response is valid
-    input  logic [7:0]  dmem_resp_tag_i,     // Tag 
-    input  logic        dmem_resp_nack_i,    // Cache request not accepted
-    input  logic        dmem_resp_has_data_i,// Dcache response contains data
-    input  logic        dmem_ordered_i,
-
-    // Request TO DCACHE
-
-    output logic        dmem_req_valid_o,    // Sending valid request
-    output logic [4:0]  dmem_req_cmd_o,      // Type of memory access
-    output addr_t       dmem_req_addr_o,     // Address of memory access
-    output logic [3:0]  dmem_op_type_o,      // Granularity of memory access
-    output bus_simd_t   dmem_req_data_o,     // Data to store
-    output logic [7:0]  dmem_req_tag_o,      // Tag for the MSHR
-    output logic        dmem_req_invalidate_lr_o, // Reset load-reserved/store-conditional
-    output logic        dmem_req_kill_o,     // Kill actual memory access
-
-    // DCACHE Answer to WB
+    // CPU Interface
+    input req_cpu_dcache_t req_cpu_dcache_i,
     output resp_dcache_cpu_t resp_dcache_cpu_o, // Dcache to CPU
+
+    // dCache Interface
+    input  logic dcache_ready_i,
+    input  logic dcache_valid_i,
+    output logic core_req_valid_o,
+    output hpdcache_req_t req_dcache_o,
+    input  hpdcache_rsp_t rsp_dcache_i,
 
     // PMU
     output logic dmem_is_store_o,
     output logic dmem_is_load_o
 );
 
-// Declarations of internal variables
-logic mem_xcpt;
 logic io_address_space;
-logic kill_io_resp;   
-logic kill_mem_ope;
-/*logic [1:0] state;
-logic [1:0] next_state;*/
-bus64_t dmem_req_addr_64;
 
-logic [1:0] type_of_op;
-
-// Possible states of the control automata
-/*parameter ResetState  = 2'b00,
-          Idle = 2'b01,
-          MakeRequest = 2'b10,
-          WaitResponse = 2'b11;*/
-
-parameter MEM_NOP   = 3'b00,
-          MEM_LOAD  = 3'b01,
-          MEM_STORE = 3'b10,
-          MEM_AMO   = 3'b11;
+assign io_address_space = (req_dcache_o.addr >= req_cpu_dcache_i.io_base_addr) && (req_dcache_o.addr < 40'h80000000) && !en_ld_st_translation_i;
 
 //-------------------------------------------------------------
-// CONTROL SIGNALS
+// dCache Interface
 //-------------------------------------------------------------
 
-// The address is in the INPUT/OUTPUT space
-assign io_address_space = (dmem_req_addr_o >= req_cpu_dcache_i.io_base_addr) && (dmem_req_addr_o < 40'h80000000) && !en_ld_st_translation_i;
+assign core_req_valid_o = req_cpu_dcache_i.valid; 
 
-// There has been a exception
-assign kill_mem_ope = req_cpu_dcache_i.kill;
-
-/////////////////////////////////////////////////////////////////////
-
-//-------------------------------------------------------------
-// STATE MACHINE LOGIC
-//-------------------------------------------------------------
-
-assign dmem_req_valid_o = req_cpu_dcache_i.valid; 
-
-
-// Decide type of memory operation
+// Memory Operation
 always_comb begin
-    type_of_op = MEM_NOP;
     case(req_cpu_dcache_i.instr_type)
-        AMO_LRW,AMO_LRD:         begin
-                                    dmem_req_cmd_o = 5'b00110; // lr
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_SCW,AMO_SCD:         begin
-                                    dmem_req_cmd_o = 5'b00111; // sc
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_SWAPW,AMO_SWAPD:     begin
-                                    dmem_req_cmd_o = 5'b00100; // amoswap
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_ADDW,AMO_ADDD:       begin
-                                    dmem_req_cmd_o = 5'b01000; // amoadd
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_XORW,AMO_XORD:       begin
-                                    dmem_req_cmd_o = 5'b01001; // amoxor
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_ANDW,AMO_ANDD:       begin
-                                    dmem_req_cmd_o = 5'b01011; // amoand
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_ORW,AMO_ORD:         begin
-                                    dmem_req_cmd_o = 5'b01010; // amoor
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_MINW,AMO_MIND:       begin
-                                    dmem_req_cmd_o = 5'b01100; // amomin
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_MAXW,AMO_MAXD:       begin
-                                    dmem_req_cmd_o = 5'b01101; // amomax
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_MINWU,AMO_MINDU:     begin
-                                    dmem_req_cmd_o = 5'b01110; // amominu
-                                    type_of_op = MEM_AMO;
-        end
-        AMO_MAXWU,AMO_MAXDU:     begin  
-                                    dmem_req_cmd_o = 5'b01111; // amomaxu
-                                    type_of_op = MEM_AMO;
-        end
-        LD,LW,LWU,LH,LHU,LB,LBU,VLE,FLD,FLW: begin
-                                    dmem_req_cmd_o = 5'b00000; // Load
-                                    type_of_op = MEM_LOAD;
-        end
-        SD,SW,SH,SB,VSE,FSW,FSD: begin
-                                    dmem_req_cmd_o = 5'b00001; // Store
-                                    type_of_op = MEM_STORE;
-        end
-        default: begin
-                                    dmem_req_cmd_o = 5'b00000;
-                                    `ifdef ASSERTIONS
-                                        // DOES NOT NEED ASSERTION
-                                    `endif
-        end
+        AMO_LRW,AMO_LRD:     req_dcache_o.op = HPDCACHE_REQ_AMO_LR;
+        AMO_SCW,AMO_SCD:     req_dcache_o.op = HPDCACHE_REQ_AMO_SC;
+        AMO_SWAPW,AMO_SWAPD: req_dcache_o.op = HPDCACHE_REQ_AMO_SWAP;
+        AMO_ADDW,AMO_ADDD:   req_dcache_o.op = HPDCACHE_REQ_AMO_ADD;
+        AMO_XORW,AMO_XORD:   req_dcache_o.op = HPDCACHE_REQ_AMO_XOR;
+        AMO_ANDW,AMO_ANDD:   req_dcache_o.op = HPDCACHE_REQ_AMO_AND;
+        AMO_ORW,AMO_ORD:     req_dcache_o.op = HPDCACHE_REQ_AMO_OR;
+        AMO_MINW,AMO_MIND:   req_dcache_o.op = HPDCACHE_REQ_AMO_MIN;
+        AMO_MAXW,AMO_MAXD:   req_dcache_o.op = HPDCACHE_REQ_AMO_MAX;
+        AMO_MINWU,AMO_MINDU: req_dcache_o.op = HPDCACHE_REQ_AMO_MINU;
+        AMO_MAXWU,AMO_MAXDU: req_dcache_o.op = HPDCACHE_REQ_AMO_MAXU;
+        LD,LW,LWU,LH,LHU,LB,LBU,VLE,FLD,FLW: req_dcache_o.op = HPDCACHE_REQ_LOAD;
+        SD,SW,SH,SB,VSE,FSW,FSD: req_dcache_o.op = HPDCACHE_REQ_STORE;
+        default: req_dcache_o.op = HPDCACHE_REQ_LOAD;
     endcase
 end
 
-// Address calculation
-assign dmem_req_addr_64 =  req_cpu_dcache_i.data_rs1;
-assign dmem_req_addr_o = dmem_req_addr_64[39:0];
+// Byte-enable
+always_comb begin
+    if (req_dcache_o.op != HPDCACHE_REQ_LOAD) begin
+        case(req_cpu_dcache_i.mem_size)
+            4'b0000, 4'b0100: req_dcache_o.be = 8'b00000001 << req_cpu_dcache_i.data_rs1[2:0];
+            4'b0001, 4'b0101: req_dcache_o.be = 8'b00000011 << {req_cpu_dcache_i.data_rs1[2:1], 1'b0};
+            4'b0010, 4'b0110: req_dcache_o.be = 8'b00001111 << {req_cpu_dcache_i.data_rs1[2], 2'b0};
+            default: req_dcache_o.be = 8'b11111111;
+        endcase
+    end else begin
+        req_dcache_o.be = 8'b0;
+    end
+end 
 
-// Granularity of mem. access. (BYTE, HALFWORD, WORD, DOUBLEWORD, QUADWORD)
-assign dmem_op_type_o = req_cpu_dcache_i.mem_size;
+// Data
+always_comb begin
+    if (req_dcache_o.op != HPDCACHE_REQ_LOAD) begin
+        case(req_cpu_dcache_i.mem_size)
+            4'b0000, 4'b0100: req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2 << {req_cpu_dcache_i.data_rs1[2:0], 3'b0};
+            4'b0001, 4'b0101: req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2 << {req_cpu_dcache_i.data_rs1[2:1], 4'b0};
+            4'b0010, 4'b0110: req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2 << {req_cpu_dcache_i.data_rs1[2],   5'b0};
+            4'b0011, 4'b0111: req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2;
+            default: req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2; // TODO: Core supports bigger memory sizes than HPDC!
+        endcase
+    end else begin
+        req_dcache_o.wdata[0] = '0;
+    end
+end 
 
-// Data to store if needed
-assign dmem_req_data_o = req_cpu_dcache_i.data_rs2;
+assign req_dcache_o.addr = req_cpu_dcache_i.data_rs1[48:0];
+assign req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2;
+assign req_dcache_o.size = req_cpu_dcache_i.mem_size[2:0]; // TODO: Core supports bigger memory sizes than HPDC!
+assign req_dcache_o.sid = 3'b001;
+assign req_dcache_o.tid = req_cpu_dcache_i.rd;
+assign req_dcache_o.need_rsp = 1'b1;
+assign req_dcache_o.uncacheable = io_address_space;
 
-// TAG for MSHR. Identifies a MEMORY access
-assign dmem_req_tag_o = {1'b0,req_cpu_dcache_i.rd};
-
-// Reset load-reserved/store-conditional 
-assign dmem_req_invalidate_lr_o = req_cpu_dcache_i.kill;
-
-// Kill actual memory operation                       
-assign dmem_req_kill_o = mem_xcpt | req_cpu_dcache_i.kill;
+//-------------------------------------------------------------
+// CPU Interface
+//-------------------------------------------------------------
 
 // Dcache interface to CPU 
-assign resp_dcache_cpu_o.valid = dmem_resp_valid_i;
-assign resp_dcache_cpu_o.replay = dmem_resp_replay_i;
-assign resp_dcache_cpu_o.ready = dmem_req_ready_i;
-assign resp_dcache_cpu_o.nack = dmem_resp_nack_i;
-assign resp_dcache_cpu_o.has_data = dmem_resp_has_data_i;
-assign resp_dcache_cpu_o.io_address_space = io_address_space;
-assign resp_dcache_cpu_o.rd = dmem_resp_tag_i;
-
-// Readed data from load
-assign resp_dcache_cpu_o.data = dmem_resp_data_i;
-
-// Fill exceptions for exe stage
-assign resp_dcache_cpu_o.addr = dmem_req_addr_64;
-assign resp_dcache_cpu_o.ordered = dmem_ordered_i;
+assign resp_dcache_cpu_o.valid = dcache_valid_i;
+assign resp_dcache_cpu_o.ready = dcache_ready_i;
+assign resp_dcache_cpu_o.io_address_space = io_address_space; // This should be done somewhere else...
+assign resp_dcache_cpu_o.rd = rsp_dcache_i.tid;
+assign resp_dcache_cpu_o.data = rsp_dcache_i.rdata;
+assign resp_dcache_cpu_o.ordered = 1'b1; // TODO: Forward wbuf_empty_o from cache
+// TODO: What about resp_dcache_cpu_o.error?
 
 //-PMU
-assign dmem_is_store_o = (type_of_op == MEM_STORE) && dmem_req_valid_o;
-assign dmem_is_load_o  = (type_of_op == MEM_LOAD) && dmem_req_valid_o;
+assign dmem_is_store_o = (req_dcache_o.op == HPDCACHE_REQ_LOAD) && req_cpu_dcache_i.valid;
+assign dmem_is_load_o  = (req_dcache_o.op == HPDCACHE_REQ_STORE) && req_cpu_dcache_i.valid;
 
 endmodule
 //`default_nettype wire

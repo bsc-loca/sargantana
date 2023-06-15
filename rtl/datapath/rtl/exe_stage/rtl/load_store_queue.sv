@@ -24,8 +24,6 @@ module load_store_queue
      
     input logic                flush_i,          // Flush all entries
     input logic                read_next_i,      // Read next instruction of the ciruclar buffer
-    input logic                reset_next_i,     // Reset next instruction to the exec pointer
-    input logic                advance_head_i,   // Advance head pointer one position
     input logic                rob_store_ack_i,
     input gl_index_t           rob_store_gl_idx_i,  // Signal from commit enables writes.
     output logic               blocked_store_o,
@@ -66,8 +64,6 @@ lsq_entry_pointer tlb_tail;
 //Num must be 1 bit bigger than head an tail
 logic [$clog2(LSQ_NUM_ENTRIES):0] num;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_exe;
-logic [$clog2(LSQ_NUM_ENTRIES):0] num_on_fly;
-logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_recover;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
 // Internal Control Signals
@@ -75,7 +71,6 @@ logic write_enable;
 logic read_enable;
 logic read_enable_lsq;
 logic read_enable_sb;
-logic advance_head_enable;
 logic bypass_lsq;
 logic empty_int;
 logic translate_enable;
@@ -88,11 +83,8 @@ assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES)
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-//assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD)) & (~reset_next_i);
-assign read_enable = read_next_i & !empty_int & (~reset_next_i);
-
-// User can advance the head of the buffer if there is data stored in the queue
-assign advance_head_enable = advance_head_i & ((num_on_fly > 0) | read_enable);
+//assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD));
+assign read_enable = read_next_i & !empty_int;
 
 //assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
 assign bypass_lsq = 1'b0;
@@ -143,10 +135,6 @@ end
 
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
-// recover table
-rr_exe_mem_instr_t recover_table[0:1];
-logic recover_head;
-logic recover_tail;
 
 always_ff @(posedge clk_i)
 begin
@@ -160,12 +148,6 @@ begin
     end
 end
 
-always_ff @(posedge clk_i)
-begin
-    if (read_enable) begin
-        recover_table[recover_tail] <= next_instr_exe_o;
-    end
-end
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
@@ -173,44 +155,21 @@ begin
         head <= 3'h0;
         tail <= 3'b0;
         num_to_exe   <= 4'b0;
-        num_on_fly   <= 4'b0;
-        num_to_recover  <= 4'b0;
         num_to_translate <= 4'b0;
-        recover_head <= 1'b0;
-        recover_tail <= 1'b0;
         tlb_tail <= 3'b0;
     end
     else if (flush_i) begin
         head <= 3'h0;
         tail <= 3'b0;
         num_to_exe   <= 4'b0;
-        num_on_fly   <= 4'b0;
-        num_to_recover  <= 4'b0;
         num_to_translate <= 4'b0;
-        recover_head <= 1'b0;
-        recover_tail <= 1'b0;
         tlb_tail <= 3'b0;
-    end
-    else if (reset_next_i) begin
-        head <= head + {2'b00, read_enable_lsq};
-        tail <= tail + {2'b00, write_enable};
-        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable};
-        num_to_exe <= num_to_exe + {3'b0, translate_enable} - {3'b0, read_enable_lsq};
-        num_on_fly <= 4'b0;
-        num_to_recover  <= num_on_fly + num_to_recover;
-        recover_head <= recover_head;
-        recover_tail <= recover_head;
-        tlb_tail <= tlb_tail + {2'b00, translate_enable};
     end
     else begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
         num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable};
         num_to_exe      <= num_to_exe + {3'b0, translate_enable} - {3'b0, read_enable_lsq};
-        num_on_fly      <= num_on_fly + {2'b00, read_enable} - {3'b0, advance_head_enable};
-        num_to_recover  <= num_to_recover > 0 ? num_to_recover - {3'b0, read_enable} : 4'b0;
-        recover_head <= recover_head + advance_head_enable;
-        recover_tail <= recover_tail + read_enable;
         tlb_tail <= tlb_tail + {2'b00, translate_enable};
     end
 end
@@ -219,9 +178,7 @@ always_comb begin
     read_enable_lsq = 1'b0;
     read_enable_sb = 1'b0;
     sb_write_enable = 1'b0;
-    if (read_enable && num_to_recover > 0) begin
-
-    end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
+    if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
         read_enable_sb = 1'b1;
     end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin
         read_enable_lsq = 1'b1;
@@ -235,15 +192,13 @@ end
 
 always_comb begin
     next_instr_exe_o = 'h0;
-    if (read_enable && num_to_recover > 0) begin
-        next_instr_exe_o = recover_table[recover_tail];
-    end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
+    if (rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
         next_instr_exe_o = st_buff_inst_out;
-    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i & control_table[head].translated) begin
+    end else if (rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i & control_table[head].translated) begin
         next_instr_exe_o = control_table[head];
-    end else if (read_enable && is_next_load && !st_buff_collision & control_table[head].translated) begin
+    end else if (is_next_load && !st_buff_collision & control_table[head].translated) begin
         next_instr_exe_o = control_table[head];
-    end else if (read_enable && bypass_lsq) begin
+    end else if (bypass_lsq) begin
         next_instr_exe_o = instruction_i;
     end
 end
@@ -253,9 +208,7 @@ assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (con
 
 always_comb begin
     blocked_store_o = 1'b1;
-    if (num_to_recover != '0) begin
-        blocked_store_o = 1'b0;
-    end else if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i)) begin
+    if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i)) begin
         blocked_store_o = 1'b0;
     end else if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i)) begin
         blocked_store_o = 1'b0;
@@ -278,7 +231,7 @@ assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
 assign dtlb_comm_o.req.store = control_table[tlb_tail].is_amo_or_store; // TODO: Check this, might not be exactly right...
 
-assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_recover == '0 && num_to_translate == '0;
+assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_translate == '0;
 assign empty_o = empty_int && !bypass_lsq;
 assign full_o  = (((num_to_exe + num_to_translate) == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 

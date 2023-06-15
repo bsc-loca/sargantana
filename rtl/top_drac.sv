@@ -13,7 +13,7 @@
 */
 
 module top_drac
-    import drac_pkg::*, sargantana_icache_pkg::*, mmu_pkg::*;
+    import drac_pkg::*, sargantana_icache_pkg::*, mmu_pkg::*, hpdcache_pkg::*;
 (
 //------------------------------------------------------------------------------------
 // ORIGINAL INPUTS OF LAGARTO 
@@ -52,14 +52,78 @@ module top_drac
 //----------------------------------------------------------------------------------
 // D-CACHE  INTERFACE
 //----------------------------------------------------------------------------------
-    input logic                 DMEM_REQ_READY,
-    input bus_simd_t            DMEM_RESP_BITS_DATA_SUBW,
-    input logic                 DMEM_RESP_BITS_NACK,
-    input logic                 DMEM_RESP_BITS_REPLAY,
-    input logic                 DMEM_RESP_VALID,
-    input logic  [7:0]          DMEM_RESP_TAG,
-    input logic                 DMEM_RESP_BITS_HAS_DATA,
-    input logic                 DMEM_ORDERED, // TODO: remove if we dont used
+
+    // *** Miss-read Interface ***
+
+    input logic                   mem_req_miss_read_ready_i,
+    input hpdcache_mem_id_t       mem_req_miss_read_base_id_i,
+    output logic                  mem_req_miss_read_valid_o,
+    output hpdcache_mem_addr_t    mem_req_addr_o,
+    output hpdcache_mem_len_t     mem_req_len_o,
+    output hpdcache_mem_size_t    mem_req_size_o,
+    output hpdcache_mem_id_t      mem_req_id_o,
+
+    input logic                   mem_resp_miss_read_valid_i,
+    input hpdcache_mem_error_e    mem_resp_r_error_i,
+    input hpdcache_mem_id_t       mem_resp_r_id_i,
+    input hpdcache_mem_data_t     mem_resp_r_data_i,
+    input logic                   mem_resp_r_last_i,
+    output logic                  mem_resp_miss_read_ready_o,
+
+    // *** Writeback Interface ***
+
+    input  logic                  mem_req_wbuf_write_ready_i,
+    output logic                  mem_req_wbuf_write_valid_o,
+    output hpdcache_mem_addr_t    mem_req_wbuf_write_addr_o,
+    output hpdcache_mem_len_t     mem_req_wbuf_write_len_o,
+    output hpdcache_mem_size_t    mem_req_wbuf_write_size_o,
+    output hpdcache_mem_id_t      mem_req_wbuf_write_id_o,
+    input  hpdcache_mem_id_t      mem_req_wbuf_write_base_id_i,
+
+    input  logic                  mem_req_wbuf_write_data_ready_i,
+    output logic                  mem_req_wbuf_write_data_valid_o,
+    output hpdcache_mem_data_t    mem_req_wbuf_write_data_o,
+    output hpdcache_mem_be_t      mem_req_wbuf_write_be_o,
+    output logic                  mem_req_wbuf_write_last_o,
+
+    output logic                  mem_resp_wbuf_write_ready_o,
+    input  logic                  mem_resp_wbuf_write_valid_i,
+    input  hpdcache_mem_error_e   mem_resp_wbuf_write_error_i,
+    input  hpdcache_mem_id_t      mem_resp_wbuf_write_id_i,
+
+    // *** Uncacheable Writeback Interface ***
+
+    input  logic                  mem_req_uc_write_ready_i,
+    output logic                  mem_req_uc_write_valid_o,
+    output hpdcache_mem_addr_t    mem_req_uc_write_addr_o,
+    output hpdcache_mem_len_t     mem_req_uc_write_len_o,
+    output hpdcache_mem_size_t    mem_req_uc_write_size_o,
+    output hpdcache_mem_id_t      mem_req_uc_write_id_o,
+    output hpdcache_mem_command_e mem_req_uc_write_command_o,
+    output hpdcache_mem_atomic_e  mem_req_uc_write_atomic_o,
+    input  hpdcache_mem_id_t      mem_req_uc_write_base_id_i,
+
+    input  logic                  mem_req_uc_write_data_ready_i,
+    output logic                  mem_req_uc_write_data_valid_o,
+    output hpdcache_mem_data_t    mem_req_uc_write_data_o,
+    output hpdcache_mem_be_t      mem_req_uc_write_be_o,
+    output logic                  mem_req_uc_write_last_o,
+
+    output logic                  mem_resp_uc_write_ready_o,
+    input  logic                  mem_resp_uc_write_valid_i,
+    input  logic                  mem_resp_uc_write_is_atomic_i,
+    input  hpdcache_mem_error_e   mem_resp_uc_write_error_i,
+    input  hpdcache_mem_id_t      mem_resp_uc_write_id_i,
+
+    // *** Uncacheable Read Interface ***
+
+    input logic                   mem_resp_uc_read_valid_i,
+    input hpdcache_mem_error_e    mem_resp_uc_read_error_i,
+    input hpdcache_mem_id_t       mem_resp_uc_read_id_i,
+    input hpdcache_mem_data_t     mem_resp_uc_read_data_i,
+    input logic                   mem_resp_uc_read_last_i,
+    output logic                  mem_resp_uc_read_ready_o,
+
 
 //-----------------------------------------------------------------------------------
 // I-CACHE OUTPUT INTERFACE
@@ -75,18 +139,6 @@ module top_drac
     output logic   [2:0] io_mem_acquire_bits_a_type         ,
     output logic  [16:0] io_mem_acquire_bits_union          ,
     output logic         io_mem_grant_ready                 ,
-
-//-----------------------------------------------------------------------------------
-// D-CACHE  OUTPUT INTERFACE
-//-----------------------------------------------------------------------------------
-    output logic                DMEM_REQ_VALID,  
-    output logic   [3:0]        DMEM_OP_TYPE,
-    output logic   [4:0]        DMEM_REQ_CMD,
-    output bus_simd_t           DMEM_REQ_BITS_DATA,
-    output addr_t               DMEM_REQ_BITS_ADDR,
-    output logic   [7:0]        DMEM_REQ_BITS_TAG,
-    output logic                DMEM_REQ_INVALIDATE_LR,
-    output logic                DMEM_REQ_BITS_KILL,
 
 //-----------------------------------------------------------------------------------
 // DEBUGGING MODULE SIGNALS
@@ -151,6 +203,8 @@ module top_drac
     output logic                pcr_req_core_id_o   // core id of the tile
 
 );
+
+localparam NREQUESTERS = 2;
 
 // Response Interface icache to datapath
 resp_icache_cpu_t resp_icache_interface_datapath;
@@ -229,7 +283,7 @@ always @(posedge CLK, negedge RST) begin
     if(~RST)
         dcache_addr <= 0;
     else
-        dcache_addr <= DMEM_REQ_BITS_ADDR;
+        dcache_addr <= mem_req_addr_o;
 end
 
 assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
@@ -409,61 +463,34 @@ icache_interface icache_interface_inst(
     .buffer_miss_o (buffer_miss )
 );
 
-// DCACHE Answer
-logic        datapath_resp_replay;  // Miss ready
-bus_simd_t   datapath_resp_data;    // Readed data from Cache
-logic        datapath_req_ready;    // Dcache ready to accept request
-logic        datapath_resp_valid;   // Response is valid
-logic [7:0]  datapath_resp_tag;     // Tag 
-logic        datapath_resp_nack;    // Cache request not accepted
-logic        datapath_resp_has_data;// Dcache response contains data
-logic        datapath_ordered;
+// Core-dCache Interface
+logic          dcache_req_valid [NREQUESTERS-1:0];
+logic          dcache_req_ready [NREQUESTERS-1:0];
+hpdcache_req_t dcache_req       [NREQUESTERS-1:0];
 
-// Request TO DCACHE
-
-logic        datapath_req_valid;    // Sending valid request
-logic [4:0]  datapath_req_cmd;      // Type of memory access
-addr_t       datapath_req_addr;     // Address of memory access
-logic [3:0]  datapath_op_type;      // Granularity of memory access
-bus_simd_t   datapath_req_data;     // Data to store
-logic [7:0]  datapath_req_tag;      // Tag for the MSHR
-logic        datapath_req_invalidate_lr; // Reset load-reserved/store-conditional
-logic        datapath_req_kill;     // Kill actual memory access
+logic          dcache_rsp_valid [NREQUESTERS-1:0];
+hpdcache_rsp_t dcache_rsp       [NREQUESTERS-1:0];
 
 dcache_interface dcache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
 
-    .req_cpu_dcache_i(req_datapath_dcache_interface),
     .en_ld_st_translation_i(en_ld_st_translation_i),
 
-    // DCACHE Answer
-    .dmem_resp_replay_i(datapath_resp_replay),  // Miss ready
-    .dmem_resp_data_i(datapath_resp_data),    // Readed data from Cache
-    .dmem_req_ready_i(datapath_req_ready),    // Dcache ready to accept request
-    .dmem_resp_valid_i(datapath_resp_valid),   // Response is valid
-    .dmem_resp_tag_i(datapath_resp_tag),     // Tag 
-    .dmem_resp_nack_i(datapath_resp_nack),    // Cache request not accepted
-    .dmem_resp_has_data_i(datapath_resp_has_data),// Dcache response contains data
-    .dmem_ordered_i(datapath_ordered),
+    // CPU Interface
+    .req_cpu_dcache_i(req_datapath_dcache_interface),
+    .resp_dcache_cpu_o(resp_dcache_interface_datapath),
 
-    // Request TO DCACHE
-
-    .dmem_req_valid_o(datapath_req_valid),    // Sending valid request
-    .dmem_req_cmd_o(datapath_req_cmd),      // Type of memory access
-    .dmem_req_addr_o(datapath_req_addr),     // Address of memory access
-    .dmem_op_type_o(datapath_op_type),      // Granularity of memory access
-    .dmem_req_data_o(datapath_req_data),     // Data to store
-    .dmem_req_tag_o(datapath_req_tag),      // Tag for the MSHR
-    .dmem_req_invalidate_lr_o(datapath_req_invalidate_lr), // Reset load-reserved/store-conditional
-    .dmem_req_kill_o(datapath_req_kill),     // Kill actual memory access
+    // dCache Interface
+    .dcache_ready_i(dcache_req_ready[1]),
+    .dcache_valid_i(dcache_rsp_valid[1]),
+    .core_req_valid_o(dcache_req_valid[1]),
+    .req_dcache_o(dcache_req[1]),
+    .rsp_dcache_i(dcache_rsp[1]),
 
     // PMU
     .dmem_is_store_o ( exe_store_pmu ),
-    .dmem_is_load_o  ( exe_load_pmu  ),
-    
-    // DCACHE Answer to cpu
-    .resp_dcache_cpu_o(resp_dcache_interface_datapath) 
+    .dmem_is_load_o  ( exe_load_pmu  )
 );
 
 
@@ -479,6 +506,137 @@ sargantana_top_icache icache (
     .icache_ifill_req_o ( ifill_req     ) ,  //- To upper levels. 
     .imiss_time_pmu_o    ( imiss_time_pmu ) ,
     .imiss_kill_pmu_o    ( imiss_kill_pmu )
+);
+
+// *** dCache-memory interface ***
+
+//      Miss read interface
+hpdcache_mem_req_t             mem_req_miss_read;
+
+assign mem_req_addr_o = mem_req_miss_read.mem_req_addr;
+assign mem_req_len_o  = mem_req_miss_read.mem_req_len;
+assign mem_req_size_o = mem_req_miss_read.mem_req_size;
+assign mem_req_id_o   = mem_req_miss_read.mem_req_id;
+
+hpdcache_mem_resp_r_t          mem_resp_miss_read;
+
+assign mem_resp_miss_read.mem_resp_r_error = mem_resp_r_error_i;
+assign mem_resp_miss_read.mem_resp_r_id = mem_resp_r_id_i;
+assign mem_resp_miss_read.mem_resp_r_data = mem_resp_r_data_i;
+assign mem_resp_miss_read.mem_resp_r_last = mem_resp_r_last_i;
+
+//      Write-buffer write interface
+hpdcache_mem_req_t    mem_req_wbuf_write;
+
+assign mem_req_wbuf_write_addr_o = mem_req_wbuf_write.mem_req_addr;
+assign mem_req_wbuf_write_len_o  = mem_req_wbuf_write.mem_req_len;
+assign mem_req_wbuf_write_size_o = mem_req_wbuf_write.mem_req_size;
+assign mem_req_wbuf_write_id_o   = mem_req_wbuf_write.mem_req_id;
+
+hpdcache_mem_req_w_t  mem_req_wbuf_write_data;
+
+assign mem_req_wbuf_write_data_o = mem_req_wbuf_write_data.mem_req_w_data;
+assign mem_req_wbuf_write_be_o   = mem_req_wbuf_write_data.mem_req_w_be;
+assign mem_req_wbuf_write_last_o = mem_req_wbuf_write_data.mem_req_w_last;
+
+hpdcache_mem_resp_w_t mem_resp_wbuf_write;
+
+assign mem_resp_wbuf_write.mem_resp_w_error = mem_resp_wbuf_write_error_i;
+assign mem_resp_wbuf_write.mem_resp_w_id = mem_resp_wbuf_write_id_i;
+assign mem_resp_wbuf_write.mem_resp_w_is_atomic = 1'b0;
+
+//      Uncacheable write interface
+hpdcache_mem_req_t    mem_req_uc_write;
+
+assign mem_req_uc_write_addr_o    = mem_req_uc_write.mem_req_addr;
+assign mem_req_uc_write_len_o     = mem_req_uc_write.mem_req_len;
+assign mem_req_uc_write_size_o    = mem_req_uc_write.mem_req_size;
+assign mem_req_uc_write_id_o      = mem_req_uc_write.mem_req_id;
+assign mem_req_uc_write_command_o = mem_req_uc_write.mem_req_command;
+assign mem_req_uc_write_atomic_o  = mem_req_uc_write.mem_req_atomic;
+
+hpdcache_mem_req_w_t  mem_req_uc_write_data;
+
+assign mem_req_uc_write_data_o = mem_req_uc_write_data.mem_req_w_data;
+assign mem_req_uc_write_be_o   = mem_req_uc_write_data.mem_req_w_be;
+assign mem_req_uc_write_last_o = mem_req_uc_write_data.mem_req_w_last;
+
+hpdcache_mem_resp_w_t mem_resp_uc_write;
+
+assign mem_resp_uc_write.mem_resp_w_error = mem_resp_uc_write_error_i;
+assign mem_resp_uc_write.mem_resp_w_id = mem_resp_uc_write_id_i;
+assign mem_resp_uc_write.mem_resp_w_is_atomic = mem_resp_uc_write_is_atomic_i;
+
+//      Uncacheable read interface
+hpdcache_mem_resp_r_t mem_resp_uc_read;
+
+assign mem_resp_uc_read.mem_resp_r_error = mem_resp_uc_read_error_i;
+assign mem_resp_uc_read.mem_resp_r_id    = mem_resp_uc_read_id_i;
+assign mem_resp_uc_read.mem_resp_r_data  = mem_resp_uc_read_data_i;
+assign mem_resp_uc_read.mem_resp_r_last  = mem_resp_uc_read_last_i;
+
+hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
+    .clk_i(CLK),
+    .rst_ni(RST),
+
+    // Core interface
+    .core_req_valid_i(dcache_req_valid),
+    .core_req_ready_o(dcache_req_ready),
+    .core_req_i(dcache_req),
+    .core_rsp_valid_o(dcache_rsp_valid),
+    .core_rsp_o(dcache_rsp),
+
+    // dMem miss-read interface
+    .mem_req_miss_read_ready_i(mem_req_miss_read_ready_i),
+    .mem_req_miss_read_valid_o(mem_req_miss_read_valid_o),
+    .mem_req_miss_read_o(mem_req_miss_read),
+    .mem_req_miss_read_base_id_i(mem_req_miss_read_base_id_i),
+
+    .mem_resp_miss_read_ready_o(mem_resp_miss_read_ready_o),
+    .mem_resp_miss_read_valid_i(mem_resp_miss_read_valid_i),
+    .mem_resp_miss_read_i(mem_resp_miss_read),
+
+    // dMem writeback interface
+    .mem_req_wbuf_write_ready_i(mem_req_wbuf_write_ready_i),
+    .mem_req_wbuf_write_valid_o(mem_req_wbuf_write_valid_o),
+    .mem_req_wbuf_write_o(mem_req_wbuf_write),
+    .mem_req_wbuf_write_base_id_i(mem_req_wbuf_write_base_id_i),
+
+    .mem_req_wbuf_write_data_ready_i(mem_req_wbuf_write_data_ready_i),
+    .mem_req_wbuf_write_data_valid_o(mem_req_wbuf_write_data_valid_o),
+    .mem_req_wbuf_write_data_o(mem_req_wbuf_write_data),
+
+    .mem_resp_wbuf_write_ready_o(mem_resp_wbuf_write_ready_o),
+    .mem_resp_wbuf_write_valid_i(mem_resp_wbuf_write_valid_i),
+    .mem_resp_wbuf_write_i(mem_resp_wbuf_write),
+
+    // dMem uncacheable write interface
+    .mem_req_uc_write_ready_i(mem_req_uc_write_ready_i),
+    .mem_req_uc_write_valid_o(mem_req_uc_write_valid_o),
+    .mem_req_uc_write_o(mem_req_uc_write),
+    .mem_req_uc_write_base_id_i(mem_req_uc_write_base_id_i),
+
+    .mem_req_uc_write_data_ready_i(mem_req_uc_write_data_ready_i),
+    .mem_req_uc_write_data_valid_o(mem_req_uc_write_data_valid_o),
+    .mem_req_uc_write_data_o(mem_req_uc_write_data),
+
+    .mem_resp_uc_write_ready_o(mem_resp_uc_write_ready_o),
+    .mem_resp_uc_write_valid_i(mem_resp_uc_write_valid_i),
+    .mem_resp_uc_write_i(mem_resp_uc_write),
+
+    // dMem uncacheable read interface
+    .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready_o),
+    .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid_i),
+    .mem_resp_uc_read_i(mem_resp_uc_read),
+
+    // Config
+    .cfg_enable_i(1'b1),
+    .cfg_wbuf_threshold_i(4'd2),
+    .cfg_wbuf_reset_timecnt_on_write_i(1'b1),
+    .cfg_wbuf_sequential_waw_i(1'b0),
+    .cfg_prefetch_updt_plru_i(1'b1),
+    .cfg_error_on_cacheable_amo_i(1'b0),
+    .cfg_rtab_single_entry_i(1'b0)
 );
 
 // NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
@@ -594,56 +752,6 @@ ptw ptw_inst (
     // pmu interface
     .pmu_ptw_hit_o(pmu_ptw_hit),
     .pmu_ptw_miss_o(pmu_ptw_miss)
-);
-
-dmem_arbiter arbiter (
-    .clk_i(CLK),
-    .rstn_i(RST),
-    
-    // DCACHE Answer
-    .datapath_resp_replay_o(datapath_resp_replay),  // Miss ready
-    .datapath_resp_data_o(datapath_resp_data),    // Readed data from Cache
-    .datapath_req_ready_o(datapath_req_ready),    // Dcache ready to accept request
-    .datapath_resp_valid_o(datapath_resp_valid),   // Response is valid
-    .datapath_resp_tag_o(datapath_resp_tag),     // Tag 
-    .datapath_resp_nack_o(datapath_resp_nack),    // Cache request not accepted
-    .datapath_resp_has_data_o(datapath_resp_has_data),// Dcache response contains data
-    .datapath_ordered_o(datapath_ordered),
-
-    // Request TO DCACHE
-
-    .datapath_req_valid_i(datapath_req_valid),    // Sending valid request
-    .datapath_req_cmd_i(datapath_req_cmd),      // Type of memory access
-    .datapath_req_addr_i(datapath_req_addr),     // Address of memory access
-    .datapath_op_type_i(datapath_op_type),      // Granularity of memory access
-    .datapath_req_data_i(datapath_req_data),     // Data to store
-    .datapath_req_tag_i(datapath_req_tag),      // Tag for the MSHR
-    .datapath_req_invalidate_lr_i(datapath_req_invalidate_lr), // Reset load-reserved/store-conditional
-    .datapath_req_kill_i(datapath_req_kill),     // Kill actual memory access
-
-    // PTW interface
-    .ptw_req_i(ptw_dmem_comm),
-    .ptw_resp_o(dmem_ptw_comm),
-
-    // DCACHE Answer
-    .dmem_resp_replay_i(DMEM_RESP_BITS_REPLAY),
-    .dmem_resp_data_i(DMEM_RESP_BITS_DATA_SUBW),
-    .dmem_req_ready_i(DMEM_REQ_READY),
-    .dmem_resp_valid_i(DMEM_RESP_VALID),
-    .dmem_resp_tag_i(DMEM_RESP_TAG),
-    .dmem_resp_nack_i(DMEM_RESP_BITS_NACK),
-    .dmem_resp_has_data_i(DMEM_RESP_BITS_HAS_DATA),
-    .dmem_ordered_i(DMEM_ORDERED),
-
-    // Interface request
-    .dmem_req_valid_o(DMEM_REQ_VALID),
-    .dmem_req_cmd_o(DMEM_REQ_CMD),
-    .dmem_req_addr_o(DMEM_REQ_BITS_ADDR),
-    .dmem_op_type_o(DMEM_OP_TYPE),
-    .dmem_req_data_o(DMEM_REQ_BITS_DATA),
-    .dmem_req_tag_o(DMEM_REQ_BITS_TAG),
-    .dmem_req_invalidate_lr_o(DMEM_REQ_INVALIDATE_LR),
-    .dmem_req_kill_o(DMEM_REQ_BITS_KILL)
 );
 
 //PMU  

@@ -3,7 +3,7 @@
 #ifndef DPI_PERFECT_MEMORY_H
 #define DPI_PERFECT_MEMORY_H
 
-#define BUS_WIDTH 128
+#define BUS_WIDTH 512
 
 #include <svdpi.h>
 #include <string>
@@ -12,9 +12,11 @@
 extern "C" {
 #endif
 
-extern svBit memory_read(const svBitVecVal *addr, svBitVecVal *data);
+extern void memory_read(const svBitVecVal *addr, svBitVecVal *data);
 
-extern svBit memory_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data);
+extern void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const svBitVecVal *data);
+
+extern void memory_amo(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *amo_op, const svBitVecVal *data, svBitVecVal *result);
 
 #ifdef __cplusplus
 }

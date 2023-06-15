@@ -37,7 +37,7 @@ static uint64_t fromhostAddr;
 static std::map<std::string, uint64_t> symbols;
 static std::map<uint64_t, std::string> reverseSymbols;
 
-svBit memory_read(const svBitVecVal *addr, svBitVecVal *data) {
+void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     uint32_t baseAddress = addr[0];
 
     /*if (baseAddress ==  ((uint32_t) fromhostAddr)) {
@@ -49,49 +49,86 @@ svBit memory_read(const svBitVecVal *addr, svBitVecVal *data) {
         memoryContents.read(baseAddress + i * 4, dataRead);
         data[i] = dataRead;
     }
-
-    return sv_1;
 }
 
 void tohost(unsigned int id, unsigned long long data);
 
-svBit memory_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data) {
+void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const svBitVecVal *data) {
     uint32_t baseAddress = addr[0];
 
     if (baseAddress == ((uint32_t) tohostAddr)) {
         //printf("Tohost!!!\n");
         tohost(0, ((uint64_t) data[1]) << 32 | data[0]);
-        return sv_1;
+        return;
     }
 
-    uint32_t alignedAddress = baseAddress & ~0b11;
-    unsigned int offset = baseAddress & 0b11;
-
-    switch(size[0]) {
-        case 0:
-            memoryContents.write(alignedAddress, data[0] << (8 * offset), 0b1 << offset);
-        break;
-        case 1:
-            memoryContents.write(alignedAddress, data[0] << (8 * offset), 0b11 << offset);
-        break;
-        case 2:
-            memoryContents.write(alignedAddress, data[0], 0b1111);
-        break;
-        case 3:
-            memoryContents.write(alignedAddress, data[0], 0b1111);
-            memoryContents.write(alignedAddress + 4, data[1], 0b1111);
-        break;
-        case 8:
-            memoryContents.write(alignedAddress, data[0], 0b1111);
-            memoryContents.write(alignedAddress + 4, data[1], 0b1111);
-            memoryContents.write(alignedAddress + 8, data[2], 0b1111);
-            memoryContents.write(alignedAddress + 16, data[3], 0b1111);
-        break;
-
+    for (unsigned int i = 0; i < (BUS_WIDTH/32); i++) {
+        if (byte_enable[0] & (0b1111 << (i*4))) {
+            memoryContents.write(baseAddress + i*4, data[i], (byte_enable[0] >> (i*4)) & 0b1111);
+        }
     }
-
-    return sv_1;
 }
+
+ void memory_amo(const svBitVecVal *addr_ptr, const svBitVecVal *size_ptr, const svBitVecVal *amo_op_ptr, const svBitVecVal *data_ptr, svBitVecVal *result_ptr) {
+    uint32_t addr = addr_ptr[0];
+    uint32_t size = size_ptr[0];
+    uint32_t amo_op = amo_op_ptr[0];
+
+    bool is_double = size == 3;
+
+    uint32_t offset = (addr >> (is_double ? 3 : 2)) % (BUS_WIDTH/32);
+
+    // Read old values
+    for (unsigned int i = 0; i < BUS_WIDTH / 32; i++) {
+        uint32_t dataRead;
+        memoryContents.read(addr + i * 4, dataRead);
+        result_ptr[i] = dataRead;
+    }
+
+    // Get the values from memory and the core
+    uint64_t mem_val, core_val, result;
+
+    if (is_double) {
+        uint32_t data_hi, data_lo;
+        memoryContents.read(addr, data_lo);
+        memoryContents.read(addr + 4, data_hi);
+
+        mem_val = ((uint64_t) data_hi << 32) | data_lo;
+        core_val = ((uint64_t) data_ptr[offset + 1] << 32) | data_ptr[offset];
+    } else {
+        uint32_t data_lo;
+        memoryContents.read(addr, data_lo);
+
+        mem_val = (int32_t) data_lo;
+        core_val = (int32_t) data_ptr[offset];
+    }
+
+    // Perform operation
+    switch(amo_op) {
+        case 0b0000: result = mem_val + core_val; break;  //HPDCACHE_MEM_ATOMIC_ADD
+        case 0b0001: result = mem_val & ~core_val; break; //HPDCACHE_MEM_ATOMIC_CLR
+        case 0b0010: result = mem_val | core_val; break;  //HPDCACHE_MEM_ATOMIC_SET
+        case 0b0011: result = mem_val ^ core_val; break;  //HPDCACHE_MEM_ATOMIC_EOR
+        case 0b0100: result = mem_val > core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMAX
+        case 0b0101: result = mem_val < core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMIN
+        case 0b0110: result = (unsigned) mem_val > (unsigned) core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMAX
+        case 0b0111: result = (unsigned) mem_val < (unsigned) core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMIN
+        case 0b1000: result = core_val; break; //HPDCACHE_MEM_ATOMIC_SWAP
+        //  Reserved           = 4'b1001,
+        //  Reserved           = 4'b1010,
+        //  Reserved           = 4'b1011,
+        case 0b1100: result = mem_val; break;  //HPDCACHE_MEM_ATOMIC_LDEX
+        case 0b1101: result = core_val; break; //HPDCACHE_MEM_ATOMIC_STEX
+    }
+
+    // Write contents to memory
+    if (is_double) {
+        memoryContents.write(addr, result & 0xffffffff, 0b1111);
+        memoryContents.write(addr + 4, result >> 32, 0b1111);
+    } else {
+        memoryContents.write(addr, result & 0xffffffff, 0b1111);
+    }
+ }
 
 void memory_init(std::string filename) {
     using namespace std::placeholders;

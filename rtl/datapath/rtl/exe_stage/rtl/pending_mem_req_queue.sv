@@ -19,9 +19,6 @@ module pending_mem_req_queue
 
     input rr_exe_mem_instr_t    instruction_i,          // All instruction input signals
     input logic [6:0]           tag_i,                  // Tag of the incoming instruction
-    input logic                 unaligned_inst_i,       // Unaligned instruction
-    input logic                 unaligned_res_valid_i,  // Unaligned result incoming
-    input bus_simd_t            unaligned_res_data_i,   // Unaligned result data
 
     input logic                 replay_valid_i,         // A replay is being executed
     input logic                 response_valid_i,       // A response is being executed
@@ -33,11 +30,11 @@ module pending_mem_req_queue
     input logic                 mv_back_tail_i,         // Move Back tail pointer one position
 
     output rr_exe_mem_instr_t   finish_instr_o,         // Next Instruction to Write Back
-    output logic                unalign_instr_o,        // Is unaligned instruction
-    output bus_simd_t           unalign_result_o,       // Unaligned output part 2
        
     output logic                full_o                  // pmrq is full
 );
+
+// TODO: Demanar-li la versió out of order a en Max
 
 typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
 
@@ -75,38 +72,22 @@ rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
 logic [6:0]    tag_table                [0:PMRQ_NUM_ENTRIES-1];
 // Instruction already finished
 logic          finish_bit_table         [0:PMRQ_NUM_ENTRIES-1];
-// Instruction is unaligned vector
-logic          unaligned_bit_table      [0:PMRQ_NUM_ENTRIES-1];
-// Unaligned vector access part 2
-bus_simd_t     unaligned_result_table   [0:PMRQ_NUM_ENTRIES-1];
-// Unaligned vector access must wait for other part
-logic          unaligned_nowait_table   [0:PMRQ_NUM_ENTRIES-1];
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if (~rstn_i) begin
         for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
             finish_bit_table[j] <= 1'b0;
-            unaligned_bit_table[j] <= 1'b0;
-            unaligned_nowait_table[j] <= 1'b0;
             instruction_table[j] <= '0;
             tag_table[j] <= '0;
-            unaligned_result_table[j] <= '0;
         end
     end else begin
 	if (write_enable) begin     // Write tail
             instruction_table[tail]      <= instruction_i;
             tag_table[tail]              <= tag_i;
 
-            unaligned_bit_table[tail]    <= unaligned_inst_i;
-            unaligned_nowait_table[tail] <= 1'b0;
-            if (unaligned_res_valid_i) begin
-               instruction_table[tail].data_rs2 <= unaligned_res_data_i; 
-               finish_bit_table[tail]           <= 1'b1;
-            end else begin
-               instruction_table[tail].data_rs2 <= 'h0;
-               finish_bit_table[tail]           <= 1'b0;
-            end
+            instruction_table[tail].data_rs2 <= 'h0;
+            finish_bit_table[tail]           <= 1'b0;
 	end
 
         // Table initial state
@@ -114,21 +95,6 @@ begin
             if (replay_valid_i && (tag_table[j] == tag_next_i)) begin
                 finish_bit_table[j] <= 1'b1;
                 instruction_table[j].data_rs2 <= replay_data_i;
-            end
-            if (replay_valid_i && ((tag_table[j] + 1'b1) == tag_next_i)) begin
-               unaligned_result_table[j] <= replay_data_i;
-               unaligned_nowait_table[j] <= 1'b1;
-            end
-            if (response_valid_i && unaligned_bit_table[j] && 
-               (tag_table[j] == tag_next_i)) begin
-               finish_bit_table[j] <= 1'b1;
-               instruction_table[j].data_rs2 <= replay_data_i;
-            end
-            if (response_valid_i && unaligned_bit_table[j] &&
-               ((tag_table[j] + 1'b1) == tag_next_i) && 
-                (!write_enable || j != tail)) begin
-               unaligned_result_table[j] <= replay_data_i;
-               unaligned_nowait_table[j] <= 1'b1;
             end
         end
     end
@@ -154,13 +120,7 @@ begin
     end
 end
 
-assign finish_instr_o = ((num > 0) & finish_bit_table[head] &
-                         (!unaligned_bit_table[head] | unaligned_nowait_table[head])) ?
-                         instruction_table[head] : 'h0;
-assign unalign_result_o = ((num > 0) & finish_bit_table[head] &
-                           (!unaligned_bit_table[head] | unaligned_nowait_table[head])) ?
-                            unaligned_result_table[head] : 'h0;
-assign unalign_instr_o = finish_bit_table[head] & unaligned_bit_table[head] & unaligned_nowait_table[head];
+assign finish_instr_o = ((num > 0) & finish_bit_table[head]) ? instruction_table[head] : 'h0;
 
 assign full_o  = ((num >= (PMRQ_NUM_ENTRIES - 3'h3)) | flush_i | ~rstn_i);
 

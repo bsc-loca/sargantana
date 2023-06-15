@@ -296,13 +296,9 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
 // Response coming from Dcache
 typedef struct packed {
     logic       valid;      // Response valid
-    logic      replay;      // Replay instruction
     logic       ready;      // Ready to accept requests
-    logic        nack;      // Request not accepted
-    logic    has_data;      // Dcache response contains data
     bus_simd_t   data;      // Data from load
     logic[6:0]     rd;      // Tag of the mem access
-    bus64_t      addr;      // Requested Address
     logic io_address_space; // Request in Input/Output Address Space
     logic     ordered;    
 } resp_dcache_cpu_t;
@@ -310,7 +306,6 @@ typedef struct packed {
 // Request send to DCache
 typedef struct packed {
     logic                valid;        // New memory request
-    logic                 kill;        // Exception detected at Commit
     bus64_t           data_rs1;        // Data operand 1
     bus_simd_t        data_rs2;        // Data operand 2
     instr_type_t    instr_type;        // Type of instruction

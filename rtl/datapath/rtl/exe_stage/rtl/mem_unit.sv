@@ -55,11 +55,7 @@ module mem_unit
 // Enum to select instruction to DCache interface
 typedef enum logic[2:0] {
     NULL             = 3'b000,
-    READ             = 3'b001,
-    STORED           = 3'b010,
-    VALIGNED1        = 3'b100,
-    STORED_VALIGNED1 = 3'b101,
-    VALIGNED2        = 3'b110
+    READ             = 3'b001
 } source_lsq_t;               
 
 bus64_t data_src1;
@@ -69,21 +65,9 @@ source_lsq_t source_dcache;
 
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s1_q;
-logic is_STORE_or_AMO_s2_q;
+//logic is_STORE_or_AMO_s2_q;
 logic is_STORE_s1_q;
-logic is_STORE_s2_q;
-
-// Instruction is the first part of an unaligned
-// Vector Memory Access
-logic is_unalign1_s1_d;
-logic is_unalign1_s1_q;
-logic is_unalign1_s2_q;
-
-// Instruction is the second part of an unaligned
-// Vector Memory Access
-logic is_unalign2_s1_d;
-logic is_unalign2_s1_q;
-logic is_unalign2_s2_q;
+//logic is_STORE_s2_q;
 
 logic flush_store;
 logic flush_amo;
@@ -98,28 +82,24 @@ logic full_lsq;
 logic empty_lsq;
 logic flush_to_lsq;
 logic read_next_lsq;
-logic reset_next_lsq;
-
-logic advance_head_lsq;
 logic blocked_store;
 
 // Instruction to LSQ and pipline
 rr_exe_mem_instr_t instruction_to_lsq;
 rr_exe_mem_instr_t instruction_to_dcache;
-rr_exe_mem_instr_t stored_instr_to_dcache;
 rr_exe_mem_instr_t instruction_to_wb;
 rr_exe_mem_instr_t instruction_s1_d;
 rr_exe_mem_instr_t instruction_s1_q;
-rr_exe_mem_instr_t instruction_s2_q;
+//rr_exe_mem_instr_t instruction_s2_q;
 
 // Input/Output Pipeline
 logic io_s1_q;
-logic io_s2_q;
+//logic io_s2_q;
 
 // Tag Counter and Pipeline
 logic [6:0] tag_id;
 logic [6:0] tag_id_s1_q;
-logic [6:0] tag_id_s2_q;
+//logic [6:0] tag_id_s2_q;
 
 rr_exe_mem_instr_t instruction_to_pmrq;
 rr_exe_mem_instr_t instruction_from_pmrq;
@@ -128,15 +108,10 @@ rr_exe_mem_instr_t instruction_from_pmrq;
 logic advance_head_prmq;
 logic mv_back_tail_prmq;
 logic full_pmrq;
-logic unaligned_to_pmrq;
-logic unalign_from_pmrq;
-bus_simd_t unalign_result_from_pmrq;
+logic replay;
 
 // Select data source
-logic [6:0] offset;
-logic [6:0] noffset;
 bus_simd_t data_to_wb;
-bus_simd_t data_to_wb_half;
 
 // State machine variables
 logic [2:0] state;
@@ -145,9 +120,7 @@ logic [2:0] next_state;
 // Possible states of the control automata
 parameter ResetState  = 3'b000,
           ReadHead = 3'b001,
-          WaitReady = 3'b010,
-          WaitCommit = 3'b011,
-          Unaligned_VLE = 3'b100;
+          WaitReady = 3'b010;
 
 assign data_src1 = instruction_i.data_rs1;
 assign data_src2 = instruction_i.data_rs2;
@@ -190,8 +163,6 @@ load_store_queue load_store_queue_inst (
     .en_ld_st_translation_i (en_ld_st_translation_i),
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
-    .reset_next_i       (reset_next_lsq),
-    .advance_head_i     (advance_head_lsq),
     .next_instr_exe_o   (instruction_to_dcache),
     .rob_store_ack_i    (commit_store_or_amo_i),
     .rob_store_gl_idx_i (commit_store_or_amo_gl_idx_i),
@@ -213,18 +184,10 @@ load_store_queue load_store_queue_inst (
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         state <= ResetState;
-        stored_instr_to_dcache <= '0;
     end else if (flush_to_lsq) begin
         state <= ResetState;
-        stored_instr_to_dcache.instr.valid <= 1'b0;
-    end else if (reset_next_lsq) begin
-        state <= ReadHead;
-        stored_instr_to_dcache.instr.valid <= 1'b0;
     end else begin
         state <= next_state;
-        if (read_next_lsq & instruction_to_dcache.instr.valid) begin
-            stored_instr_to_dcache <= instruction_to_dcache;
-        end
     end
 end
 
@@ -236,8 +199,6 @@ always_comb begin
     read_next_lsq               = 1'b1;     // No Advance LSQ
     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
     instruction_s1_d            =  'h0;     // No Instruction to next stage
-    is_unalign1_s1_d            = 1'b0;
-    is_unalign2_s1_d            = 1'b0;
     next_state                  = ReadHead; // Next state Read Head
     if (flush_to_lsq) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
@@ -245,8 +206,6 @@ always_comb begin
         read_next_lsq               = 1'b1;     // No Advance LSQ
         mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
         instruction_s1_d            =  'h0;     // No Instruction to next stage
-        is_unalign1_s1_d            = 1'b0;
-        is_unalign2_s1_d            = 1'b0;
         next_state                  = resp_dcache_cpu_i.ordered ? ReadHead : ResetState ; // Next state Read Head
     end else begin
         case(state)
@@ -257,8 +216,6 @@ always_comb begin
                 read_next_lsq               = 1'b0;         // No Read of LSQ
                 mem_commit_stall_s0         = 1'b0;         // No Stall of Commit
                 instruction_s1_d            =  'h0;         // No Instruction to next stage
-                is_unalign1_s1_d            = 1'b0;
-                is_unalign2_s1_d            = 1'b0;
                 next_state                  = resp_dcache_cpu_i.ordered ? ReadHead : ResetState; // Next state Read Head
             end
             ////////////////////////////////////////////////// Read head of LSQ
@@ -269,44 +226,34 @@ always_comb begin
                     read_next_lsq               = 1'b0;     // No Advance LSQ 
                     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
                     instruction_s1_d            =  'h0;     // No Instruction to next stage
-                    is_unalign1_s1_d            = 1'b0;
-                    is_unalign2_s1_d            = 1'b0; 
                     next_state                  = ReadHead; // Next state Read Head
                 end else begin
                     // Request Logic
-                    source_dcache = (|instruction_to_dcache.data_rs1[3:0] &
-                                     instruction_to_dcache.instr.instr_type == VLE) ?
-                                     VALIGNED1 : READ;     // Use instruction from LSQ
-                    read_next_lsq = 1'b1;     // Advance LSQ 
+                    source_dcache = READ;     // Use instruction from LSQ
+                    read_next_lsq = 1'b1;     // Advance LSQ
+                    next_state             = ReadHead;
                     
                     //// Set request valid bit, stall_commit and next state signals 
-                    if (!instruction_to_dcache.instr.valid | full_pmrq | resp_dcache_cpu_i.nack) begin
+                    if (!instruction_to_dcache.instr.valid | full_pmrq) begin
                         // If not valid instruction or full Pending Request Memory Queue
                         // Wait until next state
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
-                        next_state             = WaitReady;
                         instruction_s1_d        = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_or_store) begin
                         // If the instruction is not a Store or AMO
-                        req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready & ~instruction_to_dcache.ex.valid;
+                        req_cpu_dcache_o.valid = ~instruction_to_dcache.ex.valid;
                         mem_commit_stall_s0    = 1'b0;
-                        next_state  = (!resp_dcache_cpu_i.ready) ? WaitReady : 
-                                  (|instruction_to_dcache.data_rs1[3:0] &
-                                  instruction_to_dcache.instr.instr_type == VLE) ? Unaligned_VLE : ReadHead;
-                        is_unalign1_s1_d = resp_dcache_cpu_i.ready &&
-                                           (|instruction_to_dcache.data_rs1[3:0] &
-                                             instruction_to_dcache.instr.instr_type == VLE);
-                        is_unalign2_s1_d       = 1'b0;
+                        read_next_lsq = resp_dcache_cpu_i.ready & ~instruction_to_dcache.ex.valid;     // Advance LSQ
                         instruction_s1_d = resp_dcache_cpu_i.ready | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else if (!(store_on_fly | amo_on_fly) |
-                                 (mem_gl_index_o == instruction_to_dcache.gl_index)) begin
+                                 (mem_gl_index_o == instruction_to_dcache.gl_index)) begin // TODO: PReguntar al NArcis a veure si es pot treure
                         // If there is not a Store or AMO on fly or the current instruction
                         //  was sent to dache previously
                         
                         // Make request If L1 ready and current instruction is either load
                         //  or store with commit permission
-                        req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready &
+                        req_cpu_dcache_o.valid = 
                                           (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)
                                            & ~instruction_to_dcache.ex.valid;
                        
@@ -315,125 +262,14 @@ always_comb begin
                         // If cache is not ready wait for it
                         // Otherwise if store or amo is launched, continue reading, otherwise wait
                         // until arriving to commit
-                        next_state  = (!resp_dcache_cpu_i.ready) ? WaitReady :
-                                          (req_cpu_dcache_o.is_amo_or_store & !commit_store_or_amo_i) ?
-                                           WaitCommit : ReadHead;
-                        is_unalign1_s1_d       = 1'b0;
-                        is_unalign2_s1_d       = 1'b0;
                         instruction_s1_d = (resp_dcache_cpu_i.ready & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)) | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else begin
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
-                        is_unalign1_s1_d       = 1'b0;
-                        is_unalign2_s1_d       = 1'b0;
                         instruction_s1_d = 'h0;
-                        next_state  = WaitReady;
+                        read_next_lsq = 1'b0;
                     end
                 end
-            end
-            ////////////////////////////////////////////////// Wait for Ready DCACHE
-            WaitReady: begin
-                // Request Logic                                             
-                source_dcache = (|stored_instr_to_dcache.data_rs1[3:0] &
-                                  stored_instr_to_dcache.instr.instr_type == VLE) ?
-                                  STORED_VALIGNED1 : STORED;   // Use instruction stored previously
-                read_next_lsq = 1'b0;     // Not Advance LSQ
-                
-                //// Set request valid bit, stall_commit and next state signals 
-                if (!stored_instr_to_dcache.instr.valid | full_pmrq | resp_dcache_cpu_i.nack) begin
-                    // If not valid instruction or full Pending Request Memory Queue
-                    // Wait until next state
-                    req_cpu_dcache_o.valid = 1'b0;
-                    mem_commit_stall_s0    = 1'b0;
-                    next_state             = WaitReady;
-                end else if (!req_cpu_dcache_o.is_amo_or_store) begin
-                    // If the instruction is not a Store or AMO
-                    req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready;
-                    mem_commit_stall_s0 = 1'b0;
-                    next_state  = (!resp_dcache_cpu_i.ready) ? WaitReady : 
-                                  (|stored_instr_to_dcache.data_rs1[3:0] &
-                                  stored_instr_to_dcache.instr.instr_type == VLE) ? Unaligned_VLE : ReadHead;
-                    is_unalign1_s1_d = resp_dcache_cpu_i.ready &&
-                                       (|stored_instr_to_dcache.data_rs1[3:0] &
-                                         stored_instr_to_dcache.instr.instr_type == VLE);
-                    is_unalign2_s1_d       = 1'b0;
-                end else if (!(store_on_fly | amo_on_fly) |
-                             (mem_gl_index_o == stored_instr_to_dcache.gl_index)) begin
-                    // If there is not a Store or AMO on fly or the current instruction
-                    //  was sent to dache previously
-                       
-                    // Make request If L1 ready and current instruction is either load
-                    //  or store with commit permission
-                    req_cpu_dcache_o.valid = resp_dcache_cpu_i.ready &
-                                          (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i);
-                       
-                    // Stall the commit stage if it is a commiting store or amo
-                    mem_commit_stall_s0 = req_cpu_dcache_o.is_amo_or_store & commit_store_or_amo_i;
-                    // If cache is not ready wait for it
-                    // Otherwise if store or amo is launched, continue reading, otherwise wait
-                    // until arriving to commit
-                    next_state  = (!resp_dcache_cpu_i.ready) ? WaitReady :
-                                  (req_cpu_dcache_o.is_amo_or_store & !commit_store_or_amo_i) ?
-                                    WaitCommit : ReadHead;
-                    is_unalign1_s1_d       = 1'b0;
-                    is_unalign2_s1_d       = 1'b0;
-                end else begin
-                    req_cpu_dcache_o.valid = 1'b0;
-                    mem_commit_stall_s0    = 1'b0;
-                    is_unalign1_s1_d       = 1'b0;
-                    is_unalign2_s1_d       = 1'b0;
-                    next_state             = WaitReady;
-                end
-
-                // Next Stage Logic
-                if (!req_cpu_dcache_o.valid) begin
-                    instruction_s1_d = 'h0;
-                end else begin
-                    instruction_s1_d = stored_instr_to_dcache;
-                end
-            end
-            ////////////////////////////////////////////////// Wait for Store to DCACHE
-            WaitCommit: begin
-                // Request Logic
-                req_cpu_dcache_o.valid      = commit_store_or_amo_i & ~(store_on_fly | amo_on_fly)&
-                                              resp_dcache_cpu_i.ready & (~full_pmrq) & ~resp_dcache_cpu_i.nack;
-                source_dcache               = STORED;                   // Use instruction stored previously
-                read_next_lsq               = 1'b0;                     // Not Advance LSQ
-                mem_commit_stall_s0         = commit_store_or_amo_i & (~full_pmrq);
-                is_unalign1_s1_d            = 1'b0;
-                is_unalign2_s1_d            = 1'b0;
-
-                // Next Stage Logicww
-                if (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready) begin
-                    instruction_s1_d  = stored_instr_to_dcache;
-                end else if (full_pmrq) begin
-                    instruction_s1_d  = 'h0;
-                end else begin
-                    instruction_s1_d  = 'h0;
-                end
-                
-                // Next Sate Logic
-                next_state = (commit_store_or_amo_i & ~(store_on_fly | amo_on_fly) & resp_dcache_cpu_i.ready & (~full_pmrq) & ~resp_dcache_cpu_i.nack) ?
-                                ReadHead : WaitCommit;
-            end
-            Unaligned_VLE: begin
-                // Request Logic
-                req_cpu_dcache_o.valid      = resp_dcache_cpu_i.ready;
-                source_dcache               = VALIGNED2;                // Use instruction stored previously
-                read_next_lsq               = 1'b0;                     // Not Advance LSQ
-                mem_commit_stall_s0         = 1'b0;                     // Load dont stall commit
-                is_unalign1_s1_d            = 1'b0;
-                is_unalign2_s1_d            = resp_dcache_cpu_i.ready;
-
-                // Next Stage Logic
-                if (req_cpu_dcache_o.valid) begin
-                    instruction_s1_d  = stored_instr_to_dcache;
-                end else begin
-                    instruction_s1_d  = 'h0;
-                end
-                
-                // Next Sate Logic
-                next_state = (resp_dcache_cpu_i.ready) ? ReadHead : Unaligned_VLE;
             end
         endcase
     end
@@ -443,14 +279,8 @@ end
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         tag_id <= 'h0;
-    end else if (reset_next_lsq) begin
-        if (is_unalign2_s2_q) begin
-           tag_id <= tag_id_s2_q - 5'h1;
-        end else begin
-           tag_id <= tag_id_s2_q;
-        end
     end else begin
-        if (req_cpu_dcache_o.valid) begin
+        if (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) begin
             tag_id <= tag_id + 5'h1;
         end
     end
@@ -459,6 +289,7 @@ end
 //// Select source to DCACHE interface
 always_comb begin
     req_cpu_dcache_o.data_rs1   = 64'h0;
+    req_cpu_dcache_o.data_rs2   = 128'h0;
     req_cpu_dcache_o.instr_type = ADD;
     req_cpu_dcache_o.mem_size   = 3'h0;
     req_cpu_dcache_o.rd         = 5'h0;
@@ -468,6 +299,7 @@ always_comb begin
     case(source_dcache)
         NULL:         begin
             req_cpu_dcache_o.data_rs1        = 64'h0;
+            req_cpu_dcache_o.data_rs2        = 128'h0;
             req_cpu_dcache_o.instr_type      = ADD;
             req_cpu_dcache_o.mem_size        = 3'h0;
             req_cpu_dcache_o.rd              = 5'h0;
@@ -475,48 +307,13 @@ always_comb begin
         end
         READ:         begin
             req_cpu_dcache_o.data_rs1        = instruction_to_dcache.data_rs1;
+            req_cpu_dcache_o.data_rs2        = instruction_to_dcache.data_rs2;
             req_cpu_dcache_o.instr_type      = instruction_to_dcache.instr.instr_type;
             req_cpu_dcache_o.mem_size        = instruction_to_dcache.instr.mem_size;
             req_cpu_dcache_o.rd              = tag_id;
             req_cpu_dcache_o.is_amo_or_store = instruction_to_dcache.is_amo_or_store;
             req_cpu_dcache_o.is_amo          = instruction_to_dcache.is_amo;
             req_cpu_dcache_o.is_store        = instruction_to_dcache.is_store;
-        end
-        STORED:       begin
-            req_cpu_dcache_o.data_rs1        = stored_instr_to_dcache.data_rs1;
-            req_cpu_dcache_o.instr_type      = stored_instr_to_dcache.instr.instr_type;
-            req_cpu_dcache_o.mem_size        = stored_instr_to_dcache.instr.mem_size;
-            req_cpu_dcache_o.rd              = tag_id;
-            req_cpu_dcache_o.is_amo_or_store = stored_instr_to_dcache.is_amo_or_store;
-            req_cpu_dcache_o.is_amo          = stored_instr_to_dcache.is_amo;
-            req_cpu_dcache_o.is_store        = stored_instr_to_dcache.is_store;
-        end
-        VALIGNED1:    begin
-            req_cpu_dcache_o.data_rs1        = {instruction_to_dcache.data_rs1[63:4], 4'b0000};
-            req_cpu_dcache_o.instr_type      = instruction_to_dcache.instr.instr_type;
-            req_cpu_dcache_o.mem_size        = instruction_to_dcache.instr.mem_size;
-            req_cpu_dcache_o.rd              = tag_id;
-            req_cpu_dcache_o.is_amo_or_store = instruction_to_dcache.is_amo_or_store;
-            req_cpu_dcache_o.is_amo          = instruction_to_dcache.is_amo;
-            req_cpu_dcache_o.is_store        = instruction_to_dcache.is_store;
-        end
-        STORED_VALIGNED1:    begin
-            req_cpu_dcache_o.data_rs1        = {stored_instr_to_dcache.data_rs1[63:4], 4'b0000};
-            req_cpu_dcache_o.instr_type      = stored_instr_to_dcache.instr.instr_type;
-            req_cpu_dcache_o.mem_size        = stored_instr_to_dcache.instr.mem_size;
-            req_cpu_dcache_o.rd              = tag_id;
-            req_cpu_dcache_o.is_amo_or_store = stored_instr_to_dcache.is_amo_or_store;
-            req_cpu_dcache_o.is_amo          = stored_instr_to_dcache.is_amo;
-            req_cpu_dcache_o.is_store        = stored_instr_to_dcache.is_store;
-        end
-        VALIGNED2:    begin
-            req_cpu_dcache_o.data_rs1        = {stored_instr_to_dcache.data_rs1[63:4] + 60'h1, 4'b0000};
-            req_cpu_dcache_o.instr_type      = stored_instr_to_dcache.instr.instr_type;
-            req_cpu_dcache_o.mem_size        = stored_instr_to_dcache.instr.mem_size;
-            req_cpu_dcache_o.rd              = tag_id;
-            req_cpu_dcache_o.is_amo_or_store = stored_instr_to_dcache.is_amo_or_store;
-            req_cpu_dcache_o.is_amo          = stored_instr_to_dcache.is_amo;
-            req_cpu_dcache_o.is_store        = stored_instr_to_dcache.is_store;
         end
     endcase
 end
@@ -549,155 +346,110 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         instruction_s1_q     <=  'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         is_STORE_s1_q        <= 1'b0;
-        is_unalign1_s1_q     <= 1'b0;
-        is_unalign2_s1_q     <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
         
-        instruction_s2_q     <=  'h0;
+        /*instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
         is_STORE_s2_q        <= 1'b0;
-        is_unalign1_s2_q     <= 1'b0;
-        is_unalign2_s2_q     <= 1'b0;
         io_s2_q              <= 1'b0;
-        tag_id_s2_q          <=  'h0;
+        tag_id_s2_q          <=  'h0;*/
         
-    end else if (reset_next_lsq || flush_to_lsq) begin       // In case of miss flush the pipeline
+    end else if (flush_to_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <=  'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         is_STORE_s1_q        <= 1'b0;
-        is_unalign1_s1_q     <= 1'b0;
-        is_unalign2_s1_q     <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
         
-        instruction_s2_q     <=  'h0;
+        /*instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
         is_STORE_s2_q        <= 1'b0;
-        is_unalign1_s2_q     <= 1'b0;
-        is_unalign2_s2_q     <= 1'b0;
         io_s2_q              <= 1'b0;
-        tag_id_s2_q          <=  'h0;
+        tag_id_s2_q          <=  'h0;*/
         
     end else begin          // Update the Pipeline    
         instruction_s1_q     <= instruction_s1_d;
         is_STORE_or_AMO_s1_q <= req_cpu_dcache_o.is_amo_or_store;
         is_STORE_s1_q        <= req_cpu_dcache_o.is_store;
-        is_unalign1_s1_q     <= is_unalign1_s1_d;
-        is_unalign2_s1_q     <= is_unalign2_s1_d;
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
                 
-        instruction_s2_q     <= instruction_s1_q;
+        /*instruction_s2_q     <= instruction_s1_q;
         is_STORE_or_AMO_s2_q <= is_STORE_or_AMO_s1_q;
         is_STORE_s2_q        <= is_STORE_s1_q;
-        is_unalign1_s2_q     <= is_unalign1_s1_q;
-        is_unalign2_s2_q     <= is_unalign2_s1_q;
         io_s2_q              <= io_s1_q;
-        tag_id_s2_q          <= tag_id_s1_q;
+        tag_id_s2_q          <= tag_id_s1_q;*/
     end
 end
-
-//// In case of Store or AMO the Data to be written is sent at second stage
-assign req_cpu_dcache_o.data_rs2 = instruction_s1_q.data_rs2;
 
 //// Keep tracking an AMO or STORE if it is in the pipeline to stall the commit until access finished
 assign mem_commit_stall_s1 = instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q;
 
 //// Decide if the pipeline needs to be flushed.
 always_comb begin
-    reset_next_lsq      = 1'b0;
-    advance_head_lsq    = 1'b0;
     flush_store         = 1'b0;
     flush_amo           = 1'b0;
-    unaligned_to_pmrq   = 1'b0;
     mv_back_tail_prmq   = 1'b0;
     instruction_to_pmrq =  'h0;
-    if(instruction_s2_q.instr.valid & resp_dcache_cpu_i.nack) begin
-        reset_next_lsq      = 1'b1;
-        mv_back_tail_prmq   = is_unalign2_s2_q;
-    end else if (instruction_s2_q.instr.valid & resp_dcache_cpu_i.valid & 
-                 ~resp_dcache_cpu_i.replay) begin
-        if (is_unalign1_s2_q) begin
-            advance_head_lsq    = 1'b0;
-            unaligned_to_pmrq   = 1'b1;
-            instruction_to_pmrq = instruction_s2_q;
-            flush_store         = 1'b0;
-            flush_amo           = 1'b0;
-        end else if (is_unalign2_s2_q) begin
-            advance_head_lsq    = 1'b1;
-            unaligned_to_pmrq   = 1'b1;
-            instruction_to_pmrq =  'h0;
-            flush_store         = 1'b0;
-            flush_amo           = 1'b0;
-        end else begin
-            advance_head_lsq    = 1'b1;
-            unaligned_to_pmrq   = 1'b0;
-            flush_store         = is_STORE_s2_q;
-            flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q;  
-        end
-    end else if (instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin 
-        advance_head_lsq    = 1'b1;
+    if (instruction_s1_q.instr.valid & resp_dcache_cpu_i.valid) begin // TODO: Replace replay with tag comparison
+        flush_store         = is_STORE_s1_q;
+        flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q; 
+    end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
         instruction_to_pmrq =  'h0;
-        flush_store         = is_STORE_s2_q;
-        flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q;
-    end else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_or_AMO_s2_q) begin
-        advance_head_lsq    = 1'b1;
+        flush_store         = is_STORE_s1_q;
+        flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q;
+    end else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_or_AMO_s1_q) begin
         instruction_to_pmrq =  'h0;
         flush_store         = 1'b1;
         flush_amo           = 1'b1;
-    end else if (instruction_s2_q.instr.valid & !is_STORE_s2_q) begin 
-        advance_head_lsq    = !is_unalign1_s2_q;
-        instruction_to_pmrq = (is_unalign2_s2_q) ? 'h0 : instruction_s2_q;
-    end else if (instruction_s2_q.instr.valid & is_STORE_s2_q) begin
-        advance_head_lsq    = 1'b1;
+    end else if (instruction_s1_q.instr.valid & !is_STORE_s1_q) begin 
+        instruction_to_pmrq = instruction_s1_q; // TODO: Parlar amb en NArcis a veure si podem tenir més d'un store en vol
+    end else if (instruction_s1_q.instr.valid & is_STORE_s1_q) begin
         flush_store         = 1'b1;
     end
 end
+
+assign replay = resp_dcache_cpu_i.valid && (!instruction_s1_q.instr.valid || resp_dcache_cpu_i.rd != tag_id_s1_q);
 
 // Pending Memory Request Table (PMRQ)
 pending_mem_req_queue pending_mem_req_queue_inst (
     .clk_i                 (clk_i),
     .rstn_i                (rstn_i),
     .instruction_i         (instruction_to_pmrq),
-    .tag_i                 (tag_id_s2_q),
-    .unaligned_inst_i      (is_unalign1_s2_q),
-    .unaligned_res_valid_i (unaligned_to_pmrq),
-    .unaligned_res_data_i  (resp_dcache_cpu_i.data),
+    .tag_i                 (tag_id_s1_q),
     .flush_i               (flush_to_lsq),
-    .replay_valid_i        (resp_dcache_cpu_i.valid & resp_dcache_cpu_i.replay
-                            & resp_dcache_cpu_i.has_data),
+    .replay_valid_i        (replay), // TODO: Mirar els tags un altre cop
     .tag_next_i            (resp_dcache_cpu_i.rd),
     .replay_data_i         (resp_dcache_cpu_i.data),
     .response_valid_i      (resp_dcache_cpu_i.valid),
     .advance_head_i        (advance_head_prmq),
     .mv_back_tail_i        (mv_back_tail_prmq),
     .finish_instr_o        (instruction_from_pmrq),
-    .unalign_instr_o       (unalign_from_pmrq),
-    .unalign_result_o      (unalign_result_from_pmrq),
     .full_o                (full_pmrq)
 );
+
+logic [63:0] data_dword;
 
 //// Decide if the instruction should be sent to writeback, it must wait for response or
 ////    the request must be replayed. It also controls the LSQ head and pipeline flush.
 always_comb begin
     instruction_to_wb      =  'h0;
-    data_to_wb             =  'h0;
+    data_dword             =  'h0;
     advance_head_prmq      = 1'b0;
     flush_amo_prmq         = 1'b0;
-    if(instruction_s2_q.instr.valid & resp_dcache_cpu_i.valid &
-               !resp_dcache_cpu_i.replay & !is_STORE_s2_q &
-               !is_unalign1_s2_q & !is_unalign2_s2_q) begin
-        instruction_to_wb      = instruction_s2_q;
+    if(instruction_s1_q.instr.valid & resp_dcache_cpu_i.valid &
+               !is_STORE_s1_q) begin // TODO: TAGS TAGS TAGS
+        instruction_to_wb      = instruction_s1_q;
         advance_head_prmq      = 1'b0;
-        data_to_wb             = resp_dcache_cpu_i.data;
+        data_dword             = resp_dcache_cpu_i.data;
     end
-    else if(instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin
-        instruction_to_wb      = instruction_s2_q;
+    else if(instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin
+        instruction_to_wb      = instruction_s1_q;
         advance_head_prmq      = 1'b0;
     end
-    else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_or_AMO_s2_q) begin
-        instruction_to_wb      = instruction_s2_q;
+    else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_or_AMO_s1_q) begin // TODO: Mirar com respon la cache als stores
+        instruction_to_wb      = instruction_s1_q;
         advance_head_prmq      = 1'b0;
     end
     else if(instruction_from_pmrq.instr.valid) begin
@@ -705,19 +457,38 @@ always_comb begin
         advance_head_prmq      = 1'b1;
         flush_amo_prmq         = instruction_from_pmrq.is_amo;
         
-        if (unalign_from_pmrq) begin 
-            offset = instruction_from_pmrq.data_rs1[3:0] << 3;
-            noffset = ((~offset) + 1);
-            data_to_wb_half = unalign_result_from_pmrq << noffset;
-            data_to_wb = (instruction_from_pmrq.data_rs2 >> offset) | data_to_wb_half;
-        end else begin
-            data_to_wb = instruction_from_pmrq.data_rs2;
-        end
+        data_dword = instruction_from_pmrq.data_rs2;
     end
+end
+
+// Select bits from whole double word depending on offset
+
+logic [31:0] data_word;
+logic [15:0] data_half;
+logic [7:0]  data_byte;
+
+assign data_word = data_dword[{instruction_to_wb.data_rs1[2],   5'b0} +: 32];
+assign data_half = data_dword[{instruction_to_wb.data_rs1[2:1], 4'b0} +: 16];
+assign data_byte = data_dword[{instruction_to_wb.data_rs1[2:0], 3'b0} +: 8];
+
+// Select data depending on memory size & do sign extension if needed
+
+always_comb begin
+    case (instruction_to_wb.instr.mem_size)
+        4'b0000: data_to_wb = {{120{data_byte[7]}},data_byte};
+        4'b0001: data_to_wb = {{112{data_half[15]}},data_half};
+        4'b0010: data_to_wb = {{96{data_word[31]}},data_word};
+        4'b0011: data_to_wb = {{64{data_dword[63]}},data_dword};
+        4'b0100: data_to_wb = {120'b0,data_byte};
+        4'b0101: data_to_wb = {112'b0,data_half};
+        4'b0110: data_to_wb = {96'b0,data_word};
+        4'b0111: data_to_wb = {64'b0,data_dword};
+    endcase
 end
 
 bus_simd_t masked_data_to_wb;
 
+//TODO: Preguntar si això ha d'anar aqui o si ho ha fet en Narcís
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
@@ -828,7 +599,7 @@ assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
 assign instruction_simd_o.ex              = instruction_to_wb.ex;
 
-assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;
+assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s1_q) ? instruction_to_wb.ex : 'h0;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///// Outputs for the execution module or Dcache interface
@@ -839,9 +610,6 @@ assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 //// Stall committing instruction because it is a store
 assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
 
-//// Kill the dcache interface instruction
-assign req_cpu_dcache_o.kill = kill_i | reset_next_lsq;
-
 //// Input/Output Address Base Pointer
 assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 
@@ -850,8 +618,8 @@ assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 `ifdef VERILATOR
-assign store_addr_o = instruction_s2_q.vaddr;
-assign store_data_o = instruction_s2_q.data_rs2;
+assign store_addr_o = instruction_s1_q.vaddr;
+assign store_data_o = instruction_s1_q.data_rs2;
 `endif
 
 endmodule
