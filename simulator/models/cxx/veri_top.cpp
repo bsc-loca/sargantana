@@ -305,6 +305,7 @@ int main(int argc, char** argv) {
   }
 
   top = new Vveri_top;
+  Verilated::assertOn(false); // Disable asserts before reset is applied
   top->rst_top = 0;
   top->i_dr_dis = 1;
   top->eval();
@@ -368,6 +369,7 @@ int main(int argc, char** argv) {
 
         if(main_time > 147) {
           top->rst_top = 0;
+          Verilated::assertOn(true); // Enable asserts now that reset has been done
         }
         if((main_time % 10) == 0) { // 10ns clk
           top->clk_p = 1;
