@@ -54,7 +54,8 @@ void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
 void tohost(unsigned int id, unsigned long long data);
 
 void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const svBitVecVal *data) {
-    uint32_t baseAddress = addr[0];
+    static const unsigned int addr_mask = ~((1 << BUS_ADDR_BITS) - 1); // Mask to align the address to BUS_WIDTH
+    uint32_t baseAddress = addr[0] & addr_mask;
 
     if (baseAddress == ((uint32_t) tohostAddr)) {
         //printf("Tohost!!!\n");
@@ -62,9 +63,11 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
         return;
     }
 
-    for (unsigned int i = 0; i < (BUS_WIDTH/32); i++) {
-        if (byte_enable[0] & (0b1111 << (i*4))) {
-            memoryContents.write(baseAddress + i*4, data[i], (byte_enable[0] >> (i*4)) & 0b1111);
+    // Iterating the bus write at word-size (i.e. 32 bits)
+    for (unsigned int i = 0; i < (BUS_WIDTH/32); i++) {    
+        // byte_enable has 32 bits, a word will consume 4 bits, thus 8 words per byte_enable
+        if (byte_enable[i / 8] & (0b1111 << ((i%8)*4))) {
+            memoryContents.write(baseAddress + i*4, data[i], (byte_enable[i / 8] >> ((i%8)*4)) & 0b1111);
         }
     }
 }
@@ -159,8 +162,10 @@ void memory_enable_read_debug() {
 bool Memory32::write(const uint32_t addr, const uint32_t &data,
                      const uint32_t &mask) {
     assert((addr & 0x3) == 0);
-    if (addr_max != 0 && addr >= addr_max)
+    if (addr_max != 0 && addr >= addr_max) {
+        if (debug_read) printf("WARN: Memory write outside of range: 0x%8x\n", addr);
         return false;
+    }
 
     uint32_t data_m = mem[addr];
     for (int i = 0; i < 4; i++) {
@@ -208,7 +213,7 @@ void Memory32::write_block(uint32_t addr, uint32_t size, const uint8_t* buf) {
 bool Memory32::read(const uint32_t addr, uint32_t &data) {
     assert((addr & 0x3) == 0);
     if (addr_max != 0 && addr >= addr_max || !mem.count(addr)) {
-        if (debug_read) printf("WARN: Memory access outside of range: 0x%8x\n", addr);
+        if (debug_read) printf("WARN: Memory read outside of range: 0x%8x\n", addr);
         data = 0;
         return false;
     }

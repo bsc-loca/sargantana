@@ -3,7 +3,8 @@
 #ifndef DPI_PERFECT_MEMORY_H
 #define DPI_PERFECT_MEMORY_H
 
-#define BUS_WIDTH 512
+#define BUS_WIDTH 512   // Bus size
+#define BUS_ADDR_BITS 6 // Bits needed to address a byte within the bus
 
 #include <svdpi.h>
 #include <string>

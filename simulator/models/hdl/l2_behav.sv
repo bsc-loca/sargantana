@@ -5,7 +5,7 @@ typedef struct packed {
     logic [7:0]   tag;
     logic [3:0]   size;
     logic [511:0] data;
-    logic [15:0]  be;
+    logic [63:0]  be;
     logic [63:0]  timestamp;
     logic         wr_natomic;
     logic [3:0]   atomic_op;
@@ -144,7 +144,7 @@ module l2_behav #(
 );
 
     import "DPI-C" function void memory_read (input bit [31:0] addr, output bit [LINE_SIZE-1:0] data);
-    import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [15:0] byte_enable, input bit [LINE_SIZE-1:0] data);
+    import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
     import "DPI-C" function void memory_amo (input bit [31:0] addr, input bit [3:0] size, input bit [3:0] amo_op, input bit [LINE_SIZE-1:0] data, output bit [LINE_SIZE-1:0] result);
     import "DPI-C" function void torture_dump_amo_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
 
@@ -347,7 +347,7 @@ module l2_behav #(
     end
 
 
-    function void amo_write(input bit [31:0] addr, input bit [15:0] byte_enable, input bit [LINE_SIZE-1:0] data);
+    function void amo_write(input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
         memory_write(addr, byte_enable, data);
         //torture_dump_amo_write(addr, size, data); TODO!!!!
     endfunction
