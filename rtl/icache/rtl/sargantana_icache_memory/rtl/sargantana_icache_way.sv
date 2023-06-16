@@ -100,6 +100,21 @@ module sargantana_icache_way
             );
 		`endif
 	
+    `elsif SYNTHESIS_7NM
+        RF_SP_256x128 L1InstArray (
+            .A(address),
+            .D(write_data),
+            .CLK(clk_i),
+            .CEN(1'b0), // chip-enable active-low
+            .GWEN(write_enable), // write-enable active-low
+            .WEN({128{1'b0}}), // write-enable active-low (WEN[0]=LSB)
+            .EMA(3'b000),
+            .EMAW(2'b00),
+            .EMAS(1'b0),
+            .Q(RW0O_sram),
+            .STOV(1'b0),
+            .RET(1'b0)
+        );
     `else
     TS1N65LPHSA256X128M4F L1InstArray (
         .A  (address) ,
