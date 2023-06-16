@@ -73,11 +73,126 @@ assign w_data[53:27] = data_i;
 assign w_data[80:54] = data_i;
 assign w_data[107:81] = data_i;
 
-assign write_mask = ~w_mask;
-assign write_data = w_data;
-assign write_enable = ~we_i;
-assign address = addr_i;
-assign chip_enable = ~(|req_i);
+  assign write_mask = ~w_mask;
+  assign write_data = w_data;
+  assign write_enable = ~we_i;
+  assign address = addr_i;
+  assign chip_enable = ~(|req_i);
+
+  `ifdef MEMS_22NM
+    `ifdef MEMS_R1PH
+
+      R1PH_64x108 MDArray_tag_il1 (
+      .CLK(clk_i),
+      .CEN(1'b0), // chip_enable??
+      .RDWEN(write_enable),
+      .AW(address[5:1]), // Port-A address word line inputs 
+      .AC(address[0]), // POrt-A address column inputs 
+      .D(write_data), // Data 
+      .BW(~write_mask), // Mask 
+      .T_LOGIC(1'b0), // Test logic, active high? 
+      .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+      .MA_WL(1'b0),
+      .MA_WRAS(1'b0),
+      .MA_WRASD(1'b0),
+      .Q(q_sram)
+      );
+    `else
+      R1PD_64x108 MDArray_tag_il1 (
+      .CLK(clk_i),
+      .CEN(1'b0), // chip_enable??
+      .RDWEN(write_enable),
+      .AW(address[5:1]), // Port-A address word line inputs 
+      .AC(address[0]), // POrt-A address column inputs 
+      .D(write_data), // Data 
+      .BW(~write_mask), // Mask 
+      .T_LOGIC(1'b0), // Test logic, active high? 
+      .MA_SAWL(1'b0), // Margin adjust sense amp. Default: 1'b0
+      .MA_WL(1'b0),
+      .MA_WRAS(1'b0),
+      .MA_WRASD(1'b0),
+      .Q(q_sram)
+      );
+    `endif
+  `elsif SYNTHESIS_7NM
+    RF_SP_64x108 MDArray_tag_il1 (
+        .A(address),
+        .D(write_data),
+        .CLK(clk_i),
+        .CEN(1'b0), // chip-enable active-low
+        .GWEN(write_enable), // write-enable active-low
+        .WEN(write_mask), // write-enable active-low (WEN[0]=LSB)
+        .EMA(3'b000),
+        .EMAW(2'b00),
+        .EMAS(1'b0),
+        .Q(q_sram),
+        .STOV(1'b0),
+        .RET(1'b0)
+    );
+  `else
+  // [47:0]
+    TS1N65LPHSA128X48M4F MDArray_tag_A_l1 (
+      .A  (address) ,
+      .D  (write_data[47:0]) ,
+      .BWEB  (write_mask[47:0]) ,
+      .WEB  (write_enable) ,
+      .CEB  (chip_enable) ,
+      .CLK  (clk_i) ,
+      .Q  (q_sram[47:0]),
+      .WTSEL(3'b000),
+      .RTSEL(2'b00),
+      .AWT(1'b0)
+    ); 
+  // [87:48]
+    TS1N65LPHSA128X48M4F MDArray_tag_B_l1 (
+      .A  (address) ,
+      .D  ({16'b0,write_data[79:48]}) ,
+      .BWEB  ({16'b1, write_mask[79:48]}) ,
+      .WEB  (write_enable) ,
+      .CEB  (chip_enable) ,
+      .CLK  (clk_i) ,
+      .Q  (q_sram[95:48]),
+      .WTSEL(3'b000),
+      .RTSEL(2'b00),
+      .AWT(1'b0)
+    ); 
+  `endif
+
+  assign tag_way_o[0] = q_sram[26:0];
+  assign tag_way_o[1] = q_sram[53:27];
+  assign tag_way_o[2] = q_sram[80:54];
+  assign tag_way_o[3] = q_sram[107:81];
+
+`else //PADDR_39
+
+  //Tag array wires
+  logic [79:0] q_sram;
+  logic [79:0] write_mask, write_data, w_mask, w_data, mask;
+  logic write_enable;
+  logic chip_enable;
+  logic [ADDR_WIDHT-3:0] address;
+
+
+  // Tag array SRAM implementation
+
+  assign mask[19:0] = {20{req_i[0]}};
+  assign mask[39:20] = {20{req_i[1]}};
+  assign mask[59:40] = {20{req_i[2]}};
+  assign mask[79:60] = {20{req_i[3]}};
+  assign w_mask = {80{we_i}} & mask;
+      
+  assign w_data[19:0] = data_i;
+  assign w_data[39:20] = data_i;
+  assign w_data[59:40] = data_i;
+  assign w_data[79:60] = data_i;
+
+  assign write_mask = ~w_mask;
+  assign write_data = w_data;
+  assign write_enable = ~we_i;
+  assign address = addr_i;
+  assign chip_enable = ~(|req_i);
+
+
 
 `ifdef MEMS_22NM
 	`ifdef MEMS_R1PH

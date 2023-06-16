@@ -14,4 +14,4 @@
 	url = ../riscv-isa-sim.git
 [submodule "rtl/dcache"]
 	path = rtl/dcache
-	url = https://github.com/openhwgroup/cv-hpdcache.git
+	url = ../cv-hpdcache.git
