@@ -230,7 +230,6 @@ always_comb begin
                 end else begin
                     // Request Logic
                     source_dcache = READ;     // Use instruction from LSQ
-                    read_next_lsq = 1'b1;     // Advance LSQ
                     next_state             = ReadHead;
                     
                     //// Set request valid bit, stall_commit and next state signals 
@@ -244,7 +243,6 @@ always_comb begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_o.valid = ~instruction_to_dcache.ex.valid;
                         mem_commit_stall_s0    = 1'b0;
-                        read_next_lsq = resp_dcache_cpu_i.ready & ~instruction_to_dcache.ex.valid;     // Advance LSQ
                         instruction_s1_d = resp_dcache_cpu_i.ready | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else if (!(store_on_fly | amo_on_fly) |
                                  (mem_gl_index_o == instruction_to_dcache.gl_index)) begin // TODO: PReguntar al NArcis a veure si es pot treure
@@ -267,8 +265,10 @@ always_comb begin
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d = 'h0;
-                        read_next_lsq = 1'b0;
                     end
+
+                    // Advance LSQ ONLY when a transaction is performed
+                    read_next_lsq = req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready;
                 end
             end
         endcase
@@ -392,7 +392,7 @@ always_comb begin
     flush_amo           = 1'b0;
     mv_back_tail_prmq   = 1'b0;
     instruction_to_pmrq =  'h0;
-    if (instruction_s1_q.instr.valid & resp_dcache_cpu_i.valid) begin // TODO: Replace replay with tag comparison
+    if (instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && resp_dcache_cpu_i.rd == tag_id_s1_q) begin
         flush_store         = is_STORE_s1_q;
         flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q; 
     end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
@@ -419,7 +419,7 @@ pending_mem_req_queue pending_mem_req_queue_inst (
     .instruction_i         (instruction_to_pmrq),
     .tag_i                 (tag_id_s1_q),
     .flush_i               (flush_to_lsq),
-    .replay_valid_i        (replay), // TODO: Mirar els tags un altre cop
+    .replay_valid_i        (replay),
     .tag_next_i            (resp_dcache_cpu_i.rd),
     .replay_data_i         (resp_dcache_cpu_i.data),
     .response_valid_i      (resp_dcache_cpu_i.valid),
@@ -438,8 +438,7 @@ always_comb begin
     data_dword             =  'h0;
     advance_head_prmq      = 1'b0;
     flush_amo_prmq         = 1'b0;
-    if(instruction_s1_q.instr.valid & resp_dcache_cpu_i.valid &
-               !is_STORE_s1_q) begin // TODO: TAGS TAGS TAGS
+    if(instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && !is_STORE_s1_q && resp_dcache_cpu_i.rd == tag_id_s1_q) begin
         instruction_to_wb      = instruction_s1_q;
         advance_head_prmq      = 1'b0;
         data_dword             = resp_dcache_cpu_i.data;

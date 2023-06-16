@@ -470,6 +470,7 @@ hpdcache_req_t dcache_req       [NREQUESTERS-1:0];
 
 logic          dcache_rsp_valid [NREQUESTERS-1:0];
 hpdcache_rsp_t dcache_rsp       [NREQUESTERS-1:0];
+logic wbuf_empty;
 
 dcache_interface dcache_interface_inst(
     .clk_i(CLK),
@@ -487,6 +488,7 @@ dcache_interface dcache_interface_inst(
     .core_req_valid_o(dcache_req_valid[1]),
     .req_dcache_o(dcache_req[1]),
     .rsp_dcache_i(dcache_rsp[1]),
+    .wbuf_empty_i(wbuf_empty),
 
     // PMU
     .dmem_is_store_o ( exe_store_pmu ),
@@ -628,6 +630,9 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready_o),
     .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid_i),
     .mem_resp_uc_read_i(mem_resp_uc_read),
+
+    // misc
+    .wbuf_empty_o(wbuf_empty),
 
     // Config
     .cfg_enable_i(1'b1),

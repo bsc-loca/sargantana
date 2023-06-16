@@ -36,6 +36,7 @@ module dcache_interface
     output logic core_req_valid_o,
     output hpdcache_req_t req_dcache_o,
     input  hpdcache_rsp_t rsp_dcache_i,
+    input logic wbuf_empty_i,
 
     // PMU
     output logic dmem_is_store_o,
@@ -119,7 +120,7 @@ assign resp_dcache_cpu_o.ready = dcache_ready_i;
 assign resp_dcache_cpu_o.io_address_space = io_address_space; // This should be done somewhere else...
 assign resp_dcache_cpu_o.rd = rsp_dcache_i.tid;
 assign resp_dcache_cpu_o.data = rsp_dcache_i.rdata;
-assign resp_dcache_cpu_o.ordered = 1'b1; // TODO: Forward wbuf_empty_o from cache
+assign resp_dcache_cpu_o.ordered = wbuf_empty_i;
 // TODO: What about resp_dcache_cpu_o.error?
 
 //-PMU
