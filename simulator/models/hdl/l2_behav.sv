@@ -7,7 +7,7 @@ typedef struct packed {
     logic [511:0] data;
     logic [63:0]  be;
     logic [63:0]  timestamp;
-    logic         wr_natomic;
+    logic         is_atomic;
     logic [3:0]   atomic_op;
 } mem_op_t;
 
@@ -68,7 +68,7 @@ module l2_behav #(
 
     input logic  [25:0]             ic_addr_i,
     input logic                     ic_valid_i,
-    output logic [127:0]    ic_line_o, // TODO: Preguntar-li a la noelia quina sera la mida del bus de la NoC
+    output logic [127:0]            ic_line_o, // TODO: Change it to 512 bits, modifying iCache FSM
     output logic                    ic_ready_o,
     output logic                    ic_valid_o,
     output logic [1:0]              ic_seq_num_o,
@@ -135,6 +135,16 @@ module l2_behav #(
 
     // Uncacheable read
 
+    output logic                 dc_uc_rd_req_ready_o,
+    input logic                  dc_uc_rd_req_valid_i,
+    input hpdcache_mem_addr_t    dc_uc_rd_req_addr_i,
+    input hpdcache_mem_len_t     dc_uc_rd_req_len_i,
+    input hpdcache_mem_size_t    dc_uc_rd_req_size_i,
+    input hpdcache_mem_id_t      dc_uc_rd_req_id_i,
+    input hpdcache_mem_command_e dc_uc_rd_req_command_i,
+    input hpdcache_mem_atomic_e  dc_uc_rd_req_atomic_i,
+    output hpdcache_mem_id_t     dc_uc_rd_req_base_id_o,
+
     output logic                   dc_uc_rd_valid_o,
     output hpdcache_mem_error_e    dc_uc_rd_error_o,
     output hpdcache_mem_id_t       dc_uc_rd_id_o,
@@ -147,6 +157,11 @@ module l2_behav #(
     import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
     import "DPI-C" function void memory_amo (input bit [31:0] addr, input bit [3:0] size, input bit [3:0] amo_op, input bit [LINE_SIZE-1:0] data, output bit [LINE_SIZE-1:0] result);
     import "DPI-C" function void torture_dump_amo_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
+
+    function void amo_write(input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
+        memory_write(addr, byte_enable, data);
+        //torture_dump_amo_write(addr, size, data); TODO!!!!
+    endfunction
 
     // *** Time reference ***
 
@@ -310,8 +325,9 @@ module l2_behav #(
     assign dc_wb_resp_error_o = HPDCACHE_MEM_RESP_OK;
 
 
-    // *** dCache uncacheable write channel ***
+    // *** dCache uncacheable read & write channel ***
 
+    // Write channel
     mem_op_t uc_wr_ch_write_data;
     logic uc_wr_ch_write;
     logic uc_wr_ch_read;
@@ -342,35 +358,80 @@ module l2_behav #(
         uc_wr_ch_write_data.data       = dc_uc_wr_req_data_i;
         uc_wr_ch_write_data.be         = dc_uc_wr_req_be_i;
         uc_wr_ch_write_data.timestamp  = cycles;
-        uc_wr_ch_write_data.wr_natomic = dc_uc_wr_req_command_i == HPDCACHE_MEM_WRITE;
+        uc_wr_ch_write_data.is_atomic = dc_uc_wr_req_command_i == HPDCACHE_MEM_ATOMIC;
         uc_wr_ch_write_data.atomic_op  = dc_uc_wr_req_atomic_i;
     end
 
+    // Read channel
+    mem_op_t uc_rd_ch_write_data;
+    logic uc_rd_ch_write;
+    logic uc_rd_ch_read;
+    mem_op_t uc_rd_ch_read_data;
+    logic uc_rd_ch_full;
+    logic uc_rd_ch_empty;
 
-    function void amo_write(input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
-        memory_write(addr, byte_enable, data);
-        //torture_dump_amo_write(addr, size, data); TODO!!!!
-    endfunction
+    mem_channel uc_rd_channel (
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .data_i(uc_rd_ch_write_data),
+        .write_i(uc_rd_ch_write),
+        .read_i(uc_rd_ch_read),
+        .data_o(uc_rd_ch_read_data),
+        .full_o(uc_rd_ch_full),
+        .empty_o(uc_rd_ch_empty)
+    );
+    
+    assign dc_uc_rd_req_ready_o = ~uc_rd_ch_full;
+    assign dc_uc_rd_req_data_ready_o = ~uc_rd_ch_full;
+
+    assign uc_rd_ch_write = dc_uc_rd_req_valid_i & ~uc_rd_ch_full;
+
+    always_comb begin
+        uc_rd_ch_write_data.addr       = dc_uc_rd_req_addr_i;
+        uc_rd_ch_write_data.tag        = dc_uc_rd_req_id_i;
+        uc_rd_ch_write_data.size       = dc_uc_rd_req_size_i;
+        uc_rd_ch_write_data.timestamp  = cycles;
+        uc_rd_ch_write_data.is_atomic  = dc_uc_rd_req_command_i == HPDCACHE_MEM_ATOMIC;
+        uc_rd_ch_write_data.atomic_op  = dc_uc_rd_req_atomic_i;
+    end
 
     assign uc_wr_ch_read = !uc_wr_ch_empty && (cycles >= (uc_wr_ch_read_data.timestamp + DATA_DELAY)) && dc_uc_wr_resp_ready_i;
 
+    // Atomic write channel responses use read channel, so take this into account
+    assign uc_rd_ch_read = !uc_wr_ch_read && !uc_rd_ch_empty && (cycles >= (uc_rd_ch_read_data.timestamp + DATA_DELAY)) && dc_uc_rd_ready_i;
+
+    // Drives both read and write channel responses
     always_ff @(posedge clk_i) begin
-        if(uc_wr_ch_read) begin
-            if (uc_wr_ch_read_data.wr_natomic) begin
-                memory_write(uc_wr_ch_read_data.addr, uc_wr_ch_read_data.be, uc_wr_ch_read_data.data);
-                dc_uc_rd_valid_o <= 1'b0;
-                dc_uc_rd_data_o <= 0;
-                dc_uc_rd_last_o <= 1'b0;
-            end else begin
+        if(uc_wr_ch_read) begin // Responding uncacheable write
+            if (uc_wr_ch_read_data.is_atomic && uc_wr_ch_read_data.atomic_op != HPDCACHE_MEM_ATOMIC_STEX) begin
                 logic [LINE_SIZE-1:0] readed_contents;
                 memory_amo(uc_wr_ch_read_data.addr, uc_wr_ch_read_data.size, uc_wr_ch_read_data.atomic_op, uc_wr_ch_read_data.data, readed_contents);
                 dc_uc_rd_valid_o <= 1'b1;
                 dc_uc_rd_data_o <= readed_contents;
+                dc_uc_rd_id_o  <= 0;
                 dc_uc_rd_last_o <= 1'b1;
+            end else begin
+                memory_write(uc_wr_ch_read_data.addr, uc_wr_ch_read_data.be, uc_wr_ch_read_data.data);
+                dc_uc_rd_valid_o <= 1'b0;
+                dc_uc_rd_data_o <= 0;
+                dc_uc_rd_id_o  <= 0;
+                dc_uc_rd_last_o <= 1'b0;
             end
             dc_uc_wr_resp_valid_o <= 1'b1;
             dc_uc_wr_resp_id_o <= uc_wr_ch_read_data.tag;
-            dc_uc_wr_resp_is_atomic_o <= ~uc_wr_ch_read_data.wr_natomic;
+            dc_uc_wr_resp_is_atomic_o <= uc_wr_ch_read_data.is_atomic;
+        end else if (uc_rd_ch_read) begin // Responding uncacheable read
+            logic [LINE_SIZE-1:0] readed_contents;
+            memory_read(uc_rd_ch_read_data.addr, readed_contents);
+
+            dc_uc_wr_resp_valid_o <= 1'b0;
+            dc_uc_wr_resp_id_o <= 0;
+            dc_uc_wr_resp_is_atomic_o <= 1'b0;
+
+            dc_uc_rd_data_o  <= readed_contents;
+            dc_uc_rd_valid_o <= 1'b1;
+            dc_uc_rd_id_o   <= uc_rd_ch_read_data.tag;
+            dc_uc_rd_last_o  <= 1'b1;
         end else begin
             dc_uc_wr_resp_valid_o <= 1'b0;
             dc_uc_wr_resp_id_o <= 0;
@@ -378,10 +439,13 @@ module l2_behav #(
 
             dc_uc_rd_valid_o <= 1'b0;
             dc_uc_rd_data_o <= 0;
+            dc_uc_rd_id_o  <= 0;
             dc_uc_rd_last_o <= 1'b0;
         end
     end
 
     assign dc_uc_wr_resp_error_o = HPDCACHE_MEM_RESP_OK;
+
+    assign dc_uc_rd_resp_error_o = HPDCACHE_MEM_RESP_OK;
 
 endmodule

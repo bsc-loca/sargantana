@@ -117,6 +117,16 @@ module top_drac
 
     // *** Uncacheable Read Interface ***
 
+    input  logic                  mem_req_uc_read_ready_i,
+    output logic                  mem_req_uc_read_valid_o,
+    output hpdcache_mem_addr_t    mem_req_uc_read_addr_o,
+    output hpdcache_mem_len_t     mem_req_uc_read_len_o,
+    output hpdcache_mem_size_t    mem_req_uc_read_size_o,
+    output hpdcache_mem_id_t      mem_req_uc_read_id_o,
+    output hpdcache_mem_command_e mem_req_uc_read_command_o,
+    output hpdcache_mem_atomic_e  mem_req_uc_read_atomic_o,
+    input  hpdcache_mem_id_t      mem_req_uc_read_base_id_i,
+
     input logic                   mem_resp_uc_read_valid_i,
     input hpdcache_mem_error_e    mem_resp_uc_read_error_i,
     input hpdcache_mem_id_t       mem_resp_uc_read_id_i,
@@ -570,6 +580,15 @@ assign mem_resp_uc_write.mem_resp_w_id = mem_resp_uc_write_id_i;
 assign mem_resp_uc_write.mem_resp_w_is_atomic = mem_resp_uc_write_is_atomic_i;
 
 //      Uncacheable read interface
+hpdcache_mem_req_t mem_req_uc_read;
+
+assign mem_req_uc_read_addr_o    = mem_req_uc_read.mem_req_addr;
+assign mem_req_uc_read_len_o     = mem_req_uc_read.mem_req_len;
+assign mem_req_uc_read_size_o    = mem_req_uc_read.mem_req_size;
+assign mem_req_uc_read_id_o      = mem_req_uc_read.mem_req_id;
+assign mem_req_uc_read_command_o = mem_req_uc_read.mem_req_command;
+assign mem_req_uc_read_atomic_o  = mem_req_uc_read.mem_req_atomic;
+
 hpdcache_mem_resp_r_t mem_resp_uc_read;
 
 assign mem_resp_uc_read.mem_resp_r_error = mem_resp_uc_read_error_i;
@@ -627,6 +646,11 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_resp_uc_write_i(mem_resp_uc_write),
 
     // dMem uncacheable read interface
+    .mem_req_uc_read_ready_i(mem_req_uc_read_ready_i),
+    .mem_req_uc_read_valid_o(mem_req_uc_read_valid_o),
+    .mem_req_uc_read_o(mem_req_uc_read),
+    .mem_req_uc_read_base_id_i(mem_req_uc_read_base_id_i),
+
     .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready_o),
     .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid_i),
     .mem_resp_uc_read_i(mem_resp_uc_read),
@@ -758,6 +782,22 @@ ptw ptw_inst (
     .pmu_ptw_hit_o(pmu_ptw_hit),
     .pmu_ptw_miss_o(pmu_ptw_miss)
 );
+
+// Connect PTW to dcache
+assign dcache_req_valid[0] = ptw_dmem_comm.req.valid;
+assign dmem_ptw_comm.dmem_ready = dcache_req_ready[0];
+assign dcache_req[0].addr = ptw_dmem_comm.req.addr;
+assign dcache_req[0].wdata = ptw_dmem_comm.req.data;
+assign dcache_req[0].op = ptw_dmem_comm.req.cmd == 5'b01010 ? HPDCACHE_REQ_AMO_OR : HPDCACHE_REQ_LOAD;
+assign dcache_req[0].be = ptw_dmem_comm.req.cmd == 5'b01010 ? 8'hff : 8'h00;
+assign dcache_req[0].size = ptw_dmem_comm.req.typ;
+assign dcache_req[0].uncacheable = 1'b0;
+assign dcache_req[0].sid = 0;
+assign dcache_req[0].tid = 0;
+assign dcache_req[0].need_rsp = 1'b1;
+
+assign dmem_ptw_comm.resp.valid = dcache_rsp_valid[0];
+assign dmem_ptw_comm.resp.data = dcache_rsp[0].rdata; //TODO: Shift
 
 //PMU  
 assign imiss_l2_hit = ifill_resp.ack & io_core_pmu_l2_hit_i; 

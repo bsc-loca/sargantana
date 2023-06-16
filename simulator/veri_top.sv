@@ -80,6 +80,16 @@ module veri_top
     hpdcache_mem_id_t      mem_resp_uc_write_id;
 
     // L2 uncacheable read
+    logic                  mem_req_uc_read_ready;
+    logic                  mem_req_uc_read_valid;
+    hpdcache_mem_addr_t    mem_req_uc_read_addr;
+    hpdcache_mem_len_t     mem_req_uc_read_len;
+    hpdcache_mem_size_t    mem_req_uc_read_size;
+    hpdcache_mem_id_t      mem_req_uc_read_id;
+    hpdcache_mem_command_e mem_req_uc_read_command;
+    hpdcache_mem_atomic_e  mem_req_uc_read_atomic;
+    hpdcache_mem_id_t      mem_req_uc_read_base_id;
+
     logic                   mem_resp_uc_read_valid;
     hpdcache_mem_error_e    mem_resp_uc_read_error;
     hpdcache_mem_id_t       mem_resp_uc_read_id;
@@ -166,6 +176,16 @@ module veri_top
         .mem_resp_uc_write_id_i(mem_resp_uc_write_id),
 
         // Uncacheable reads
+        .mem_req_uc_read_ready_i(mem_req_uc_read_ready),
+        .mem_req_uc_read_valid_o(mem_req_uc_read_valid),
+        .mem_req_uc_read_addr_o(mem_req_uc_read_addr),
+        .mem_req_uc_read_len_o(mem_req_uc_read_len),
+        .mem_req_uc_read_size_o(mem_req_uc_read_size),
+        .mem_req_uc_read_id_o(mem_req_uc_read_id),
+        .mem_req_uc_read_command_o(mem_req_uc_read_command),
+        .mem_req_uc_read_atomic_o(mem_req_uc_read_atomic),
+        .mem_req_uc_read_base_id_i(mem_req_uc_read_base_id),
+
         .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid),
         .mem_resp_uc_read_error_i(mem_resp_uc_read_error),
         .mem_resp_uc_read_id_i(mem_resp_uc_read_id),
@@ -210,6 +230,7 @@ module veri_top
         .dc_mr_tag_o(dmem_resp_tag),
         .dc_mr_last_o(mem_resp_r_last),
 
+        // *** dCache Writeback Interface ***
         .dc_wb_req_ready_o(mem_req_wbuf_write_ready),
         .dc_wb_req_valid_i(mem_req_wbuf_write_valid),
         .dc_wb_req_addr_i(mem_req_wbuf_write_addr),
@@ -229,6 +250,7 @@ module veri_top
         .dc_wb_resp_error_o(mem_resp_wbuf_write_error),
         .dc_wb_resp_id_o(mem_resp_wbuf_write_id),
 
+        // *** dCache Uncacheable Writes Interface ***
         .dc_uc_wr_req_ready_o(mem_req_uc_write_ready),
         .dc_uc_wr_req_valid_i(mem_req_uc_write_valid),
         .dc_uc_wr_req_addr_i(mem_req_uc_write_addr),
@@ -251,7 +273,17 @@ module veri_top
         .dc_uc_wr_resp_error_o(mem_resp_uc_write_error),
         .dc_uc_wr_resp_id_o(mem_resp_uc_write_id),
 
-        // Uncacheable reads
+        // *** dCache Uncacheable Reads Interface ***
+        .dc_uc_rd_req_ready_o(mem_req_uc_read_ready),
+        .dc_uc_rd_req_valid_i(mem_req_uc_read_valid),
+        .dc_uc_rd_req_addr_i(mem_req_uc_read_addr),
+        .dc_uc_rd_req_len_i(mem_req_uc_read_len),
+        .dc_uc_rd_req_size_i(mem_req_uc_read_size),
+        .dc_uc_rd_req_id_i(mem_req_uc_read_id),
+        .dc_uc_rd_req_command_i(mem_req_uc_read_command),
+        .dc_uc_rd_req_atomic_i(mem_req_uc_read_atomic),
+        .dc_uc_rd_req_base_id_o(mem_req_uc_read_base_id),
+
         .dc_uc_rd_valid_o(mem_resp_uc_read_valid),
         .dc_uc_rd_error_o(mem_resp_uc_read_error),
         .dc_uc_rd_id_o(mem_resp_uc_read_id),
