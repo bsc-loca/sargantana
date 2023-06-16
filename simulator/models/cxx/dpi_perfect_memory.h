@@ -5,6 +5,7 @@
 
 #define BUS_WIDTH 512   // Bus size
 #define BUS_ADDR_BITS 6 // Bits needed to address a byte within the bus
+#define BUS_ADDR_MASK (~((1 << BUS_ADDR_BITS) - 1)) // Mask to align addresses to the bus width
 
 #include <svdpi.h>
 #include <string>

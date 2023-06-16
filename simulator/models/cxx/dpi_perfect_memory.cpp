@@ -38,7 +38,7 @@ static std::map<std::string, uint64_t> symbols;
 static std::map<uint64_t, std::string> reverseSymbols;
 
 void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
-    uint32_t baseAddress = addr[0];
+    uint32_t baseAddress = addr[0] & BUS_ADDR_MASK;
 
     /*if (baseAddress ==  ((uint32_t) fromhostAddr)) {
         printf("Fromhost!!!\n");
@@ -54,8 +54,7 @@ void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
 void tohost(unsigned int id, unsigned long long data);
 
 void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const svBitVecVal *data) {
-    static const unsigned int addr_mask = ~((1 << BUS_ADDR_BITS) - 1); // Mask to align the address to BUS_WIDTH
-    uint32_t baseAddress = addr[0] & addr_mask;
+    uint32_t baseAddress = addr[0] & BUS_ADDR_MASK;
 
     if (baseAddress == ((uint32_t) tohostAddr)) {
         //printf("Tohost!!!\n");
@@ -73,7 +72,7 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 }
 
  void memory_amo(const svBitVecVal *addr_ptr, const svBitVecVal *size_ptr, const svBitVecVal *amo_op_ptr, const svBitVecVal *data_ptr, svBitVecVal *result_ptr) {
-    uint32_t addr = addr_ptr[0];
+    uint32_t addr = addr_ptr[0] & BUS_ADDR_MASK;
     uint32_t size = size_ptr[0];
     uint32_t amo_op = amo_op_ptr[0];
 
