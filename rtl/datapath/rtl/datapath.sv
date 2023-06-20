@@ -1224,16 +1224,20 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
-                instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                `ifdef VERILATOR
+                instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
+                `endif
             end else begin
                 gl_valid[i] = wb_scalar[i].valid;
                 gl_index[i] = wb_scalar[i].gl_index;
                 instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
-                instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                `ifdef VERILATOR
+                instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
+                `endif
             end
 
             // Write data regfile from WB or from Commit (CSR)
@@ -1264,13 +1268,15 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             instruction_simd_writeback_gl[i].csr_addr  = wb_simd[i].csr_addr;
             instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
             instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
-            instruction_simd_writeback_gl[i].addr      = wb_simd[i].addr;
             simd_data_wb_to_exe[i]  = wb_simd[i].vresult;
             simd_write_paddr_exe[i] = wb_simd[i].pvd;
             simd_write_vaddr[i]     = wb_simd[i].vd;
             wb_cu_int.vwrite_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vvalid[i]        = wb_simd[i].valid;
+            `ifdef VERILATOR
+            instruction_simd_writeback_gl[i].addr      = wb_simd[i].addr;
+            `endif
         end
         
         for (int i = 0; i<NUM_FP_WB; ++i) begin
@@ -1280,7 +1286,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             instruction_fp_writeback_gl[i].csr_addr  = wb_fp[i].csr_addr;
             instruction_fp_writeback_gl[i].exception = wb_fp[i].ex;
             instruction_fp_writeback_gl[i].result    = wb_fp[i].result;
-            instruction_fp_writeback_gl[i].addr      = wb_fp[i].addr;
             instruction_fp_writeback_gl[i].fp_status = wb_fp[i].fp_status;
             fp_data_wb_to_exe[i]  = wb_fp[i].result;
             fp_write_paddr_exe[i] = wb_fp[i].fprd;
@@ -1288,6 +1293,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             wb_cu_int.fwrite_enable[i] = wb_fp[i].regfile_we;
             wb_cu_int.fsnoop_enable[i] = wb_fp[i].regfile_we;
             wb_cu_int.fvalid[i]        = wb_fp[i].valid;
+            `ifdef VERILATOR
+            instruction_fp_writeback_gl[i].addr      = wb_fp[i].addr;
+            `endif
         end
 
         wb_cu_int.checkpoint_done = wb_scalar[0].checkpoint_done;

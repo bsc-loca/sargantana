@@ -482,6 +482,7 @@ always_comb begin
         4'b0101: data_to_wb = {112'b0,data_half};
         4'b0110: data_to_wb = {96'b0,data_word};
         4'b0111: data_to_wb = {64'b0,data_dword};
+        default: data_to_wb = instruction_to_wb.data_rs1;
     endcase
 end
 

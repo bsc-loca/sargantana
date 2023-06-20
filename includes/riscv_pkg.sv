@@ -884,15 +884,6 @@ localparam logic [63:0] MSTATUS_SXL    = 64'h0000000C00000000;
 localparam logic [63:0] MSTATUS64_SD   = 64'h8000000000000000;
 localparam logic [63:0] MSTATUS64_WPRI = 64'h7ffffff5ff800044;
 
-typedef enum logic [2:0] {
-    CSRRW  = 3'h1,
-    CSRRS  = 3'h2,
-    CSRRC  = 3'h3,
-    CSRRWI = 3'h5,
-    CSRRSI = 3'h6,
-    CSRRCI = 3'h7
-} csr_op_t;
-
 // decoded CSR address
 typedef struct packed {
     logic [1:0]  rw;

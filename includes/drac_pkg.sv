@@ -939,7 +939,7 @@ typedef struct packed {
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
-    addr_t          addr;
+    addr_t          addr;                   // Virtual address of memory op.
     `endif
     logic           ex_valid;
     logic           stall_csr_fence;        // CSR or fence
@@ -965,7 +965,9 @@ typedef struct packed {
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
-    addr_t addr;
+    `ifdef VERILATOR
+    addr_t addr;                            // Virtual address of memory op.
+    `endif
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
 } gl_wb_data_t;
 
