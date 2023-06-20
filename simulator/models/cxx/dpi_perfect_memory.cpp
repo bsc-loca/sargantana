@@ -92,14 +92,14 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 
     if (is_double) {
         uint32_t data_hi, data_lo;
-        memoryContents.read(addr, data_lo);
-        memoryContents.read(addr + 4, data_hi);
+        memoryContents.read(addr_ptr[0], data_lo);
+        memoryContents.read(addr_ptr[0] + 4, data_hi);
 
         mem_val = ((uint64_t) data_hi << 32) | data_lo;
         core_val = ((uint64_t) data_ptr[offset + 1] << 32) | data_ptr[offset];
     } else {
         uint32_t data_lo;
-        memoryContents.read(addr, data_lo);
+        memoryContents.read(addr_ptr[0], data_lo);
 
         mem_val = (int32_t) data_lo;
         core_val = (int32_t) data_ptr[offset];
@@ -125,10 +125,10 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 
     // Write contents to memory
     if (is_double) {
-        memoryContents.write(addr, result & 0xffffffff, 0b1111);
-        memoryContents.write(addr + 4, result >> 32, 0b1111);
+        memoryContents.write(addr_ptr[0], result & 0xffffffff, 0b1111);
+        memoryContents.write(addr_ptr[0] + 4, result >> 32, 0b1111);
     } else {
-        memoryContents.write(addr, result & 0xffffffff, 0b1111);
+        memoryContents.write(addr_ptr[0], result & 0xffffffff, 0b1111);
     }
  }
 
