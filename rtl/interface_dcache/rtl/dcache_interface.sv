@@ -103,7 +103,6 @@ always_comb begin
 end 
 
 assign req_dcache_o.addr = req_cpu_dcache_i.data_rs1[48:0];
-assign req_dcache_o.wdata[0] = req_cpu_dcache_i.data_rs2;
 assign req_dcache_o.size = req_cpu_dcache_i.mem_size[2:0]; // TODO: Core supports bigger memory sizes than HPDC!
 assign req_dcache_o.sid = 3'b001;
 assign req_dcache_o.tid = req_cpu_dcache_i.rd;
