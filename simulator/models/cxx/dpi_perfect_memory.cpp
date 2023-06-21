@@ -8,6 +8,7 @@
 
 #include "loadelf.hpp"
 #include "globals.h"
+#include "dpi_torture.h"
 
 class Memory32 {                    // data width = 32-bit
     std::map<uint32_t, uint32_t> mem; // memory storage
@@ -72,18 +73,18 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 }
 
  void memory_amo(const svBitVecVal *addr_ptr, const svBitVecVal *size_ptr, const svBitVecVal *amo_op_ptr, const svBitVecVal *data_ptr, svBitVecVal *result_ptr) {
-    uint32_t addr = addr_ptr[0] & BUS_ADDR_MASK;
-    uint32_t size = size_ptr[0];
-    uint32_t amo_op = amo_op_ptr[0];
+    const uint32_t addr = addr_ptr[0];
+    const uint32_t size = size_ptr[0];
+    const uint32_t amo_op = amo_op_ptr[0];
 
-    bool is_double = size == 3;
+    const bool is_double = size == 3;
 
-    uint32_t offset = (addr >> (is_double ? 3 : 2)) % (BUS_WIDTH/32);
+    const uint32_t offset = (addr >> (is_double ? 3 : 2)) % (BUS_WIDTH/32);
 
     // Read old values
     for (unsigned int i = 0; i < BUS_WIDTH / 32; i++) {
         uint32_t dataRead;
-        memoryContents.read(addr + i * 4, dataRead);
+        memoryContents.read((addr & BUS_ADDR_MASK) + i * 4, dataRead);
         result_ptr[i] = dataRead;
     }
 
@@ -92,18 +93,21 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 
     if (is_double) {
         uint32_t data_hi, data_lo;
-        memoryContents.read(addr_ptr[0], data_lo);
-        memoryContents.read(addr_ptr[0] + 4, data_hi);
+        memoryContents.read(addr, data_lo);
+        memoryContents.read(addr + 4, data_hi);
 
         mem_val = ((uint64_t) data_hi << 32) | data_lo;
         core_val = ((uint64_t) data_ptr[offset + 1] << 32) | data_ptr[offset];
     } else {
         uint32_t data_lo;
-        memoryContents.read(addr_ptr[0], data_lo);
+        memoryContents.read(addr, data_lo);
 
         mem_val = (int32_t) data_lo;
         core_val = (int32_t) data_ptr[offset];
     }
+
+    int64_t mem_val_s = (int64_t) mem_val;
+    int64_t core_val_s = (int64_t) core_val;
 
     // Perform operation
     switch(amo_op) {
@@ -111,10 +115,10 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
         case 0b0001: result = mem_val & ~core_val; break; //HPDCACHE_MEM_ATOMIC_CLR
         case 0b0010: result = mem_val | core_val; break;  //HPDCACHE_MEM_ATOMIC_SET
         case 0b0011: result = mem_val ^ core_val; break;  //HPDCACHE_MEM_ATOMIC_EOR
-        case 0b0100: result = mem_val > core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMAX
-        case 0b0101: result = mem_val < core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMIN
-        case 0b0110: result = (unsigned) mem_val > (unsigned) core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMAX
-        case 0b0111: result = (unsigned) mem_val < (unsigned) core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMIN
+        case 0b0100: result = mem_val_s > core_val_s ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMAX
+        case 0b0101: result = mem_val_s < core_val_s ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_SMIN
+        case 0b0110: result = mem_val > core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMAX
+        case 0b0111: result = mem_val < core_val ? mem_val : core_val; break; //HPDCACHE_MEM_ATOMIC_UMIN
         case 0b1000: result = core_val; break; //HPDCACHE_MEM_ATOMIC_SWAP
         //  Reserved           = 4'b1001,
         //  Reserved           = 4'b1010,
@@ -125,11 +129,14 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 
     // Write contents to memory
     if (is_double) {
-        memoryContents.write(addr_ptr[0], result & 0xffffffff, 0b1111);
-        memoryContents.write(addr_ptr[0] + 4, result >> 32, 0b1111);
+        memoryContents.write(addr, result & 0xffffffff, 0b1111);
+        memoryContents.write(addr + 4, result >> 32, 0b1111);
     } else {
-        memoryContents.write(addr_ptr[0], result & 0xffffffff, 0b1111);
+        memoryContents.write(addr, result & 0xffffffff, 0b1111);
     }
+
+    // Add information to torture dump
+    torture_dump_amo_write(addr, result);
  }
 
 void memory_init(std::string filename) {

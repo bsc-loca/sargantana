@@ -76,10 +76,11 @@ extern void torture_dump (unsigned long long cycles, const commit_data_t *commit
   #endif
 extern void check_deadlock (unsigned long long cycles, unsigned long long PC, unsigned long long commit_valid);
 extern void csr_change(unsigned long long addr, unsigned long long value);
-extern void torture_dump_amo_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data);
 #ifdef __cplusplus
 }
 #endif
+
+void torture_dump_amo_write(const uint32_t baseAddress, const uint64_t data);
 
 // Class to hold the torture signature
 class tortureSignature {

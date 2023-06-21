@@ -276,13 +276,6 @@ module l2_behav #(
     input logic                    dc_uc_rd_ready_i
 );
 
-    import "DPI-C" function void torture_dump_amo_write (input bit [31:0] addr, input bit [3:0] size, input bit [LINE_SIZE-1:0] data);
-
-    function void amo_write(input bit [31:0] addr, input bit [(LINE_SIZE/8)-1:0] byte_enable, input bit [LINE_SIZE-1:0] data);
-        memory_write(addr, byte_enable, data);
-        //torture_dump_amo_write(addr, size, data); TODO!!!!
-    endfunction
-
     // *** iCache memory channel logic ***
 
     logic [$clog2(INST_DELAY)+1:0] ic_counter;

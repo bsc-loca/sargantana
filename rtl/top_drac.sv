@@ -797,7 +797,7 @@ assign dcache_req[0].tid = 0;
 assign dcache_req[0].need_rsp = 1'b1;
 
 assign dmem_ptw_comm.resp.valid = dcache_rsp_valid[0];
-assign dmem_ptw_comm.resp.data = dcache_rsp[0].rdata; //TODO: Shift
+assign dmem_ptw_comm.resp.data = dcache_rsp[0].rdata;
 
 //PMU  
 assign imiss_l2_hit = ifill_resp.ack & io_core_pmu_l2_hit_i; 

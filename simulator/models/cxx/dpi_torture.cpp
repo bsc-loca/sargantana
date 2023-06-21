@@ -256,12 +256,8 @@ void csr_change(unsigned long long addr, unsigned long long value) {
 
 std::stack<uint64_t> amo_writes;
 
-void torture_dump_amo_write(const svBitVecVal *addr, const svBitVecVal *size, const svBitVecVal *data) {
-    uint32_t baseAddress = addr[0];
-
-    if (size[0] == 2) amo_writes.push(data[0]);
-    else if (size[0] == 3) amo_writes.push(((uint64_t) data[1]) << 32 | data[0]);
-    else assert(false);
+void torture_dump_amo_write(const uint32_t baseAddress,  const uint64_t data) {
+    amo_writes.push(data);
 }
 
 #ifndef INCISIVE_SIMULATION
