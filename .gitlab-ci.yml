@@ -125,6 +125,7 @@ benchmarks:
   dependencies:
     - build-simulator
     - build-benchmarks
+  timeout: 4h
   script:
     - ./run-benchmarks.sh
 
@@ -135,9 +136,19 @@ torture:
       when: always
   dependencies:
     - build-torture
+  timeout: 4h
+  parallel:
+    matrix:
+      - CONFIG:
+        - peta
+        - large_fp
+        - tlb_large
+        - tlb_medium
   script:
-    - $RISCV_GCC --version
-    - make run-torture
+    - tb/tb_torture/run_torture.sh $CONFIG
+  artifacts:
+    paths:
+    - tb/tb_torture/signatures
 
 #questa:verilog:
 #  image: localhost:5000/epi_rtl-vsim
