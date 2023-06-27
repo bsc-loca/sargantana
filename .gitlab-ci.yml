@@ -135,6 +135,7 @@ torture:
     - if: ($CI_PIPELINE_SOURCE == "schedule")
       when: always
   dependencies:
+    - build-simulator
     - build-torture
   timeout: 4h
   parallel:
