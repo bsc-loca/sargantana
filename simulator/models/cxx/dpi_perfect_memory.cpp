@@ -79,7 +79,7 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
 
     const bool is_double = size == 3;
 
-    const uint32_t offset = (addr >> (is_double ? 3 : 2)) % (BUS_WIDTH/32);
+    const uint32_t offset = (addr >> 2) % (BUS_WIDTH/32);
 
     // Read old values
     for (unsigned int i = 0; i < BUS_WIDTH / 32; i++) {
