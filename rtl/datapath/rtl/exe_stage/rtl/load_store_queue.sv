@@ -113,7 +113,7 @@ always_comb begin
         translated_instr.ex.cause       = instr_to_translate.is_amo_or_store ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;
-    end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_store) begin // Page fault store
+    end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_or_store) begin // Page fault store
         translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;

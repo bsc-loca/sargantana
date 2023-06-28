@@ -148,6 +148,7 @@ torture:
   script:
     - tb/tb_torture/run_torture.sh $CONFIG
   artifacts:
+    when: on_failure
     paths:
     - tb/tb_torture/signatures
 
