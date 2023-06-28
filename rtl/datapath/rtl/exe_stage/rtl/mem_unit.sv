@@ -267,8 +267,8 @@ always_comb begin
                         instruction_s1_d = 'h0;
                     end
 
-                    // Advance LSQ ONLY when a transaction is performed
-                    read_next_lsq = req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready;
+                    // Advance LSQ when a transaction is performed OR if the instruction has an exception
+                    read_next_lsq = (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) | instruction_to_dcache.ex.valid;
                 end
             end
         endcase
