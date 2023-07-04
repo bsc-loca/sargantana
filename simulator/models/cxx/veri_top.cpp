@@ -129,16 +129,12 @@ void restore_model(const char* filename) {
 
 VerilatedFstC* fst;
 bool vcd_enable = false;
+bool stop_requested = false;
 
 void signalHandler( int signum ) {
-   std::cout << "Interrupt signal (" << signum << ") received." << std::endl;
-
-   if (vcd_enable) {
-        std::cout << "Saving waveform..." << std::endl;
-        fst->close();
-   } 
-
-   exit(signum);
+    std::cout << "Interrupt signal (" << signum << ") received." << std::endl;
+    std::cout << "Stop requested." << std::endl;
+    stop_requested = true;
 }
 
 int main(int argc, char** argv) {
@@ -344,7 +340,7 @@ int main(int argc, char** argv) {
     //#####################################################################
     while(!Verilated::gotFinish() && (!exit_code || exit_delay > 1) &&
            (max_time == 0 || main_time < max_time) && finish_due_renaming_error == 0 &&
-	   (exit_delay != 1) && (!torture_dump_valid || torture_signature->dump_check()) 
+	   (exit_delay != 1) && (!torture_dump_valid || torture_signature->dump_check()) && !stop_requested
 	   ) {
 
         if (checkpoint_cycles != 0 && (main_time % checkpoint_cycles) == 0 && main_time != 0) {

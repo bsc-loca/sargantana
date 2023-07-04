@@ -8,7 +8,7 @@ module veri_top
     input         rst_top
     );
 
-    // Bootrom wiressd
+    // Bootrom wires
     logic [23:0] brom_req_address;
     logic brom_req_valid;
     logic brom_ready;
