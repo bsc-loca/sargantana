@@ -94,10 +94,10 @@ module axi_wrapper (
         .brom_req_valid_o(brom_req_valid),
 
         // icache ports
-        .io_mem_acquire_valid(l1_request_valid),               
-        .io_mem_acquire_bits_addr_block(l1_request_paddr),   
-        .io_mem_grant_valid(l2_response_valid),         
-        .io_mem_grant_bits_data(l2_response_data),     
+        .io_mem_acquire_valid(l1_request_valid),
+        .io_mem_acquire_bits_addr_block(l1_request_paddr),
+        .io_mem_grant_valid(l2_response_valid),
+        .io_mem_grant_bits_data(l2_response_data),
         .io_mem_grant_bits_addr_beat(l2_response_seqnum),
 
         // dmem ports
@@ -170,13 +170,12 @@ module axi_wrapper (
 
         // *** iCache ***
 
-        .icache_miss_valid_i(),
-        .icache_miss_ready_o(),
-        .icache_miss_i(),
-        .icache_miss_id_i(),
+        .icache_miss_valid_i(l1_request_valid),
+        .icache_miss_paddr_i(l1_request_paddr),
 
-        .icache_miss_resp_valid_o(),
-        .icache_miss_resp_o(),
+        .icache_miss_resp_valid_o(l2_response_valid),
+        .icache_miss_resp_data_o(l2_response_data),
+        .icache_miss_resp_beat_o(l2_response_seqnum),
 
         // *** dCache ***
 

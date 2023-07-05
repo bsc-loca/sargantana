@@ -256,6 +256,51 @@ module axi_arbiter
     end else if (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH > ICACHE_LINE_WIDTH) begin
       // TODO: Downsize AXI data to iCache
 
+      hpdcache_fifo_reg #(
+          .FIFO_DEPTH  (1),
+          .fifo_data_t (hpdcache_pkg::hpdcache_mem_id_t)
+      ) i_icache_refill_meta_fifo (
+          .clk_i,
+          .rst_ni,
+
+          .w_i    (icache_miss_resp_meta_w),
+          .wok_o  (icache_miss_resp_meta_wok),
+          .wdata_i(icache_miss_resp_wdata.mem_resp_r_id),
+
+          .r_i    (icache_miss_resp_meta_r),
+          .rok_o  (icache_miss_resp_meta_rok),
+          .rdata_o(icache_miss_resp_meta_id)
+      );
+
+      hpdcache_data_downsize #(
+          .WR_WIDTH(ICACHE_LINE_WIDTH),
+          .RD_WIDTH(hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+          .DEPTH(1)
+      ) i_icache_hpdcache_data_downsize (
+          .clk_i,
+          .rst_ni,
+
+          .w_i     (icache_miss_resp_data_w),
+          .wlast_i (icache_miss_resp_wdata.mem_resp_r_last),
+          .wok_o   (icache_miss_resp_data_wok),
+          .wdata_i (icache_miss_resp_wdata.mem_resp_r_data),
+
+          .r_i     (icache_miss_resp_data_r),
+          .rok_o   (icache_miss_resp_data_rok),
+          .rdata_o (icache_miss_resp_data_rdata)
+      );
+
+      assign icache_miss_resp_meta_r = 1'b1,
+             icache_miss_resp_data_r = 1'b1;
+
+      assign icache_miss_resp_meta_w = icache_miss_resp_w &
+             icache_miss_resp_wdata.mem_resp_r_last;
+
+      assign icache_miss_resp_data_w = icache_miss_resp_w;
+
+      assign icache_miss_resp_wok = icache_miss_resp_data_wok & (
+             icache_miss_resp_meta_wok | ~icache_miss_resp_wdata.mem_resp_r_last);
+
     end else begin
       assign icache_miss_resp_data_rok = icache_miss_resp_w;
       assign icache_miss_resp_meta_rok = icache_miss_resp_w;
