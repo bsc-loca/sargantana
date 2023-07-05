@@ -15,3 +15,9 @@
 [submodule "rtl/dcache"]
 	path = rtl/dcache
 	url = ../cv-hpdcache.git
+[submodule "fpga/common/rtl/axi"]
+	path = fpga/common/rtl/axi
+	url = https://github.com/pulp-platform/axi.git
+[submodule "fpga/common/rtl/axi_riscv_atomics"]
+	path = fpga/common/rtl/axi_riscv_atomics
+	url = https://github.com/pulp-platform/axi_riscv_atomics.git
