@@ -53,86 +53,53 @@ module top_drac
 // D-CACHE  INTERFACE
 //----------------------------------------------------------------------------------
 
-    // *** Miss-read Interface ***
+    //      Miss read interface
+    input  logic                          mem_req_miss_read_ready_i,
+    output logic                          mem_req_miss_read_valid_o,
+    output hpdcache_mem_req_t             mem_req_miss_read_o,
+    input  hpdcache_mem_id_t              mem_req_miss_read_base_id_i,
 
-    input logic                   mem_req_miss_read_ready_i,
-    input hpdcache_mem_id_t       mem_req_miss_read_base_id_i,
-    output logic                  mem_req_miss_read_valid_o,
-    output hpdcache_mem_addr_t    mem_req_addr_o,
-    output hpdcache_mem_len_t     mem_req_len_o,
-    output hpdcache_mem_size_t    mem_req_size_o,
-    output hpdcache_mem_id_t      mem_req_id_o,
+    output logic                          mem_resp_miss_read_ready_o,
+    input  logic                          mem_resp_miss_read_valid_i,
+    input  hpdcache_mem_resp_r_t          mem_resp_miss_read_i,
 
-    input logic                   mem_resp_miss_read_valid_i,
-    input hpdcache_mem_error_e    mem_resp_r_error_i,
-    input hpdcache_mem_id_t       mem_resp_r_id_i,
-    input hpdcache_mem_data_t     mem_resp_r_data_i,
-    input logic                   mem_resp_r_last_i,
-    output logic                  mem_resp_miss_read_ready_o,
+    //      Write-buffer write interface
+    input  logic                          mem_req_wbuf_write_ready_i,
+    output logic                          mem_req_wbuf_write_valid_o,
+    output hpdcache_mem_req_t             mem_req_wbuf_write_o,
+    input  hpdcache_mem_id_t              mem_req_wbuf_write_base_id_i,
 
-    // *** Writeback Interface ***
+    input  logic                          mem_req_wbuf_write_data_ready_i,
+    output logic                          mem_req_wbuf_write_data_valid_o,
+    output hpdcache_mem_req_w_t           mem_req_wbuf_write_data_o,
 
-    input  logic                  mem_req_wbuf_write_ready_i,
-    output logic                  mem_req_wbuf_write_valid_o,
-    output hpdcache_mem_addr_t    mem_req_wbuf_write_addr_o,
-    output hpdcache_mem_len_t     mem_req_wbuf_write_len_o,
-    output hpdcache_mem_size_t    mem_req_wbuf_write_size_o,
-    output hpdcache_mem_id_t      mem_req_wbuf_write_id_o,
-    input  hpdcache_mem_id_t      mem_req_wbuf_write_base_id_i,
+    output logic                          mem_resp_wbuf_write_ready_o,
+    input  logic                          mem_resp_wbuf_write_valid_i,
+    input  hpdcache_mem_resp_w_t          mem_resp_wbuf_write_i,
 
-    input  logic                  mem_req_wbuf_write_data_ready_i,
-    output logic                  mem_req_wbuf_write_data_valid_o,
-    output hpdcache_mem_data_t    mem_req_wbuf_write_data_o,
-    output hpdcache_mem_be_t      mem_req_wbuf_write_be_o,
-    output logic                  mem_req_wbuf_write_last_o,
+    //      Uncached read interface
+    input  logic                          mem_req_uc_read_ready_i,
+    output logic                          mem_req_uc_read_valid_o,
+    output hpdcache_mem_req_t             mem_req_uc_read_o,
+    input  hpdcache_mem_id_t              mem_req_uc_read_base_id_i,
 
-    output logic                  mem_resp_wbuf_write_ready_o,
-    input  logic                  mem_resp_wbuf_write_valid_i,
-    input  hpdcache_mem_error_e   mem_resp_wbuf_write_error_i,
-    input  hpdcache_mem_id_t      mem_resp_wbuf_write_id_i,
+    output logic                          mem_resp_uc_read_ready_o,
+    input  logic                          mem_resp_uc_read_valid_i,
+    input  hpdcache_mem_resp_r_t          mem_resp_uc_read_i,
 
-    // *** Uncacheable Writeback Interface ***
+    //      Uncached write interface
+    input  logic                          mem_req_uc_write_ready_i,
+    output logic                          mem_req_uc_write_valid_o,
+    output hpdcache_mem_req_t             mem_req_uc_write_o,
+    input  hpdcache_mem_id_t              mem_req_uc_write_base_id_i,
 
-    input  logic                  mem_req_uc_write_ready_i,
-    output logic                  mem_req_uc_write_valid_o,
-    output hpdcache_mem_addr_t    mem_req_uc_write_addr_o,
-    output hpdcache_mem_len_t     mem_req_uc_write_len_o,
-    output hpdcache_mem_size_t    mem_req_uc_write_size_o,
-    output hpdcache_mem_id_t      mem_req_uc_write_id_o,
-    output hpdcache_mem_command_e mem_req_uc_write_command_o,
-    output hpdcache_mem_atomic_e  mem_req_uc_write_atomic_o,
-    input  hpdcache_mem_id_t      mem_req_uc_write_base_id_i,
+    input  logic                          mem_req_uc_write_data_ready_i,
+    output logic                          mem_req_uc_write_data_valid_o,
+    output hpdcache_mem_req_w_t           mem_req_uc_write_data_o,
 
-    input  logic                  mem_req_uc_write_data_ready_i,
-    output logic                  mem_req_uc_write_data_valid_o,
-    output hpdcache_mem_data_t    mem_req_uc_write_data_o,
-    output hpdcache_mem_be_t      mem_req_uc_write_be_o,
-    output logic                  mem_req_uc_write_last_o,
-
-    output logic                  mem_resp_uc_write_ready_o,
-    input  logic                  mem_resp_uc_write_valid_i,
-    input  logic                  mem_resp_uc_write_is_atomic_i,
-    input  hpdcache_mem_error_e   mem_resp_uc_write_error_i,
-    input  hpdcache_mem_id_t      mem_resp_uc_write_id_i,
-
-    // *** Uncacheable Read Interface ***
-
-    input  logic                  mem_req_uc_read_ready_i,
-    output logic                  mem_req_uc_read_valid_o,
-    output hpdcache_mem_addr_t    mem_req_uc_read_addr_o,
-    output hpdcache_mem_len_t     mem_req_uc_read_len_o,
-    output hpdcache_mem_size_t    mem_req_uc_read_size_o,
-    output hpdcache_mem_id_t      mem_req_uc_read_id_o,
-    output hpdcache_mem_command_e mem_req_uc_read_command_o,
-    output hpdcache_mem_atomic_e  mem_req_uc_read_atomic_o,
-    input  hpdcache_mem_id_t      mem_req_uc_read_base_id_i,
-
-    input logic                   mem_resp_uc_read_valid_i,
-    input hpdcache_mem_error_e    mem_resp_uc_read_error_i,
-    input hpdcache_mem_id_t       mem_resp_uc_read_id_i,
-    input hpdcache_mem_data_t     mem_resp_uc_read_data_i,
-    input logic                   mem_resp_uc_read_last_i,
-    output logic                  mem_resp_uc_read_ready_o,
+    output logic                          mem_resp_uc_write_ready_o,
+    input  logic                          mem_resp_uc_write_valid_i,
+    input  hpdcache_mem_resp_w_t          mem_resp_uc_write_i,
 
 
 //-----------------------------------------------------------------------------------
@@ -293,7 +260,8 @@ always @(posedge CLK, negedge RST) begin
     if(~RST)
         dcache_addr <= 0;
     else
-        dcache_addr <= mem_req_addr_o;
+        // TODO: This could be wrong, maybe last access was write/uncacheable
+        dcache_addr <= mem_req_miss_read_o.mem_req_addr;
 end
 
 assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
@@ -520,82 +488,6 @@ sargantana_top_icache icache (
     .imiss_kill_pmu_o    ( imiss_kill_pmu )
 );
 
-// *** dCache-memory interface ***
-
-//      Miss read interface
-hpdcache_mem_req_t             mem_req_miss_read;
-
-assign mem_req_addr_o = mem_req_miss_read.mem_req_addr;
-assign mem_req_len_o  = mem_req_miss_read.mem_req_len;
-assign mem_req_size_o = mem_req_miss_read.mem_req_size;
-assign mem_req_id_o   = mem_req_miss_read.mem_req_id;
-
-hpdcache_mem_resp_r_t          mem_resp_miss_read;
-
-assign mem_resp_miss_read.mem_resp_r_error = mem_resp_r_error_i;
-assign mem_resp_miss_read.mem_resp_r_id = mem_resp_r_id_i;
-assign mem_resp_miss_read.mem_resp_r_data = mem_resp_r_data_i;
-assign mem_resp_miss_read.mem_resp_r_last = mem_resp_r_last_i;
-
-//      Write-buffer write interface
-hpdcache_mem_req_t    mem_req_wbuf_write;
-
-assign mem_req_wbuf_write_addr_o = mem_req_wbuf_write.mem_req_addr;
-assign mem_req_wbuf_write_len_o  = mem_req_wbuf_write.mem_req_len;
-assign mem_req_wbuf_write_size_o = mem_req_wbuf_write.mem_req_size;
-assign mem_req_wbuf_write_id_o   = mem_req_wbuf_write.mem_req_id;
-
-hpdcache_mem_req_w_t  mem_req_wbuf_write_data;
-
-assign mem_req_wbuf_write_data_o = mem_req_wbuf_write_data.mem_req_w_data;
-assign mem_req_wbuf_write_be_o   = mem_req_wbuf_write_data.mem_req_w_be;
-assign mem_req_wbuf_write_last_o = mem_req_wbuf_write_data.mem_req_w_last;
-
-hpdcache_mem_resp_w_t mem_resp_wbuf_write;
-
-assign mem_resp_wbuf_write.mem_resp_w_error = mem_resp_wbuf_write_error_i;
-assign mem_resp_wbuf_write.mem_resp_w_id = mem_resp_wbuf_write_id_i;
-assign mem_resp_wbuf_write.mem_resp_w_is_atomic = 1'b0;
-
-//      Uncacheable write interface
-hpdcache_mem_req_t    mem_req_uc_write;
-
-assign mem_req_uc_write_addr_o    = mem_req_uc_write.mem_req_addr;
-assign mem_req_uc_write_len_o     = mem_req_uc_write.mem_req_len;
-assign mem_req_uc_write_size_o    = mem_req_uc_write.mem_req_size;
-assign mem_req_uc_write_id_o      = mem_req_uc_write.mem_req_id;
-assign mem_req_uc_write_command_o = mem_req_uc_write.mem_req_command;
-assign mem_req_uc_write_atomic_o  = mem_req_uc_write.mem_req_atomic;
-
-hpdcache_mem_req_w_t  mem_req_uc_write_data;
-
-assign mem_req_uc_write_data_o = mem_req_uc_write_data.mem_req_w_data;
-assign mem_req_uc_write_be_o   = mem_req_uc_write_data.mem_req_w_be;
-assign mem_req_uc_write_last_o = mem_req_uc_write_data.mem_req_w_last;
-
-hpdcache_mem_resp_w_t mem_resp_uc_write;
-
-assign mem_resp_uc_write.mem_resp_w_error = mem_resp_uc_write_error_i;
-assign mem_resp_uc_write.mem_resp_w_id = mem_resp_uc_write_id_i;
-assign mem_resp_uc_write.mem_resp_w_is_atomic = mem_resp_uc_write_is_atomic_i;
-
-//      Uncacheable read interface
-hpdcache_mem_req_t mem_req_uc_read;
-
-assign mem_req_uc_read_addr_o    = mem_req_uc_read.mem_req_addr;
-assign mem_req_uc_read_len_o     = mem_req_uc_read.mem_req_len;
-assign mem_req_uc_read_size_o    = mem_req_uc_read.mem_req_size;
-assign mem_req_uc_read_id_o      = mem_req_uc_read.mem_req_id;
-assign mem_req_uc_read_command_o = mem_req_uc_read.mem_req_command;
-assign mem_req_uc_read_atomic_o  = mem_req_uc_read.mem_req_atomic;
-
-hpdcache_mem_resp_r_t mem_resp_uc_read;
-
-assign mem_resp_uc_read.mem_resp_r_error = mem_resp_uc_read_error_i;
-assign mem_resp_uc_read.mem_resp_r_id    = mem_resp_uc_read_id_i;
-assign mem_resp_uc_read.mem_resp_r_data  = mem_resp_uc_read_data_i;
-assign mem_resp_uc_read.mem_resp_r_last  = mem_resp_uc_read_last_i;
-
 hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .clk_i(CLK),
     .rst_ni(RST),
@@ -610,50 +502,50 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     // dMem miss-read interface
     .mem_req_miss_read_ready_i(mem_req_miss_read_ready_i),
     .mem_req_miss_read_valid_o(mem_req_miss_read_valid_o),
-    .mem_req_miss_read_o(mem_req_miss_read),
+    .mem_req_miss_read_o(mem_req_miss_read_o),
     .mem_req_miss_read_base_id_i(mem_req_miss_read_base_id_i),
 
     .mem_resp_miss_read_ready_o(mem_resp_miss_read_ready_o),
     .mem_resp_miss_read_valid_i(mem_resp_miss_read_valid_i),
-    .mem_resp_miss_read_i(mem_resp_miss_read),
+    .mem_resp_miss_read_i(mem_resp_miss_read_i),
 
     // dMem writeback interface
     .mem_req_wbuf_write_ready_i(mem_req_wbuf_write_ready_i),
     .mem_req_wbuf_write_valid_o(mem_req_wbuf_write_valid_o),
-    .mem_req_wbuf_write_o(mem_req_wbuf_write),
+    .mem_req_wbuf_write_o(mem_req_wbuf_write_o),
     .mem_req_wbuf_write_base_id_i(mem_req_wbuf_write_base_id_i),
 
     .mem_req_wbuf_write_data_ready_i(mem_req_wbuf_write_data_ready_i),
     .mem_req_wbuf_write_data_valid_o(mem_req_wbuf_write_data_valid_o),
-    .mem_req_wbuf_write_data_o(mem_req_wbuf_write_data),
+    .mem_req_wbuf_write_data_o(mem_req_wbuf_write_data_o),
 
     .mem_resp_wbuf_write_ready_o(mem_resp_wbuf_write_ready_o),
     .mem_resp_wbuf_write_valid_i(mem_resp_wbuf_write_valid_i),
-    .mem_resp_wbuf_write_i(mem_resp_wbuf_write),
+    .mem_resp_wbuf_write_i(mem_resp_wbuf_write_i),
 
     // dMem uncacheable write interface
     .mem_req_uc_write_ready_i(mem_req_uc_write_ready_i),
     .mem_req_uc_write_valid_o(mem_req_uc_write_valid_o),
-    .mem_req_uc_write_o(mem_req_uc_write),
+    .mem_req_uc_write_o(mem_req_uc_write_o),
     .mem_req_uc_write_base_id_i(mem_req_uc_write_base_id_i),
 
     .mem_req_uc_write_data_ready_i(mem_req_uc_write_data_ready_i),
     .mem_req_uc_write_data_valid_o(mem_req_uc_write_data_valid_o),
-    .mem_req_uc_write_data_o(mem_req_uc_write_data),
+    .mem_req_uc_write_data_o(mem_req_uc_write_data_o),
 
     .mem_resp_uc_write_ready_o(mem_resp_uc_write_ready_o),
     .mem_resp_uc_write_valid_i(mem_resp_uc_write_valid_i),
-    .mem_resp_uc_write_i(mem_resp_uc_write),
+    .mem_resp_uc_write_i(mem_resp_uc_write_i),
 
     // dMem uncacheable read interface
     .mem_req_uc_read_ready_i(mem_req_uc_read_ready_i),
     .mem_req_uc_read_valid_o(mem_req_uc_read_valid_o),
-    .mem_req_uc_read_o(mem_req_uc_read),
+    .mem_req_uc_read_o(mem_req_uc_read_o),
     .mem_req_uc_read_base_id_i(mem_req_uc_read_base_id_i),
 
     .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready_o),
     .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid_i),
-    .mem_resp_uc_read_i(mem_resp_uc_read),
+    .mem_resp_uc_read_i(mem_resp_uc_read_i),
 
     // misc
     .wbuf_empty_o(wbuf_empty),
