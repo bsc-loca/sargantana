@@ -288,7 +288,6 @@ module axi_arbiter
           .rst_ni,
 
           .w_i     (icache_miss_resp_data_w),
-          .wlast_i (icache_miss_resp_wdata.mem_resp_r_last),
           .wok_o   (icache_miss_resp_data_wok),
           .wdata_i (icache_miss_resp_wdata.mem_resp_r_data),
 
