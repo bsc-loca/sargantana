@@ -16,6 +16,11 @@ include benchmarks.mk
 # *** Torture Tests ***
 include tb/tb_torture/torture.mk
 
+# *** MEEP FPGA simulator ***
+include fpga/meep_shell/simulator/simulator.mk
+
+sim-meep: $(MEEP_SIMULATOR)
+
 # *** CI rules ***
 lint:
 	bash ./scripts/veri_lint.sh

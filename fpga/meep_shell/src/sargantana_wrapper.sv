@@ -1,3 +1,5 @@
+import fpga_pkg::*;
+
 module sargantana_wrapper(
     input            clk_i,
     input            mc_clk,
@@ -84,6 +86,10 @@ module sargantana_wrapper(
     input                                uart_irq
 );
 
+    logic rstn;
+
+    assign rstn = pcie_gpio[0];
+
     // AXI Crossbar Configuration
 
     localparam axi_pkg::xbar_cfg_t xbar_cfg = '{
@@ -94,9 +100,9 @@ module sargantana_wrapper(
         FallThrough:        1'b0,
         LatencyMode:        axi_pkg::CUT_ALL_AX,
         PipelineStages:     1,
-        AxiIdWidthSlvPorts: TbAxiIdWidthMasters,
-        AxiIdUsedSlvPorts:  TbAxiIdUsed,
-        UniqueIds:          TbUniqueIds,
+        AxiIdWidthSlvPorts: 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        AxiIdUsedSlvPorts:  32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        UniqueIds:          1,
         AxiAddrWidth:       `AXI4_ADDR_WIDTH,
         AxiDataWidth:       `AXI4_DATA_WIDTH,
         NoAddrRules:        2
@@ -120,21 +126,21 @@ module sargantana_wrapper(
     };
 
     // master structs
-    mst_req_t  [xbar_cfg.NoMstPorts-1:0] masters_req;
-    mst_resp_t [xbar_cfg.NoMstPorts-1:0] masters_resp;
+    fpga_pkg::mst_req_t  [xbar_cfg.NoMstPorts-1:0] masters_req;
+    fpga_pkg::mst_resp_t [xbar_cfg.NoMstPorts-1:0] masters_resp;
 
     AXI_BUS #(
         .AXI_ADDR_WIDTH ( `AXI4_ADDR_WIDTH      ),
         .AXI_DATA_WIDTH ( `AXI4_DATA_WIDTH      ),
-        .AXI_ID_WIDTH   ( TbAxiIdWidthMasters ),
-        .AXI_USER_WIDTH ( TbAxiUserWidth      )
+        .AXI_ID_WIDTH   ( hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH + $clog2(xbar_cfg.NoMstPorts) ),
+        .AXI_USER_WIDTH ( hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH + $clog2(xbar_cfg.NoMstPorts) )
     ) master_bus [xbar_cfg.NoMstPorts-1:0] ();
     
     AXI_BUS #(
         .AXI_ADDR_WIDTH ( `AXI4_ADDR_WIDTH     ),
         .AXI_DATA_WIDTH ( `AXI4_DATA_WIDTH     ),
-        .AXI_ID_WIDTH   ( TbAxiIdWidthSlaves ),
-        .AXI_USER_WIDTH ( TbAxiUserWidth     )
+        .AXI_ID_WIDTH   ( 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH) ),
+        .AXI_USER_WIDTH ( 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH) )
     ) slave_bus [xbar_cfg.NoSlvPorts-1:0] ();
 
     // Connect core AXI master to xbar slave
@@ -153,7 +159,7 @@ module sargantana_wrapper(
         .rule_t         ( rule_t          )
     ) xbar_inst (
         .clk_i                  ( clk_i    ),
-        .rst_ni                 ( rstn_i   ),
+        .rst_ni                 ( rstn   ),
         .test_i                 ( 1'b0    ),
         .slv_ports              ( slave_bus ),
         .mst_ports              ( master_bus  ),
@@ -164,7 +170,7 @@ module sargantana_wrapper(
 
     axi_wrapper core_inst (
         .clk_i(clk_i),
-        .rstn_i(rstn_i),
+        .rstn_i(rstn),
 
         .axi_o(slave_bus[0])
     );

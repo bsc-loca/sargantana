@@ -34,10 +34,10 @@ VERI_FLAGS = \
 VERI_OPTI_FLAGS = -O2 -CFLAGS "-O2"
 
 SIM_CPP_SRCS = $(wildcard $(SIM_DIR)/models/cxx/*.cpp)
-SIM_VERILOG_SRCS = $(shell cat $(FILELIST)) $(wildcard $(SIM_DIR)/models/hdl/*.sv) $(SIM_DIR)/veri_top.sv
+SIM_VERILOG_SRCS = $(shell cat $(FILELIST)) $(wildcard $(SIM_DIR)/models/hdl/*.sv)
  
-$(SIMULATOR): $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) bootrom.hex $(SPIKE_DIR)/build/libriscv.so
-		$(VERILATOR) --cc $(VERI_FLAGS) $(VERI_OPTI_FLAGS) $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) -o $(SIMULATOR)
+$(SIMULATOR): $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) bootrom.hex $(SPIKE_DIR)/build/libriscv.so $(SIM_DIR)/veri_top.sv
+		$(VERILATOR) --cc $(VERI_FLAGS) $(VERI_OPTI_FLAGS) $(SIM_VERILOG_SRCS) $(SIM_CPP_SRCS) $(SIM_DIR)/veri_top.sv -o $(SIMULATOR)
 		$(MAKE) -C $(SIM_DIR)/build -f V$(TOP_MODULE).mk $(SIMULATOR)
 
 clean-simulator:

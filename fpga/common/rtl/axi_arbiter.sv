@@ -25,6 +25,11 @@
 *                  L1 Dcache (CV-HPDcache).
  *  History      : July, 2023. Modified for use with Sargantana instead of CVA6.
  */
+
+`include "defines.svh"
+
+import fpga_pkg::*;
+
 module axi_arbiter
 (
   input  wire logic                               clk_i,
@@ -86,8 +91,8 @@ module axi_arbiter
   output wire hpdcache_pkg::hpdcache_mem_resp_w_t dcache_uc_write_resp_o,
 
   // *** AXI interface ***
-  output mst_req_t                                axi_req_o,
-  input  mst_resp_t                               axi_resp_i
+  output fpga_pkg::mst_req_t                                axi_req_o,
+  input  fpga_pkg::mst_resp_t                               axi_resp_i
 );
 
   localparam AxiCacheDataWidth = hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH;
@@ -96,29 +101,36 @@ module axi_arbiter
 
   typedef logic [AxiCacheDataWidth-1:0] axi_cache_data_t;
   typedef logic [AxiCacheStrbWidth-1:0] axi_cache_strb_t;
+  typedef logic [`AXI4_ID_WIDTH-1:0]    axi_cache_id_t;
+  typedef logic [`AXI4_USER_WIDTH-1:0]  axi_cache_user_t;
+  typedef logic [`AXI4_ADDR_WIDTH-1:0]  axi_cache_addr_t;
+
+  `AXI_TYPEDEF_AW_CHAN_T(aw_chan_t, axi_cache_addr_t, axi_cache_id_t, axi_cache_user_t)
+  `AXI_TYPEDEF_AR_CHAN_T(ar_chan_t, axi_cache_addr_t, axi_cache_id_t, axi_cache_user_t)
+  `AXI_TYPEDEF_B_CHAN_T(b_chan_t, axi_cache_id_t, axi_cache_user_t)
 
   typedef struct packed {
       axi_cache_data_t      data;
       axi_cache_strb_t      strb;
       logic                 last;
-      ariane_axi::user_t    user;
+      axi_cache_user_t      user;
   } axi_cache_w_chan_t;
 
   typedef struct packed {
-      ariane_axi::id_t      id;
+      axi_cache_id_t        id;
       axi_cache_data_t      data;
       axi_pkg::resp_t       resp;
       logic                 last;
-      ariane_axi::user_t    user;
+      axi_cache_user_t      user;
   } axi_cache_r_chan_t;
 
   typedef struct packed {
-      ariane_axi::aw_chan_t aw;
+      aw_chan_t             aw;
       logic                 aw_valid;
       axi_cache_w_chan_t    w;
       logic                 w_valid;
       logic                 b_ready;
-      ariane_axi::ar_chan_t ar;
+      ar_chan_t             ar;
       logic                 ar_valid;
       logic                 r_ready;
   } axi_cache_req_t;
@@ -128,7 +140,7 @@ module axi_arbiter
       logic                 ar_ready;
       logic                 w_ready;
       logic                 b_valid;
-      ariane_axi::b_chan_t  b;
+      b_chan_t  b;
       logic                 r_valid;
       axi_cache_r_chan_t    r;
   } axi_cache_resp_t;
@@ -199,12 +211,7 @@ module axi_arbiter
   logic                                icache_miss_resp_meta_r, icache_miss_resp_meta_rok;
   hpdcache_pkg::hpdcache_mem_id_t      icache_miss_resp_meta_id;
 
-  assign icache_miss_resp_valid_o = icache_miss_resp_meta_rok,
-         icache_miss_resp_o.rtype = wt_cache_pkg::ICACHE_IFILL_ACK,
-         icache_miss_resp_o.data = icache_miss_resp_data_rdata,
-         icache_miss_resp_o.user = '0,
-         icache_miss_resp_o.inv = '0,
-         icache_miss_resp_o.tid = icache_miss_resp_meta_id;
+  assign icache_miss_resp_valid_o = icache_miss_resp_meta_rok;
 
   generate
     if (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH < ICACHE_LINE_WIDTH) begin
@@ -504,9 +511,9 @@ module axi_arbiter
   axi_cache_resp_t      axi_resp;
 
   hpdcache_mem_to_axi_write #(
-      .aw_chan_t          (ariane_axi::aw_chan_t),
+      .aw_chan_t          (aw_chan_t),
       .w_chan_t           (axi_cache_w_chan_t),
-      .b_chan_t           (ariane_axi::b_chan_t)
+      .b_chan_t           (b_chan_t)
   ) i_hpdcache_mem_to_axi_write (
       .req_ready_o        (mem_req_write_ready_arb),
       .req_valid_i        (mem_req_write_valid_arb),
@@ -534,7 +541,7 @@ module axi_arbiter
   );
 
   hpdcache_mem_to_axi_read #(
-    .ar_chan_t            (ariane_axi::ar_chan_t),
+    .ar_chan_t            (ar_chan_t),
     .r_chan_t             (axi_cache_r_chan_t)
   ) i_hpdcache_mem_to_axi_read (
     .req_ready_o          (mem_req_read_ready_arb),
@@ -557,4 +564,4 @@ module axi_arbiter
   assign axi_req_o = axi_req;
   assign axi_resp  = axi_resp_i;
 
-endmodule : cva6_hpdcache_subsystem_axi_arbiter
+endmodule

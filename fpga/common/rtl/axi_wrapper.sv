@@ -10,6 +10,8 @@
  *  History      :
  */
 
+import fpga_pkg::*;
+
 module axi_wrapper (
     input logic clk_i,
     input logic rstn_i,
@@ -161,8 +163,8 @@ module axi_wrapper (
         .brom_resp_valid_o(brom_resp_valid)
     );
 
-    axi_req_t axi_req;
-    axi_resp_t axi_resp;
+    fpga_pkg::mst_req_t axi_req;
+    fpga_pkg::mst_resp_t axi_resp;
 
     axi_arbiter axi_arbiter_inst(
         .clk_i(clk_i),
@@ -231,8 +233,8 @@ module axi_wrapper (
     );
 
     AXI_BUS #(
-        .AXI_ADDR_WIDTH (512),
-        .AXI_DATA_WIDTH (64),
+        .AXI_ADDR_WIDTH (32),
+        .AXI_DATA_WIDTH (512),
         .AXI_ID_WIDTH   (8),
         .AXI_USER_WIDTH (0)
     ) axi_to_core();
@@ -240,7 +242,15 @@ module axi_wrapper (
     `AXI_ASSIGN_TO_REQ(axi_req, axi_to_core)
     `AXI_ASSIGN_TO_RESP(axi_resp, axi_to_core)
 
-    axi_riscv_atomics_wrap #() atomics_processor (
+    axi_riscv_atomics_wrap #(
+        .AXI_ADDR_WIDTH(32),
+        .AXI_DATA_WIDTH(512),
+        .AXI_ID_WIDTH(8),
+        .AXI_USER_WIDTH(0),
+        .AXI_MAX_READ_TXNS(128),
+        .AXI_MAX_WRITE_TXNS(128),
+        .RISCV_WORD_WIDTH(64)
+    ) atomics_processor (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
         .mst(axi_o),
