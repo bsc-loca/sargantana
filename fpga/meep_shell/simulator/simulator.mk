@@ -35,7 +35,7 @@ MEEP_SIM_CPP_SRCS = $(SIM_CPP_SRCS) $(wildcard $(MEEP_SIM_DIR)/models/cxx/*.cpp)
 MEEP_SIM_VERILOG_SRCS = $(SIM_VERILOG_SRCS) $(shell cat $(PROJECT_DIR)/fpga/common/filelist.f) $(wildcard $(PROJECT_DIR)/fpga/meep_shell/src/*) $(wildcard $(MEEP_SIM_DIR)/models/hdl/*.sv)
  
 $(MEEP_SIMULATOR): $(MEEP_SIM_VERILOG_SRCS) $(MEEP_SIM_CPP_SRCS) bootrom.hex $(SPIKE_DIR)/build/libriscv.so $(MEEP_SIM_DIR)/veri_top.sv
-		$(VERILATOR) --cc $(MEEP_VERI_FLAGS) $(VERI_OPTI_FLAGS) $(MEEP_SIM_VERILOG_SRCS) $(MEEP_SIM_CPP_SRCS) $(MEEP_SIM_DIR)/veri_top.sv -o $(SIMULATOR)
+		$(VERILATOR) --cc $(MEEP_VERI_FLAGS) $(VERI_OPTI_FLAGS) $(MEEP_SIM_VERILOG_SRCS) $(MEEP_SIM_CPP_SRCS) $(MEEP_SIM_DIR)/veri_top.sv -o $(MEEP_SIMULATOR)
 		$(MAKE) -C $(MEEP_SIM_DIR)/build -f V$(TOP_MODULE).mk $(MEEP_SIMULATOR)
 
 clean-meep-simulator:

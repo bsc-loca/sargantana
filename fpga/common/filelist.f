@@ -132,6 +132,8 @@
 ./fpga/common/rtl/axi_riscv_atomics/src/axi_riscv_atomics_wrap.sv
 ./fpga/common/rtl/axi_riscv_atomics/src/axi_riscv_atomics_structs.sv
 ./fpga/common/includes/fpga_pkg.sv
+./rtl/dcache/rtl/src/utils/hpdcache_mem_to_axi_read.sv
+./rtl/dcache/rtl/src/utils/hpdcache_mem_to_axi_write.sv
 ./fpga/common/rtl/axi_arbiter.sv
 ./fpga/common/rtl/bootrom.sv
 ./fpga/common/rtl/axi_wrapper.sv

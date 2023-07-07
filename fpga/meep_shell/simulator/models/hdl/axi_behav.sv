@@ -85,7 +85,9 @@ module axi_behav (
         .AddrWidth(`AXI4_ADDR_WIDTH),
         .DataWidth(`AXI4_DATA_WIDTH),
         .IdWidth(`AXI4_ID_WIDTH),
-        .NumBanks(1)
+        .NumBanks(1),
+        .axi_req_t(fpga_pkg::slv_req_t),
+        .axi_resp_t(fpga_pkg::slv_resp_t)
     ) translator_inst (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
