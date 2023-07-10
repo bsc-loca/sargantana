@@ -1,5 +1,5 @@
 `define AXI4_DATA_WIDTH  512
-`define AXI4_ID_WIDTH    6
+`define AXI4_ID_WIDTH    8
 `define AXI4_ADDR_WIDTH  64
 `define AXI4_LEN_WIDTH   8
 `define AXI4_SIZE_WIDTH  3

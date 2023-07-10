@@ -166,6 +166,10 @@ module axi_wrapper (
     fpga_pkg::mst_req_t axi_req;
     fpga_pkg::mst_resp_t axi_resp;
 
+    // Ojo! This breaks if hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH <= (clog2(num_sets) + clog2(num_ways))!!!!
+    assign mem_req_uc_read_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h01;
+    assign mem_req_uc_write_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h02;
+
     axi_arbiter axi_arbiter_inst(
         .clk_i(clk_i),
         .rst_ni(rstn_i),
@@ -174,6 +178,7 @@ module axi_wrapper (
 
         .icache_miss_valid_i(l1_request_valid),
         .icache_miss_paddr_i(l1_request_paddr),
+        .icache_miss_id_i(1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)),
 
         .icache_miss_resp_valid_o(l2_response_valid),
         .icache_miss_resp_data_o(l2_response_data),
@@ -207,7 +212,7 @@ module axi_wrapper (
         .dcache_uc_read_ready_o(mem_req_uc_read_ready),
         .dcache_uc_read_valid_i(mem_req_uc_read_valid),
         .dcache_uc_read_i(mem_req_uc_read),
-        .dcache_uc_read_id_i('1),
+        .dcache_uc_read_id_i(mem_req_uc_read_base_id),
 
         .dcache_uc_read_resp_ready_i(mem_resp_uc_read_ready),
         .dcache_uc_read_resp_valid_o(mem_resp_uc_read_valid),
@@ -217,7 +222,7 @@ module axi_wrapper (
         .dcache_uc_write_ready_o(mem_req_uc_write_ready),
         .dcache_uc_write_valid_i(mem_req_uc_write_valid),
         .dcache_uc_write_i(mem_req_uc_write),
-        .dcache_uc_write_id_i('1),
+        .dcache_uc_write_id_i(mem_req_uc_write_base_id),
 
         .dcache_uc_write_data_ready_o(mem_req_uc_write_data_ready),
         .dcache_uc_write_data_valid_i(mem_req_uc_write_data_valid),

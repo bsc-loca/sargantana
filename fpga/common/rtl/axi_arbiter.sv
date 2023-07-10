@@ -193,7 +193,7 @@ module axi_arbiter
   assign icache_miss_req_wdata.mem_req_addr      = {icache_miss_paddr_i, 6'b0},
          icache_miss_req_wdata.mem_req_len       = ICACHE_MEM_REQ_CL_LEN - 1,
          icache_miss_req_wdata.mem_req_size      = ICACHE_MEM_REQ_CL_SIZE,
-         icache_miss_req_wdata.mem_req_id        = 0,
+         icache_miss_req_wdata.mem_req_id        = icache_miss_id_i,
          icache_miss_req_wdata.mem_req_command   = hpdcache_pkg::HPDCACHE_MEM_READ,
          icache_miss_req_wdata.mem_req_atomic    = hpdcache_pkg::hpdcache_mem_atomic_e'(0),
          icache_miss_req_wdata.mem_req_cacheable = 1'b1;
