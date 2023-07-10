@@ -190,7 +190,7 @@ module axi_arbiter
   assign icache_miss_req_w   = icache_miss_valid_i,
          icache_miss_ready_o = icache_miss_req_wok;
 
-  assign icache_miss_req_wdata.mem_req_addr      = icache_miss_paddr_i,
+  assign icache_miss_req_wdata.mem_req_addr      = {icache_miss_paddr_i, 6'b0},
          icache_miss_req_wdata.mem_req_len       = ICACHE_MEM_REQ_CL_LEN - 1,
          icache_miss_req_wdata.mem_req_size      = ICACHE_MEM_REQ_CL_SIZE,
          icache_miss_req_wdata.mem_req_id        = 0,
@@ -211,7 +211,8 @@ module axi_arbiter
   logic                                icache_miss_resp_meta_r, icache_miss_resp_meta_rok;
   hpdcache_pkg::hpdcache_mem_id_t      icache_miss_resp_meta_id;
 
-  assign icache_miss_resp_valid_o = icache_miss_resp_meta_rok;
+  assign icache_miss_resp_valid_o = icache_miss_resp_data_rok;
+  assign icache_miss_resp_data_o = icache_miss_resp_data_rdata;
 
   generate
     if (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH < ICACHE_LINE_WIDTH) begin
@@ -280,8 +281,8 @@ module axi_arbiter
       );
 
       hpdcache_data_downsize #(
-          .WR_WIDTH(ICACHE_LINE_WIDTH),
-          .RD_WIDTH(hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+          .WR_WIDTH(hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+          .RD_WIDTH(ICACHE_LINE_WIDTH),
           .DEPTH(1)
       ) i_icache_hpdcache_data_downsize (
           .clk_i,
@@ -306,6 +307,14 @@ module axi_arbiter
 
       assign icache_miss_resp_wok = icache_miss_resp_data_wok & (
              icache_miss_resp_meta_wok | ~icache_miss_resp_wdata.mem_resp_r_last);
+
+      always_ff @(posedge clk_i) begin
+        if (~rst_ni) begin
+          icache_miss_resp_beat_o <= 0;
+        end else begin
+          icache_miss_resp_beat_o <= icache_miss_resp_data_rok ? icache_miss_resp_beat_o + 2'b01 : 0;
+        end
+      end
 
     end else begin
       assign icache_miss_resp_data_rok = icache_miss_resp_w;

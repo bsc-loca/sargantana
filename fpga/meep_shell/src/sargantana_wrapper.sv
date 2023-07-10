@@ -146,7 +146,7 @@ module sargantana_wrapper(
     // Connect core AXI master to xbar slave
     for (genvar i = 0; i < xbar_cfg.NoMstPorts; i++) begin
         `AXI_ASSIGN_TO_REQ(masters_req[i], master_bus[i])
-        `AXI_ASSIGN_TO_RESP(masters_resp[i], master_bus[i])
+        `AXI_ASSIGN_FROM_RESP(master_bus[i], masters_resp[i])
     end
 
     // AXI connections

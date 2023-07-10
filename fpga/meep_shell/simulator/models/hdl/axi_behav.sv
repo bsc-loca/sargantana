@@ -105,6 +105,8 @@ module axi_behav (
         .mem_rdata_i(mem_rdata)
     );
 
+    assign mem_gnt = mem_req;
+
     always_ff @(posedge clk_i) begin
         if (mem_req) begin
             mem_rvalid = 1;
@@ -114,7 +116,6 @@ module axi_behav (
                 memory_read(mem_addr, mem_rdata);
             end
         end else begin
-            mem_gnt = 0;
             mem_rvalid = 0;
             mem_rdata = 0;
         end

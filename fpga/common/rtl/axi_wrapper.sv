@@ -239,7 +239,7 @@ module axi_wrapper (
         .AXI_USER_WIDTH (0)
     ) axi_to_core();
 
-    `AXI_ASSIGN_TO_REQ(axi_req, axi_to_core)
+    `AXI_ASSIGN_FROM_REQ(axi_to_core, axi_req)
     `AXI_ASSIGN_TO_RESP(axi_resp, axi_to_core)
 
     axi_riscv_atomics_wrap #(
