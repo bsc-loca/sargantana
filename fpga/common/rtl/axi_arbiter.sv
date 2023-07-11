@@ -308,11 +308,14 @@ module axi_arbiter
       assign icache_miss_resp_wok = icache_miss_resp_data_wok & (
              icache_miss_resp_meta_wok | ~icache_miss_resp_wdata.mem_resp_r_last);
 
+      logic [1:0] icache_beat;
+      assign icache_miss_resp_beat_o = icache_beat;
+
       always_ff @(posedge clk_i) begin
         if (~rst_ni) begin
-          icache_miss_resp_beat_o <= 0;
+          icache_beat <= 0;
         end else begin
-          icache_miss_resp_beat_o <= icache_miss_resp_data_rok ? icache_miss_resp_beat_o + 2'b01 : 0;
+          icache_beat <= icache_miss_resp_data_rok ? icache_beat + 2'b01 : 0;
         end
       end
 

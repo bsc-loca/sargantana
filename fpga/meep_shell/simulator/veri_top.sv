@@ -9,12 +9,10 @@ module veri_top
     );
 
     logic clk_i;
-    logic [4:0] pcie_gpio;
     logic rstn_i;
 
     assign clk_i = clk_p;
     assign rstn_i = ~rst_top;
-    assign pcie_gpio[0] = rstn_i;
 
     // AXI Write Address Channel Signals
     logic   [`AXI4_ID_WIDTH     -1:0]    mem_awid;
@@ -95,7 +93,7 @@ module veri_top
 
     sargantana_wrapper DUT(
         .clk_i(clk_i),
-        .pcie_gpio(pcie_gpio),
+        .rstn_i(rstn_i),
 
         .m_axi_mem_awid(mem_awid),
         .m_axi_mem_awaddr(mem_awaddr),

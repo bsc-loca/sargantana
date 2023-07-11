@@ -10,7 +10,7 @@
  *  History      :
  */
 
-import fpga_pkg::*;
+import fpga_pkg::*, hpdcache_pkg::*;
 
 module axi_wrapper (
     input logic clk_i,

@@ -2,11 +2,7 @@ import fpga_pkg::*;
 
 module sargantana_wrapper(
     input            clk_i,
-    input            mc_clk,
-    input            vpu_clk,
-    input   [4:0]    pcie_gpio ,
-    output           ExtArstn,
-    input            mc_rstn,
+    input            rstn_i,
 
     // AXI Write Address Channel Signals
     output   [`AXI4_ID_WIDTH     -1:0]    m_axi_mem_awid,
@@ -112,10 +108,6 @@ module sargantana_wrapper(
   assign rsp.r.data   = m_axi_``pat``_rdata;     \
   assign rsp.r.resp   = m_axi_``pat``_rresp;
 
-    logic rstn;
-
-    assign rstn = pcie_gpio[0];
-
     // AXI Crossbar Configuration
 
     localparam axi_pkg::xbar_cfg_t xbar_cfg = '{
@@ -200,7 +192,7 @@ module sargantana_wrapper(
         .axi_slv_resp_t(peri_axi_resp_t)
     ) axi_downsizer_inst (
         .clk_i(clk_i),
-        .rst_ni(rstn),
+        .rst_ni(rstn_i),
         .slv_req_i(peripheral_req[0]),
         .slv_resp_o(peripheral_resp[0]),
         .mst_req_o(uart_axi32_req),
@@ -220,7 +212,7 @@ module sargantana_wrapper(
         .lite_resp_t(fpga_pkg::axi_lite_resp_t)
     ) axi_lite_converter (
         .clk_i(clk_i),
-        .rst_ni(rstn),
+        .rst_ni(rstn_i),
         .test_i(1'b0),
         .slv_req_i(uart_axi32_req),
         .slv_resp_o(uart_axi32_resp),
@@ -234,7 +226,7 @@ module sargantana_wrapper(
         .rule_t         ( rule_t          )
     ) xbar_inst (
         .clk_i                  ( clk_i    ),
-        .rst_ni                 ( rstn   ),
+        .rst_ni                 ( rstn_i   ),
         .test_i                 ( 1'b0    ),
         .slv_ports              ( core_bus ),
         .mst_ports              ( peripheral_bus  ),
@@ -245,7 +237,7 @@ module sargantana_wrapper(
 
     axi_wrapper core_inst (
         .clk_i(clk_i),
-        .rstn_i(rstn),
+        .rstn_i(rstn_i),
 
         .axi_o(core_bus[0])
     );

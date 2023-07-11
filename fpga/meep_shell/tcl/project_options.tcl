@@ -38,7 +38,7 @@ lappend include_paths "${g_accel_dir}/includes"
 lappend include_paths "${g_accel_dir}/rtl"
 lappend include_paths "${g_accel_dir}/fpga/meep_shell/src"
 lappend include_paths "${g_accel_dir}/fpga/common/rtl/axi/include"
-lappend include_paths "${g_accel_dir}/fpga/common/includes"
+lappend include_paths "${g_accel_dir}/fpga/common/rtl/common_cells/include"
 set_property include_dirs $include_paths $fileset_obj
 
 # Mark directories with global verilog defines
@@ -46,8 +46,8 @@ set verilog_defines {}
 lappend verilog_defines "${g_accel_dir}/fpga/meep_shell/src/defines.svh"
 lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/axi/include/axi/assign.svh"
 lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/axi/include/axi/typedef.svh"
-lappend verilog_defines "${g_accel_dir}/fpga/common/includes/common_cells/registers.svh"
-lappend verilog_defines "${g_accel_dir}/fpga/common/includes/common_cells/assertions.svh"
+lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/common_cells/include/common_cells/registers.svh"
+lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/common_cells/include/common_cells/assertions.svh"
 set_property verilog_define $verilog_defines $fileset_obj
 
 # Mark files with global verilog defines
@@ -57,7 +57,7 @@ set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/comm
 set_property "is_global_include" "1" $file_obj
 set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/rtl/axi/include/axi/typedef.svh"]]
 set_property "is_global_include" "1" $file_obj
-set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/includes/common_cells/registers.svh"]]
+set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/rtl/common_cells/include/common_cells/registers.svh"]]
 set_property "is_global_include" "1" $file_obj
-set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/includes/common_cells/assertions.svh"]]
+set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/rtl/common_cells/include/common_cells/assertions.svh"]]
 set_property "is_global_include" "1" $file_obj

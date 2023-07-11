@@ -1,10 +1,6 @@
 module sargantana_wrapper(
     input            clk_i,
-    input            mc_clk,
-    input            vpu_clk,
-    input   [4:0]    pcie_gpio ,
-    output           ExtArstn,
-    input            mc_rstn,
+    input            rstn_i,
 
     // AXI Write Address Channel Signals
     output   [`AXI4_ID_WIDTH     -1:0]    m_axi_mem_awid,
