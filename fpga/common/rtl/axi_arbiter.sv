@@ -91,8 +91,8 @@ module axi_arbiter
   output wire hpdcache_pkg::hpdcache_mem_resp_w_t dcache_uc_write_resp_o,
 
   // *** AXI interface ***
-  output fpga_pkg::mst_req_t                                axi_req_o,
-  input  fpga_pkg::mst_resp_t                               axi_resp_i
+  output fpga_pkg::core_axi_req_t                                axi_req_o,
+  input  fpga_pkg::core_axi_resp_t                               axi_resp_i
 );
 
   localparam AxiCacheDataWidth = hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH;

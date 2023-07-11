@@ -163,12 +163,12 @@ module axi_wrapper (
         .brom_resp_valid_o(brom_resp_valid)
     );
 
-    fpga_pkg::mst_req_t axi_req;
-    fpga_pkg::mst_resp_t axi_resp;
+    fpga_pkg::core_axi_req_t axi_req;
+    fpga_pkg::core_axi_resp_t axi_resp;
 
     // Ojo! This breaks if hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH <= (clog2(num_sets) + clog2(num_ways))!!!!
     assign mem_req_uc_read_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h01;
-    assign mem_req_uc_write_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h02;
+    assign mem_req_uc_write_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h01;
 
     axi_arbiter axi_arbiter_inst(
         .clk_i(clk_i),
@@ -241,25 +241,45 @@ module axi_wrapper (
         .AXI_ADDR_WIDTH (32),
         .AXI_DATA_WIDTH (512),
         .AXI_ID_WIDTH   (8),
-        .AXI_USER_WIDTH (0)
-    ) axi_to_core();
+        .AXI_USER_WIDTH (11)
+    ) axi_core_to_atomic();
 
-    `AXI_ASSIGN_FROM_REQ(axi_to_core, axi_req)
-    `AXI_ASSIGN_TO_RESP(axi_resp, axi_to_core)
+    `AXI_ASSIGN_FROM_REQ(axi_core_to_atomic, axi_req)
+    `AXI_ASSIGN_TO_RESP(axi_resp, axi_core_to_atomic)
+
+    AXI_BUS #(
+        .AXI_ADDR_WIDTH (32),
+        .AXI_DATA_WIDTH (512),
+        .AXI_ID_WIDTH   (8),
+        .AXI_USER_WIDTH (11)
+    ) axi_atomic_to_fpga();
 
     axi_riscv_atomics_wrap #(
         .AXI_ADDR_WIDTH(32),
         .AXI_DATA_WIDTH(512),
         .AXI_ID_WIDTH(8),
-        .AXI_USER_WIDTH(0),
-        .AXI_MAX_READ_TXNS(128),
-        .AXI_MAX_WRITE_TXNS(128),
+        .AXI_USER_WIDTH(11),
+        .AXI_MAX_READ_TXNS(1),
+        .AXI_MAX_WRITE_TXNS(1),
         .RISCV_WORD_WIDTH(64)
     ) atomics_processor (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
         .mst(axi_o),
-        .slv(axi_to_core)
+        .slv(axi_core_to_atomic)
     );
+
+    /*axi_atop_filter_intf #(
+        .AXI_ADDR_WIDTH(32),
+        .AXI_DATA_WIDTH(512),
+        .AXI_ID_WIDTH(8),
+        .AXI_USER_WIDTH(0),
+        .AXI_MAX_WRITE_TXNS(1)
+    ) filter_inst (
+        .clk_i(clk_i),
+        .rst_ni(rstn_i),
+        .mst(axi_o),
+        .slv(axi_atomic_to_fpga)
+    );*/
 
 endmodule

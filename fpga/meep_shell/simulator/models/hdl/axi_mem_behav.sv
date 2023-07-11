@@ -1,6 +1,6 @@
 import fpga_pkg::*;
 
-module axi_behav (
+module axi_mem_behav (
     input logic                     clk_i,
     input logic                     rstn_i,
 
@@ -63,8 +63,8 @@ module axi_behav (
     import "DPI-C" function void memory_read (input bit [31:0] addr, output bit [512-1:0] data);
     import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [(512/8)-1:0] byte_enable, input bit [512-1:0] data);
 
-    fpga_pkg::slv_req_t  axi_req;
-    fpga_pkg::slv_resp_t axi_resp;
+    fpga_pkg::peri_axi_req_t  axi_req, filtered_req;
+    fpga_pkg::peri_axi_resp_t axi_resp, filtered_resp;
 
     `AXI_ASSIGN_SLAVE_TO_FLAT(mem, axi_req, axi_resp)
 
@@ -86,8 +86,8 @@ module axi_behav (
         .DataWidth(`AXI4_DATA_WIDTH),
         .IdWidth(`AXI4_ID_WIDTH),
         .NumBanks(1),
-        .axi_req_t(fpga_pkg::slv_req_t),
-        .axi_resp_t(fpga_pkg::slv_resp_t)
+        .axi_req_t(fpga_pkg::peri_axi_req_t),
+        .axi_resp_t(fpga_pkg::peri_axi_resp_t)
     ) translator_inst (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
@@ -110,8 +110,8 @@ module axi_behav (
     always_ff @(posedge clk_i) begin
         if (mem_req) begin
             mem_rvalid = 1;
-            if (mem_we != 0) begin
-                memory_write(mem_addr, mem_we, mem_wdata);
+            if (mem_we) begin
+                memory_write(mem_addr, mem_strb, mem_wdata);
             end else begin
                 memory_read(mem_addr, mem_rdata);
             end

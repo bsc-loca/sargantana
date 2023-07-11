@@ -86,6 +86,32 @@ module sargantana_wrapper(
     input                                uart_irq
 );
 
+`define AXI_LITE_ASSIGN_MASTER_TO_FLAT(pat, req, rsp) \
+  assign m_axi_``pat``_awvalid  = req.aw_valid;  \
+  assign m_axi_``pat``_awaddr   = req.aw.addr;   \
+                                                 \
+  assign m_axi_``pat``_wvalid   = req.w_valid;   \
+  assign m_axi_``pat``_wdata    = req.w.data;    \
+  assign m_axi_``pat``_wstrb    = req.w.strb;    \
+                                                 \
+  assign m_axi_``pat``_bready   = req.b_ready;   \
+                                                 \
+  assign m_axi_``pat``_arvalid  = req.ar_valid;  \
+  assign m_axi_``pat``_araddr   = req.ar.addr;   \
+                                                 \
+  assign m_axi_``pat``_rready   = req.r_ready;   \
+                                                 \
+  assign rsp.aw_ready = m_axi_``pat``_awready;   \
+  assign rsp.ar_ready = m_axi_``pat``_arready;   \
+  assign rsp.w_ready  = m_axi_``pat``_wready;    \
+                                                 \
+  assign rsp.b_valid  = m_axi_``pat``_bvalid;    \
+  assign rsp.b.resp   = m_axi_``pat``_bresp;     \
+                                                 \
+  assign rsp.r_valid  = m_axi_``pat``_rvalid;    \
+  assign rsp.r.data   = m_axi_``pat``_rdata;     \
+  assign rsp.r.resp   = m_axi_``pat``_rresp;
+
     logic rstn;
 
     assign rstn = pcie_gpio[0];
@@ -113,8 +139,8 @@ module sargantana_wrapper(
     localparam rule_t [xbar_cfg.NoAddrRules-1:0] ADDR_MAP = {
         rule_t'{
             idx: 0,
-            start_addr: 32'h4000_0000,
-            end_addr: 32'h4001_0000, // TODO: Check this?
+            start_addr: 32'h4000_1000,
+            end_addr: 32'h4000_1020,
             default: '0
         },
         rule_t'{
@@ -126,43 +152,92 @@ module sargantana_wrapper(
     };
 
     // master structs
-    fpga_pkg::mst_req_t  [xbar_cfg.NoMstPorts-1:0] masters_req;
-    fpga_pkg::mst_resp_t [xbar_cfg.NoMstPorts-1:0] masters_resp;
+    fpga_pkg::peri_axi_req_t  [xbar_cfg.NoMstPorts-1:0] peripheral_req;
+    fpga_pkg::peri_axi_resp_t [xbar_cfg.NoMstPorts-1:0] peripheral_resp;
+    fpga_pkg::axi32_req_t uart_axi32_req;
+    fpga_pkg::axi32_resp_t uart_axi32_resp;
+    fpga_pkg::axi_lite_req_t uart_req;
+    fpga_pkg::axi_lite_resp_t uart_resp;
 
     AXI_BUS #(
         .AXI_ADDR_WIDTH ( `AXI4_ADDR_WIDTH      ),
         .AXI_DATA_WIDTH ( `AXI4_DATA_WIDTH      ),
         .AXI_ID_WIDTH   ( hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH + $clog2(xbar_cfg.NoMstPorts) ),
-        .AXI_USER_WIDTH ( hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH + $clog2(xbar_cfg.NoMstPorts) )
-    ) master_bus [xbar_cfg.NoMstPorts-1:0] ();
+        .AXI_USER_WIDTH ( 32'd11 )
+    ) peripheral_bus [xbar_cfg.NoMstPorts-1:0] ();
     
     AXI_BUS #(
         .AXI_ADDR_WIDTH ( `AXI4_ADDR_WIDTH     ),
         .AXI_DATA_WIDTH ( `AXI4_DATA_WIDTH     ),
         .AXI_ID_WIDTH   ( 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH) ),
-        .AXI_USER_WIDTH ( 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH) )
-    ) slave_bus [xbar_cfg.NoSlvPorts-1:0] ();
+        .AXI_USER_WIDTH ( 32'd11 )
+    ) core_bus [xbar_cfg.NoSlvPorts-1:0] ();
 
     // Connect core AXI master to xbar slave
     for (genvar i = 0; i < xbar_cfg.NoMstPorts; i++) begin
-        `AXI_ASSIGN_TO_REQ(masters_req[i], master_bus[i])
-        `AXI_ASSIGN_FROM_RESP(master_bus[i], masters_resp[i])
+        `AXI_ASSIGN_TO_REQ(peripheral_req[i], peripheral_bus[i])
+        `AXI_ASSIGN_FROM_RESP(peripheral_bus[i], peripheral_resp[i])
     end
 
     // AXI connections
-    // TODO: Connect UART to axi-lite adapter
-    `AXI_ASSIGN_MASTER_TO_FLAT(mem, masters_req[1], masters_resp[1])
+    `AXI_ASSIGN_MASTER_TO_FLAT(mem, peripheral_req[1], peripheral_resp[1])
+    `AXI_LITE_ASSIGN_MASTER_TO_FLAT(uart, uart_req, uart_resp)
+    axi_dw_downsizer #(
+        .AxiSlvPortDataWidth(512),
+        .AxiMstPortDataWidth(32),
+        .AxiAddrWidth(64),
+        .AxiIdWidth(8), // ID width
+        .aw_chan_t(peri_axi_aw_chan_t),
+        .mst_w_chan_t(axi32_w_chan_t),
+        .slv_w_chan_t(peri_axi_w_chan_t),
+        .b_chan_t(peri_axi_b_chan_t),
+        .ar_chan_t(peri_axi_ar_chan_t),
+        .mst_r_chan_t(axi32_r_chan_t),
+        .slv_r_chan_t(peri_axi_r_chan_t),
+        .axi_mst_req_t(axi32_req_t),
+        .axi_mst_resp_t(axi32_resp_t),
+        .axi_slv_req_t(peri_axi_req_t),
+        .axi_slv_resp_t(peri_axi_resp_t)
+    ) axi_downsizer_inst (
+        .clk_i(clk_i),
+        .rst_ni(rstn),
+        .slv_req_i(peripheral_req[0]),
+        .slv_resp_o(peripheral_resp[0]),
+        .mst_req_o(uart_axi32_req),
+        .mst_resp_i(uart_axi32_resp)
+    );
+
+    axi_to_axi_lite #(
+        .AxiAddrWidth(64),
+        .AxiDataWidth(32),
+        .AxiIdWidth(8),
+        .AxiUserWidth(11),
+        .AxiMaxReadTxns(1),
+        .AxiMaxWriteTxns(1),
+        .full_req_t(fpga_pkg::axi32_req_t),
+        .full_resp_t(fpga_pkg::axi32_resp_t),
+        .lite_req_t(fpga_pkg::axi_lite_req_t),
+        .lite_resp_t(fpga_pkg::axi_lite_resp_t)
+    ) axi_lite_converter (
+        .clk_i(clk_i),
+        .rst_ni(rstn),
+        .test_i(1'b0),
+        .slv_req_i(uart_axi32_req),
+        .slv_resp_o(uart_axi32_resp),
+        .mst_req_o(uart_req),
+        .mst_resp_i(uart_resp)
+    );
 
     axi_xbar_intf #(
-        .AXI_USER_WIDTH ( 0               ),
+        .AXI_USER_WIDTH ( 11              ),
         .Cfg            ( xbar_cfg        ),
         .rule_t         ( rule_t          )
     ) xbar_inst (
         .clk_i                  ( clk_i    ),
         .rst_ni                 ( rstn   ),
         .test_i                 ( 1'b0    ),
-        .slv_ports              ( slave_bus ),
-        .mst_ports              ( master_bus  ),
+        .slv_ports              ( core_bus ),
+        .mst_ports              ( peripheral_bus  ),
         .addr_map_i             ( ADDR_MAP ),
         .en_default_mst_port_i  ( '0      ),
         .default_mst_port_i     ( '0      )
@@ -172,7 +247,7 @@ module sargantana_wrapper(
         .clk_i(clk_i),
         .rstn_i(rstn),
 
-        .axi_o(slave_bus[0])
+        .axi_o(core_bus[0])
     );
 
 endmodule

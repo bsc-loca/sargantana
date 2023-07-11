@@ -64,7 +64,8 @@ module veri_top
     logic                                mem_rvalid;
     logic                                mem_rready;
 
-    // AXI Write Response Channel Signals    logic   [`AXI4_ID_WIDTH     -1:0]    mem_bid;
+    // AXI Write Response Channel Signals
+    logic   [`AXI4_ID_WIDTH     -1:0]    mem_bid;
     logic   [`AXI4_RESP_WIDTH   -1:0]    mem_bresp;
     logic   [`AXI4_USER_WIDTH   -1:0]    mem_buser;
     logic                                mem_bvalid;
@@ -140,10 +141,29 @@ module veri_top
         .m_axi_mem_bresp(mem_bresp),
         .m_axi_mem_buser(mem_buser),
         .m_axi_mem_bvalid(mem_bvalid),
-        .m_axi_mem_bready(mem_bready)
+        .m_axi_mem_bready(mem_bready),
+
+        .m_axi_uart_awaddr(uart_awaddr),
+        .m_axi_uart_awvalid(uart_awvalid),
+        .m_axi_uart_awready(uart_awready),
+        .m_axi_uart_wdata(uart_wdata),
+        .m_axi_uart_wstrb(uart_wstrb),
+        .m_axi_uart_wvalid(uart_wvalid),
+        .m_axi_uart_wready(uart_wready),
+        .m_axi_uart_bresp(uart_bresp),
+        .m_axi_uart_bvalid(uart_bvalid),
+        .m_axi_uart_bready(uart_bready),
+        .m_axi_uart_araddr(uart_araddr),
+        .m_axi_uart_arvalid(uart_arvalid),
+        .m_axi_uart_arready(uart_arready),
+        .m_axi_uart_rdata(uart_rdata),
+        .m_axi_uart_rresp(uart_rresp),
+        .m_axi_uart_rvalid(uart_rvalid),
+        .m_axi_uart_rready(uart_rready),
+        .uart_irq(uart_irq)
     );
 
-    axi_behav axi_inst(
+    axi_mem_behav axi_mem_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
@@ -191,6 +211,32 @@ module veri_top
         .s_axi_mem_bresp(mem_bresp),
         .s_axi_mem_buser(mem_buser),
         .s_axi_mem_bvalid(mem_bvalid),
-        .s_axi_mem_bready(mem_bready));
+        .s_axi_mem_bready(mem_bready)
+    );
+
+
+    axi_uart_behav axi_uart_inst (
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+
+        .s_axi_uart_awaddr(uart_awaddr),
+        .s_axi_uart_awvalid(uart_awvalid),
+        .s_axi_uart_awready(uart_awready),
+        .s_axi_uart_wdata(uart_wdata),
+        .s_axi_uart_wstrb(uart_wstrb),
+        .s_axi_uart_wvalid(uart_wvalid),
+        .s_axi_uart_wready(uart_wready),
+        .s_axi_uart_bresp(uart_bresp),
+        .s_axi_uart_bvalid(uart_bvalid),
+        .s_axi_uart_bready(uart_bready),
+        .s_axi_uart_araddr(uart_araddr),
+        .s_axi_uart_arvalid(uart_arvalid),
+        .s_axi_uart_arready(uart_arready),
+        .s_axi_uart_rdata(uart_rdata),
+        .s_axi_uart_rresp(uart_rresp),
+        .s_axi_uart_rvalid(uart_rvalid),
+        .s_axi_uart_rready(uart_rready),
+        .uart_irq(uart_irq)
+    );
 
 endmodule // veri_top
