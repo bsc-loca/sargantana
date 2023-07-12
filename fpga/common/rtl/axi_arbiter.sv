@@ -101,9 +101,9 @@ module axi_arbiter
 
   typedef logic [AxiCacheDataWidth-1:0] axi_cache_data_t;
   typedef logic [AxiCacheStrbWidth-1:0] axi_cache_strb_t;
-  typedef logic [`AXI4_ID_WIDTH-1:0]    axi_cache_id_t;
-  typedef logic [`AXI4_USER_WIDTH-1:0]  axi_cache_user_t;
-  typedef logic [`AXI4_ADDR_WIDTH-1:0]  axi_cache_addr_t;
+  typedef logic [7:0]    axi_cache_id_t;
+  typedef logic [10:0]  axi_cache_user_t;
+  typedef logic [63:0]  axi_cache_addr_t;
 
   `AXI_TYPEDEF_AW_CHAN_T(aw_chan_t, axi_cache_addr_t, axi_cache_id_t, axi_cache_user_t)
   `AXI_TYPEDEF_AR_CHAN_T(ar_chan_t, axi_cache_addr_t, axi_cache_id_t, axi_cache_user_t)

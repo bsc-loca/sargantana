@@ -28,7 +28,7 @@ module axi_uart_behav (
 
 `define AXI_LITE_ASSIGN_SLAVE_TO_FLAT(pat, req, rsp)  \
   assign req.aw_valid  = s_axi_``pat``_awvalid;  \
-  assign req.aw.addr   = s_axi_``pat``_awaddr - 13'h1000;   \
+  assign req.aw.addr   = s_axi_``pat``_awaddr;   \
                                                  \
   assign req.w_valid   = s_axi_``pat``_wvalid;   \
   assign req.w.data    = s_axi_``pat``_wdata;    \
@@ -37,7 +37,7 @@ module axi_uart_behav (
   assign req.b_ready   = s_axi_``pat``_bready;   \
                                                  \
   assign req.ar_valid  = s_axi_``pat``_arvalid;  \
-  assign req.ar.addr   = s_axi_``pat``_araddr - 13'h1000;   \
+  assign req.ar.addr   = s_axi_``pat``_araddr;   \
                                                  \
   assign req.r_ready   = s_axi_``pat``_rready;   \
                                                  \

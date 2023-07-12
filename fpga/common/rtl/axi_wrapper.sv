@@ -238,9 +238,9 @@ module axi_wrapper (
     );
 
     AXI_BUS #(
-        .AXI_ADDR_WIDTH (32),
-        .AXI_DATA_WIDTH (512),
-        .AXI_ID_WIDTH   (8),
+        .AXI_ADDR_WIDTH (64),
+        .AXI_DATA_WIDTH (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH   (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
         .AXI_USER_WIDTH (11)
     ) axi_core_to_atomic();
 
@@ -248,16 +248,16 @@ module axi_wrapper (
     `AXI_ASSIGN_TO_RESP(axi_resp, axi_core_to_atomic)
 
     AXI_BUS #(
-        .AXI_ADDR_WIDTH (32),
-        .AXI_DATA_WIDTH (512),
-        .AXI_ID_WIDTH   (8),
+        .AXI_ADDR_WIDTH (64),
+        .AXI_DATA_WIDTH (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH   (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
         .AXI_USER_WIDTH (11)
     ) axi_atomic_to_fpga();
 
     axi_riscv_atomics_wrap #(
-        .AXI_ADDR_WIDTH(32),
-        .AXI_DATA_WIDTH(512),
-        .AXI_ID_WIDTH(8),
+        .AXI_ADDR_WIDTH(64),
+        .AXI_DATA_WIDTH(hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
         .AXI_USER_WIDTH(11),
         .AXI_MAX_READ_TXNS(1),
         .AXI_MAX_WRITE_TXNS(1),
@@ -268,18 +268,5 @@ module axi_wrapper (
         .mst(axi_o),
         .slv(axi_core_to_atomic)
     );
-
-    /*axi_atop_filter_intf #(
-        .AXI_ADDR_WIDTH(32),
-        .AXI_DATA_WIDTH(512),
-        .AXI_ID_WIDTH(8),
-        .AXI_USER_WIDTH(0),
-        .AXI_MAX_WRITE_TXNS(1)
-    ) filter_inst (
-        .clk_i(clk_i),
-        .rst_ni(rstn_i),
-        .mst(axi_o),
-        .slv(axi_atomic_to_fpga)
-    );*/
 
 endmodule

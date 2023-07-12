@@ -15,57 +15,57 @@ module veri_top
     assign rstn_i = ~rst_top;
 
     // AXI Write Address Channel Signals
-    logic   [`AXI4_ID_WIDTH     -1:0]    mem_awid;
-    logic   [`AXI4_ADDR_WIDTH   -1:0]    mem_awaddr;
-    logic   [`AXI4_LEN_WIDTH    -1:0]    mem_awlen;
-    logic   [`AXI4_SIZE_WIDTH   -1:0]    mem_awsize;
-    logic   [`AXI4_BURST_WIDTH  -1:0]    mem_awburst;
+    logic   [`MEM_ID_WIDTH     -1:0]    mem_awid;
+    logic   [`MEM_ADDR_WIDTH   -1:0]    mem_awaddr;
+    logic   [`MEM_LEN_WIDTH    -1:0]    mem_awlen;
+    logic   [`MEM_SIZE_WIDTH   -1:0]    mem_awsize;
+    logic   [`MEM_BURST_WIDTH  -1:0]    mem_awburst;
     logic                                mem_awlock;
-    logic   [`AXI4_CACHE_WIDTH  -1:0]    mem_awcache;
-    logic   [`AXI4_PROT_WIDTH   -1:0]    mem_awprot;
-    logic   [`AXI4_QOS_WIDTH    -1:0]    mem_awqos;
-    logic   [`AXI4_REGION_WIDTH -1:0]    mem_awregion;
-    logic   [`AXI4_USER_WIDTH   -1:0]    mem_awuser;
+    logic   [`MEM_CACHE_WIDTH  -1:0]    mem_awcache;
+    logic   [`MEM_PROT_WIDTH   -1:0]    mem_awprot;
+    logic   [`MEM_QOS_WIDTH    -1:0]    mem_awqos;
+    logic   [`MEM_REGION_WIDTH -1:0]    mem_awregion;
+    logic   [`MEM_USER_WIDTH   -1:0]    mem_awuser;
     logic                                mem_awvalid;
     logic                                mem_awready;
 
     // AXI Write Data Channel Signals
-    logic   [`AXI4_ID_WIDTH     -1:0]    mem_wid;
-    logic   [`AXI4_DATA_WIDTH   -1:0]    mem_wdata;
-    logic   [`AXI4_STRB_WIDTH   -1:0]    mem_wstrb;
+    logic   [`MEM_ID_WIDTH     -1:0]    mem_wid;
+    logic   [`MEM_DATA_WIDTH   -1:0]    mem_wdata;
+    logic   [`MEM_STRB_WIDTH   -1:0]    mem_wstrb;
     logic                                mem_wlast;
-    logic   [`AXI4_USER_WIDTH   -1:0]    mem_wuser;
+    logic   [`MEM_USER_WIDTH   -1:0]    mem_wuser;
     logic                                mem_wvalid;
     logic                                mem_wready;
 
     // AXI Read Address Channel Signals
-    logic   [`AXI4_ID_WIDTH     -1:0]    mem_arid;
-    logic   [`AXI4_ADDR_WIDTH   -1:0]    mem_araddr;
-    logic   [`AXI4_LEN_WIDTH    -1:0]    mem_arlen;
-    logic   [`AXI4_SIZE_WIDTH   -1:0]    mem_arsize;
-    logic   [`AXI4_BURST_WIDTH  -1:0]    mem_arburst;
+    logic   [`MEM_ID_WIDTH     -1:0]    mem_arid;
+    logic   [`MEM_ADDR_WIDTH   -1:0]    mem_araddr;
+    logic   [`MEM_LEN_WIDTH    -1:0]    mem_arlen;
+    logic   [`MEM_SIZE_WIDTH   -1:0]    mem_arsize;
+    logic   [`MEM_BURST_WIDTH  -1:0]    mem_arburst;
     logic                                mem_arlock;
-    logic   [`AXI4_CACHE_WIDTH  -1:0]    mem_arcache;
-    logic   [`AXI4_PROT_WIDTH   -1:0]    mem_arprot;
-    logic   [`AXI4_QOS_WIDTH    -1:0]    mem_arqos;
-    logic   [`AXI4_REGION_WIDTH -1:0]    mem_arregion;
-    logic   [`AXI4_USER_WIDTH   -1:0]    mem_aruser;
+    logic   [`MEM_CACHE_WIDTH  -1:0]    mem_arcache;
+    logic   [`MEM_PROT_WIDTH   -1:0]    mem_arprot;
+    logic   [`MEM_QOS_WIDTH    -1:0]    mem_arqos;
+    logic   [`MEM_REGION_WIDTH -1:0]    mem_arregion;
+    logic   [`MEM_USER_WIDTH   -1:0]    mem_aruser;
     logic                                mem_arvalid;
     logic                                mem_arready;
 
     // AXI Read Data Channel Signals
-    logic   [`AXI4_ID_WIDTH     -1:0]    mem_rid;
-    logic   [`AXI4_DATA_WIDTH   -1:0]    mem_rdata;
-    logic   [`AXI4_RESP_WIDTH   -1:0]    mem_rresp;
+    logic   [`MEM_ID_WIDTH     -1:0]    mem_rid;
+    logic   [`MEM_DATA_WIDTH   -1:0]    mem_rdata;
+    logic   [`MEM_RESP_WIDTH   -1:0]    mem_rresp;
     logic                                mem_rlast;
-    logic   [`AXI4_USER_WIDTH   -1:0]    mem_ruser;
+    logic   [`MEM_USER_WIDTH   -1:0]    mem_ruser;
     logic                                mem_rvalid;
     logic                                mem_rready;
 
     // AXI Write Response Channel Signals
-    logic   [`AXI4_ID_WIDTH     -1:0]    mem_bid;
-    logic   [`AXI4_RESP_WIDTH   -1:0]    mem_bresp;
-    logic   [`AXI4_USER_WIDTH   -1:0]    mem_buser;
+    logic   [`MEM_ID_WIDTH     -1:0]    mem_bid;
+    logic   [`MEM_RESP_WIDTH   -1:0]    mem_bresp;
+    logic   [`MEM_USER_WIDTH   -1:0]    mem_buser;
     logic                                mem_bvalid;
     logic                                mem_bready;
 
