@@ -83,14 +83,12 @@ assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES)
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-//assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD));
-assign read_enable = read_next_i & !empty_int;
+assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD && translate_incoming && translate_enable));
 
-//assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
-assign bypass_lsq = 1'b0;
+assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD) && translate_incoming && translate_enable;
 
 // We can translate the incoming instruction if there are no instructions to translate in the queue
-assign translate_incoming = write_enable & num_to_translate == '0;
+assign translate_incoming = instruction_i.instr.valid & num_to_translate == '0;
 
 rr_exe_mem_instr_t instr_to_translate;
 assign instr_to_translate = translate_incoming ? instruction_i : control_table[tlb_tail];
@@ -171,9 +169,9 @@ begin
     else begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable & (translate_incoming || num_to_translate > 0)};
-        num_to_exe      <= num_to_exe + {3'b0, translate_enable & (translate_incoming || num_to_translate > 0)} - {3'b0, read_enable_lsq};
-        tlb_tail <= tlb_tail + {2'b00, translate_enable & (translate_incoming || num_to_translate > 0)};
+        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)};
+        num_to_exe      <= num_to_exe + {3'b0, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)} - {3'b0, read_enable_lsq};
+        tlb_tail <= tlb_tail + {2'b00, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)};
     end
 end
 
@@ -202,7 +200,7 @@ always_comb begin
     end else if (is_next_load && !st_buff_collision & control_table[head].translated) begin
         next_instr_exe_o = control_table[head];
     end else if (bypass_lsq) begin
-        next_instr_exe_o = instruction_i;
+        next_instr_exe_o = translated_instr;
     end
 end
 
