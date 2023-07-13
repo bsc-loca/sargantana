@@ -61,3 +61,10 @@ set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/comm
 set_property "is_global_include" "1" $file_obj
 set file_obj [get_files -of_objects $fileset_obj [list "${g_accel_dir}/fpga/common/rtl/common_cells/include/common_cells/assertions.svh"]]
 set_property "is_global_include" "1" $file_obj
+
+################################################################################
+# Add bootrom                                                                  #
+################################################################################
+
+add_files -norecurse "${g_accel_dir}/fpga/meep_shell/bootrom.hex"
+set_property file_type {Memory Initialization Files} [get_files  "${g_accel_dir}/fpga/meep_shell/bootrom.hex"]
