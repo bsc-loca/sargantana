@@ -13,6 +13,7 @@ input exe_valid,
 input wb1_valid,
 input wb2_valid,
 input wb3_valid,
+input wb4_valid,
 input wb1_fp_valid,
 input wb2_fp_valid,
 input wb1_simd_valid,
@@ -42,6 +43,7 @@ input [63:0] exe_id,
 input [63:0] wb1_id,
 input [63:0] wb2_id,
 input [63:0] wb3_id,
+input [63:0] wb4_id,
 input [63:0] wb1_fp_id,
 input [63:0] wb2_fp_id,
 input [63:0] wb1_simd_id,
@@ -67,6 +69,7 @@ import "DPI-C" function
                             input longint unsigned wb1_valid,
                             input longint unsigned wb2_valid,
                             input longint unsigned wb3_valid,
+                            input longint unsigned wb4_valid,
                             input longint unsigned wb1_fp_valid,
                             input longint unsigned wb2_fp_valid,
                             input longint unsigned wb1_simd_valid,
@@ -96,6 +99,7 @@ import "DPI-C" function
                             input longint unsigned wb1_id,
                             input longint unsigned wb2_id,
                             input longint unsigned wb3_id,
+                            input longint unsigned wb4_id,
                             input longint unsigned wb1_fp_id,
                             input longint unsigned wb2_fp_id,
                             input longint unsigned wb1_simd_id,
@@ -115,9 +119,9 @@ end
 // Main always
 always @(posedge clk) begin
 konata_dump(if1_valid, if2_valid, id_valid, rr_valid, ir_valid, exe_valid, 
-            wb1_valid, wb2_valid, wb3_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
+            wb1_valid, wb2_valid, wb3_valid, wb4_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
             rr_stall, exe_stall, if1_flush, if2_flush, id_flush, ir_flush, rr_flush, exe_flush, id_pc,
-            id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_srore_id);
+            id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb4_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_srore_id);
 end
 
 endmodule

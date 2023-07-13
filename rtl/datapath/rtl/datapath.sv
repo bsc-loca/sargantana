@@ -1532,6 +1532,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             // Scalar 
             .wb3_valid(wb_scalar[2].valid),
             .wb3_id(wb_scalar[2].id),
+            // Mult writeback
+            .wb4_valid(wb_scalar[3].valid),
+            .wb4_id(wb_scalar[3].id),
             // FP 1
             .wb1_fp_valid(wb_fp[0].valid),
             .wb1_fp_id(wb_fp[0].id),
