@@ -73,6 +73,7 @@ logic read_enable_sb;
 logic bypass_lsq;
 logic empty_int;
 logic translate_enable;
+logic translate_incoming;
 
 logic io_address_space;
 
@@ -88,11 +89,14 @@ assign read_enable = read_next_i & !empty_int;
 //assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD);
 assign bypass_lsq = 1'b0;
 
-// A translation can be done if there is a hit in the dTLB
-assign translate_enable = dtlb_comm_i.tlb_ready & !dtlb_comm_i.resp.miss & (num_to_translate > 0);
+// We can translate the incoming instruction if there are no instructions to translate in the queue
+assign translate_incoming = write_enable & num_to_translate == '0;
 
 rr_exe_mem_instr_t instr_to_translate;
-assign instr_to_translate = control_table[tlb_tail];
+assign instr_to_translate = translate_incoming ? instruction_i : control_table[tlb_tail];
+
+// A translation can be done if there is a hit in the dTLB
+assign translate_enable = dtlb_comm_i.tlb_ready & !dtlb_comm_i.resp.miss & instr_to_translate.instr.valid;
 
 rr_exe_mem_instr_t translated_instr;
 
@@ -139,10 +143,10 @@ always_ff @(posedge clk_i)
 begin
     // Write tail
     if (write_enable) begin
-        control_table[tail] <= instruction_i;
+        control_table[tail] <= (translate_enable & translate_incoming) ? translated_instr : instruction_i;
     end
     // Update entry to be translated
-    if (translate_enable) begin
+    if (translate_enable & ~translate_incoming && (num_to_translate > 0)) begin
         control_table[tlb_tail] <= translated_instr;
     end
 end
@@ -167,9 +171,9 @@ begin
     else begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable};
-        num_to_exe      <= num_to_exe + {3'b0, translate_enable} - {3'b0, read_enable_lsq};
-        tlb_tail <= tlb_tail + {2'b00, translate_enable};
+        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable & (translate_incoming || num_to_translate > 0)};
+        num_to_exe      <= num_to_exe + {3'b0, translate_enable & (translate_incoming || num_to_translate > 0)} - {3'b0, read_enable_lsq};
+        tlb_tail <= tlb_tail + {2'b00, translate_enable & (translate_incoming || num_to_translate > 0)};
     end
 end
 
@@ -223,12 +227,12 @@ end
 
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;
 assign dtlb_comm_o.priv_lvl = priv_lvl_i;
-assign dtlb_comm_o.req.valid = num_to_translate > 0;
-assign dtlb_comm_o.req.vpn = control_table[tlb_tail].data_rs1[63:12];
+assign dtlb_comm_o.req.valid = num_to_translate > 0 || translate_incoming;
+assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[63:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
-assign dtlb_comm_o.req.store = control_table[tlb_tail].is_amo_or_store; // TODO: Check this, might not be exactly right...
+assign dtlb_comm_o.req.store = instr_to_translate.is_amo_or_store; // TODO: Check this, might not be exactly right...
 
 assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_translate == '0;
 assign empty_o = empty_int && !bypass_lsq;
