@@ -442,15 +442,15 @@ always_comb begin
             stall_int = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
-        else if ((from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM )) begin
-            stall_int = ~ready | ~ready_1cycle_inst;
-				end
+        else if (from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM) begin
+            stall_int = ~ready;
+        end
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
             stall_int = stall_mem | (~ready);
             pmu_stall_mem_o = stall_mem | (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_FPU) begin
-            stall_fpu_int = stall_fpu | (~ready_1cycle_inst && from_rr_i.instr.instr_type == FMV_F2X);
+            stall_fpu_int = stall_fpu;
             stall_int = (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_SIMD & is_vmul & sew_i == SEW_64) begin
