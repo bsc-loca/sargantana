@@ -179,11 +179,13 @@ always_comb begin
     read_enable_lsq = 1'b0;
     read_enable_sb = 1'b0;
     sb_write_enable = 1'b0;
-    if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
-        read_enable_sb = 1'b1;
-    end else if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin
+    if (read_enable && rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i) begin // Store inside LSQ
         read_enable_lsq = 1'b1;
-    end else if (read_enable && is_next_load && !st_buff_collision) begin
+    end else if (read_enable && is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
+        read_enable_lsq = 1'b1;
+    end else if (read_enable && rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin // Store inside SB
+        read_enable_sb = 1'b1;
+    end else if (read_enable && is_next_load && !st_buff_collision && io_address_space) begin // Load inside LSQ (IO)
         read_enable_lsq = 1'b1;
     end else if ((!read_enable || !rob_store_ack_i || control_table[head].gl_index != rob_store_gl_idx_i) && is_next_store && !st_buff_full) begin
         sb_write_enable = 1'b1;
@@ -193,31 +195,33 @@ end
 
 always_comb begin
     next_instr_exe_o = 'h0;
-    if (rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin
-        next_instr_exe_o = st_buff_inst_out;
-    end else if (rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i & control_table[head].translated) begin
+    if (rob_store_ack_i && is_next_store && control_table[head].gl_index == rob_store_gl_idx_i & control_table[head].translated) begin // Store inside LSQ
         next_instr_exe_o = control_table[head];
-    end else if (is_next_load && !st_buff_collision & control_table[head].translated) begin
+    end else if (is_next_load && !st_buff_collision & control_table[head].translated && !io_address_space) begin // Load inside LSQ
+        next_instr_exe_o = control_table[head];
+    end else if (rob_store_ack_i && !st_buff_empty && st_buff_inst_out.gl_index == rob_store_gl_idx_i) begin // Store inside SB
+        next_instr_exe_o = st_buff_inst_out;
+    end else if (is_next_load && !st_buff_collision & control_table[head].translated && io_address_space) begin // Load inside LSQ (IO)
         next_instr_exe_o = control_table[head];
     end else if (bypass_lsq) begin
         next_instr_exe_o = translated_instr;
     end
 end
 
+
 // If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
 assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (control_table[head].data_rs1 < 40'h80000000) && !en_ld_st_translation_i;
 
 always_comb begin
     blocked_store_o = 1'b1;
-    if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i)) begin
+    if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i)) begin // Store inside LSQ
         blocked_store_o = 1'b0;
-    end else if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i)) begin
+    end else if (is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
         blocked_store_o = 1'b0;
-    end else if (is_next_load && !st_buff_empty && io_address_space) begin 
-        // If the memory access is IO should not advance any store
-        blocked_store_o = 1'b1;
-    end else if (is_next_load && !st_buff_collision) begin
+    end else if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i)) begin // Store inside SB
         blocked_store_o = 1'b0;
+    end else if (is_next_load && st_buff_empty && io_address_space) begin // Load inside LSQ (IO)
+        blocked_store_o = 1'b0; 
     end else if (bypass_lsq) begin
         blocked_store_o = 1'b0;
     end
