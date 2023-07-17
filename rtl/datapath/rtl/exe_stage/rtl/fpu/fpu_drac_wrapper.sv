@@ -33,7 +33,6 @@ logic        op_mod;
 logic        rnd_mode_sel;
 operation_e  op;
 fp_format_e  src_fmt;
-fp_format_e  add_fmt;
 fp_format_e  dst_fmt;
 int_format_e int_fmt;
 logic ready_fpu;
@@ -49,18 +48,17 @@ rr_exe_fpu_instr_t finish_fp_op_int;
 
 always_comb begin : decide_FMT
    if (instruction_i.instr.fmt) begin
-      add_fmt = FP64;
+      dst_fmt = FP64;
    end else begin
-      add_fmt = FP32;
+      dst_fmt = FP32;
    end
 end
 // Operation decoding
 always_comb begin
    rnd_mode_sel    = 0;
    opcode_rnd_mode = RNE;
-   src_fmt         = add_fmt;
-   dst_fmt         = add_fmt;
-   int_fmt         = add_fmt == FP32 ? INT32 : INT64;
+   src_fmt         = dst_fmt;
+   int_fmt         = dst_fmt == FP32 ? INT32 : INT64;
    sign_extend_int = 0;
    op_mod = 0;
 
@@ -222,7 +220,7 @@ pending_fp_ops_queue pending_fp_ops_queue_inst (
     .full_o(stall_pending_fp_ops)                  // fifo full
 );
 
-fpuv_top #(
+fpnew_top #(
    .Features       ( Features ),
    .Implementation ( Implementation )
 ) i_fpuv_top (
@@ -235,12 +233,10 @@ fpuv_top #(
    .op_i           ( op ),
    .op_mod_i       ( op_mod ),
    .src_fmt_i      ( src_fmt ),
-   .add_fmt_i      ( add_fmt ),
    .dst_fmt_i      ( dst_fmt ),
    .int_fmt_i      ( int_fmt ),
-   .masked_op_i    ( '0 ),
-   .mask_bits_i    ( '0 ),
-   .inactive_sel_i ( 2'b11 ),
+   .simd_mask_i    ( '0 ),
+   //.inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),

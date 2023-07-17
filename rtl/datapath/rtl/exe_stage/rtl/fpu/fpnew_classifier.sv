@@ -8,22 +8,24 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpuv_classifier #(
-  parameter fpuv_pkg::fp_format_e FpFormat = fpuv_pkg::fp_format_e'(0),
-  parameter int unsigned          NumOperands = 1,
+module fpnew_classifier #(
+  parameter fpnew_pkg::fp_format_e   FpFormat = fpnew_pkg::fp_format_e'(0),
+  parameter int unsigned             NumOperands = 1,
   // Do not change
-  localparam int unsigned WIDTH = fpuv_pkg::fp_width(FpFormat)
+  localparam int unsigned WIDTH = fpnew_pkg::fp_width(FpFormat)
 ) (
-  input  logic               [NumOperands-1:0][WIDTH-1:0] operands_i,
-  input  logic               [NumOperands-1:0]            is_boxed_i,
-  output fpuv_pkg::fp_info_t [NumOperands-1:0]            info_o
+  input  logic                [NumOperands-1:0][WIDTH-1:0] operands_i,
+  input  logic                [NumOperands-1:0]            is_boxed_i,
+  output fpnew_pkg::fp_info_t [NumOperands-1:0]            info_o
 );
 
-  localparam int unsigned EXP_BITS = fpuv_pkg::exp_bits(FpFormat);
-  localparam int unsigned MAN_BITS = fpuv_pkg::man_bits(FpFormat);
+  localparam int unsigned EXP_BITS = fpnew_pkg::exp_bits(FpFormat);
+  localparam int unsigned MAN_BITS = fpnew_pkg::man_bits(FpFormat);
 
   // Type definition
   typedef struct packed {

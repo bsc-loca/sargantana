@@ -8,75 +8,70 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
-//
-// Additional contributions by: Luka Macan <luka.macan@fer.hr>
-//                              Leon Dragic <leon.dragic@fer.hr>
-//
-// Change history: 29/10/2019 - Fixed not equal operation. NaN (signaling or quiet) 
-//                              is a valid input to not equal operation.
-//                 11/03/2020 - Added masking functionality.
-//                 30/06/2020 - Added forwarding of 3 src registers for inactive element select.
-//                 09/07/2020 - Fixed masking for classify operations.
-//
 
 `include "registers.svh"
 
-module fpuv_noncomp #(
-  parameter fpuv_pkg::fp_format_e   FpFormat    = fpuv_pkg::fp_format_e'(0),
-  parameter int unsigned            NumPipeRegs = 0,
-  parameter fpuv_pkg::pipe_config_t PipeConfig  = fpuv_pkg::BEFORE,
-  parameter type                    TagType     = logic,
-  parameter type                    AuxType     = logic,
-
-  localparam int unsigned WIDTH = fpuv_pkg::fp_width(FpFormat) // do not change
+module fpnew_noncomp #(
+  parameter fpnew_pkg::fp_format_e   FpFormat    = fpnew_pkg::fp_format_e'(0),
+  parameter int unsigned             NumPipeRegs = 0,
+  parameter fpnew_pkg::pipe_config_t PipeConfig  = fpnew_pkg::BEFORE,
+  parameter type                     TagType     = logic,
+  parameter type                     AuxType     = logic,
+  // Do not change
+  localparam int unsigned WIDTH = fpnew_pkg::fp_width(FpFormat),
+  localparam int unsigned ExtRegEnaWidth = NumPipeRegs == 0 ? 1 : NumPipeRegs
 ) (
   input logic                  clk_i,
   input logic                  rst_ni,
   // Input signals
-  input logic [2:0][WIDTH-1:0]    operands_i, // 3 operands, 2 for op, 1 for mask forwarding
-  input logic [1:0]               is_boxed_i, // 2 operands
-  input fpuv_pkg::roundmode_e     rnd_mode_i,
-  input fpuv_pkg::operation_e     op_i,
-  input logic                     op_mod_i,
-  input TagType                   tag_i,
-  input AuxType                   aux_i,
-  input logic                     mask_i,
-  input logic [1:0]               inactive_sel_i,
+  input logic [1:0][WIDTH-1:0]     operands_i, // 2 operands
+  input logic [1:0]                is_boxed_i, // 2 operands
+  input fpnew_pkg::roundmode_e     rnd_mode_i,
+  input fpnew_pkg::operation_e     op_i,
+  input logic                      op_mod_i,
+  input TagType                    tag_i,
+  input logic                      mask_i,
+  input AuxType                    aux_i,
   // Input Handshake
-  input  logic                    in_valid_i,
-  output logic                    in_ready_o,
-  input  logic                    flush_i,
+  input  logic                     in_valid_i,
+  output logic                     in_ready_o,
+  input  logic                     flush_i,
   // Output signals
-  output logic [WIDTH-1:0]        result_o,
-  output fpuv_pkg::status_t       status_o,
-  output logic                    extension_bit_o,
-  output fpuv_pkg::classmask_e    class_mask_o,
-  output logic                    is_class_o,
-  output TagType                  tag_o,
-  output AuxType                  aux_o,
+  output logic [WIDTH-1:0]         result_o,
+  output fpnew_pkg::status_t       status_o,
+  output logic                     extension_bit_o,
+  output fpnew_pkg::classmask_e    class_mask_o,
+  output logic                     is_class_o,
+  output TagType                   tag_o,
+  output logic                     mask_o,
+  output AuxType                   aux_o,
   // Output handshake
-  output logic                    out_valid_o,
-  input  logic                    out_ready_i,
+  output logic                     out_valid_o,
+  input  logic                     out_ready_i,
   // Indication of valid data in flight
-  output logic                    busy_o
+  output logic                     busy_o,
+  // External register enable override
+  input  logic [ExtRegEnaWidth-1:0] reg_ena_i
 );
 
   // ----------
   // Constants
   // ----------
-  localparam int unsigned EXP_BITS = fpuv_pkg::exp_bits(FpFormat);
-  localparam int unsigned MAN_BITS = fpuv_pkg::man_bits(FpFormat);
+  localparam int unsigned EXP_BITS = fpnew_pkg::exp_bits(FpFormat);
+  localparam int unsigned MAN_BITS = fpnew_pkg::man_bits(FpFormat);
   // Pipelines
-  localparam NUM_INP_REGS = (PipeConfig == fpuv_pkg::BEFORE || PipeConfig == fpuv_pkg::INSIDE)
+  localparam NUM_INP_REGS = (PipeConfig == fpnew_pkg::BEFORE || PipeConfig == fpnew_pkg::INSIDE)
                             ? NumPipeRegs
-                            : (PipeConfig == fpuv_pkg::DISTRIBUTED
+                            : (PipeConfig == fpnew_pkg::DISTRIBUTED
                                ? ((NumPipeRegs + 1) / 2) // First to get distributed regs
                                : 0); // no regs here otherwise
-  localparam NUM_OUT_REGS = PipeConfig == fpuv_pkg::AFTER
+  localparam NUM_OUT_REGS = PipeConfig == fpnew_pkg::AFTER
                             ? NumPipeRegs
-                            : (PipeConfig == fpuv_pkg::DISTRIBUTED
+                            : (PipeConfig == fpnew_pkg::DISTRIBUTED
                                ? (NumPipeRegs / 2) // Last to get distributed regs
                                : 0); // no regs here otherwise
 
@@ -92,33 +87,31 @@ module fpuv_noncomp #(
   // ---------------
   // Input pipeline
   // ---------------
-  // verilator lint_off BLKANDNBLK
   // Input pipeline signals, index i holds signal after i register stages
-  logic                 [0:NUM_INP_REGS][2:0][WIDTH-1:0] inp_pipe_operands_q;
-  logic                 [0:NUM_INP_REGS][1:0]            inp_pipe_is_boxed_q;
-  fpuv_pkg::roundmode_e [0:NUM_INP_REGS]                 inp_pipe_rnd_mode_q;
-  fpuv_pkg::operation_e [0:NUM_INP_REGS]                 inp_pipe_op_q;
-  logic                 [0:NUM_INP_REGS]                 inp_pipe_op_mod_q;
-  TagType               [0:NUM_INP_REGS]                 inp_pipe_tag_q;
-  AuxType               [0:NUM_INP_REGS]                 inp_pipe_aux_q;
-  logic                 [0:NUM_INP_REGS]                 inp_pipe_valid_q;
-  logic                 [0:NUM_INP_REGS]                 inp_pipe_mask_q;
-  logic                 [0:NUM_INP_REGS][1:0]            inp_pipe_inactive_sel_q;
+  // verilator lint_off BLKANDNBLK
+  logic                  [0:NUM_INP_REGS][1:0][WIDTH-1:0] inp_pipe_operands_q;
+  logic                  [0:NUM_INP_REGS][1:0]            inp_pipe_is_boxed_q;
+  fpnew_pkg::roundmode_e [0:NUM_INP_REGS]                 inp_pipe_rnd_mode_q;
+  fpnew_pkg::operation_e [0:NUM_INP_REGS]                 inp_pipe_op_q;
+  logic                  [0:NUM_INP_REGS]                 inp_pipe_op_mod_q;
+  TagType                [0:NUM_INP_REGS]                 inp_pipe_tag_q;
+  logic                  [0:NUM_INP_REGS]                 inp_pipe_mask_q;
+  AuxType                [0:NUM_INP_REGS]                 inp_pipe_aux_q;
+  logic                  [0:NUM_INP_REGS]                 inp_pipe_valid_q;
   // Ready signal is combinatorial for all stages
   logic [0:NUM_INP_REGS] inp_pipe_ready;
 
   // Input stage: First element of pipeline is taken from inputs
-  assign inp_pipe_operands_q[0]     = operands_i;
-  assign inp_pipe_is_boxed_q[0]     = is_boxed_i;
-  assign inp_pipe_rnd_mode_q[0]     = rnd_mode_i;
-  assign inp_pipe_op_q[0]           = op_i;
-  assign inp_pipe_op_mod_q[0]       = op_mod_i;
-  assign inp_pipe_tag_q[0]          = tag_i;
-  assign inp_pipe_aux_q[0]          = aux_i;
-  assign inp_pipe_valid_q[0]        = in_valid_i;
-  assign inp_pipe_mask_q[0]         = mask_i;
-  assign inp_pipe_inactive_sel_q[0] = inactive_sel_i;
-
+  assign inp_pipe_operands_q[0] = operands_i;
+  assign inp_pipe_is_boxed_q[0] = is_boxed_i;
+  assign inp_pipe_rnd_mode_q[0] = rnd_mode_i;
+  assign inp_pipe_op_q[0]       = op_i;
+  assign inp_pipe_op_mod_q[0]   = op_mod_i;
+  assign inp_pipe_tag_q[0]      = tag_i;
+  assign inp_pipe_mask_q[0]     = mask_i;
+  assign inp_pipe_aux_q[0]      = aux_i;
+  assign inp_pipe_valid_q[0]    = in_valid_i;
+  // verilator lint_on BLKANDNBLK
   // Input stage: Propagate pipeline ready signal to updtream circuitry
   assign in_ready_o = inp_pipe_ready[0];
   // Generate the register stages
@@ -132,36 +125,35 @@ module fpuv_noncomp #(
     // Valid: enabled by ready signal, synchronous clear with the flush signal
     `FFLARNC(inp_pipe_valid_q[i+1], inp_pipe_valid_q[i], inp_pipe_ready[i], flush_i, 1'b0, clk_i, rst_ni)
     // Enable register if pipleine ready and a valid data item is present
-    assign reg_ena = inp_pipe_ready[i] & inp_pipe_valid_q[i];
+    assign reg_ena = (inp_pipe_ready[i] & inp_pipe_valid_q[i]) | reg_ena_i[i];
     // Generate the pipeline registers within the stages, use enable-registers
-    `FFL(inp_pipe_operands_q[i+1],     inp_pipe_operands_q[i],     reg_ena, '0)
-    `FFL(inp_pipe_is_boxed_q[i+1],     inp_pipe_is_boxed_q[i],     reg_ena, '0)
-    `FFL(inp_pipe_rnd_mode_q[i+1],     inp_pipe_rnd_mode_q[i],     reg_ena, fpuv_pkg::RNE)
-    `FFL(inp_pipe_op_q[i+1],           inp_pipe_op_q[i],           reg_ena, fpuv_pkg::FMADD)
-    `FFL(inp_pipe_op_mod_q[i+1],       inp_pipe_op_mod_q[i],       reg_ena, '0)
-    `FFL(inp_pipe_tag_q[i+1],          inp_pipe_tag_q[i],          reg_ena, TagType'('0))
-    `FFL(inp_pipe_aux_q[i+1],          inp_pipe_aux_q[i],          reg_ena, AuxType'('0))
-    `FFL(inp_pipe_mask_q[i+1],         inp_pipe_mask_q[i],         reg_ena, '0)
-    `FFL(inp_pipe_inactive_sel_q[i+1], inp_pipe_inactive_sel_q[i], reg_ena, '0)
+    `FFL(inp_pipe_operands_q[i+1], inp_pipe_operands_q[i], reg_ena, '0)
+    `FFL(inp_pipe_is_boxed_q[i+1], inp_pipe_is_boxed_q[i], reg_ena, '0)
+    `FFL(inp_pipe_rnd_mode_q[i+1], inp_pipe_rnd_mode_q[i], reg_ena, fpnew_pkg::RNE)
+    `FFL(inp_pipe_op_q[i+1],       inp_pipe_op_q[i],       reg_ena, fpnew_pkg::FMADD)
+    `FFL(inp_pipe_op_mod_q[i+1],   inp_pipe_op_mod_q[i],   reg_ena, '0)
+    `FFL(inp_pipe_tag_q[i+1],      inp_pipe_tag_q[i],      reg_ena, TagType'('0))
+    `FFL(inp_pipe_mask_q[i+1],     inp_pipe_mask_q[i],     reg_ena, '0)
+    `FFL(inp_pipe_aux_q[i+1],      inp_pipe_aux_q[i],      reg_ena, AuxType'('0))
   end
 
   // ---------------------
   // Input classification
   // ---------------------
-  fpuv_pkg::fp_info_t [1:0] info_q;
+  fpnew_pkg::fp_info_t [1:0] info_q;
 
   // Classify input
-  fpuv_classifier #(
+  fpnew_classifier #(
     .FpFormat    ( FpFormat ),
     .NumOperands ( 2        )
     ) i_class_a (
-    .operands_i ( inp_pipe_operands_q[NUM_INP_REGS][1:0] ),
+    .operands_i ( inp_pipe_operands_q[NUM_INP_REGS] ),
     .is_boxed_i ( inp_pipe_is_boxed_q[NUM_INP_REGS] ),
     .info_o     ( info_q                            )
   );
 
-  fp_t                operand_a, operand_b;
-  fpuv_pkg::fp_info_t info_a,    info_b;
+  fp_t                 operand_a, operand_b;
+  fpnew_pkg::fp_info_t info_a,    info_b;
 
   // Packing-order-agnostic assignments
   assign operand_a = inp_pipe_operands_q[NUM_INP_REGS][0];
@@ -169,10 +161,12 @@ module fpuv_noncomp #(
   assign info_a    = info_q[0];
   assign info_b    = info_q[1];
 
+  logic any_operand_inf;
   logic any_operand_nan;
   logic signalling_nan;
 
   // Reduction for special case handling
+  assign any_operand_inf = (| {info_a.is_inf,        info_b.is_inf});
   assign any_operand_nan = (| {info_a.is_nan,        info_b.is_nan});
   assign signalling_nan  = (| {info_a.is_signalling, info_b.is_signalling});
 
@@ -186,9 +180,9 @@ module fpuv_noncomp #(
   // ---------------
   // Sign Injection
   // ---------------
-  fp_t               sgnj_result;
-  fpuv_pkg::status_t sgnj_status;
-  logic              sgnj_extension_bit;
+  fp_t                sgnj_result;
+  fpnew_pkg::status_t sgnj_status;
+  logic               sgnj_extension_bit;
 
   // Sign Injection - operation is encoded in rnd_mode_q:
   // RNE = SGNJ, RTZ = SGNJN, RDN = SGNJX, RUP = Passthrough (no NaN-box check)
@@ -206,11 +200,11 @@ module fpuv_noncomp #(
 
     // Do the sign injection based on rm field
     unique case (inp_pipe_rnd_mode_q[NUM_INP_REGS])
-      fpuv_pkg::RNE: sgnj_result.sign = sign_b;          // SGNJ
-      fpuv_pkg::RTZ: sgnj_result.sign = ~sign_b;         // SGNJN
-      fpuv_pkg::RDN: sgnj_result.sign = sign_a ^ sign_b; // SGNJX
-      fpuv_pkg::RUP: sgnj_result      = operand_a;       // passthrough
-      default: sgnj_result = '{default: fpuv_pkg::DONT_CARE}; // don't care
+      fpnew_pkg::RNE: sgnj_result.sign = sign_b;          // SGNJ
+      fpnew_pkg::RTZ: sgnj_result.sign = ~sign_b;         // SGNJN
+      fpnew_pkg::RDN: sgnj_result.sign = sign_a ^ sign_b; // SGNJX
+      fpnew_pkg::RUP: sgnj_result      = operand_a;       // passthrough
+      default: sgnj_result = '{default: fpnew_pkg::DONT_CARE}; // don't care
     endcase
   end
 
@@ -222,9 +216,9 @@ module fpuv_noncomp #(
   // ------------------
   // Minimum / Maximum
   // ------------------
-  fp_t               minmax_result;
-  fpuv_pkg::status_t minmax_status;
-  logic              minmax_extension_bit;
+  fp_t                minmax_result;
+  fpnew_pkg::status_t minmax_status;
+  logic               minmax_extension_bit;
 
   // Minimum/Maximum - operation is encoded in rnd_mode_q:
   // RNE = MIN, RTZ = MAX
@@ -244,9 +238,9 @@ module fpuv_noncomp #(
     // Otherwise decide according to the operation
     else begin
       unique case (inp_pipe_rnd_mode_q[NUM_INP_REGS])
-        fpuv_pkg::RNE: minmax_result = operand_a_smaller ? operand_a : operand_b; // MIN
-        fpuv_pkg::RTZ: minmax_result = operand_a_smaller ? operand_b : operand_a; // MAX
-        default: minmax_result = '{default: fpuv_pkg::DONT_CARE}; // don't care
+        fpnew_pkg::RNE: minmax_result = operand_a_smaller ? operand_a : operand_b; // MIN
+        fpnew_pkg::RTZ: minmax_result = operand_a_smaller ? operand_b : operand_a; // MAX
+        default: minmax_result = '{default: fpnew_pkg::DONT_CARE}; // don't care
       endcase
     end
   end
@@ -256,9 +250,9 @@ module fpuv_noncomp #(
   // ------------
   // Comparisons
   // ------------
-  fp_t               cmp_result;
-  fpuv_pkg::status_t cmp_status;
-  logic              cmp_extension_bit;
+  fp_t                cmp_result;
+  fpnew_pkg::status_t cmp_status;
+  logic               cmp_extension_bit;
 
   // Comparisons - operation is encoded in rnd_mode_q:
   // RNE = LE, RTZ = LT, RDN = EQ
@@ -268,24 +262,26 @@ module fpuv_noncomp #(
     cmp_result = '0; // false
     cmp_status = '0; // no flags
 
-    // Signalling NaNs always raises an invalid exception
-    cmp_status.NV = signalling_nan;
-
-    unique case (inp_pipe_rnd_mode_q[NUM_INP_REGS])
-      fpuv_pkg::RNE: begin // Less than or equal
-        if (any_operand_nan) cmp_status.NV = 1'b1; // Signalling comparison: NaNs are invalid
-        else cmp_result = (operand_a_smaller | operands_equal) ^ inp_pipe_op_mod_q[NUM_INP_REGS];
-      end
-      fpuv_pkg::RTZ: begin // Less than
-        if (any_operand_nan) cmp_status.NV = 1'b1; // Signalling comparison: NaNs are invalid
-        else cmp_result = (operand_a_smaller & ~operands_equal) ^ inp_pipe_op_mod_q[NUM_INP_REGS];
-      end
-      fpuv_pkg::RDN: begin // Equal
-        if (any_operand_nan) cmp_result = inp_pipe_op_mod_q[NUM_INP_REGS]; // NaN are valid, always compare as not equal
-        else cmp_result = operands_equal ^ inp_pipe_op_mod_q[NUM_INP_REGS];
-      end
-      default: cmp_result = '{default: fpuv_pkg::DONT_CARE}; // don't care
-    endcase
+    // Signalling NaNs always compare as false and are illegal
+    if (signalling_nan) cmp_status.NV = 1'b1; // invalid operation
+    // Otherwise do comparisons
+    else begin
+      unique case (inp_pipe_rnd_mode_q[NUM_INP_REGS])
+        fpnew_pkg::RNE: begin // Less than or equal
+          if (any_operand_nan) cmp_status.NV = 1'b1; // Signalling comparison: NaNs are invalid
+          else cmp_result = (operand_a_smaller | operands_equal) ^ inp_pipe_op_mod_q[NUM_INP_REGS];
+        end
+        fpnew_pkg::RTZ: begin // Less than
+          if (any_operand_nan) cmp_status.NV = 1'b1; // Signalling comparison: NaNs are invalid
+          else cmp_result = (operand_a_smaller & ~operands_equal) ^ inp_pipe_op_mod_q[NUM_INP_REGS];
+        end
+        fpnew_pkg::RDN: begin // Equal
+          if (any_operand_nan) cmp_result = inp_pipe_op_mod_q[NUM_INP_REGS]; // NaN always not equal
+          else cmp_result = operands_equal ^ inp_pipe_op_mod_q[NUM_INP_REGS];
+        end
+        default: cmp_result = '{default: fpnew_pkg::DONT_CARE}; // don't care
+      endcase
+    end
   end
 
   assign cmp_extension_bit = 1'b0; // Comparisons always produce booleans in integer registers
@@ -293,24 +289,24 @@ module fpuv_noncomp #(
   // ---------------
   // Classification
   // ---------------
-  fpuv_pkg::status_t    class_status;
-  logic                 class_extension_bit;
-  fpuv_pkg::classmask_e class_mask_d; // the result is actually here
+  fpnew_pkg::status_t    class_status;
+  logic                  class_extension_bit;
+  fpnew_pkg::classmask_e class_mask_d; // the result is actually here
 
   // Classification - always return the classification mask on the dedicated port
   always_comb begin : classify
     if (info_a.is_normal) begin
-      class_mask_d = operand_a.sign       ? fpuv_pkg::NEGNORM    : fpuv_pkg::POSNORM;
+      class_mask_d = operand_a.sign       ? fpnew_pkg::NEGNORM    : fpnew_pkg::POSNORM;
     end else if (info_a.is_subnormal) begin
-      class_mask_d = operand_a.sign       ? fpuv_pkg::NEGSUBNORM : fpuv_pkg::POSSUBNORM;
+      class_mask_d = operand_a.sign       ? fpnew_pkg::NEGSUBNORM : fpnew_pkg::POSSUBNORM;
     end else if (info_a.is_zero) begin
-      class_mask_d = operand_a.sign       ? fpuv_pkg::NEGZERO    : fpuv_pkg::POSZERO;
+      class_mask_d = operand_a.sign       ? fpnew_pkg::NEGZERO    : fpnew_pkg::POSZERO;
     end else if (info_a.is_inf) begin
-      class_mask_d = operand_a.sign       ? fpuv_pkg::NEGINF     : fpuv_pkg::POSINF;
+      class_mask_d = operand_a.sign       ? fpnew_pkg::NEGINF     : fpnew_pkg::POSINF;
     end else if (info_a.is_nan) begin
-      class_mask_d = info_a.is_signalling ? fpuv_pkg::SNAN       : fpuv_pkg::QNAN;
+      class_mask_d = info_a.is_signalling ? fpnew_pkg::SNAN       : fpnew_pkg::QNAN;
     end else begin
-      class_mask_d = fpuv_pkg::QNAN; // default value
+      class_mask_d = fpnew_pkg::QNAN; // default value
     end
   end
 
@@ -320,73 +316,58 @@ module fpuv_noncomp #(
   // -----------------
   // Result selection
   // -----------------
-  fp_t                  result_d;
-  fpuv_pkg::status_t    status_d;
-  logic                 extension_bit_d;
-  logic                 is_class_d;
+  fp_t                   result_d;
+  fpnew_pkg::status_t    status_d;
+  logic                  extension_bit_d;
+  logic                  is_class_d;
 
   // Select result
   always_comb begin : select_result
-
-    if (inp_pipe_mask_q[NUM_INP_REGS]) begin
-      status_d = '0; // invalid operation
-      extension_bit_d = fpuv_pkg::DONT_CARE;             // dont care
-      if (inp_pipe_inactive_sel_q[NUM_INP_REGS] == 2'b01) begin
-        result_d = inp_pipe_operands_q[NUM_INP_REGS][0];
-      end else if (inp_pipe_inactive_sel_q[NUM_INP_REGS] == 2'b10) begin
-        result_d = inp_pipe_operands_q[NUM_INP_REGS][1];
-      end else if (inp_pipe_inactive_sel_q[NUM_INP_REGS] == 2'b11) begin
-        result_d = inp_pipe_operands_q[NUM_INP_REGS][2];
-      end else begin
-        result_d = '{default: fpuv_pkg::DONT_CARE};
-      end
-    end
-    else begin
     unique case (inp_pipe_op_q[NUM_INP_REGS])
-      fpuv_pkg::SGNJ: begin
+      fpnew_pkg::SGNJ: begin
         result_d        = sgnj_result;
         status_d        = sgnj_status;
         extension_bit_d = sgnj_extension_bit;
       end
-      fpuv_pkg::MINMAX: begin
+      fpnew_pkg::MINMAX: begin
         result_d        = minmax_result;
         status_d        = minmax_status;
         extension_bit_d = minmax_extension_bit;
       end
-      fpuv_pkg::CMP: begin
+      fpnew_pkg::CMP: begin
         result_d        = cmp_result;
         status_d        = cmp_status;
         extension_bit_d = cmp_extension_bit;
       end
-      fpuv_pkg::CLASSIFY: begin
-        result_d        = '{default: fpuv_pkg::DONT_CARE}; // unused
+      fpnew_pkg::CLASSIFY: begin
+        result_d        = '{default: fpnew_pkg::DONT_CARE}; // unused
         status_d        = class_status;
         extension_bit_d = class_extension_bit;
       end
       default: begin
-        result_d        = '{default: fpuv_pkg::DONT_CARE}; // dont care
-        status_d        = '{default: fpuv_pkg::DONT_CARE}; // dont care
-        extension_bit_d = fpuv_pkg::DONT_CARE;             // dont care
+        result_d        = '{default: fpnew_pkg::DONT_CARE}; // dont care
+        status_d        = '{default: fpnew_pkg::DONT_CARE}; // dont care
+        extension_bit_d = fpnew_pkg::DONT_CARE;             // dont care
       end
     endcase
-    end
   end
 
-  assign is_class_d = (inp_pipe_op_q[NUM_INP_REGS] == fpuv_pkg::CLASSIFY && inp_pipe_mask_q[NUM_INP_REGS] == 0 );
+  assign is_class_d = (inp_pipe_op_q[NUM_INP_REGS] == fpnew_pkg::CLASSIFY);
 
   // ----------------
   // Output Pipeline
   // ----------------
-  // verilator lint_off BLKANDNBLK
   // Output pipeline signals, index i holds signal after i register stages
-  fp_t                  [0:NUM_OUT_REGS] out_pipe_result_q;
-  fpuv_pkg::status_t    [0:NUM_OUT_REGS] out_pipe_status_q;
-  logic                 [0:NUM_OUT_REGS] out_pipe_extension_bit_q;
-  fpuv_pkg::classmask_e [0:NUM_OUT_REGS] out_pipe_class_mask_q;
-  logic                 [0:NUM_OUT_REGS] out_pipe_is_class_q;
-  TagType               [0:NUM_OUT_REGS] out_pipe_tag_q;
-  AuxType               [0:NUM_OUT_REGS] out_pipe_aux_q;
-  logic                 [0:NUM_OUT_REGS] out_pipe_valid_q;
+  // verilator lint_off BLKANDNBLK
+  fp_t                   [0:NUM_OUT_REGS] out_pipe_result_q;
+  fpnew_pkg::status_t    [0:NUM_OUT_REGS] out_pipe_status_q;
+  logic                  [0:NUM_OUT_REGS] out_pipe_extension_bit_q;
+  fpnew_pkg::classmask_e [0:NUM_OUT_REGS] out_pipe_class_mask_q;
+  logic                  [0:NUM_OUT_REGS] out_pipe_is_class_q;
+  TagType                [0:NUM_OUT_REGS] out_pipe_tag_q;
+  logic                  [0:NUM_OUT_REGS] out_pipe_mask_q;
+  AuxType                [0:NUM_OUT_REGS] out_pipe_aux_q;
+  logic                  [0:NUM_OUT_REGS] out_pipe_valid_q;
   // Ready signal is combinatorial for all stages
   logic [0:NUM_OUT_REGS] out_pipe_ready;
 
@@ -397,11 +378,13 @@ module fpuv_noncomp #(
   assign out_pipe_class_mask_q[0]    = class_mask_d;
   assign out_pipe_is_class_q[0]      = is_class_d;
   assign out_pipe_tag_q[0]           = inp_pipe_tag_q[NUM_INP_REGS];
+  assign out_pipe_mask_q[0]          = inp_pipe_mask_q[NUM_INP_REGS];
   assign out_pipe_aux_q[0]           = inp_pipe_aux_q[NUM_INP_REGS];
   assign out_pipe_valid_q[0]         = inp_pipe_valid_q[NUM_INP_REGS];
-
   // Input stage: Propagate pipeline ready signal to inside pipe
   assign inp_pipe_ready[NUM_INP_REGS] = out_pipe_ready[0];
+  // verilator lint_on BLKANDNBLK
+  
   // Generate the register stages
   for (genvar i = 0; i < NUM_OUT_REGS; i++) begin : gen_output_pipeline
     // Internal register enable for this stage
@@ -413,14 +396,15 @@ module fpuv_noncomp #(
     // Valid: enabled by ready signal, synchronous clear with the flush signal
     `FFLARNC(out_pipe_valid_q[i+1], out_pipe_valid_q[i], out_pipe_ready[i], flush_i, 1'b0, clk_i, rst_ni)
     // Enable register if pipleine ready and a valid data item is present
-    assign reg_ena = out_pipe_ready[i] & out_pipe_valid_q[i];
+    assign reg_ena = (out_pipe_ready[i] & out_pipe_valid_q[i]) | reg_ena_i[NUM_INP_REGS + i];
     // Generate the pipeline registers within the stages, use enable-registers
     `FFL(out_pipe_result_q[i+1],        out_pipe_result_q[i],        reg_ena, '0)
     `FFL(out_pipe_status_q[i+1],        out_pipe_status_q[i],        reg_ena, '0)
     `FFL(out_pipe_extension_bit_q[i+1], out_pipe_extension_bit_q[i], reg_ena, '0)
-    `FFL(out_pipe_class_mask_q[i+1],    out_pipe_class_mask_q[i],    reg_ena, fpuv_pkg::QNAN)
+    `FFL(out_pipe_class_mask_q[i+1],    out_pipe_class_mask_q[i],    reg_ena, fpnew_pkg::QNAN)
     `FFL(out_pipe_is_class_q[i+1],      out_pipe_is_class_q[i],      reg_ena, '0)
     `FFL(out_pipe_tag_q[i+1],           out_pipe_tag_q[i],           reg_ena, TagType'('0))
+    `FFL(out_pipe_mask_q[i+1],          out_pipe_mask_q[i],          reg_ena, '0)
     `FFL(out_pipe_aux_q[i+1],           out_pipe_aux_q[i],           reg_ena, AuxType'('0))
   end
   // Output stage: Ready travels backwards from output side, driven by downstream circuitry
@@ -432,8 +416,8 @@ module fpuv_noncomp #(
   assign class_mask_o    = out_pipe_class_mask_q[NUM_OUT_REGS];
   assign is_class_o      = out_pipe_is_class_q[NUM_OUT_REGS];
   assign tag_o           = out_pipe_tag_q[NUM_OUT_REGS];
+  assign mask_o          = out_pipe_mask_q[NUM_OUT_REGS];
   assign aux_o           = out_pipe_aux_q[NUM_OUT_REGS];
   assign out_valid_o     = out_pipe_valid_q[NUM_OUT_REGS];
   assign busy_o          = (| {inp_pipe_valid_q, out_pipe_valid_q});
-
 endmodule

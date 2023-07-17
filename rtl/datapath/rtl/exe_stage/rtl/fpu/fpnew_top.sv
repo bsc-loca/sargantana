@@ -8,22 +8,23 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
-//
-// Additional contributions by: Mate Kovac <mate.kovac@fer.hr>
-//                              Leon Dragic <leon.dragic@fer.hr>
-//
-// Change history: 03/09/2019 - Added addend format input (add_fmt_i).
-//                 09/03/2020 - Added masking inputs.
-//
 
-module fpuv_top #(
+module fpnew_top #(
   // FPU configuration
-  parameter fpuv_pkg::fpu_features_t        Features       = fpuv_pkg::RV64D_Xsflt,
-  parameter fpuv_pkg::fpu_implementation_t  Implementation = fpuv_pkg::DEFAULT_NOREGS,
+  parameter fpnew_pkg::fpu_features_t       Features       = fpnew_pkg::RV64D_Xsflt,
+  parameter fpnew_pkg::fpu_implementation_t Implementation = fpnew_pkg::DEFAULT_NOREGS,
+  // PulpDivSqrt = 0 enables T-head-based DivSqrt unit. Supported only for FP32-only instances of Fpnew
+  parameter logic                           PulpDivsqrt    = 1'b1,
   parameter type                            TagType        = logic[4:0],
+  parameter int unsigned                    TrueSIMDClass  = 0,
+  parameter int unsigned                    EnableSIMDMask = 0,
   // Do not change
+  localparam int unsigned NumLanes     = fpnew_pkg::max_num_lanes(Features.Width, Features.FpFmtMask, Features.EnableVectors),
+  localparam type         MaskType     = logic [NumLanes-1:0],
   localparam int unsigned WIDTH        = Features.Width,
   localparam int unsigned NUM_OPERANDS = 3
 ) (
@@ -31,25 +32,22 @@ module fpuv_top #(
   input logic                               rst_ni,
   // Input signals
   input logic [NUM_OPERANDS-1:0][WIDTH-1:0] operands_i,
-  input fpuv_pkg::roundmode_e               rnd_mode_i,
-  input fpuv_pkg::operation_e               op_i,
+  input fpnew_pkg::roundmode_e              rnd_mode_i,
+  input fpnew_pkg::operation_e              op_i,
   input logic                               op_mod_i,
-  input fpuv_pkg::fp_format_e               src_fmt_i,
-  input fpuv_pkg::fp_format_e               add_fmt_i,
-  input fpuv_pkg::fp_format_e               dst_fmt_i,
-  input fpuv_pkg::int_format_e              int_fmt_i,
-  input logic                               masked_op_i,
-  input logic [fpuv_pkg::MASK_WORD-1:0]     mask_bits_i,
-  input logic [1:0]                         inactive_sel_i,
+  input fpnew_pkg::fp_format_e              src_fmt_i,
+  input fpnew_pkg::fp_format_e              dst_fmt_i,
+  input fpnew_pkg::int_format_e             int_fmt_i,
   input logic                               vectorial_op_i,
   input TagType                             tag_i,
+  input MaskType                            simd_mask_i,
   // Input Handshake
   input  logic                              in_valid_i,
   output logic                              in_ready_o,
   input  logic                              flush_i,
   // Output signals
   output logic [WIDTH-1:0]                  result_o,
-  output fpuv_pkg::status_t                 status_o,
+  output fpnew_pkg::status_t                status_o,
   output TagType                            tag_o,
   // Output handshake
   output logic                              out_valid_o,
@@ -58,16 +56,16 @@ module fpuv_top #(
   output logic                              busy_o
 );
 
-  localparam int unsigned NUM_OPGROUPS = fpuv_pkg::NUM_OPGROUPS;
-  localparam int unsigned NUM_FORMATS  = fpuv_pkg::NUM_FP_FORMATS;
+  localparam int unsigned NUM_OPGROUPS = fpnew_pkg::NUM_OPGROUPS;
+  localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS;
 
   // ----------------
   // Type Definition
   // ----------------
   typedef struct packed {
     logic [WIDTH-1:0]   result;
-    fpuv_pkg::status_t status;
-    TagType             tagt;
+    fpnew_pkg::status_t status;
+    TagType             tag;
   } output_t;
 
   // Handshake signals for the blocks
@@ -79,11 +77,11 @@ module fpuv_top #(
   // -----------
   // Input Side
   // -----------
-  assign in_ready_o = in_valid_i & opgrp_in_ready[fpuv_pkg::get_opgroup(op_i)];
+  assign in_ready_o = in_valid_i & opgrp_in_ready[fpnew_pkg::get_opgroup(op_i)];
 
   // NaN-boxing check
   for (genvar fmt = 0; fmt < int'(NUM_FORMATS); fmt++) begin : gen_nanbox_check
-    localparam int unsigned FP_WIDTH = fpuv_pkg::fp_width(fpuv_pkg::fp_format_e'(fmt));
+    localparam int unsigned FP_WIDTH = fpnew_pkg::fp_width(fpnew_pkg::fp_format_e'(fmt));
     // NaN boxing is only generated if it's enabled and needed
     if (Features.EnableNanBox && (FP_WIDTH < WIDTH)) begin : check
       for (genvar op = 0; op < int'(NUM_OPERANDS); op++) begin : operands
@@ -96,16 +94,20 @@ module fpuv_top #(
     end
   end
 
+  // Filter out the mask if not used
+  MaskType simd_mask;
+  assign simd_mask = simd_mask_i | ~{NumLanes{logic'(EnableSIMDMask)}};
+
   // -------------------------
   // Generate Operation Blocks
   // -------------------------
   for (genvar opgrp = 0; opgrp < int'(NUM_OPGROUPS); opgrp++) begin : gen_operation_groups
-    localparam int unsigned NUM_OPS = fpuv_pkg::num_operands(fpuv_pkg::opgroup_e'(opgrp));
+    localparam int unsigned NUM_OPS = fpnew_pkg::num_operands(fpnew_pkg::opgroup_e'(opgrp));
 
     logic in_valid;
     logic [NUM_FORMATS-1:0][NUM_OPS-1:0] input_boxed;
 
-    assign in_valid = in_valid_i & (fpuv_pkg::get_opgroup(op_i) == fpuv_pkg::opgroup_e'(opgrp));
+    assign in_valid = in_valid_i & (fpnew_pkg::get_opgroup(op_i) == fpnew_pkg::opgroup_e'(opgrp));
 
     // slice out input boxing
     always_comb begin : slice_inputs
@@ -113,16 +115,18 @@ module fpuv_top #(
         input_boxed[fmt] = is_boxed[fmt][NUM_OPS-1:0];
     end
 
-    fpuv_opgroup_block #(
-      .OpGroup       ( fpuv_pkg::opgroup_e'(opgrp)     ),
+    fpnew_opgroup_block #(
+      .OpGroup       ( fpnew_pkg::opgroup_e'(opgrp)    ),
       .Width         ( WIDTH                           ),
       .EnableVectors ( Features.EnableVectors          ),
+      .PulpDivsqrt   ( PulpDivsqrt                     ),
       .FpFmtMask     ( Features.FpFmtMask              ),
       .IntFmtMask    ( Features.IntFmtMask             ),
       .FmtPipeRegs   ( Implementation.PipeRegs[opgrp]  ),
       .FmtUnitTypes  ( Implementation.UnitTypes[opgrp] ),
       .PipeConfig    ( Implementation.PipeConfig       ),
-      .TagType       ( TagType                         )
+      .TagType       ( TagType                         ),
+      .TrueSIMDClass ( TrueSIMDClass                   )
     ) i_opgroup_block (
       .clk_i,
       .rst_ni,
@@ -132,21 +136,18 @@ module fpuv_top #(
       .op_i,
       .op_mod_i,
       .src_fmt_i,
-      .add_fmt_i,
       .dst_fmt_i,
       .int_fmt_i,
-      .masked_op_i     ( masked_op_i ),
-      .mask_bits_i     ( mask_bits_i ),
-      .inactive_sel_i  ( inactive_sel_i ),
       .vectorial_op_i,
       .tag_i,
+      .simd_mask_i     ( simd_mask             ),
       .in_valid_i      ( in_valid              ),
       .in_ready_o      ( opgrp_in_ready[opgrp] ),
       .flush_i,
       .result_o        ( opgrp_outputs[opgrp].result ),
       .status_o        ( opgrp_outputs[opgrp].status ),
       .extension_bit_o ( opgrp_ext[opgrp]            ),
-      .tag_o           ( opgrp_outputs[opgrp].tagt    ),
+      .tag_o           ( opgrp_outputs[opgrp].tag    ),
       .out_valid_o     ( opgrp_out_valid[opgrp]      ),
       .out_ready_i     ( opgrp_out_ready[opgrp]      ),
       .busy_o          ( opgrp_busy[opgrp]           )
@@ -159,7 +160,7 @@ module fpuv_top #(
   output_t arbiter_output;
 
   // Round-Robin arbiter to decide which result to use
-  fpuv_rr_arb_tree #(
+  rr_arb_tree #(
     .NumIn     ( NUM_OPGROUPS ),
     .DataType  ( output_t     ),
     .AxiVldRdy ( 1'b1         )
@@ -180,7 +181,7 @@ module fpuv_top #(
   // Unpack output
   assign result_o        = arbiter_output.result;
   assign status_o        = arbiter_output.status;
-  assign tag_o           = arbiter_output.tagt;
+  assign tag_o           = arbiter_output.tag;
 
   assign busy_o = (| opgrp_busy);
 
