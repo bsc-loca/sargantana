@@ -25,7 +25,7 @@ module mem_unit
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
-    input wire                   commit_store_or_amo_i,  // Signal from commit enables writes.
+    input wire [1:0]             commit_store_or_amo_i,  // Signal from commit enables writes.
     input gl_index_t             commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t       dtlb_comm_i,
 
@@ -164,7 +164,7 @@ load_store_queue load_store_queue_inst (
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
     .next_instr_exe_o   (instruction_to_dcache),
-    .rob_store_ack_i    (commit_store_or_amo_i),
+    .rob_store_ack_i    (|commit_store_or_amo_i),
     .rob_store_gl_idx_i (commit_store_or_amo_gl_idx_i),
     .full_o             (full_lsq),
     .empty_o            (empty_lsq),
@@ -244,7 +244,7 @@ always_comb begin
                         req_cpu_dcache_o.valid = ~instruction_to_dcache.ex.valid;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d = resp_dcache_cpu_i.ready | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
-                    end else if (!(store_on_fly | amo_on_fly) |
+                    end else if (!((store_on_fly & req_cpu_dcache_o.is_amo) | amo_on_fly) |
                                  (mem_gl_index_o == instruction_to_dcache.gl_index)) begin // TODO: PReguntar al NArcis a veure si es pot treure
                         // If there is not a Store or AMO on fly or the current instruction
                         //  was sent to dache previously
@@ -252,15 +252,16 @@ always_comb begin
                         // Make request If L1 ready and current instruction is either load
                         //  or store with commit permission
                         req_cpu_dcache_o.valid = 
-                                          (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)
+                                          (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])
                                            & ~instruction_to_dcache.ex.valid;
                        
                         // Stall the commit stage if it is a commiting store or amo
-                        mem_commit_stall_s0 = req_cpu_dcache_o.is_amo_or_store & commit_store_or_amo_i;
+                        mem_commit_stall_s0 = req_cpu_dcache_o.is_amo_or_store & commit_store_or_amo_i[0] & ~flush_store;
                         // If cache is not ready wait for it
                         // Otherwise if store or amo is launched, continue reading, otherwise wait
                         // until arriving to commit
-                        instruction_s1_d = (resp_dcache_cpu_i.ready & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i)) | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
+                        instruction_s1_d = (resp_dcache_cpu_i.ready & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])) 
+                                            | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else begin
                         req_cpu_dcache_o.valid = 1'b0;
                         mem_commit_stall_s0    = 1'b0;

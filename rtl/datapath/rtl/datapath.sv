@@ -267,7 +267,7 @@ module datapath
     cu_commit_t cu_commit_int;
     logic commit_xcpt;
     bus64_t commit_xcpt_cause;
-    logic commit_store_or_amo_int;
+    logic [1:0] commit_store_or_amo_int;
     logic mem_commit_store_or_amo_int;
     
     //gl_instruction_t instruction_gl_commit_old_q;
@@ -1339,7 +1339,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     assign instruction_to_commit = instruction_gl_commit;
-    assign commit_cu_int.gl_index = index_gl_commit;
+    assign commit_cu_int.gl_index = (commit_store_or_amo_int[0]) ? index_gl_commit : index_gl_commit + 1'b1;
 
     csr_interface csr_interface_inst
     (
@@ -1348,7 +1348,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .csr_addr_gl_i              (csr_addr_gl_out_int),
         .instruction_to_commit_i    (instruction_to_commit),
         .stall_exe_i                (control_int.stall_exe),
-        .commit_store_or_amo_i      (commit_store_or_amo_int),
+        .commit_store_or_amo_i      (commit_store_or_amo_int[0]),
         .mem_commit_stall_i         (commit_cu_int.stall_commit),
         .exception_mem_commit_i     (exception_mem_commit_int),
         .exception_gl_i             (ex_gl_out_int),
@@ -1370,8 +1370,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     // if there is an exception that can be from:
     // the instruction itself or the interrupt
-    assign commit_xcpt = (~commit_store_or_amo_int)? ex_gl_out_int.valid & instruction_to_commit[0].ex_valid : exception_mem_commit_int.valid;
-    assign commit_xcpt_cause = (~commit_store_or_amo_int)? ex_gl_out_int.cause : exception_mem_commit_int.cause;
+    assign commit_xcpt = (~commit_store_or_amo_int[0])? ex_gl_out_int.valid & instruction_to_commit[0].ex_valid : exception_mem_commit_int.valid;
+    assign commit_xcpt_cause = (~commit_store_or_amo_int[0])? ex_gl_out_int.cause : exception_mem_commit_int.cause;
 
     // Control Unit From Commit
     assign commit_cu_int.valid = instruction_to_commit[0].valid;
@@ -1406,10 +1406,12 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                                          instruction_to_commit[0].instr_type == VSETVL ||
                                          instruction_to_commit[0].instr_type == VSETVLI);
 
-    assign commit_store_or_amo_int = ((instruction_to_commit[0].mem_type == STORE) || 
-                                     (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid;
-
-    assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
+    assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
+                                        (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid);
+    assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
+                                        (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid);
+        
+    assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int[0] & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
     assign commit_cu_int.retire = retire_inst_gl;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// DEBUG SIGNALS                                                                                /////////
@@ -1451,7 +1453,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 if(instruction_to_commit[0].valid) begin
                     if (commit_cu_int.write_enable) begin
                         commit_data[0].data = resp_csr_cpu_i.csr_rw_rdata;
-                    end else if (commit_store_or_amo_int & (commit_cu_int.gl_index == mem_gl_index_int)) begin
+                    end else if (commit_store_or_amo_int[0] & (commit_cu_int.gl_index == mem_gl_index_int)) begin
                         commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : exe_to_wb_scalar[1].result;
                         commit_data[0].mem_addr = instruction_to_commit[0].mem_type == STORE ? store_addr : exe_to_wb_scalar[1].addr;
                     end else begin
@@ -1590,7 +1592,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.instr.valid;
     assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
-    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int || instruction_to_commit[0].mem_type == LOAD);
+    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || instruction_to_commit[0].mem_type == LOAD);
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;

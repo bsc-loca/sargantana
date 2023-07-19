@@ -31,7 +31,7 @@ module exe_stage
     // I/O base space pointer to dcache interface
     input addr_t                        io_base_addr_i,
 
-    input wire                          commit_store_or_amo_i, // Signal to execute stores and atomics in commit
+    input wire [1:0]                    commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
     // OUTPUTS
