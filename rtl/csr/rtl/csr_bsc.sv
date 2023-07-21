@@ -1528,6 +1528,7 @@ module csr_bsc#(
                         riscv_pkg::CSR_STVEC: csr_change(csr_addr, stvec_d);
                         riscv_pkg::CSR_SSCRATCH: csr_change(csr_addr, sscratch_d);
                         riscv_pkg::CSR_SEPC: csr_change(csr_addr, sepc_d);
+                        riscv_pkg::CSR_MISA: csr_change(csr_addr, def_pkg::ISA_CODE);
                         default: csr_change(csr_addr, csr_wdata);
                     endcase
                 end
