@@ -199,7 +199,9 @@ end
 
 always_comb begin
     next_instr_exe_o = 'h0;
-    if (is_next_load && !st_buff_collision & control_table[head].translated && !io_address_space) begin // Load inside LSQ
+    if (bypass_lsq) begin
+        next_instr_exe_o = translated_instr;
+    end else if (is_next_load && !st_buff_collision & control_table[head].translated && !io_address_space) begin // Load inside LSQ
         next_instr_exe_o = control_table[head];
     end else if (rob_store_ack_i && !st_buff_empty && (st_buff_inst_out.gl_index == rob_store_gl_idx_i || st_buff_inst_out.gl_index == rob_store_gl_idx_next)) begin // Store inside SB
         next_instr_exe_o = st_buff_inst_out;
@@ -207,8 +209,6 @@ always_comb begin
         next_instr_exe_o = control_table[head];
     end else if (is_next_load && !st_buff_collision & control_table[head].translated && io_address_space) begin // Load inside LSQ (IO)
         next_instr_exe_o = control_table[head];
-    end else if (bypass_lsq) begin
-        next_instr_exe_o = translated_instr;
     end
 end
 
@@ -218,7 +218,9 @@ assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (con
 
 always_comb begin
     blocked_store_o = 1'b1;
-    if (is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
+    if (bypass_lsq) begin
+        blocked_store_o = 1'b0;
+    end else if (is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
         blocked_store_o = 1'b0;
     end else if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i || st_buff_inst_out.gl_index == rob_store_gl_idx_next)) begin // Store inside SB
         blocked_store_o = 1'b0;
@@ -226,9 +228,7 @@ always_comb begin
         blocked_store_o = 1'b0;
     end else if (is_next_load && st_buff_empty && io_address_space) begin // Load inside LSQ (IO)
         blocked_store_o = 1'b0; 
-    end else if (bypass_lsq) begin
-        blocked_store_o = 1'b0;
-    end
+    end 
 end
 
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;

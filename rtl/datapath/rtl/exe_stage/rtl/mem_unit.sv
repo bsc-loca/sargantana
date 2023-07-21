@@ -51,17 +51,9 @@ module mem_unit
 
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
-
-// Enum to select instruction to DCache interface
-typedef enum logic[2:0] {
-    NULL             = 3'b000,
-    READ             = 3'b001
-} source_lsq_t;               
-
+             
 bus64_t data_src1;
 bus_simd_t data_src2;
-
-source_lsq_t source_dcache;
 
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s1_q;
@@ -134,7 +126,7 @@ assign flush_to_lsq = kill_i | flush_i;
 
 // Input instruction to LSQ
 assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM && instruction_i.instr.valid) ? instruction_i.instr : 'h0 ;
-assign instruction_to_lsq.data_rs1      = (instruction_to_lsq.is_amo) ? instruction_i.data_rs1 : instruction_i.data_rs1 + instruction_i.instr.imm;
+assign instruction_to_lsq.data_rs1      = (instruction_i.instr.mem_type == AMO) ? instruction_i.data_rs1 : instruction_i.data_rs1 + instruction_i.instr.imm;
 assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
 assign instruction_to_lsq.data_old_vd   = instruction_i.data_old_vd;
 assign instruction_to_lsq.data_vm       = instruction_i.data_vm;
@@ -195,14 +187,12 @@ end
 // Mealy Output and Next State
 always_comb begin
     req_cpu_dcache_o.valid      = 1'b0;     // No Request
-    source_dcache               = NULL;     
     read_next_lsq               = 1'b1;     // No Advance LSQ
     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
     instruction_s1_d            =  'h0;     // No Instruction to next stage
     next_state                  = ReadHead; // Next state Read Head
     if (flush_to_lsq) begin
         req_cpu_dcache_o.valid      = 1'b0;     // No Request
-        source_dcache               = NULL;     
         read_next_lsq               = 1'b1;     // No Advance LSQ
         mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
         instruction_s1_d            =  'h0;     // No Instruction to next stage
@@ -212,7 +202,6 @@ always_comb begin
             ////////////////////////////////////////////////// Reset state
             ResetState: begin
                 req_cpu_dcache_o.valid      = 1'b0;         // No Request
-                source_dcache               = NULL;         
                 read_next_lsq               = 1'b0;         // No Read of LSQ
                 mem_commit_stall_s0         = 1'b0;         // No Stall of Commit
                 instruction_s1_d            =  'h0;         // No Instruction to next stage
@@ -222,14 +211,12 @@ always_comb begin
             ReadHead: begin
                 if (empty_lsq || blocked_store) begin
                     req_cpu_dcache_o.valid      = 1'b0;     // No Request
-                    source_dcache               = NULL;     
                     read_next_lsq               = 1'b0;     // No Advance LSQ 
                     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
                     instruction_s1_d            =  'h0;     // No Instruction to next stage
                     next_state                  = ReadHead; // Next state Read Head
                 end else begin
                     // Request Logic
-                    source_dcache = READ;     // Use instruction from LSQ
                     next_state             = ReadHead;
                     
                     //// Set request valid bit, stall_commit and next state signals 
@@ -289,34 +276,14 @@ end
 
 //// Select source to DCACHE interface
 always_comb begin
-    req_cpu_dcache_o.data_rs1   = 64'h0;
-    req_cpu_dcache_o.data_rs2   = 128'h0;
-    req_cpu_dcache_o.instr_type = ADD;
-    req_cpu_dcache_o.mem_size   = 3'h0;
-    req_cpu_dcache_o.rd         = 5'h0;
-    req_cpu_dcache_o.is_amo_or_store = 1'b0;
-    req_cpu_dcache_o.is_store   = 1'b0;
-    req_cpu_dcache_o.is_amo     = 1'b0;
-    case(source_dcache)
-        NULL:         begin
-            req_cpu_dcache_o.data_rs1        = 64'h0;
-            req_cpu_dcache_o.data_rs2        = 128'h0;
-            req_cpu_dcache_o.instr_type      = ADD;
-            req_cpu_dcache_o.mem_size        = 3'h0;
-            req_cpu_dcache_o.rd              = 5'h0;
-            req_cpu_dcache_o.is_amo_or_store = 1'b0;
-        end
-        READ:         begin
-            req_cpu_dcache_o.data_rs1        = instruction_to_dcache.data_rs1;
-            req_cpu_dcache_o.data_rs2        = instruction_to_dcache.data_rs2;
-            req_cpu_dcache_o.instr_type      = instruction_to_dcache.instr.instr_type;
-            req_cpu_dcache_o.mem_size        = instruction_to_dcache.instr.mem_size;
-            req_cpu_dcache_o.rd              = tag_id;
-            req_cpu_dcache_o.is_amo_or_store = instruction_to_dcache.is_amo_or_store;
-            req_cpu_dcache_o.is_amo          = instruction_to_dcache.is_amo;
-            req_cpu_dcache_o.is_store        = instruction_to_dcache.is_store;
-        end
-    endcase
+    req_cpu_dcache_o.data_rs1        = instruction_to_dcache.data_rs1;
+    req_cpu_dcache_o.data_rs2        = instruction_to_dcache.data_rs2;
+    req_cpu_dcache_o.instr_type      = instruction_to_dcache.instr.instr_type;
+    req_cpu_dcache_o.mem_size        = instruction_to_dcache.instr.mem_size;
+    req_cpu_dcache_o.rd              = tag_id;
+    req_cpu_dcache_o.is_amo_or_store = instruction_to_dcache.is_amo_or_store;
+    req_cpu_dcache_o.is_amo          = instruction_to_dcache.is_amo;
+    req_cpu_dcache_o.is_store        = instruction_to_dcache.is_store;
 end
 
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store

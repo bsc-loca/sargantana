@@ -207,8 +207,8 @@ always_comb begin
     arith_instr.chkp                = from_rr_i.chkp;
     arith_instr.gl_index            = from_rr_i.gl_index;
 
-    mem_instr.data_rs1            = rs1_data_def;
-    mem_instr.data_rs2            = rs2_data_def;
+    mem_instr.data_rs1            = from_rr_i.data_rs1;
+    mem_instr.data_rs2            = from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
     mem_instr.data_old_vd         = from_rr_i.data_old_vd;
     mem_instr.data_vm             = from_rr_i.data_vm;
     mem_instr.sew                 = sew_i;
