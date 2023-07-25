@@ -150,7 +150,11 @@ module axi_wrapper (
 
         .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready),
         .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid),
-        .mem_resp_uc_read_i(mem_resp_uc_read)
+        .mem_resp_uc_read_i(mem_resp_uc_read),
+
+        .time_irq_i(1'b0),
+        .irq_i(1'b0),
+        .time_i(64'b0)
     );
 
     bootrom brom(
