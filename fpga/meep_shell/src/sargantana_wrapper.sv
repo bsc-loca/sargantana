@@ -86,7 +86,7 @@ module sargantana_wrapper(
 
     localparam axi_pkg::xbar_cfg_t xbar_cfg = '{
         NoSlvPorts:         1,
-        NoMstPorts:         2,
+        NoMstPorts:         3,
         MaxMstTrans:        10,
         MaxSlvTrans:        6,
         FallThrough:        1'b0,
@@ -97,7 +97,7 @@ module sargantana_wrapper(
         UniqueIds:          1,
         AxiAddrWidth:       `AXI_XBAR_ADDR_WIDTH,
         AxiDataWidth:       `AXI_XBAR_DATA_WIDTH,
-        NoAddrRules:        2
+        NoAddrRules:        3
     };
 
     // Address Map
@@ -107,6 +107,12 @@ module sargantana_wrapper(
             idx: `UART_XBAR_ID,
             start_addr: `UART_BASE_ADDR,
             end_addr: `UART_END_ADDR,
+            default: '0
+        },
+        rule_t'{
+            idx: `TIMER_XBAR_ID,
+            start_addr: `TIMER_BASE_ADDR,
+            end_addr: `TIMER_END_ADDR,
             default: '0
         },
         rule_t'{
@@ -176,6 +182,18 @@ module sargantana_wrapper(
         .AXI_DATA_WIDTH(`AXI_XBAR_DATA_WIDTH),
         .AXI_ID_WIDTH(`AXI_XBAR_PERI_ID_WIDTH),
         .AXI_USER_WIDTH(`AXI_XBAR_USER_WIDTH)
+    ) addr_trans_timer_inst (
+        .slv(xbar2tran_bus[`TIMER_XBAR_ID]),
+        .mst_aw_addr_i(xbar2tran_bus[`TIMER_XBAR_ID].aw_addr - `TIMER_BASE_ADDR),
+        .mst_ar_addr_i(xbar2tran_bus[`TIMER_XBAR_ID].ar_addr - `TIMER_BASE_ADDR),
+        .mst(xbar2peri_bus[`TIMER_XBAR_ID])
+    );
+
+    axi_modify_address_intf #(
+        .AXI_SLV_PORT_ADDR_WIDTH(`AXI_XBAR_ADDR_WIDTH),
+        .AXI_DATA_WIDTH(`AXI_XBAR_DATA_WIDTH),
+        .AXI_ID_WIDTH(`AXI_XBAR_PERI_ID_WIDTH),
+        .AXI_USER_WIDTH(`AXI_XBAR_USER_WIDTH)
     ) addr_trans_mem_inst (
         .slv(xbar2tran_bus[`MEM_XBAR_ID]),
         .mst_aw_addr_i(xbar2tran_bus[`MEM_XBAR_ID].aw_addr - `MEM_BASE_ADDR),
@@ -194,13 +212,24 @@ module sargantana_wrapper(
     `AXI_ASSIGN_TO_REQ(xbar2peri_req[`UART_XBAR_ID], xbar2peri_bus[`UART_XBAR_ID])
     `AXI_ASSIGN_FROM_RESP(xbar2peri_bus[`UART_XBAR_ID], xbar2peri_resp[`UART_XBAR_ID])
 
+    `AXI_ASSIGN_TO_REQ(xbar2peri_req[`TIMER_XBAR_ID], xbar2peri_bus[`TIMER_XBAR_ID])
+    `AXI_ASSIGN_FROM_RESP(xbar2peri_bus[`TIMER_XBAR_ID], xbar2peri_resp[`TIMER_XBAR_ID])
+
+
+    // TIMER signals
+    logic timer_irq;
+    logic [63:0] time_value;
+
     // *** Core Instance ***
 
     axi_wrapper core_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
-        .axi_o(core2xbar_bus[0])
+        .axi_o(core2xbar_bus[0]),
+
+        .time_irq_i(time_irq),
+        .time_i(time_value)
     );
 
     // *** Memory Connection ***
@@ -262,7 +291,7 @@ module sargantana_wrapper(
         .axi_mst_resp_t(axi32_resp_t),
         .axi_slv_req_t(peri_axi_req_t),
         .axi_slv_resp_t(peri_axi_resp_t)
-    ) axi_downsizer_inst (
+    ) axi_downsizer_uart_inst (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
         .slv_req_i(xbar2peri_req[`UART_XBAR_ID]),
@@ -287,7 +316,7 @@ module sargantana_wrapper(
         .full_resp_t(fpga_pkg::axi32_resp_t),
         .lite_req_t(fpga_pkg::axi_lite_req_t),
         .lite_resp_t(fpga_pkg::axi_lite_resp_t)
-    ) axi_lite_converter (
+    ) axi_lite_uart_converter (
         .clk_i(clk_i),
         .rst_ni(rstn_i),
         .test_i(1'b0),
@@ -326,5 +355,94 @@ module sargantana_wrapper(
   assign rsp.r.resp   = m_axi_``pat``_rresp;
 
     `AXI_LITE_ASSIGN_MASTER_TO_FLAT(uart, uart_req, uart_resp)
+
+
+  // *** TIMER Connection ***
+
+  // Downsize 512b -> 32b
+
+  fpga_pkg::axi32_req_t timer_axi32_req;
+  fpga_pkg::axi32_resp_t timer_axi32_resp;
+
+  axi_dw_downsizer #(
+      .AxiSlvPortDataWidth(`AXI_XBAR_DATA_WIDTH),
+      .AxiMstPortDataWidth(32),
+      .AxiAddrWidth(`AXI_XBAR_ADDR_WIDTH),
+      .AxiIdWidth(8),
+      .aw_chan_t(peri_axi_aw_chan_t),
+      .mst_w_chan_t(axi32_w_chan_t),
+      .slv_w_chan_t(peri_axi_w_chan_t),
+      .b_chan_t(peri_axi_b_chan_t),
+      .ar_chan_t(peri_axi_ar_chan_t),
+      .mst_r_chan_t(axi32_r_chan_t),
+      .slv_r_chan_t(peri_axi_r_chan_t),
+      .axi_mst_req_t(axi32_req_t),
+      .axi_mst_resp_t(axi32_resp_t),
+      .axi_slv_req_t(peri_axi_req_t),
+      .axi_slv_resp_t(peri_axi_resp_t)
+  ) axi_downsizer_timer_inst (
+      .clk_i(clk_i),
+      .rst_ni(rstn_i),
+      .slv_req_i(xbar2peri_req[`TIMER_XBAR_ID]),
+      .slv_resp_o(xbar2peri_resp[`TIMER_XBAR_ID]),
+      .mst_req_o(timer_axi32_req),
+      .mst_resp_i(timer_axi32_resp)
+  );
+
+  // Convert AXI to AXI-Lite
+
+  fpga_pkg::axi_lite_req_t timer_req;
+  fpga_pkg::axi_lite_resp_t timer_resp;
+
+  axi_to_axi_lite #(
+      .AxiAddrWidth(`AXI_XBAR_ADDR_WIDTH),
+      .AxiDataWidth(32),
+      .AxiIdWidth(8),
+      .AxiUserWidth(`AXI_XBAR_USER_WIDTH),
+      .AxiMaxReadTxns(1),
+      .AxiMaxWriteTxns(1),
+      .full_req_t(fpga_pkg::axi32_req_t),
+      .full_resp_t(fpga_pkg::axi32_resp_t),
+      .lite_req_t(fpga_pkg::axi_lite_req_t),
+      .lite_resp_t(fpga_pkg::axi_lite_resp_t)
+  ) axi_lite_timer_converter (
+      .clk_i(clk_i),
+      .rst_ni(rstn_i),
+      .test_i(1'b0),
+      .slv_req_i(timer_axi32_req),
+      .slv_resp_o(timer_axi32_resp),
+      .mst_req_o(timer_req),
+      .mst_resp_i(timer_resp)
+  );
+
+  axi_timer # (
+    .C_S_AXI_ADDR_WIDTH  ( `AXI_XBAR_ADDR_WIDTH         ),
+    .C_S_AXI_DATA_WIDTH  (32)
+    ) axi_timer_inst (
+      .S_AXI_ACLK     ( clk_i                           ),
+      .S_AXI_ARESETN  ( rstn_i                          ),
+      .S_AXI_AWADDR   (timer_req.aw.addr                ),
+      .S_AXI_AWPROT   (timer_req.aw.prot                ),
+      .S_AXI_AWVALID  (timer_req.aw_valid               ),
+      .S_AXI_AWREADY  (timer_resp.aw_ready              ),
+      .S_AXI_WDATA    (timer_req.w.data                 ),
+      .S_AXI_WSTRB    (timer_req.w.strb                 ),
+      .S_AXI_WVALID   (timer_req.w_valid                ),
+      .S_AXI_WREADY   (timer_resp.w_ready               ),
+      .S_AXI_BRESP    (timer_resp.b.resp                ),
+      .S_AXI_BVALID   (timer_resp.b_valid               ),
+      .S_AXI_BREADY   (timer_req.b_ready                ),
+      .S_AXI_ARADDR   (timer_req.ar.addr               ),
+      .S_AXI_ARPROT   (timer_req.ar.prot                ),
+      .S_AXI_ARVALID  (timer_req.ar_valid               ),
+      .S_AXI_ARREADY  (timer_resp.ar_ready              ),
+      .S_AXI_RDATA    (timer_resp.r.data                ),
+      .S_AXI_RRESP    (timer_resp.r.resp                ),
+      .S_AXI_RVALID   (timer_resp.r_valid               ),
+      .S_AXI_RREADY   (timer_req.r_ready                ),
+      .time_o         (time_value                       ),
+      .irq_o          (time_irq                         )
+    );
+
 
 endmodule

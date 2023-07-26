@@ -140,3 +140,4 @@
 ./fpga/common/rtl/axi_arbiter.sv
 ./fpga/common/rtl/bootrom.sv
 ./fpga/common/rtl/axi_wrapper.sv
+./fpga/common/rtl/axi_timer.sv

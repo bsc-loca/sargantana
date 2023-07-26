@@ -16,7 +16,10 @@ module axi_wrapper (
     input logic clk_i,
     input logic rstn_i,
 
-    AXI_BUS.Master axi_o
+    AXI_BUS.Master axi_o,
+
+    input logic time_irq_i,
+    input logic [63:0] time_i
 );
 
     // Bootrom wires
@@ -152,9 +155,9 @@ module axi_wrapper (
         .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid),
         .mem_resp_uc_read_i(mem_resp_uc_read),
 
-        .time_irq_i(1'b0),
+        .time_irq_i(time_irq_i),
         .irq_i(1'b0),
-        .time_i(64'b0)
+        .time_i(time_i)
     );
 
     bootrom brom(
