@@ -1523,7 +1523,8 @@ module csr_bsc#(
                         riscv_pkg::CSR_MCAUSE: csr_change(csr_addr, mcause_d);
                         riscv_pkg::CSR_MSCRATCH: csr_change(csr_addr, mscratch_d);
                         riscv_pkg::CSR_MEDELEG: csr_change(csr_addr, medeleg_d);
-                        riscv_pkg::CSR_MIE: csr_change(csr_addr, mie_d);
+                        riscv_pkg::CSR_SIE,
+                        riscv_pkg::CSR_MIE: csr_change(riscv_pkg::CSR_MIE, mie_d);
                         riscv_pkg::CSR_SATP: csr_change(csr_addr, satp_d);
                         riscv_pkg::CSR_STVEC: csr_change(csr_addr, stvec_d);
                         riscv_pkg::CSR_SSCRATCH: csr_change(csr_addr, sscratch_d);
