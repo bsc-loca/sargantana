@@ -130,21 +130,20 @@ assign icache_ifill_req_o.paddr = {cline_tag_d,idx_q[ICACHE_INDEX_WIDTH-1:ICACHE
 assign icache_ifill_req_o.valid = ifill_req_valid  && !ireq_kill_d ;
 
 //-----------------------------------------------------------------------
-assign valid_ifill_resp = ifill_resp_i.valid & ifill_resp_i.ack;
+assign valid_ifill_resp = ifill_resp_i.valid /*& ifill_resp_i.ack*/;
 
 assign ifill_req_was_sent_d = icache_ifill_req_o.valid | 
                               (ifill_req_was_sent_q & ~valid_ifill_resp);
 
-assign ifill_process_started_d = ((ifill_resp_i.beat == 2'b00) && ifill_resp_i.valid) ? 1'b1 :
-                                  (valid_ifill_resp) ? 1'b0 : ifill_process_started_q;
+assign ifill_process_started_d = ifill_resp_i.valid ;
+//assign ifill_process_started_d = ((ifill_resp_i.beat == 2'b00) && ifill_resp_i.valid) ? 1'b1 :
+//                                  (valid_ifill_resp) ? 1'b0 : ifill_process_started_q;
 
 assign block_invalidate = ifill_process_started_q && ireq_kill_d ;
 
-assign valid_bit = 
-    (tag_we_valid && (ifill_resp_i.beat == 2'b00) && !ireq_kill_d && !ireq_kill_q) ?
-                                                                             1'b1 : 1'b0 ;
+assign valid_bit = tag_we_valid  && ~ireq_kill_d && ~ireq_kill_q ;
                                          
-assign tag_we = tag_we_valid && ((ifill_resp_i.beat == 2'b00) || block_invalidate) ;
+assign tag_we = tag_we_valid || block_invalidate ;
 
 sargantana_icache_ctrl  icache_ctrl (
     .clk_i              ( clk_i                     ),
