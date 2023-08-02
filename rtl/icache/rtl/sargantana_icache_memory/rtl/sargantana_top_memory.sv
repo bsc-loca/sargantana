@@ -59,7 +59,7 @@ sargantana_idata_memory idata_memory(
         .vbit_i     ( valid_bit_i ),
         .flush_i    ( flush_en_i  ),
         .data_i     ( tag_i       ),
-        .addr_i     ( addr_i[ADDR_WIDHT-1:2]),
+        .addr_i     ( addr_i      ),
         .tag_way_o  ( tag_way_o   ),
         .vbit_o     ( valid_bit_o )
     );
@@ -72,7 +72,7 @@ sargantana_idata_memory idata_memory(
         .vbit_i     ( valid_bit_i ),
         .flush_i    ( flush_en_i  ),
         .data_i     ( tag_i       ),
-        .addr_i     ( addr_i[ADDR_WIDHT-1:2]),
+        .addr_i     ( addr_i      ),
         .tag_way_o  ( tag_way_o   ),
         .vbit_o     ( valid_bit_o )
     );
