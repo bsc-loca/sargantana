@@ -19,7 +19,7 @@ module veri_top
     logic l1_request_valid;
     logic l2_response_valid;
     logic [25:0] l1_request_paddr;
-    logic [127:0] l2_response_data;
+    logic [511:0] l2_response_data;
     logic [1:0] l2_response_seqnum;
 
     //      Miss read interface

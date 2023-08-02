@@ -45,7 +45,7 @@ module top_drac
     
     //- From L2
     input  logic         io_mem_grant_valid                 ,
-    input  logic [127:0] io_mem_grant_bits_data             ,
+    input  logic [511:0] io_mem_grant_bits_data             ,
     input  logic   [1:0] io_mem_grant_bits_addr_beat        ,
     
 

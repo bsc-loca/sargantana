@@ -122,10 +122,10 @@ typedef struct packed {
 } inval_t;
   
   typedef struct packed {
-      logic                 valid ; // Valid response
-      logic                 ack   ; // IFILL request was received
-      logic [WAY_WIDHT-1:0] data  ; // Full cache line
-      logic           [1:0] beat  ;
+      logic         valid ; // Valid response
+      logic         ack   ; // IFILL request was received
+      logic [511:0] data  ; // Full cache line
+      logic   [1:0] beat  ;
   } ifill_resp_i_t;
 
   typedef struct packed {
