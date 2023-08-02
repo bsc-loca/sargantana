@@ -45,7 +45,7 @@ localparam int unsigned TAG_WIDHT       = 20; //- Tag size.
 localparam int unsigned VADDR_SIZE          = drac_pkg::ADDR_SIZE ;
 localparam int unsigned ICACHE_INDEX_WIDTH  = 12  ;
 localparam int unsigned ICACHE_TAG_WIDTH    = TAG_WIDHT  ;
-localparam int unsigned ICACHE_OFFSET_WIDTH = 4   ;
+localparam int unsigned ICACHE_OFFSET_WIDTH = 6   ; // align to 64bytes
 localparam int unsigned ICACHE_IDX_WIDTH    = ADDR_WIDHT;
 
 localparam logic [43:0] CachedAddrBeg = 44'h8000_0000; // begin of cached region

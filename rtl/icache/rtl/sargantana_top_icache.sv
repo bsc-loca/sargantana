@@ -108,9 +108,7 @@ assign icache_treq_o.valid = treq_valid || valid_ireq_d ;
 assign mmu_tresp_d = mmu_tresp_i;
 
 //- Split virtual address into index and offset to address cache arrays.
-assign vaddr_index = ( cache_wr_ena ) ?
-        {idx_d[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH+2],ifill_resp_i.beat} :
-         idx_d[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH];
+assign vaddr_index = idx_d[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH];
                      
 assign cline_tag_d  = mmu_tresp_q.ppn ;
                                                                 
@@ -127,8 +125,7 @@ assign icache_resp_o.valid = icache_resp_valid && !ireq_kill_d;
 //---------------------------------------------------------------------
 //------------------------------------------------------ IFILL request.
 
-assign icache_ifill_req_o.paddr = {cline_tag_d, 
-                                   idx_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH+2]};
+assign icache_ifill_req_o.paddr = {cline_tag_d,idx_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH]};
 
 assign icache_ifill_req_o.valid = ifill_req_valid  && !ireq_kill_d ;
 
