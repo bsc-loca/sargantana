@@ -191,7 +191,7 @@ module l2_behav #(
 
     input logic  [25:0]             ic_addr_i,
     input logic                     ic_valid_i,
-    output logic [127:0]            ic_line_o, // TODO: Change it to 512 bits, modifying iCache FSM
+    output logic [LINE_SIZE-1:0]    ic_line_o, // TODO: Change it to 512 bits, modifying iCache FSM
     output logic                    ic_ready_o,
     output logic                    ic_valid_o,
     output logic [1:0]              ic_seq_num_o,
@@ -298,7 +298,7 @@ module l2_behav #(
             request_q <= 1'b0;
 	        ic_valid_o <= 1'b0;
         end else if (ic_valid_i && !request_q) begin
-            ic_counter <= INST_DELAY + 4;
+            ic_counter <= INST_DELAY + 1;
 	        ic_valid_o  <= 1'b0;
 	        request_q <= 1'b1;
    	        ic_addr_int <= ic_addr_i;
@@ -306,7 +306,7 @@ module l2_behav #(
             ic_counter <= ic_next_counter;
 	        ic_addr_int <= ic_addr_i;
    	        request_q <= 1'b1;
-	        if ((ic_next_counter < 4) && (!ic_valid_i)) begin
+	        if (~|ic_next_counter && ~ic_valid_i) begin
                 memory_read({ic_addr_int[25:0], 6'b0}, ic_line);
 	            ic_valid_o <= 1'b1;
 	        end else begin
@@ -319,11 +319,8 @@ module l2_behav #(
     end 
 
     always_comb begin
-        if (ic_valid_o) begin
-            ic_line_o = ic_line[{2'b11 - ic_counter[1:0], 7'b0} +: 128];
-        end else begin
-            ic_line_o = 0;
-        end
+        if (ic_valid_o) ic_line_o = ic_line;
+        else            ic_line_o = 0      ;
     end
 
     // *** dCache miss-read channel ***
