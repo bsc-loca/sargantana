@@ -217,6 +217,7 @@ sargantana_icache_checker ichecker(
     .read_tags_i        ( way_tags            ),
     .cmp_enable_q       ( cmp_enable_q        ),
     .cline_tag_d        ( cline_tag_d         ),
+    .fetch_idx_i        ( idx_q[5:4]          ),
     .way_valid_bits_i   ( way_valid_bits      ),
     .data_rd_i          ( cline_data_rd       ),
     .cline_hit_o        ( cline_hit           ),
