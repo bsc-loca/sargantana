@@ -1,10 +1,12 @@
+./rtl/dcache/rtl/src/target/generic/hpdcache_params_pkg.sv
+./rtl/dcache/rtl/src/hpdcache_pkg.sv
+./rtl/dcache/rtl/include/hpdcache_typedef.svh
 ./includes/fpuv_pkg.sv
 ./includes/fpuv_wrapper_pkg.sv
 ./includes/riscv_pkg.sv
 ./includes/def_pkg.sv
 ./includes/drac_pkg.sv
 ./rtl/mmu/includes/mmu_pkg.sv
-./rtl/dcache/rtl/src/hpdcache_pkg.sv
 ./includes/sargantana_icache_pkg.sv
 ./rtl/interface_icache/rtl/icache_interface.sv
 ./rtl/control_unit/rtl/control_unit.sv
@@ -97,8 +99,9 @@
 ./rtl/dcache/rtl/src/common/hpdcache_rrarb.sv
 ./rtl/dcache/rtl/src/common/hpdcache_mux.sv
 ./rtl/dcache/rtl/src/common/hpdcache_prio_1hot_encoder.sv
-./rtl/dcache/rtl/src/common/hpdcache_ram_1rw.sv
 ./rtl/dcache/rtl/src/common/hpdcache_sram.sv
+./rtl/dcache/rtl/src/common/macros/behav/hpdcache_sram_1rw.sv
+./rtl/dcache/rtl/src/common/macros/behav/hpdcache_sram_wmask_1rw.sv
 ./rtl/dcache/rtl/src/common/hpdcache_sram_wmask.sv
 ./rtl/dcache/rtl/src/common/hpdcache_data_downsize.sv
 ./rtl/dcache/rtl/src/common/hpdcache_data_upsize.sv

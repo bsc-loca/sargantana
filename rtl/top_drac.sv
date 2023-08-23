@@ -181,8 +181,6 @@ module top_drac
 
 );
 
-localparam NREQUESTERS = 2;
-
 // Response Interface icache to datapath
 resp_icache_cpu_t resp_icache_interface_datapath;
 
@@ -442,12 +440,12 @@ icache_interface icache_interface_inst(
 );
 
 // Core-dCache Interface
-logic          dcache_req_valid [NREQUESTERS-1:0];
-logic          dcache_req_ready [NREQUESTERS-1:0];
-hpdcache_req_t dcache_req       [NREQUESTERS-1:0];
+logic          dcache_req_valid [HPDCACHE_NREQUESTERS-1:0];
+logic          dcache_req_ready [HPDCACHE_NREQUESTERS-1:0];
+hpdcache_req_t dcache_req       [HPDCACHE_NREQUESTERS-1:0];
 
-logic          dcache_rsp_valid [NREQUESTERS-1:0];
-hpdcache_rsp_t dcache_rsp       [NREQUESTERS-1:0];
+logic          dcache_rsp_valid [HPDCACHE_NREQUESTERS-1:0];
+hpdcache_rsp_t dcache_rsp       [HPDCACHE_NREQUESTERS-1:0];
 logic wbuf_empty;
 
 dcache_interface dcache_interface_inst(
@@ -488,7 +486,15 @@ sargantana_top_icache icache (
     .imiss_kill_pmu_o    ( imiss_kill_pmu )
 );
 
-hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
+hpdcache #(
+    .NREQUESTERS            (HPDCACHE_NREQUESTERS),
+    .HPDcacheMemIdWidth     (HPDCACHE_MEM_TID_WIDTH),
+    .HPDcacheMemDataWidth   (HPDCACHE_MEM_DATA_WIDTH),
+    .hpdcache_mem_req_t     (hpdcache_mem_req_t),
+    .hpdcache_mem_req_w_t   (hpdcache_mem_req_w_t),
+    .hpdcache_mem_resp_r_t  (hpdcache_mem_resp_r_t),
+    .hpdcache_mem_resp_w_t  (hpdcache_mem_resp_w_t)
+) dcache (
     .clk_i(CLK),
     .rst_ni(RST),
 
@@ -503,7 +509,7 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_req_miss_read_ready_i(mem_req_miss_read_ready_i),
     .mem_req_miss_read_valid_o(mem_req_miss_read_valid_o),
     .mem_req_miss_read_o(mem_req_miss_read_o),
-    .mem_req_miss_read_base_id_i(mem_req_miss_read_base_id_i),
+    //.mem_req_miss_read_base_id_i(mem_req_miss_read_base_id_i),
 
     .mem_resp_miss_read_ready_o(mem_resp_miss_read_ready_o),
     .mem_resp_miss_read_valid_i(mem_resp_miss_read_valid_i),
@@ -513,7 +519,7 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_req_wbuf_write_ready_i(mem_req_wbuf_write_ready_i),
     .mem_req_wbuf_write_valid_o(mem_req_wbuf_write_valid_o),
     .mem_req_wbuf_write_o(mem_req_wbuf_write_o),
-    .mem_req_wbuf_write_base_id_i(mem_req_wbuf_write_base_id_i),
+    //.mem_req_wbuf_write_base_id_i(mem_req_wbuf_write_base_id_i),
 
     .mem_req_wbuf_write_data_ready_i(mem_req_wbuf_write_data_ready_i),
     .mem_req_wbuf_write_data_valid_o(mem_req_wbuf_write_data_valid_o),
@@ -527,7 +533,7 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_req_uc_write_ready_i(mem_req_uc_write_ready_i),
     .mem_req_uc_write_valid_o(mem_req_uc_write_valid_o),
     .mem_req_uc_write_o(mem_req_uc_write_o),
-    .mem_req_uc_write_base_id_i(mem_req_uc_write_base_id_i),
+    //.mem_req_uc_write_base_id_i(mem_req_uc_write_base_id_i),
 
     .mem_req_uc_write_data_ready_i(mem_req_uc_write_data_ready_i),
     .mem_req_uc_write_data_valid_o(mem_req_uc_write_data_valid_o),
@@ -541,7 +547,7 @@ hpdcache #(.NREQUESTERS(NREQUESTERS)) dcache (
     .mem_req_uc_read_ready_i(mem_req_uc_read_ready_i),
     .mem_req_uc_read_valid_o(mem_req_uc_read_valid_o),
     .mem_req_uc_read_o(mem_req_uc_read_o),
-    .mem_req_uc_read_base_id_i(mem_req_uc_read_base_id_i),
+    //.mem_req_uc_read_base_id_i(mem_req_uc_read_base_id_i),
 
     .mem_resp_uc_read_ready_o(mem_resp_uc_read_ready_o),
     .mem_resp_uc_read_valid_i(mem_resp_uc_read_valid_i),
