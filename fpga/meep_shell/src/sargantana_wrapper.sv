@@ -92,8 +92,8 @@ module sargantana_wrapper(
         FallThrough:        1'b0,
         LatencyMode:        axi_pkg::CUT_ALL_AX,
         PipelineStages:     1,
-        AxiIdWidthSlvPorts: 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
-        AxiIdUsedSlvPorts:  32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        AxiIdWidthSlvPorts: 32'(drac_pkg::HPDCACHE_MEM_TID_WIDTH),
+        AxiIdUsedSlvPorts:  32'(drac_pkg::HPDCACHE_MEM_TID_WIDTH),
         UniqueIds:          1,
         AxiAddrWidth:       `AXI_XBAR_ADDR_WIDTH,
         AxiDataWidth:       `AXI_XBAR_DATA_WIDTH,
@@ -127,7 +127,7 @@ module sargantana_wrapper(
     AXI_BUS #(
         .AXI_ADDR_WIDTH ( `AXI_XBAR_ADDR_WIDTH     ),
         .AXI_DATA_WIDTH ( `AXI_XBAR_DATA_WIDTH     ),
-        .AXI_ID_WIDTH   ( 32'(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH) ),
+        .AXI_ID_WIDTH   ( 32'(drac_pkg::HPDCACHE_MEM_TID_WIDTH) ),
         .AXI_USER_WIDTH ( `AXI_XBAR_USER_WIDTH )
     ) core2xbar_bus [xbar_cfg.NoSlvPorts-1:0] ();
 

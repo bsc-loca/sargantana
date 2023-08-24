@@ -37,52 +37,52 @@ module axi_wrapper (
     logic [1:0] l2_response_seqnum;
 
     //      Miss read interface
-    logic                          mem_req_miss_read_ready;
-    logic                          mem_req_miss_read_valid;
-    hpdcache_mem_req_t             mem_req_miss_read;
-    hpdcache_mem_id_t              mem_req_miss_read_base_id;
+    logic                           mem_req_miss_read_ready;
+    logic                           mem_req_miss_read_valid;
+    drac_pkg::hpdcache_mem_req_t    mem_req_miss_read;
+    drac_pkg::hpdcache_mem_id_t     mem_req_miss_read_base_id;
 
-    logic                          mem_resp_miss_read_ready;
-    logic                          mem_resp_miss_read_valid;
-    hpdcache_mem_resp_r_t          mem_resp_miss_read;
+    logic                           mem_resp_miss_read_ready;
+    logic                           mem_resp_miss_read_valid;
+    drac_pkg::hpdcache_mem_resp_r_t mem_resp_miss_read;
 
     //      Write-buffer write interface
-    logic                          mem_req_wbuf_write_ready;
-    logic                          mem_req_wbuf_write_valid;
-    hpdcache_mem_req_t             mem_req_wbuf_write;
-    hpdcache_mem_id_t              mem_req_wbuf_write_base_id;
+    logic                           mem_req_wbuf_write_ready;
+    logic                           mem_req_wbuf_write_valid;
+    drac_pkg::hpdcache_mem_req_t    mem_req_wbuf_write;
+    drac_pkg::hpdcache_mem_id_t     mem_req_wbuf_write_base_id;
 
-    logic                          mem_req_wbuf_write_data_ready;
-    logic                          mem_req_wbuf_write_data_valid;
-    hpdcache_mem_req_w_t           mem_req_wbuf_write_data;
+    logic                           mem_req_wbuf_write_data_ready;
+    logic                           mem_req_wbuf_write_data_valid;
+    drac_pkg::hpdcache_mem_req_w_t  mem_req_wbuf_write_data;
 
-    logic                          mem_resp_wbuf_write_ready;
-    logic                          mem_resp_wbuf_write_valid;
-    hpdcache_mem_resp_w_t          mem_resp_wbuf_write;
+    logic                           mem_resp_wbuf_write_ready;
+    logic                           mem_resp_wbuf_write_valid;
+    drac_pkg::hpdcache_mem_resp_w_t mem_resp_wbuf_write;
 
     //      Uncached read interface
-    logic                          mem_req_uc_read_ready;
-    logic                          mem_req_uc_read_valid;
-    hpdcache_mem_req_t             mem_req_uc_read;
-    hpdcache_mem_id_t              mem_req_uc_read_base_id;
+    logic                           mem_req_uc_read_ready;
+    logic                           mem_req_uc_read_valid;
+    drac_pkg::hpdcache_mem_req_t    mem_req_uc_read;
+    drac_pkg::hpdcache_mem_id_t     mem_req_uc_read_base_id;
 
-    logic                          mem_resp_uc_read_ready;
-    logic                          mem_resp_uc_read_valid;
-    hpdcache_mem_resp_r_t          mem_resp_uc_read;
+    logic                           mem_resp_uc_read_ready;
+    logic                           mem_resp_uc_read_valid;
+    drac_pkg::hpdcache_mem_resp_r_t mem_resp_uc_read;
 
     //      Uncached write interface
-    logic                          mem_req_uc_write_ready;
-    logic                          mem_req_uc_write_valid;
-    hpdcache_mem_req_t             mem_req_uc_write;
-    hpdcache_mem_id_t              mem_req_uc_write_base_id;
+    logic                           mem_req_uc_write_ready;
+    logic                           mem_req_uc_write_valid;
+    drac_pkg::hpdcache_mem_req_t    mem_req_uc_write;
+    drac_pkg::hpdcache_mem_id_t     mem_req_uc_write_base_id;
 
-    logic                          mem_req_uc_write_data_ready;
-    logic                          mem_req_uc_write_data_valid;
-    hpdcache_mem_req_w_t           mem_req_uc_write_data;
+    logic                           mem_req_uc_write_data_ready;
+    logic                           mem_req_uc_write_data_valid;
+    drac_pkg::hpdcache_mem_req_w_t  mem_req_uc_write_data;
 
-    logic                          mem_resp_uc_write_ready;
-    logic                          mem_resp_uc_write_valid;
-    hpdcache_mem_resp_w_t          mem_resp_uc_write;
+    logic                           mem_resp_uc_write_ready;
+    logic                           mem_resp_uc_write_valid;
+    drac_pkg::hpdcache_mem_resp_w_t mem_resp_uc_write;
 
     top_drac core_inst(
         .CLK(clk_i),
@@ -173,9 +173,9 @@ module axi_wrapper (
     fpga_pkg::core_axi_req_t axi_req;
     fpga_pkg::core_axi_resp_t axi_resp;
 
-    // Ojo! This breaks if hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH <= (clog2(num_sets) + clog2(num_ways))!!!!
-    assign mem_req_uc_read_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h01;
-    assign mem_req_uc_write_base_id = (1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)) | 8'h01;
+    // Ojo! This breaks if hpdcache_pkg::HPDCACHE_MEM_TID_WIDTH <= (clog2(num_sets) + clog2(num_ways))!!!!
+    assign mem_req_uc_read_base_id = (1 << (drac_pkg::HPDCACHE_MEM_TID_WIDTH - 1)) | 8'h01;
+    assign mem_req_uc_write_base_id = (1 << (drac_pkg::HPDCACHE_MEM_TID_WIDTH - 1)) | 8'h01;
 
     axi_arbiter axi_arbiter_inst(
         .clk_i(clk_i),
@@ -185,7 +185,7 @@ module axi_wrapper (
 
         .icache_miss_valid_i(l1_request_valid),
         .icache_miss_paddr_i(l1_request_paddr),
-        .icache_miss_id_i(1 << (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH - 1)),
+        .icache_miss_id_i(1 << (drac_pkg::HPDCACHE_MEM_TID_WIDTH - 1)),
 
         .icache_miss_resp_valid_o(l2_response_valid),
         .icache_miss_resp_data_o(l2_response_data),
@@ -246,8 +246,8 @@ module axi_wrapper (
 
     AXI_BUS #(
         .AXI_ADDR_WIDTH (64),
-        .AXI_DATA_WIDTH (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
-        .AXI_ID_WIDTH   (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        .AXI_DATA_WIDTH (drac_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH   (drac_pkg::HPDCACHE_MEM_TID_WIDTH),
         .AXI_USER_WIDTH (11)
     ) axi_core_to_atomic();
 
@@ -256,15 +256,15 @@ module axi_wrapper (
 
     AXI_BUS #(
         .AXI_ADDR_WIDTH (64),
-        .AXI_DATA_WIDTH (hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
-        .AXI_ID_WIDTH   (hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        .AXI_DATA_WIDTH (drac_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH   (drac_pkg::HPDCACHE_MEM_TID_WIDTH),
         .AXI_USER_WIDTH (11)
     ) axi_atomic_to_fpga();
 
     axi_riscv_atomics_wrap #(
         .AXI_ADDR_WIDTH(64),
-        .AXI_DATA_WIDTH(hpdcache_pkg::HPDCACHE_MEM_DATA_WIDTH),
-        .AXI_ID_WIDTH(hpdcache_pkg::HPDCACHE_MEM_ID_WIDTH),
+        .AXI_DATA_WIDTH(drac_pkg::HPDCACHE_MEM_DATA_WIDTH),
+        .AXI_ID_WIDTH(drac_pkg::HPDCACHE_MEM_TID_WIDTH),
         .AXI_USER_WIDTH(11),
         .AXI_MAX_READ_TXNS(1),
         .AXI_MAX_WRITE_TXNS(1),
