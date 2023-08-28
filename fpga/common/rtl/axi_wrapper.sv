@@ -174,8 +174,8 @@ module axi_wrapper (
     fpga_pkg::core_axi_resp_t axi_resp;
 
     // Ojo! This breaks if hpdcache_pkg::HPDCACHE_MEM_TID_WIDTH <= (clog2(num_sets) + clog2(num_ways))!!!!
-    assign mem_req_uc_read_base_id = (1 << (drac_pkg::HPDCACHE_MEM_TID_WIDTH - 1)) | 8'h01;
-    assign mem_req_uc_write_base_id = (1 << (drac_pkg::HPDCACHE_MEM_TID_WIDTH - 1)) | 8'h01;
+    assign mem_req_uc_read_base_id = '1;
+    assign mem_req_uc_write_base_id = '1;
 
     axi_arbiter axi_arbiter_inst(
         .clk_i(clk_i),

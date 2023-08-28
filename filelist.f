@@ -1,6 +1,5 @@
 ./rtl/dcache/rtl/src/target/generic/hpdcache_params_pkg.sv
 ./rtl/dcache/rtl/src/hpdcache_pkg.sv
-./rtl/dcache/rtl/include/hpdcache_typedef.svh
 ./includes/fpuv_pkg.sv
 ./includes/fpuv_wrapper_pkg.sv
 ./includes/riscv_pkg.sv

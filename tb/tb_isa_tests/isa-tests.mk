@@ -14,8 +14,8 @@ build-isa-tests: $(TB_ISA_TEST_DIR)/build/Makefile
 
 # *** ISA Test Simulation ***
 
-run-isa-tests: build-isa-tests $(SIMULATOR)
-		$(TB_ISA_TEST_DIR)/run-tests.py $(SIMULATOR) $(TB_ISA_TEST_DIR)/build/isa
+run-isa-tests: build-isa-tests $(MEEP_SIMULATOR)
+		$(TB_ISA_TEST_DIR)/run-tests.py $(MEEP_SIMULATOR) $(TB_ISA_TEST_DIR)/build/isa
 
 # *** Cleaning ***
 

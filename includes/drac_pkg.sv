@@ -57,7 +57,7 @@ typedef logic [HPDCACHE_MEM_TID_WIDTH-1:0]      hpdcache_mem_id_t;
 typedef logic [HPDCACHE_MEM_DATA_WIDTH-1:0]     hpdcache_mem_data_t;
 typedef logic [HPDCACHE_MEM_DATA_WIDTH/8-1:0]   hpdcache_mem_be_t;
 
-`include "./rtl/dcache/rtl/include/hpdcache_typedef.svh"    // TODO: change to single file name
+`include "hpdcache_typedef.svh"
 `HPDCACHE_TYPEDEF_MEM_REQ_T(hpdcache_mem_req_t, hpdcache_mem_addr_t, hpdcache_mem_id_t);
 `HPDCACHE_TYPEDEF_MEM_RESP_R_T(hpdcache_mem_resp_r_t, hpdcache_mem_id_t, hpdcache_mem_data_t);
 `HPDCACHE_TYPEDEF_MEM_REQ_W_T(hpdcache_mem_req_w_t, hpdcache_mem_data_t, hpdcache_mem_be_t);

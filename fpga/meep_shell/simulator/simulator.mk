@@ -10,6 +10,7 @@ MEEP_VERI_FLAGS = \
 	-DVERILATOR_GCC \
 	+define+VERILATOR_TORTURE_TESTS \
 	+incdir+$(PROJECT_DIR)/rtl \
+	+incdir+$(PROJECT_DIR)/rtl/dcache/rtl/include \
 	+incdir+$(PROJECT_DIR)/fpga/common/rtl/common_cells/include \
 	+incdir+$(PROJECT_DIR)/fpga/common/rtl/axi/include \
 	+incdir+$(PROJECT_DIR)/fpga/meep_shell/src \
