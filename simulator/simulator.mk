@@ -15,7 +15,7 @@ VERI_FLAGS = \
 	-DVERILATOR_GCC \
 	+define+VERILATOR_TORTURE_TESTS \
 	+incdir+$(PROJECT_DIR)/rtl \
-	+incdir+$(PROJECT_DIR)/rtl/dcache/rtl \
+	+incdir+$(PROJECT_DIR)/rtl/dcache/rtl/include \
 	--top-module $(TOP_MODULE) \
 	--unroll-count 256 \
 	-Wno-lint -Wno-style -Wno-STMTDLY -Wno-fatal \
