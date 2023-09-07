@@ -36,6 +36,7 @@ add_files -norecurse -fileset $fileset_obj $files_to_add
 set include_paths {}
 lappend include_paths "${g_accel_dir}/includes"
 lappend include_paths "${g_accel_dir}/rtl"
+lappend include_paths "${g_accel_dir}/rtl/dcache/rtl/include"
 lappend include_paths "${g_accel_dir}/fpga/meep_shell/src"
 lappend include_paths "${g_accel_dir}/fpga/common/rtl/axi/include"
 lappend include_paths "${g_accel_dir}/fpga/common/rtl/common_cells/include"
@@ -43,6 +44,7 @@ set_property include_dirs $include_paths $fileset_obj
 
 # Mark directories with global verilog defines
 set verilog_defines {}
+lappend verilog_defines "${g_accel_dir}/rtl/dcache/rtl/include/hpdcache_typedef.svh"
 lappend verilog_defines "${g_accel_dir}/fpga/meep_shell/src/defines.svh"
 lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/axi/include/axi/assign.svh"
 lappend verilog_defines "${g_accel_dir}/fpga/common/rtl/axi/include/axi/typedef.svh"
