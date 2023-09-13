@@ -14,12 +14,13 @@
 module mem_unit 
     import drac_pkg::*;
     import riscv_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+)(
     input  wire                  clk_i,                  // Clock signal
     input  wire                  rstn_i,                 // Reset signal
     input logic                  kill_i,                 // Exception detected at Commit
     input logic                  flush_i,                // Delete all load_store_queue entries
-    input addr_t                 io_base_addr_i,         // Input_output_address
     input logic                  en_ld_st_translation_i,
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
@@ -582,9 +583,6 @@ assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 
 //// Stall committing instruction because it is a store
 assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
-
-//// Input/Output Address Base Pointer
-assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 
 //// Block incoming Mem instructions
 assign lock_o   = full_lsq;

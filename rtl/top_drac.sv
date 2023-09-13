@@ -14,7 +14,9 @@
 
 module top_drac
     import drac_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+)(
 //------------------------------------------------------------------------------------
 // ORIGINAL INPUTS OF LAGARTO 
 //------------------------------------------------------------------------------------
@@ -37,8 +39,8 @@ module top_drac
     input  [4:0]                IO_REG_ADDR,
     input                       IO_REG_WRITE,
     input bus64_t               IO_REG_WRITE_DATA,
-    input  [5:0]		IO_REG_PADDR,
-    input			IO_REG_PREAD,
+    input  [5:0]	            IO_REG_PADDR,
+    input                       IO_REG_PREAD,
 
 //------------------------------------------------------------------------------------
 // I-CACHE INTERFACE
@@ -226,7 +228,9 @@ hpm_counters hpm_counters_inst (
 sew_t sew;
 assign sew = sew_t'(vpu_csr[37:36]);
 
-datapath datapath_inst(
+datapath #(
+    .DracCfg(DracCfg)
+) datapath_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
     .reset_addr_i(reset_addr_i),

@@ -134,6 +134,33 @@ parameter ST_BUF_NUM_ENTRIES = 8;
 // SIMD
 typedef logic [$clog2(VELEMENTS)-1:0] fu_id_t;
 
+localparam NrMaxRules = 16;
+
+typedef struct packed {  
+    int                                   NIOSections;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOBase;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOEnd;
+  
+    int                                   NMemSections;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemBase;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemEnd;
+} drac_cfg_t;
+
+function automatic logic range_check(addr_t start_region, addr_t end_region, addr_t address);
+    // if len is a power of two, and base is properly aligned, this check could be simplified
+    return (address >= start_region) && (address < end_region);
+endfunction : range_check
+
+function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, addr_t address);
+    // if we don't specify any region we assume everything is accessible
+    logic[NrMaxRules-1:0] pass;
+    pass = '0;
+    for (int unsigned k = 0; k < Cfg.NIOSections; k++) begin
+        pass[k] = range_check(Cfg.InitIOBase[k], Cfg.InitIOEnd[k], address);
+    end
+    return |pass;
+endfunction : is_inside_IO_sections
+
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
     NEXT_PC_SEL_KEEP_PC     = 2'b01,
@@ -329,7 +356,6 @@ typedef struct packed {
     instr_type_t    instr_type;        // Type of instruction
     logic [3:0]       mem_size;        // Granularity of mem. access
     logic [6:0]             rd;        // Destination register. Used for identify a pending Miss
-    addr_t        io_base_addr;        // Address Base Pointer of INPUT/OUPUT
     logic      is_amo_or_store;        // Type of instruction is amo or store
     logic               is_amo;        // Type of instruction is amo
     logic             is_store;        // Type of instruction is amo
@@ -1027,20 +1053,29 @@ typedef struct packed {
     bus64_t         reg_read_data;
     // Signal to ensure the debug ring only interacts when the
     // pipeline is empty
-    logic	    reg_backend_empty;
+    logic           reg_backend_empty;
     // physical register addres from the list
     logic  [5:0]    reg_list_paddr;
 } debug_out_t;
 
 
+localparam drac_cfg_t DracDefaultConfig = '{
+    NIOSections: 1, // number of IO space sections
+    InitIOBase:  {40'h40000000}, // IO base 0 address after reset
+    InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
+
+    NMemSections: 2, // number of Memory space sections
+    InitMemBase: {40'h4000000000, 40'h0000000000}, // Memory base address after reset
+    InitMemEnd: {40'h3fffffffff, 40'h000000ffff} // Memory end 0 address after reset
+};
 
 localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
-      Width:         64,
-      EnableVectors: 1'b0,
-      EnableNanBox:  1'b1,
-      FpFmtMask:     5'b11000,
-      IntFmtMask:    4'b0011
-   };
+    Width:         64,
+    EnableVectors: 1'b0,
+    EnableNanBox:  1'b1,
+    FpFmtMask:     5'b11000,
+    IntFmtMask:    4'b0011
+};
 
 localparam fpuv_pkg::fpu_implementation_t EPI_INIT = '{
     PipeRegs:   '{'{default: 5}, // ADDMUL

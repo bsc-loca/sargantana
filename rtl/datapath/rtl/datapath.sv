@@ -15,7 +15,9 @@
 module datapath
     import drac_pkg::*;
     import riscv_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+)(
     input logic             clk_i,
     input logic             rstn_i,
     input addr_t            reset_addr_i,
@@ -249,9 +251,6 @@ module datapath
     bus64_t exe_data_frs3;
     rr_exe_instr_t reg_to_exe;
 
-    // This addresses are fixed from lowrisc
-    reg_addr_t io_base_addr;
-
     // codifies if the branch was correctly predicted 
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
@@ -323,17 +322,6 @@ module datapath
     `ifdef SIM_KONATA_DUMP
         bus64_t id_fetch;
     `endif
-
-    // This addresses are fixed from lowrisc
-    always_ff @(posedge clk_i, negedge rstn_i) begin
-        if(!rstn_i) begin
-            io_base_addr <=  40'h0040000000;
-        end else if(!soft_rstn_i) begin
-            io_base_addr <=  40'h0040000000;
-        end else begin 
-            io_base_addr <= io_base_addr;
-        end
-    end
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// CONTROL UNIT                                                                                 /////////
@@ -1119,7 +1107,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign reg_to_exe.chkp = stage_rr_exe_q.chkp;
     assign reg_to_exe.gl_index = stage_rr_exe_q.gl_index;
 
-    exe_stage exe_stage_inst(
+    exe_stage #(
+        .DracCfg(DracCfg)
+    ) exe_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
@@ -1131,7 +1121,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .sew_i(sew_i),
         
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
-        .io_base_addr_i(io_base_addr),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
         .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),

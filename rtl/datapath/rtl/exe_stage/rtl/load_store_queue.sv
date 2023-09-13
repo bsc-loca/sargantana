@@ -14,7 +14,9 @@
 
 module load_store_queue
     import drac_pkg::*, riscv_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+)(
     input logic                clk_i,            // Clock Singal
     input logic                rstn_i,           // Negated Reset Signal
 
@@ -216,7 +218,7 @@ end
 
 
 // If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
-assign io_address_space = (control_table[head].data_rs1 >= 40'h40000000) && (control_table[head].data_rs1 < 40'h80000000) && !en_ld_st_translation_i;
+assign io_address_space = (is_inside_IO_sections(DracCfg, control_table[head].data_rs1)) && !en_ld_st_translation_i;
 
 always_comb begin
     blocked_store_o = 1'b1;

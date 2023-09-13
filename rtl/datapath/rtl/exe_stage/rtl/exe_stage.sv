@@ -15,7 +15,9 @@ module exe_stage
     import drac_pkg::*;
     import riscv_pkg::*;
     import fpuv_wrapper_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+)(
     input logic                         clk_i,
     input logic                         rstn_i,
     input logic                         kill_i,
@@ -26,9 +28,6 @@ module exe_stage
     input rr_exe_instr_t                from_rr_i,
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input sew_t                         sew_i,                  // SEW from vl CSR
-
-    // I/O base space pointer to dcache interface
-    input addr_t                        io_base_addr_i,
 
     input wire [1:0]                    commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
@@ -324,10 +323,11 @@ simd_unit simd_unit_inst (
 );
 `endif
 
-mem_unit mem_unit_inst(
+mem_unit #(
+    .DracCfg(DracCfg)
+) mem_unit_inst (
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
-    .io_base_addr_i         (io_base_addr_i),
     .en_ld_st_translation_i (en_ld_st_translation_i),
     .instruction_i          (mem_instr),
     .flush_i                (flush_i),
