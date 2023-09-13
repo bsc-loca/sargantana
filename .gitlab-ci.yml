@@ -26,19 +26,12 @@ variables:
   RISCV_OBJDUMP: /opt/riscv-gnu-toolchain/rvv-1.0.0/bin/riscv64-unknown-elf-objcopy 
 
 before_script:
-  #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "https://gitlab.bsc.es/"
-  #- git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.bsc.es:".insteadOf "git@gitlab-internal.bsc.es/"
   - echo $CI_PIPELINE_SOURCE
   - echo $CI_COMMIT_BRANCH
   - echo $CI_OPEN_MERGE_REQUESTS
 
-  # Clone repos
-  #- rm -rf rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine
-  #- git clone git@gitlab-internal.bsc.es:drac/mixgemm_uengine.git rtl/datapath/rtl/exe_stage/rtl/mixgemm_uengine -b main
-  #- rm -rf rtl/mmu
-  #- git clone --recurse-submodules git@gitlab-internal.bsc.es:drac/mmu.git rtl/mmu -b sargantana
-  #- rm -rf drac-bench
-  #- git clone --recurse-submodules git@gitlab-internal.bsc.es:drac/drac-bench.git drac-bench -b sargantana
+  - module load verilator/5.014
+  - module load rvv/1.0.0
 
 stages:
   - linting
