@@ -1,4 +1,4 @@
-image: registry.gitlab.bsc.es/hwdesign/containerhub/verilator_riscv:latest
+image: registry.gitlab.bsc.es/hwdesign/containerhub/riscv:latest
 
 ## This workflow avoids duplicate pipelines when there is an open merge request (commit_branch + merge_request) 
 ## so only the open merge request will be executed and not the commit_branch. PIPELINE_BRANCH will be used to refer to
