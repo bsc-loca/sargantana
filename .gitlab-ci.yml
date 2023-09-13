@@ -30,6 +30,7 @@ before_script:
   - echo $CI_COMMIT_BRANCH
   - echo $CI_OPEN_MERGE_REQUESTS
 
+  - source /load_modulefiles_bash.sh
   - module load verilator/5.014
   - module load rvv/1.0.0
 
