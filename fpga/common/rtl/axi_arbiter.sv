@@ -41,7 +41,7 @@ module axi_arbiter
   input  wire logic [25:0]                        icache_miss_paddr_i,
   input  wire drac_pkg::hpdcache_mem_id_t         icache_miss_id_i,
   output wire logic                               icache_miss_resp_valid_o,
-  output wire logic [127:0]                       icache_miss_resp_data_o,
+  output wire logic [511:0]                       icache_miss_resp_data_o,
   output wire logic [1:0]                         icache_miss_resp_beat_o,
   
   // *** dCache interface ***
@@ -97,7 +97,7 @@ module axi_arbiter
 
   localparam AxiCacheDataWidth = drac_pkg::HPDCACHE_MEM_DATA_WIDTH;
   localparam AxiCacheStrbWidth = AxiCacheDataWidth / 8;
-  localparam ICACHE_LINE_WIDTH = 128;
+  localparam IFILL_WIDTH = 512;
 
   typedef logic [AxiCacheDataWidth-1:0] axi_cache_data_t;
   typedef logic [AxiCacheStrbWidth-1:0] axi_cache_strb_t;
@@ -147,15 +147,15 @@ module axi_arbiter
 
   localparam int MEM_RESP_RT_DEPTH = (1 << drac_pkg::HPDCACHE_MEM_TID_WIDTH);
   typedef drac_pkg::hpdcache_mem_id_t [MEM_RESP_RT_DEPTH-1:0]  mem_resp_rt_t;
-  typedef logic [ICACHE_LINE_WIDTH-1:0]  icache_resp_data_t;
+  typedef logic [IFILL_WIDTH-1:0]  icache_resp_data_t;
 
 
-  localparam int ICACHE_CL_SIZE         = $clog2(ICACHE_LINE_WIDTH/8);
+  localparam int ICACHE_CL_SIZE         = $clog2(IFILL_WIDTH/8);
   localparam int ICACHE_MEM_REQ_CL_LEN  =
-    (ICACHE_LINE_WIDTH + drac_pkg::HPDCACHE_MEM_DATA_WIDTH - 1)/
+    (IFILL_WIDTH + drac_pkg::HPDCACHE_MEM_DATA_WIDTH - 1)/
     drac_pkg::HPDCACHE_MEM_DATA_WIDTH;
   localparam int ICACHE_MEM_REQ_CL_SIZE =
-    (drac_pkg::HPDCACHE_MEM_DATA_WIDTH <= ICACHE_LINE_WIDTH) ?
+    (drac_pkg::HPDCACHE_MEM_DATA_WIDTH <= IFILL_WIDTH) ?
       $clog2(drac_pkg::HPDCACHE_MEM_DATA_WIDTH/8) :
       ICACHE_CL_SIZE;
 
@@ -215,7 +215,7 @@ module axi_arbiter
   assign icache_miss_resp_data_o = icache_miss_resp_data_rdata;
 
   generate
-    if (drac_pkg::HPDCACHE_MEM_DATA_WIDTH < ICACHE_LINE_WIDTH) begin
+    if (drac_pkg::HPDCACHE_MEM_DATA_WIDTH < IFILL_WIDTH) begin
       hpdcache_fifo_reg #(
           .FIFO_DEPTH  (1),
           .fifo_data_t (drac_pkg::hpdcache_mem_id_t)
@@ -234,7 +234,7 @@ module axi_arbiter
 
       hpdcache_data_upsize #(
           .WR_WIDTH(drac_pkg::HPDCACHE_MEM_DATA_WIDTH),
-          .RD_WIDTH(ICACHE_LINE_WIDTH),
+          .RD_WIDTH(IFILL_WIDTH),
           .DEPTH(1)
       ) i_icache_hpdcache_data_upsize (
           .clk_i,
@@ -261,8 +261,7 @@ module axi_arbiter
       assign icache_miss_resp_wok = icache_miss_resp_data_wok & (
                icache_miss_resp_meta_wok | ~icache_miss_resp_wdata.mem_resp_r_last);
 
-    end else if (drac_pkg::HPDCACHE_MEM_DATA_WIDTH > ICACHE_LINE_WIDTH) begin
-      // TODO: Downsize AXI data to iCache
+    end else if (drac_pkg::HPDCACHE_MEM_DATA_WIDTH > IFILL_WIDTH) begin
 
       hpdcache_fifo_reg #(
           .FIFO_DEPTH  (1),
@@ -282,7 +281,7 @@ module axi_arbiter
 
       hpdcache_data_downsize #(
           .WR_WIDTH(drac_pkg::HPDCACHE_MEM_DATA_WIDTH),
-          .RD_WIDTH(ICACHE_LINE_WIDTH),
+          .RD_WIDTH(IFILL_WIDTH),
           .DEPTH(1)
       ) i_icache_hpdcache_data_downsize (
           .clk_i,
