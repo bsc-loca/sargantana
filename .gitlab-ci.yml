@@ -33,6 +33,7 @@ before_script:
   - source /load_modulefiles_bash.sh
   - module load verilator/5.014
   - module load rvv/1.0.0
+  - module load gcc/10.3.0
 
 stages:
   - linting
