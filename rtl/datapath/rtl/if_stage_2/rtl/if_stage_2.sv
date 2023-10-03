@@ -76,7 +76,7 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
     assign fetch_o.bpred.is_branch = fetch_i.bpred.is_branch;
     assign fetch_o.bpred.decision  = fetch_i.bpred.decision;
     assign fetch_o.bpred.pred_addr = fetch_i.bpred.pred_addr;
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     assign fetch_o.id = fetch_i.id;
     `endif
 

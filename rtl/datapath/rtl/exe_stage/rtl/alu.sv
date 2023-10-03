@@ -107,7 +107,7 @@ assign instruction_o.gl_index        = instruction_i.gl_index;
 assign instruction_o.mem_type        = instruction_i.instr.mem_type;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_o.id              = instruction_i.instr.id;
 `endif
 assign instruction_o.fp_status     = 'h0;

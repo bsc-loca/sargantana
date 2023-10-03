@@ -44,7 +44,7 @@ module mem_unit
 
     input logic [1:0] priv_lvl_i,
 
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
     output bus64_t               store_data_o,
     `endif
@@ -143,7 +143,7 @@ assign instruction_to_lsq.is_store  = instruction_i.instr.mem_type == STORE;
                                       
 assign instruction_to_lsq.is_amo  = (instruction_to_lsq.is_amo_or_store & !instruction_to_lsq.is_store);
 
-`ifdef VERILATOR
+`ifdef SIM_COMMIT_LOG
 assign instruction_to_lsq.vaddr = instruction_to_lsq.data_rs1;
 `endif
 
@@ -501,8 +501,10 @@ assign instruction_scalar_o.rd            = instruction_to_wb.instr.rd;
 assign instruction_scalar_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
 assign instruction_scalar_o.regfile_we    = instruction_to_wb.instr.regfile_we;
 assign instruction_scalar_o.instr_type    = instruction_to_wb.instr.instr_type;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id	          = instruction_to_wb.instr.id;
+`endif
+`ifdef SIM_COMMIT_LOG
 assign instruction_scalar_o.addr          = instruction_to_wb.vaddr;
 `endif
 assign instruction_scalar_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
@@ -527,8 +529,10 @@ assign instruction_fp_o.rd                = instruction_to_wb.instr.rd;
 assign instruction_fp_o.change_pc_ena     = instruction_to_wb.instr.change_pc_ena;
 assign instruction_fp_o.regfile_we        = instruction_to_wb.instr.fregfile_we;
 assign instruction_fp_o.instr_type        = instruction_to_wb.instr.instr_type;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_fp_o.id	              = instruction_to_wb.instr.id;
+`endif
+`ifdef SIM_COMMIT_LOG
 assign instruction_fp_o.addr              = instruction_to_wb.vaddr;
 `endif
 assign instruction_fp_o.stall_csr_fence   = instruction_to_wb.instr.stall_csr_fence;
@@ -552,8 +556,10 @@ assign instruction_simd_o.vd              = instruction_to_wb.instr.vd;
 assign instruction_simd_o.change_pc_ena   = instruction_to_wb.instr.change_pc_ena;
 assign instruction_simd_o.vregfile_we     = instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.instr_type      = instruction_to_wb.instr.instr_type;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id	          = instruction_to_wb.instr.id;
+`endif
+`ifdef SIM_COMMIT_LOG
 assign instruction_simd_o.addr            = instruction_to_wb.vaddr;
 `endif
 assign instruction_simd_o.stall_csr_fence = instruction_to_wb.instr.stall_csr_fence;
@@ -585,7 +591,7 @@ assign req_cpu_dcache_o.io_base_addr = io_base_addr_i;
 assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
-`ifdef VERILATOR
+`ifdef SIM_COMMIT_LOG
 assign store_addr_o = instruction_s1_q.vaddr;
 assign store_data_o = instruction_s1_q.data_rs2;
 `endif

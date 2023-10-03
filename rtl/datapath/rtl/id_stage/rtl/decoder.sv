@@ -103,7 +103,7 @@ module decoder
         check_frm              = 1'b0;
 
         decode_instr_int.instr_type = ADD;
-        `ifdef VERILATOR
+        `ifdef SIM_KONATA_DUMP
             decode_instr_int.id = decode_i.id;
         `endif
 
@@ -122,7 +122,7 @@ module decoder
         // Signal that tells whether it is a csr or fence
         decode_instr_int.stall_csr_fence = 1'b0;
 
-        `ifdef VERILATOR
+        `ifdef SIM_COMMIT_LOG
             decode_instr_int.inst = decode_i.inst;
         `endif
 

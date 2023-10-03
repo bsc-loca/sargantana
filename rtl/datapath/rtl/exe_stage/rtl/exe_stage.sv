@@ -60,7 +60,7 @@ module exe_stage
 
     input logic [1:0] priv_lvl_i,
 
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
     output bus64_t               store_data_o,
     `endif
@@ -350,7 +350,7 @@ mem_unit mem_unit_inst(
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem),
 
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     .store_addr_o(store_addr_o),
     .store_data_o(store_data_o),
     `endif

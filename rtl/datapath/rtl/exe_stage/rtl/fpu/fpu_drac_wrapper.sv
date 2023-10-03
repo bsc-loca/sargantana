@@ -274,7 +274,7 @@ assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
 assign instruction_o.fp_status       = finish_fp_status_int;
 assign instruction_o.ex              = '0;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
    assign instruction_o.id           = finish_fp_op_int.instr.id;
 `endif 
 
@@ -299,7 +299,7 @@ assign instruction_scalar_o.prd             = finish_fp_op_int.fprd;
 assign instruction_scalar_o.checkpoint_done = finish_fp_op_int.checkpoint_done;
 assign instruction_scalar_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_scalar_o.gl_index        = finish_fp_op_int.gl_index;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;

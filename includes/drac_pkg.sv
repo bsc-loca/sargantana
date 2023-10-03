@@ -343,7 +343,7 @@ typedef struct packed {
     logic                    valid;     // Valid instruction
     branch_pred_t            bpred;     // Branch prediction
     exception_t              ex;        // Exceptions
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
 } if_1_if_2_stage_t;       // FETCH 1 STAGE TO DECODE STAGE
@@ -355,7 +355,7 @@ typedef struct packed {
     logic                    valid;     // Valid instruction
     branch_pred_t            bpred;     // Branch prediction
     exception_t              ex;        // Exceptions
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
 } if_id_stage_t;       // FETCH STAGE TO DECODE STAGE
@@ -407,8 +407,10 @@ typedef struct packed {
     logic [3:0] mem_size;               // Memory operation size (Byte, Word, etc)
     logic stall_csr_fence;              // CSR or fence
     mem_type_t mem_type;                // Mem instruction type
-    `ifdef VERILATOR
-    riscv_pkg::instruction_t inst; 
+    `ifdef SIM_COMMIT_LOG
+    riscv_pkg::instruction_t inst;
+    `endif
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
 } instr_entry_t;
@@ -538,7 +540,7 @@ typedef struct packed {
     logic translated;                   // Has been translated to a physical address
     exception_t ex;
 
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     bus64_t vaddr;
     `endif
 
@@ -611,9 +613,11 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
-    `ifdef VERILATOR
-    riscv_pkg::instruction_t inst;      // Bits of the instruction
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
+    `endif
+    `ifdef SIM_COMMIT_LOG
+    riscv_pkg::instruction_t inst;
     addr_t addr;
     `endif
     phreg_t prd;                        // Physical register destination
@@ -642,10 +646,12 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
-    `ifdef VERILATOR
-    riscv_pkg::instruction_t inst;      // Bits of the instruction
-    addr_t addr;
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
+    `endif
+    `ifdef SIM_COMMIT_LOG
+    riscv_pkg::instruction_t inst;
+    addr_t addr;
     `endif
     phvreg_t pvd;                       // Physical vregister destination
 
@@ -671,10 +677,12 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
-    `ifdef VERILATOR
-    riscv_pkg::instruction_t inst;      // Bits of the instruction
-    addr_t addr;
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
+    `endif
+    `ifdef SIM_COMMIT_LOG
+    riscv_pkg::instruction_t inst;
+    addr_t addr;
     `endif
     phreg_t fprd;                       // Physical register destination
     fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
@@ -955,7 +963,7 @@ typedef struct packed {
     reg_t           rs1;                    // Source register 1
     vreg_t          vd;                     // Destination VRegister
     vreg_t          vs1;                    // Source vregister 1
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
@@ -972,8 +980,10 @@ typedef struct packed {
     phreg_t         old_prd;                // Old Physical register destination
     phreg_t         fprd;                   // Physical register destination to write
     phreg_t         old_fprd;               // Old Physical register destination
-    `ifdef VERILATOR
-    riscv_pkg::instruction_t inst;          // Bits of the instruction
+    `ifdef SIM_COMMIT_LOG
+    riscv_pkg::instruction_t inst;
+    `endif
+    `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
@@ -985,7 +995,7 @@ typedef struct packed {
     reg_csr_addr_t  csr_addr;               // CSR Address
     exception_t     exception;              // Exceptions
     bus_simd_t      result;                 // Result or immediate
-    `ifdef VERILATOR
+    `ifdef SIM_COMMIT_LOG
     addr_t addr;                            // Virtual address of memory op.
     `endif
     fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
@@ -1054,7 +1064,7 @@ typedef enum logic [SEW_WIDTH - 1 : 0] {
 } std_element_width_e;
 
 
-`ifdef VERILATOR
+`ifdef SIM_COMMIT_LOG
 typedef struct packed {
     longint unsigned pc;
     longint unsigned inst;

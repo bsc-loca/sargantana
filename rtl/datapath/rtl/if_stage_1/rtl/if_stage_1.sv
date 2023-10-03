@@ -44,7 +44,7 @@ module if_stage_1
     output req_cpu_icache_t     req_cpu_icache_o,  
     // fetch data output
     output if_1_if_2_stage_t    fetch_o
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     ,
     output logic[63:0]          id_o
     `endif
@@ -53,7 +53,7 @@ module if_stage_1
     addrPC_t next_pc;
 //    regPC_t pc;
     reg[63:0] pc;
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     logic[63:0] id, next_id;
     `endif
 
@@ -72,7 +72,7 @@ module if_stage_1
         priority case (cu_if_i.next_pc)
             NEXT_PC_SEL_KEEP_PC: begin
                 next_pc = pc;
-                `ifdef VERILATOR
+                `ifdef SIM_KONATA_DUMP
                 next_id = id;
                 `endif
             end
@@ -82,14 +82,14 @@ module if_stage_1
                 else
                     next_pc = pc + 64'h04;
                 
-                `ifdef VERILATOR
+                `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif
             end
             NEXT_PC_SEL_JUMP,
             NEXT_PC_SEL_DEBUG: begin
                 next_pc = pc_jump_i;
-                `ifdef VERILATOR
+                `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif
             end
@@ -98,7 +98,7 @@ module if_stage_1
                     $error("next pc not defined error in if stage");
                 `endif
                 next_pc = pc + 64'h04;
-                `ifdef VERILATOR
+                `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif
             end
@@ -109,12 +109,12 @@ module if_stage_1
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
             pc <= {24'b0,reset_addr_i};
-            `ifdef VERILATOR
+            `ifdef SIM_KONATA_DUMP
             id <= 64'h0;
             `endif
         end else begin
             pc <= next_pc;
-            `ifdef VERILATOR
+            `ifdef SIM_KONATA_DUMP
             id <= next_id;
             `endif
         end
@@ -146,7 +146,7 @@ module if_stage_1
     // Output fetch
     assign fetch_o.pc_inst = pc;
     assign fetch_o.valid   = !stall_debug_i && !stall_i;  // valid if the response of the cache is valid or xcpt
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     assign fetch_o.id = id;
     `endif
 
@@ -185,7 +185,7 @@ module if_stage_1
     assign fetch_o.bpred.is_branch = branch_predict_is_branch;
     assign fetch_o.bpred.decision  = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
     assign fetch_o.bpred.pred_addr = branch_predict_addr;
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
     assign id_o = id;
     `endif
 

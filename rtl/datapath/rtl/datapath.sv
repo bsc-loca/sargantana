@@ -48,7 +48,7 @@ module datapath
 //////// SIGNAL DECLARATION                                                                           /////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-`ifdef VERILATOR
+`ifdef SIM_COMMIT_LOG
     logic commit_valid[1:0];
     commit_data_t commit_data[1:0];
     addr_t store_addr;
@@ -320,7 +320,7 @@ module datapath
     // stall IF
     logic stall_if;
     logic miss_icache;
-    `ifdef VERILATOR
+    `ifdef SIM_KONATA_DUMP
         bus64_t id_fetch;
     `endif
 
@@ -415,7 +415,7 @@ module datapath
         .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_1_if_2_d),
-        `ifdef VERILATOR
+        `ifdef SIM_KONATA_DUMP
         .id_o(id_fetch),
         `endif
         .exe_if_branch_pred_i(exe_if_branch_pred_int)
@@ -806,9 +806,11 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign instruction_decode_gl.regfile_we             = stage_ir_rr_q.instr.regfile_we;
     assign instruction_decode_gl.vregfile_we            = stage_ir_rr_q.instr.vregfile_we;
     assign instruction_decode_gl.fregfile_we            = stage_ir_rr_q.instr.fregfile_we;
-    `ifdef VERILATOR
-        assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
+    `ifdef SIM_KONATA_DUMP
         assign instruction_decode_gl.id                 = stage_ir_rr_q.instr.id;
+    `endif
+    `ifdef SIM_COMMIT_LOG
+        assign instruction_decode_gl.inst               = stage_ir_rr_q.instr.inst;
         assign instruction_decode_gl.exception = !stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt ?  interrupt_ex : stage_ir_rr_q.ex;
     `endif
     assign instruction_decode_gl.fp_status              = '0;
@@ -1136,7 +1138,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .dtlb_comm_o(dtlb_comm_o),
         .priv_lvl_i(csr_priv_lvl_i),
 
-        `ifdef VERILATOR
+        `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),
         .store_data_o(store_data),
         `endif
@@ -1225,7 +1227,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
-                `ifdef VERILATOR
+                `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 `endif
             end else begin
@@ -1235,7 +1237,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
-                `ifdef VERILATOR
+                `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 `endif
             end
@@ -1274,7 +1276,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             wb_cu_int.vwrite_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vvalid[i]        = wb_simd[i].valid;
-            `ifdef VERILATOR
+            `ifdef SIM_COMMIT_LOG
             instruction_simd_writeback_gl[i].addr      = wb_simd[i].addr;
             `endif
         end
@@ -1293,7 +1295,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             wb_cu_int.fwrite_enable[i] = wb_fp[i].regfile_we;
             wb_cu_int.fsnoop_enable[i] = wb_fp[i].regfile_we;
             wb_cu_int.fvalid[i]        = wb_fp[i].valid;
-            `ifdef VERILATOR
+            `ifdef SIM_COMMIT_LOG
             instruction_fp_writeback_gl[i].addr      = wb_fp[i].addr;
             `endif
         end
@@ -1417,7 +1419,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     //////// DEBUG SIGNALS                                                                                /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-`ifdef VERILATOR
+`ifdef SIM_COMMIT_LOG
     // Debug signals
     always_comb begin 
         for (int i=0; i<2; i++) begin
@@ -1474,83 +1476,84 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
 
     // Module that generates the signature of the core to compare with spike
-    `ifdef VERILATOR_TORTURE_TESTS
-        logic commit_store_int, is_commit_store_valid;
-        assign commit_store_int = instruction_to_commit[0].mem_type == STORE;
-        assign is_commit_store_valid = instruction_to_commit[0].valid && !commit_cu_int.stall_commit && 
-                                        commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
-        torture_dump_behav torture_dump
-        (
-            .clk(clk_i),
-            .rst(rstn_i),
-            .commit_valid_i(commit_valid),
-            .commit_data_i(commit_data)
-        );
-        konata_dump_behav konata_dump
-        (
-            .clk(clk_i),
-            .rst(rstn_i),
-            .if1_valid(valid_if1),
-            .if1_id(id_fetch), 
-            .if1_stall(control_int.stall_if_1),
-            .if1_flush(flush_int.flush_if),
+    logic commit_store_int, is_commit_store_valid;
+    assign commit_store_int = instruction_to_commit[0].mem_type == STORE;
+    assign is_commit_store_valid = instruction_to_commit[0].valid && !commit_cu_int.stall_commit && 
+                                    commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
+    torture_dump_behav torture_dump
+    (
+        .clk(clk_i),
+        .rst(rstn_i),
+        .commit_valid_i(commit_valid),
+        .commit_data_i(commit_data)
+    );
+`endif
 
-            .if2_valid(valid_if2),
-            .if2_id(stage_if_2_id_d.id),
-            .if2_stall(control_int.stall_if_2),
-            .if2_flush(flush_int.flush_if),
+`ifdef SIM_KONATA_DUMP
+    konata_dump_behav konata_dump
+    (
+        .clk(clk_i),
+        .rst(rstn_i),
+        .if1_valid(valid_if1),
+        .if1_id(id_fetch), 
+        .if1_stall(control_int.stall_if_1),
+        .if1_flush(flush_int.flush_if),
 
-            .id_valid(valid_id),
-            .id_inst(stage_if_2_id_q.inst),
-            .id_pc(pc_id),
-            .id_id(stage_if_2_id_q.id),
-            .id_stall(control_int.stall_id),
-            .id_flush(flush_int.flush_id),
+        .if2_valid(valid_if2),
+        .if2_id(stage_if_2_id_d.id),
+        .if2_stall(control_int.stall_if_2),
+        .if2_flush(flush_int.flush_if),
 
-            .ir_valid(stage_iq_ir_q.instr.valid),
-            .ir_id(stage_iq_ir_q.instr.id),
-            .ir_stall(control_int.stall_ir),
-            .ir_flush(flush_int.flush_ir),
+        .id_valid(valid_id),
+        .id_inst(stage_if_2_id_q.inst),
+        .id_pc(pc_id),
+        .id_id(stage_if_2_id_q.id),
+        .id_stall(control_int.stall_id),
+        .id_flush(flush_int.flush_id),
 
-            .rr_valid(valid_rr),
-            .rr_id(stage_ir_rr_q.instr.id),
-            .rr_stall(control_int.stall_rr),
-            .rr_flush(flush_int.flush_rr),
+        .ir_valid(stage_iq_ir_q.instr.valid),
+        .ir_id(stage_iq_ir_q.instr.id),
+        .ir_stall(control_int.stall_ir),
+        .ir_flush(flush_int.flush_ir),
 
-            .exe_valid(valid_exe),
-            .exe_id(stage_rr_exe_q.instr.id),
-            .exe_stall(control_int.stall_exe),
-            .exe_flush(flush_int.flush_exe),
-            .exe_unit(reg_to_exe.instr.unit),
+        .rr_valid(valid_rr),
+        .rr_id(stage_ir_rr_q.instr.id),
+        .rr_stall(control_int.stall_rr),
+        .rr_flush(flush_int.flush_rr),
 
-            .wb1_valid(wb_scalar[0].valid),
-            .wb1_id(wb_scalar[0].id),
+        .exe_valid(valid_exe),
+        .exe_id(stage_rr_exe_q.instr.id),
+        .exe_stall(control_int.stall_exe),
+        .exe_flush(flush_int.flush_exe),
+        .exe_unit(reg_to_exe.instr.unit),
 
-            .wb2_valid(wb_scalar[1].valid),
-            .wb2_id(wb_scalar[1].id),
+        .wb1_valid(wb_scalar[0].valid),
+        .wb1_id(wb_scalar[0].id),
 
-            .wb_store_valid(is_commit_store_valid),
-            .wb_srore_id(instruction_to_commit[0].id),
-            // Scalar 
-            .wb3_valid(wb_scalar[2].valid),
-            .wb3_id(wb_scalar[2].id),
-            // Mult writeback
-            .wb4_valid(wb_scalar[3].valid),
-            .wb4_id(wb_scalar[3].id),
-            // FP 1
-            .wb1_fp_valid(wb_fp[0].valid),
-            .wb1_fp_id(wb_fp[0].id),
-            // FP 2
-            .wb2_fp_valid(wb_fp[1].valid),
-            .wb2_fp_id(wb_fp[1].id),
-            // SIMD 1
-            .wb1_simd_valid(wb_simd[0].valid),
-            .wb1_simd_id(wb_simd[0].id),
-            // SIMD 2
-            .wb2_simd_valid(wb_simd[1].valid),
-            .wb2_simd_id(wb_simd[1].id)
-        );
-    `endif
+        .wb2_valid(wb_scalar[1].valid),
+        .wb2_id(wb_scalar[1].id),
+
+        .wb_store_valid(is_commit_store_valid),
+        .wb_srore_id(instruction_to_commit[0].id),
+        // Scalar 
+        .wb3_valid(wb_scalar[2].valid),
+        .wb3_id(wb_scalar[2].id),
+        // Mult writeback
+        .wb4_valid(wb_scalar[3].valid),
+        .wb4_id(wb_scalar[3].id),
+        // FP 1
+        .wb1_fp_valid(wb_fp[0].valid),
+        .wb1_fp_id(wb_fp[0].id),
+        // FP 2
+        .wb2_fp_valid(wb_fp[1].valid),
+        .wb2_fp_id(wb_fp[1].id),
+        // SIMD 1
+        .wb1_simd_valid(wb_simd[0].valid),
+        .wb1_simd_id(wb_simd[0].id),
+        // SIMD 2
+        .wb2_simd_valid(wb_simd[1].valid),
+        .wb2_simd_id(wb_simd[1].id)
+    );
 `endif
 
         // PCcommit_freg_we

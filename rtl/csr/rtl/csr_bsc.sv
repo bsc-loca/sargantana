@@ -1491,7 +1491,7 @@ module csr_bsc#(
         end
     end
 
-    `ifdef VERILATOR_TORTURE_TESTS
+    `ifdef SIM_COMMIT_LOG
         import "DPI-C" function void csr_change (input longint unsigned addr, input longint unsigned value);
 
         // Very important!!! Must be negedge to execute it before torture_dump when an instruction commits in datapath!

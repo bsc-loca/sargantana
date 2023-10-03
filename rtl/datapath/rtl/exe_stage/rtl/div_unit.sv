@@ -90,7 +90,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_d[div_unit_sel_i].branch_taken    = 1'b0;
             instruction_d[div_unit_sel_i].result_pc       = data_src1;                 // Store dividend in result_pc
             instruction_d[div_unit_sel_i].mem_type        = instruction_i.instr.mem_type;
-            `ifdef VERILATOR
+            `ifdef SIM_KONATA_DUMP
             instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
             `endif
 
@@ -238,7 +238,7 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.chkp            = 'h0;
         instruction_o.gl_index        = 'h0;
         instruction_o.mem_type        = NOT_MEM;
-        `ifdef VERILATOR
+        `ifdef SIM_KONATA_DUMP
         instruction_o.id              = 'h0;
         `endif
         instruction_o.branch_taken    = 'h0;
@@ -262,7 +262,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.chkp            = instruction_q[0].chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
             instruction_o.mem_type        = instruction_q[0].mem_type;
-            `ifdef VERILATOR
+            `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[0].id;
             `endif
             instruction_o.branch_taken    = 1'b0;
@@ -302,7 +302,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.chkp            = instruction_q[1].chkp;
             instruction_o.gl_index        = instruction_q[1].gl_index;
             instruction_o.mem_type        = instruction_q[1].mem_type;
-            `ifdef VERILATOR
+            `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[1].id;
             `endif
             instruction_o.fp_status       = 'h0;

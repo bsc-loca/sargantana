@@ -13,7 +13,8 @@ FLAGS ?=
 VERI_FLAGS = \
 	$(foreach flag, $(FLAGS), -D$(flag)) \
 	-DVERILATOR_GCC \
-	+define+VERILATOR_TORTURE_TESTS \
+	+define+SIM_COMMIT_LOG \
+	+define+SIM_KONATA_DUMP \
 	+incdir+$(PROJECT_DIR)/rtl \
 	+incdir+$(PROJECT_DIR)/rtl/dcache/rtl/include \
 	--top-module $(TOP_MODULE) \

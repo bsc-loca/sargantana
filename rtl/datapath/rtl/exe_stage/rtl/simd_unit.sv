@@ -321,7 +321,7 @@ assign instruction_scalar_o.branch_taken = 1'b0;
 assign instruction_scalar_o.result_pc = 0;
 assign instruction_scalar_o.fp_status = 0;
 assign instruction_scalar_o.mem_type = NOT_MEM;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id = instruction_i.instr.id;
 `endif
 
@@ -356,7 +356,7 @@ assign instruction_simd_o.chkp = instruction_i.chkp;
 assign instruction_simd_o.gl_index = instruction_i.gl_index;
 assign instruction_simd_o.branch_taken = 1'b0;
 assign instruction_simd_o.result_pc = 0;
-`ifdef VERILATOR
+`ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id = instruction_i.instr.id;
 `endif
 

@@ -191,50 +191,49 @@ assign new_register_o = (~read_enable)? 'h0 : ((num_registers[version_head] == 0
 assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0 & ~write_enable_1;
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
-`ifdef VERILATOR
-    rename_checking_behav konata_dump
-    (
-        .clk(clk_i),
-        .rst(rstn_i),
-        .r0(register_table[0]),
-        .r1(register_table[1]),
-        .r2(register_table[2]),
-        .r3(register_table[3]),
-        .r4(register_table[4]),
-        .r5(register_table[5]),
-        .r6(register_table[6]),
-        .r7(register_table[7]),
-        .r8(register_table[8]),
-        .r9(register_table[9]),
-        .r10(register_table[10]),
-        .r11(register_table[11]),
-        .r12(register_table[12]),
-        .r13(register_table[13]),
-        .r14(register_table[14]),
-        .r15(register_table[15]),
-        .r16(register_table[16]),
-        .r17(register_table[17]),
-        .r18(register_table[18]),
-        .r19(register_table[19]),
-        .r20(register_table[20]),
-        .r21(register_table[21]),
-        .r22(register_table[22]),
-        .r23(register_table[23]),
-        .r24(register_table[24]),
-        .r25(register_table[25]),
-        .r26(register_table[26]),
-        .r27(register_table[27]),
-        .r28(register_table[28]),
-        .r29(register_table[29]),
-        .r30(register_table[30]),
-        .r31(register_table[31]),
-        .head(head[version_head]),
-        .tail(tail),
-        .num(num_registers[version_head])
-    );
-`endif
-
 `ifdef CHECK_RENAME
+    `ifdef VERILATOR
+        rename_checking_behav check_rename_inst
+        (
+            .clk(clk_i),
+            .rst(rstn_i),
+            .r0(register_table[0]),
+            .r1(register_table[1]),
+            .r2(register_table[2]),
+            .r3(register_table[3]),
+            .r4(register_table[4]),
+            .r5(register_table[5]),
+            .r6(register_table[6]),
+            .r7(register_table[7]),
+            .r8(register_table[8]),
+            .r9(register_table[9]),
+            .r10(register_table[10]),
+            .r11(register_table[11]),
+            .r12(register_table[12]),
+            .r13(register_table[13]),
+            .r14(register_table[14]),
+            .r15(register_table[15]),
+            .r16(register_table[16]),
+            .r17(register_table[17]),
+            .r18(register_table[18]),
+            .r19(register_table[19]),
+            .r20(register_table[20]),
+            .r21(register_table[21]),
+            .r22(register_table[22]),
+            .r23(register_table[23]),
+            .r24(register_table[24]),
+            .r25(register_table[25]),
+            .r26(register_table[26]),
+            .r27(register_table[27]),
+            .r28(register_table[28]),
+            .r29(register_table[29]),
+            .r30(register_table[30]),
+            .r31(register_table[31]),
+            .head(head[version_head]),
+            .tail(tail),
+            .num(num_registers[version_head])
+        );
+    `endif
 
 (* keep="TRUE" *) (* mark_debug="TRUE" *) logic [NUM_CHECKPOINTS-1:0] error_free_list_q;
 logic [NUM_CHECKPOINTS-1:0] error_free_list_d;
