@@ -65,6 +65,9 @@ logic [$clog2(LSQ_NUM_ENTRIES):0] num;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_exe;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
+// FIFO Memory structure
+rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
+
 // Internal Control Signals
 logic write_enable;
 logic read_enable;
@@ -133,11 +136,10 @@ always_comb begin
         translated_instr.ex.cause  = instr_to_translate.is_amo_or_store ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
         translated_instr.ex.origin = instr_to_translate.data_rs1;
         translated_instr.ex.valid  = 1'b1;
+    end else begin
+        translated_instr.ex = 0;
     end
 end
-
-// FIFO Memory structure
-rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
 
 always_ff @(posedge clk_i)
 begin

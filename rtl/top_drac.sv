@@ -556,6 +556,22 @@ hpdcache #(
     // misc
     .wbuf_empty_o(wbuf_empty),
 
+    // PMU events
+    .evt_stall_o(),
+    .evt_stall_refill_o(),
+    .evt_rtab_rollback_o(),
+    .evt_req_on_hold_o(),
+    .evt_prefetch_req_o(),
+    .evt_read_req_o(),
+    .evt_write_req_o(),
+    .evt_cmo_req_o(),
+    .evt_uncached_req_o(),
+    .evt_cache_read_miss_o(),
+    .evt_cache_write_miss_o(),
+
+    // Unused
+    .wbuf_flush_i(1'b0),
+
     // Config
     .cfg_enable_i(1'b1),
     .cfg_wbuf_threshold_i(4'd2),
@@ -628,6 +644,15 @@ csr_bsc csr_inst (
 
     .flush_o(tlb_flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
+
+    // Unused interfaces
+    .pcr_update_data_i(0),
+    .pcr_update_addr_i(0),
+    .pcr_update_core_id_i(0),
+    .pcr_update_broadcast_i(0),
+    .pcr_update_valid_i(0),
+    .m_soft_irq_i(0),
+    .rocc_interrupt_i(0),
 
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module

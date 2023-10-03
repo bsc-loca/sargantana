@@ -112,7 +112,7 @@ module csr_bsc#(
     output logic                            perf_we_o
 );
 
-    localparam int MHPM_TO_HPM_DIST = CSR_HPM_COUNTER_3 - CSR_MHPM_COUNTER_3;
+    localparam int MHPM_TO_HPM_DIST = riscv_pkg::CSR_HPM_COUNTER_3 - riscv_pkg::CSR_MHPM_COUNTER_3;
 
     //////////////////////////////////////////////
     // Registers declaration
@@ -1264,7 +1264,7 @@ module csr_bsc#(
     always_comb begin : vsetvl_ctrl
         vtype_new = rw_addr_i[10:0];
         // new vlmax depending on the vtype config
-        vlmax = ((VLEN << vtype_new[1:0]) >> 3) >> vtype_new[4:2];
+        vlmax = ((riscv_pkg::VLEN << vtype_new[1:0]) >> 3) >> vtype_new[4:2];
         if (vsetvl_insn) begin
             // vl assignation depending on the AVL respect VLMAX
             if (rw_cmd_i == 3'b111) begin //vsetvl with x0
