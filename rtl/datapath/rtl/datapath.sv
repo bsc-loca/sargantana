@@ -1480,6 +1480,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign commit_store_int = instruction_to_commit[0].mem_type == STORE;
     assign is_commit_store_valid = instruction_to_commit[0].valid && !commit_cu_int.stall_commit && 
                                     commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
+
+    `ifdef SIM_COMMIT_LOG_DPI    
     torture_dump_behav torture_dump
     (
         .clk(clk_i),
@@ -1487,6 +1489,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .commit_valid_i(commit_valid),
         .commit_data_i(commit_data)
     );
+    `endif
 `endif
 
 `ifdef SIM_KONATA_DUMP

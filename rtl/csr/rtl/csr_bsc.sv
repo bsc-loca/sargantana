@@ -1492,6 +1492,7 @@ module csr_bsc#(
     end
 
     `ifdef SIM_COMMIT_LOG
+    `ifdef SIM_COMMIT_LOG_DPI
         import "DPI-C" function void csr_change (input longint unsigned addr, input longint unsigned value);
 
         // Very important!!! Must be negedge to execute it before torture_dump when an instruction commits in datapath!
@@ -1535,6 +1536,7 @@ module csr_bsc#(
                 end
             end
         end
+    `endif
     `endif
 
     //-------------
