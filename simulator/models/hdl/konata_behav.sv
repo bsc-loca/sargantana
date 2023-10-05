@@ -1,3 +1,5 @@
+import drac_pkg::*;
+
 // Module used to dump information comming from writeback stage
 module konata_dump_behav
 (
@@ -61,67 +63,76 @@ input functional_unit_t exe_unit
 // DPI calls definition
 import "DPI-C" function
   void konata_dump (input longint unsigned if1_valid,
-                            input longint unsigned if2_valid,
-                            input longint unsigned id_valid,
-                            input longint unsigned ir_valid,
-                            input longint unsigned rr_valid,
-                            input longint unsigned exe_valid,
-                            input longint unsigned wb1_valid,
-                            input longint unsigned wb2_valid,
-                            input longint unsigned wb3_valid,
-                            input longint unsigned wb4_valid,
-                            input longint unsigned wb1_fp_valid,
-                            input longint unsigned wb2_fp_valid,
-                            input longint unsigned wb1_simd_valid,
-                            input longint unsigned wb2_simd_valid,
-                            input longint unsigned wb_store_valid,
-                            input longint unsigned if1_stall,
-                            input longint unsigned if2_stall,
-                            input longint unsigned id_stall,
-                            input longint unsigned ir_stall,
-                            input longint unsigned rr_stall,
-                            input longint unsigned exe_stall,
-                            input longint unsigned if1_flush,
-                            input longint unsigned if2_flush,
-                            input longint unsigned id_flush,
-                            input longint unsigned ir_flush,
-                            input longint unsigned rr_flush,
-                            input longint unsigned exe_flush, 
-                            input longint unsigned id_pc,
-                            input longint unsigned id_inst,
-                            input longint unsigned if1_id,
-                            input longint unsigned if2_id,
-                            input longint unsigned id_id,
-                            input longint unsigned ir_id,
-                            input longint unsigned rr_id,
-                            input longint unsigned exe_id,
-                            input longint unsigned exe_unit,
-                            input longint unsigned wb1_id,
-                            input longint unsigned wb2_id,
-                            input longint unsigned wb3_id,
-                            input longint unsigned wb4_id,
-                            input longint unsigned wb1_fp_id,
-                            input longint unsigned wb2_fp_id,
-                            input longint unsigned wb1_simd_id,
-                            input longint unsigned wb2_simd_id,
-                            input longint unsigned wb_srore_id);
+                    input longint unsigned if2_valid,
+                    input longint unsigned id_valid,
+                    input longint unsigned ir_valid,
+                    input longint unsigned rr_valid,
+                    input longint unsigned exe_valid,
+                    input longint unsigned wb1_valid,
+                    input longint unsigned wb2_valid,
+                    input longint unsigned wb3_valid,
+                    input longint unsigned wb4_valid,
+                    input longint unsigned wb1_fp_valid,
+                    input longint unsigned wb2_fp_valid,
+                    input longint unsigned wb1_simd_valid,
+                    input longint unsigned wb2_simd_valid,
+                    input longint unsigned wb_store_valid,
+                    input longint unsigned if1_stall,
+                    input longint unsigned if2_stall,
+                    input longint unsigned id_stall,
+                    input longint unsigned ir_stall,
+                    input longint unsigned rr_stall,
+                    input longint unsigned exe_stall,
+                    input longint unsigned if1_flush,
+                    input longint unsigned if2_flush,
+                    input longint unsigned id_flush,
+                    input longint unsigned ir_flush,
+                    input longint unsigned rr_flush,
+                    input longint unsigned exe_flush, 
+                    input longint unsigned id_pc,
+                    input longint unsigned id_inst,
+                    input longint unsigned if1_id,
+                    input longint unsigned if2_id,
+                    input longint unsigned id_id,
+                    input longint unsigned ir_id,
+                    input longint unsigned rr_id,
+                    input longint unsigned exe_id,
+                    input longint unsigned exe_unit,
+                    input longint unsigned wb1_id,
+                    input longint unsigned wb2_id,
+                    input longint unsigned wb3_id,
+                    input longint unsigned wb4_id,
+                    input longint unsigned wb1_fp_id,
+                    input longint unsigned wb2_fp_id,
+                    input longint unsigned wb1_simd_id,
+                    input longint unsigned wb2_simd_id,
+                    input longint unsigned wb_srore_id);
                      
                     
-import "DPI-C" function void konata_signature_init();
+import "DPI-C" function void konata_signature_init(input string dumpfile);
+
+    logic dump_enabled;
 
 // we create the behav model to control it
 initial begin
-  `ifndef VERILATOR
-  konata_signature_init();
-  `endif
+    string dumpfile;
+    if($test$plusargs("konata_dump")) begin
+        dump_enabled = 1'b1;
+        if (!$value$plusargs("konata_dump=%s", dumpfile)) dumpfile = "konata.txt";
+        konata_signature_init(dumpfile);
+    end else begin
+        dump_enabled = 1'b0;
+    end
 end
 
 // Main always
 always @(posedge clk) begin
-konata_dump(if1_valid, if2_valid, id_valid, rr_valid, ir_valid, exe_valid, 
-            wb1_valid, wb2_valid, wb3_valid, wb4_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
-            rr_stall, exe_stall, if1_flush, if2_flush, id_flush, ir_flush, rr_flush, exe_flush, id_pc,
-            id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb4_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_srore_id);
+    if (dump_enabled) begin
+        konata_dump(if1_valid, if2_valid, id_valid, rr_valid, ir_valid, exe_valid, 
+                    wb1_valid, wb2_valid, wb3_valid, wb4_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
+                    rr_stall, exe_stall, if1_flush, if2_flush, id_flush, ir_flush, rr_flush, exe_flush, id_pc,
+                    id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb4_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_srore_id);
+    end
 end
 
 endmodule

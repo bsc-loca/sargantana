@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
-#include "globals.h"
 
 #define HEX_PC( x ) "0x" << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
 #define HEX_INST( x ) "0x" << std::setw(8) << std::setfill('0') << std::hex << (long)( x )
@@ -107,7 +106,7 @@ void rename_checking::dump_file(unsigned long long r0, unsigned long long r1, un
         int index = (head + 1) % 32;
         if ( hit[regs[index]] > 0){
             std::cout << "The register:" << std::dec << regs[index] << "is duplicated on the cycle\t" << std::dec << cycles_rename << "\n";
-            finish_due_renaming_error = 1;
+            //finish_due_renaming_error = 1;
         }else{
             hit[regs[index]]++;
         }

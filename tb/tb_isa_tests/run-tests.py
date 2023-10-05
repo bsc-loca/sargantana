@@ -95,10 +95,7 @@ def run_test(test_path):
                 with results_lock:
                     passed_tests += 1
             else:
-                if result.returncode == 255:
-                    logger.log(red('SIM. TIMED OUT'))
-                else:
-                    logger.log(f'{red("FAILED")} (Test case {result.returncode})')
+                logger.log(f'{red("ERROR")}')
                 with results_lock:
                     failed_tests.append(test_name)
         except subprocess.TimeoutExpired:

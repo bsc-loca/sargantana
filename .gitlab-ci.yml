@@ -90,9 +90,23 @@ build-simulator:
     - make sim
   artifacts:
     paths:
-    - simulator/riscv-isa-sim/build/spike
+    - simulator/reference/build/libdisasm.so
     - sim
     - bootrom.hex
+    expire_in: 1 week
+
+
+build-spike:
+  stage: building
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
+  script:
+    - gcc --version
+    - make spike
+  artifacts:
+    paths:
+    - simulator/reference/build/spike
     expire_in: 1 week
 
 build-torture:
@@ -132,6 +146,7 @@ torture:
   dependencies:
     - build-simulator
     - build-torture
+    - build-spike
   timeout: 4h
   parallel:
     matrix:

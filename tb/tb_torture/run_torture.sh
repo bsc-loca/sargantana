@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SIM="./sim"
-SPIKE="simulator/riscv-isa-sim/build/spike"
+SPIKE="simulator/reference/build/spike"
 
 CONFIG=$1
 BINARY="tb/tb_torture/riscv-torture/output/test_$CONFIG.riscv"

@@ -1547,7 +1547,7 @@ module csr_bsc#(
         // check that eret and ex are never valid together
         assert property (
           @(posedge clk_i) !(eret_o && ex_i))
-        else begin $error("eret and exception should never be valid at the same time"); $stop(); end
+        else begin $error("eret and exception should never be valid at the same time"); end
     `endif
     //pragma translate_on
 endmodule

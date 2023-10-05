@@ -452,7 +452,7 @@ dcache_interface dcache_interface_inst(
     .clk_i(CLK),
     .rstn_i(RST),
 
-    .en_ld_st_translation_i(en_ld_st_translation_i),
+    .en_ld_st_translation_i(en_ld_st_translation),
 
     // CPU Interface
     .req_cpu_dcache_i(req_datapath_dcache_interface),

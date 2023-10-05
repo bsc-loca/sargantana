@@ -4,11 +4,10 @@
 #include <cstdint>
 #include <cassert>
 #include <iostream>
-#include <unistd.h>
+#include <bitset>
 
 #include "loadelf.hpp"
-#include "globals.h"
-#include "dpi_torture.h"
+//#include "dpi_torture.h"
 
 class Memory32 {                    // data width = 32-bit
     std::map<uint32_t, uint32_t> mem; // memory storage
@@ -33,17 +32,11 @@ class Memory32 {                    // data width = 32-bit
 };
 
 static Memory32 memoryContents;
-static uint64_t tohostAddr;
-static uint64_t fromhostAddr;
 static std::map<std::string, uint64_t> symbols;
 static std::map<uint64_t, std::string> reverseSymbols;
 
 void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     uint32_t baseAddress = addr[0] & BUS_ADDR_MASK;
-
-    /*if (baseAddress ==  ((uint32_t) fromhostAddr)) {
-        printf("Fromhost!!!\n");
-    }*/
 
     for (unsigned int i = 0; i < BUS_WIDTH / 32; i++) {
         uint32_t dataRead;
@@ -52,16 +45,8 @@ void memory_read(const svBitVecVal *addr, svBitVecVal *data) {
     }
 }
 
-void tohost(unsigned int id, unsigned long long data);
-
 void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const svBitVecVal *data) {
     uint32_t baseAddress = addr[0] & BUS_ADDR_MASK;
-
-    if (baseAddress == ((uint32_t) tohostAddr)) {
-        //printf("Tohost!!!\n");
-        tohost(0, ((uint64_t) data[1]) << 32 | data[0]);
-        return;
-    }
 
     // Iterating the bus write at word-size (i.e. 32 bits)
     for (unsigned int i = 0; i < (BUS_WIDTH/32); i++) {    
@@ -125,6 +110,9 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
         //  Reserved           = 4'b1011,
         case 0b1100: result = mem_val; break;  //HPDCACHE_MEM_ATOMIC_LDEX
         case 0b1101: result = core_val; break; //HPDCACHE_MEM_ATOMIC_STEX
+        default:
+            std::cerr << "Invalid AMO operation: 0b" << std::bitset<4>(amo_op) << std::endl;
+            abort();
     }
 
     // Write contents to memory
@@ -136,10 +124,10 @@ void memory_write(const svBitVecVal *addr, const svBitVecVal *byte_enable, const
     }
 
     // Add information to torture dump
-    torture_dump_amo_write(addr, result);
+    //torture_dump_amo_write(addr, result);
  }
 
-void memory_init(std::string filename) {
+void memory_init(const char *filename) {
     using namespace std::placeholders;
 
     memoryContents = Memory32();
@@ -152,9 +140,11 @@ void memory_init(std::string filename) {
 
     for (const auto& kv : symbols)
         reverseSymbols[kv.second] = kv.first;
-        
-    tohostAddr = symbols["tohost"];
-    fromhostAddr = symbols["fromhost"];
+}
+
+void memory_symbol_addr(const char *symbol, svBitVecVal *addr) {
+    addr[0] = symbols[symbol];
+    addr[1] = symbols[symbol] >> 32;
 }
 
 static bool debug_read = false;
@@ -230,58 +220,23 @@ bool Memory32::read(const uint32_t addr, uint32_t &data) {
     return true;
 }
 
-
-// Commands definition
-#define SYS_write 64
-
-void tohost(unsigned int id, unsigned long long data) {
-  if(data & 1) {
-    uint64_t payload = data << 16 >>16;
-    // test pass/fail
-    if(payload != 1) {
-      std::cout << "Core " << id << " exit with error code " << (payload >> 1) << std::endl;
-      exit_code = payload >> 1;
-      exit_delay = 1;
-    }
-    else {
-      std::cout << "Run finished correctly" << std::endl;
-      exit_code = 0;
-      exit_delay = 1;
-    }
-    std::cout << "Run time is : " << main_time << std::endl;
-  } else {
-    uint64_t magicmem[8];
-    uint32_t upper, lower;
-
-    for (unsigned int i = 0; i < 8; i++) {
-        memoryContents.read((data + i*8), lower);
-        memoryContents.read((data + i*8) + 4, upper);
-        magicmem[i] = ((uint64_t) upper) << 32 | lower;
-    }
-
-    switch (magicmem[0]) {
-        case SYS_write:
-        {
-            uint64_t length = magicmem[3];
-            char buf[length];
-            for (unsigned int i = 0; i < length; i++) {
-                uint32_t data;
-                memoryContents.read(magicmem[2] + (i & ~0b11), data);
-                buf[i] = data >> ((i%4) * 8);
-            }
-            uint64_t result = write(magicmem[1], buf, length);
-            memoryContents.write(fromhostAddr, result & 0xffffffff, 0b1111);
-            memoryContents.write(fromhostAddr + 4, (result >> 32) & 0xffffffff, 0b1111);
-            break;
-        }
-        default:
-            std::cerr << "Unknown tohost syscall " << std::hex << magicmem[0] << std::endl;
-    }
-  }
-}
-
 std::string memory_symbol_from_addr(uint64_t addr) {
     auto symbol = reverseSymbols.find(addr);
 
     return symbol == reverseSymbols.end() ? std::string("") : symbol->second;
+}
+
+uint32_t memory_dpi_read_contents(uint64_t addr) {
+    uint32_t data;
+    memoryContents.read(addr, data);
+
+    return data;
+}
+
+void memory_dpi_write_contents(uint64_t addr, uint32_t data) {
+    memoryContents.write(addr, data, 0b1111);
+}
+
+uint64_t memory_dpi_get_symbol_addr(const char *symbol) {
+    return symbols[symbol];
 }

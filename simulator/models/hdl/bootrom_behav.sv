@@ -16,7 +16,11 @@ module bootrom_behav
     localparam BRAM_LINE_OFFSET = $clog2(MEM_DATA_WIDTH/8);
 
     (* ram_style = "block" *) reg [MEM_DATA_WIDTH-1:0] boot_ram [0 : BRAM_LINE-1];
-    initial $readmemh("bootrom.hex", boot_ram);
+    initial begin
+        string bootrom;
+        if (!$value$plusargs("bootrom=%s", bootrom)) bootrom = "bootrom.hex";
+        $readmemh(bootrom, boot_ram);
+    end
 
     logic [MEM_DATA_WIDTH-1:0] brom_resp_data_block;
     logic [23:0] brom_req_address_d;

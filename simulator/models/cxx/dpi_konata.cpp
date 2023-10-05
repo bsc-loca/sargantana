@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <riscv/disasm.h>
 
 #define HEX_PC( x ) "0x" << std::setw(16) << std::setfill('0') << std::hex << (long)( x )
 #define HEX_INST( x ) "0x" << std::setw(8) << std::setfill('0') << std::hex << (long)( x )
@@ -12,6 +13,8 @@
 
 // Global objects
 konataSignature *konata_signature;
+disassembler_t *disassembler;
+isa_parser_t *isa;
 
 // Global Variables
 uint64_t last_pc=0, cycles=1;
@@ -63,42 +66,25 @@ void konata_dump (unsigned long long if1_valid,
                             unsigned long long wb2_simd_id,
                             unsigned long long wb_store_id){
 
-
-    if(konata_signature->dump_check()){
-        konata_signature->dump_file(if1_valid, if2_valid, id_valid, rr_valid, ir_valid, exe_valid, 
-                                    wb1_valid, wb2_valid, wb3_valid, wb4_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
-                                    rr_stall, exe_stall, if1_flush, if2_flush, id_flush, ir_flush, rr_flush, exe_flush, id_pc,
-                                    id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb4_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_store_id);
-    }
+    konata_signature->dump_file(if1_valid, if2_valid, id_valid, rr_valid, ir_valid, exe_valid, 
+                                wb1_valid, wb2_valid, wb3_valid, wb4_valid, wb1_fp_valid, wb2_fp_valid, wb1_simd_valid, wb2_simd_valid, wb_store_valid, if1_stall, if2_stall, id_stall, ir_stall,
+                                rr_stall, exe_stall, if1_flush, if2_flush, id_flush, ir_flush, rr_flush, exe_flush, id_pc,
+                                id_inst, if1_id, if2_id, id_id, ir_id, rr_id, exe_id, exe_unit, wb1_id, wb2_id, wb3_id, wb4_id, wb1_fp_id, wb2_fp_id, wb1_simd_id, wb2_simd_id, wb_store_id);
 }
 
-void konata_signature_init(){
-    konata_signature = new konataSignature;
+void konata_signature_init(const char *dumpfile){
+    konata_signature = new konataSignature(dumpfile);
+    isa = new isa_parser_t("rv64imaf", "msu");
+    disassembler = new disassembler_t(isa);
 }
 
-// konata Signature
-void konataSignature::disable()
-{
-    dump_valid = false;
-}
+// End of SystemVerilog DPI
 
-void konataSignature::set_dump_file_name(std::string name)
-{
-    signatureFileName = name;
-}
-
-bool konataSignature::dump_check()
-{
-    return dump_valid;
-}
-
-void konataSignature::clear_output()
-{
+konataSignature::konataSignature(const char *dumpfile) {
+	signature = (uint64_t*) calloc(32,sizeof(uint64_t));
+    signatureFileName = dumpfile;
     signatureFile.open(signatureFileName, std::ios::out);
-    signatureFile.close();
-    signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
     signatureFile << "Kanata\t0004\n";
-    signatureFile.close();
 }
 
 void konataSignature::dump_file(unsigned long long if1_valid,
@@ -158,7 +144,6 @@ void konataSignature::dump_file(unsigned long long if1_valid,
          ir_flush || rr_flush || exe_flush)){
         cycles++;
     }else{
-        signatureFile.open(signatureFileName, std::ios::out | std::ios::app);
         signatureFile << "C\t" << std::dec << cycles << "\n";
         if (if1_valid && !if1_stall && !if1_flush){
             signatureFile << "I\t" << std::dec << if1_id << "\t" << std::dec << if1_id << "\t" << 0 << "\n";
@@ -173,7 +158,7 @@ void konataSignature::dump_file(unsigned long long if1_valid,
         if(id_flush){
             signatureFile << "R\t" << std::dec << id_id << "\t" << std::dec << id_id << "\t" << 1 << "\n";
         }else if(id_valid && !id_stall){
-            signatureFile << "L\t" << std::dec << id_id << "\t" << std::dec << 0 << "\t" << HEX_PC( signedPC ) << ": DASM(" << HEX_INST(id_inst) << ")" << "\n";
+            signatureFile << "L\t" << std::dec << id_id << "\t" << std::dec << 0 << "\t" << HEX_PC( signedPC ) << ": " << disassembler->disassemble(insn_t(id_inst)) << "\n";
             signatureFile << "E\t" << std::dec << id_id << "\t" << std::dec << 0 << "\tF2" << "\n";
             signatureFile << "S\t" << std::dec << id_id << "\t" << std::dec << 0 << "\tD" << "\n";
         }
@@ -248,7 +233,7 @@ void konataSignature::dump_file(unsigned long long if1_valid,
             signatureFile << "R\t" << std::dec << wb_store_id << "\t" << std::dec << wb_store_id << "\t" << 0 << "\n";
         }
         cycles = 1;
-        signatureFile.close();
+        signatureFile.flush();
     }
 
 }

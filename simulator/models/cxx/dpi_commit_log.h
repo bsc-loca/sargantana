@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 
-#ifndef DPI_TORTURE_H
-#define DPI_TORTURE_H
+#ifndef DPI_COMMIT_LOG_H
+#define DPI_COMMIT_LOG_H
 
 #include "riscv/isa_parser.h"
 #include <svdpi.h>
@@ -67,73 +67,43 @@ typedef struct {
     unsigned long long pc;
 } commit_data_t;
 
-extern void torture_dump (unsigned long long cycles, const commit_data_t *commit_data);
+// Initialized the commit logging
+extern void commit_log_init(const char* logfile);
 
-  #ifndef INCISIVE_SIMULATION
-  extern void torture_signature_init(const char* binaryFileName);
-  #else
-  extern void torture_signature_init();
-  #endif
-extern void check_deadlock (unsigned long long cycles, unsigned long long PC, unsigned long long commit_valid);
+// Logs the commit of an instruction
+extern void commit_log (const commit_data_t *commit_data);
+
+// Saves the change in the CSR for the next commit
 extern void csr_change(unsigned long long addr, unsigned long long value);
+
 #ifdef __cplusplus
 }
 #endif
 
-void torture_dump_amo_write(const uint32_t baseAddress, const uint64_t data);
+void commit_log_dump_amo_write(const uint32_t baseAddress, const uint64_t data);
 
-// Class to hold the torture signature
-class tortureSignature {
-uint64_t * signature; // vector to hold the register file status
-std::ofstream signatureFile; // file where the info is dumped
-std::string signatureFileName = "signature.txt";
-disassembler_t *disassembler;
-isa_parser_t *isa;
-uint64_t debug_addr = 0;
-bool dump_valid = true;
-uint64_t max_miss = 0;
-bool first_missmatch = false;
+// Class to hold the commit_log signature
+class CommitLog {
+    uint64_t * signature; // vector to hold the register file status
+    std::ofstream signatureFile; // file where the info is dumped
+    std::string signatureFileName;
+
+    disassembler_t *disassembler;
+    isa_parser_t *isa;
+
+    uint64_t last_fflags;
 
 public:
-tortureSignature()
-{
-	signature = (uint64_t*) calloc(32,sizeof(uint64_t));
-  isa = new isa_parser_t("rv64imaf", "msu");
-  disassembler = new disassembler_t(isa);
-}
+    CommitLog(const char *logfile);
 
-virtual ~tortureSignature() { free(signature); }
+    virtual ~CommitLog() { free(signature); }
 
-void disable();
+    void dump_file(const commit_data_t *commit_data);
 
-void set_dump_file_name(std::string name);
-
-void set_debug_addr(std::string addr);
-
-void set_max_miss(std::string miss);
-
-void set_first_missmatch(bool conf);
-
-bool dump_check();
-
-uint64_t get_debug_addr();
-
-uint64_t get_max_miss();
-
-bool get_first_missmatch();
-
-void clear_output();
-
-void update_signature(uint64_t dst, uint64_t data);
-
-void dump_file(unsigned long long cycles, const commit_data_t *commit_data);
-
-void dump_xcpt(uint64_t xcpt_cause, uint64_t epc, uint64_t tval);
-
-void dump_spike(uint64_t PC, uint64_t inst, uint64_t dst, uint64_t dst_value);
+    void dump_xcpt(uint64_t xcpt_cause, uint64_t epc, uint64_t tval);
 };
 
-// Global torture_signature
-extern tortureSignature *torture_signature;
+// Global commit_log_signature
+extern CommitLog *commitLog;
 
 #endif

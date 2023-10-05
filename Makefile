@@ -2,7 +2,7 @@ PROJECT_DIR = $(abspath .)
 
 FILELIST = $(PROJECT_DIR)/filelist.f
 
-# *** Verilator Simulator ***
+# *** Simulators ***
 include simulator/simulator.mk
 
 sim: $(SIMULATOR)

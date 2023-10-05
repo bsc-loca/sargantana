@@ -2,10 +2,8 @@
 module veri_top
     (
     // debugring disable
-    input       i_dr_dis,
-    input         clk_p,
-    input         clk_n,
-    input         rst_top
+    input         clk_i,
+    input         rstn_i
     );
 
     // Bootrom wires
@@ -71,9 +69,9 @@ module veri_top
     hpdcache_mem_resp_w_t          mem_resp_uc_write;
 
     top_drac DUT(
-        .CLK(clk_p),
-        .RST(~rst_top),
-        .SOFT_RST(~rst_top),
+        .CLK(clk_i),
+        .RST(rstn_i),
+        .SOFT_RST(rstn_i),
         .debug_halt_i(0),
         .RESET_ADDRESS('h00000100),
 
@@ -143,8 +141,8 @@ module veri_top
     );
 
     bootrom_behav brom(
-        .clk(clk_p),
-        .rstn(~rst_top),
+        .clk(clk_i),
+        .rstn(rstn_i),
         .brom_req_address_i(brom_req_address),
         .brom_req_valid_i(brom_req_valid),
         .brom_ready_o(brom_ready),
@@ -153,8 +151,8 @@ module veri_top
     );
 
     l2_behav l2_inst (
-        .clk_i(clk_p),
-        .rstn_i(~rst_top),
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
 
         // *** Instruction Cache Interface ***
 
@@ -238,5 +236,27 @@ module veri_top
         .dc_uc_rd_last_o(mem_resp_uc_read.mem_resp_r_last),
         .dc_uc_rd_ready_i(mem_resp_uc_read_ready)
     );
+
+    logic [63:0] cycles, max_cycles;
+
+    always @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) cycles <= 0;
+        else cycles <= cycles + 1;
+    end
+
+    initial begin
+        string dumpfile;
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("dump_file.vcd");
+            $dumpvars();
+        end
+        if (!$value$plusargs("max-cycles=%d", max_cycles)) max_cycles = 0;
+    end
+
+    always @(posedge clk_i) begin
+        if (max_cycles > 0 && cycles == max_cycles) begin
+            $error("Test timeout");
+        end
+    end
 
 endmodule // veri_top

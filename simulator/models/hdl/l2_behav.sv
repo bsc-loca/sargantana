@@ -1,9 +1,13 @@
 import drac_pkg::*, hpdcache_pkg::*;
 
 
+import "DPI-C" function void memory_init (input string path);
 import "DPI-C" function void memory_read (input bit [31:0] addr, output bit [512-1:0] data);
 import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [(512/8)-1:0] byte_enable, input bit [512-1:0] data);
 import "DPI-C" function void memory_amo (input bit [31:0] addr, input bit [3:0] size, input bit [3:0] amo_op, input bit [512-1:0] data, output bit [512-1:0] result);
+import "DPI-C" function void memory_symbol_addr(input string symbol, output bit [63:0] addr);
+
+import "DPI-C" function int  tohost(input bit [63:0] data);
 
 module mem_channel #(
     parameter SIZE = 16,
@@ -158,7 +162,10 @@ module mem_channel #(
                         next_atomic <= head.atomic_op != 4'b1101; //STEX are treated differently
                         next_data <= readed_data;
                     end
-                    2'b11: ; // Unused
+                    2'b11: begin // Used for tohost, put dummy data
+                        next_data <= 0;
+                        next_atomic <= 1'b0;
+                    end
                 endcase
             end
         end
@@ -276,6 +283,19 @@ module l2_behav #(
     input logic                    dc_uc_rd_ready_i
 );
 
+    logic [63:0] tohost_addr;
+
+    // Memory DPI
+    initial begin
+        string path;
+        if ($value$plusargs("load=%s", path)) begin
+            memory_init(path);
+            memory_symbol_addr("tohost", tohost_addr);
+        end else begin
+            $fatal(1, "No path provided for ELF to be loaded into the simulator's memory. Please provide one using +load=<path>");
+        end
+    end
+
     // *** iCache memory channel logic ***
 
     logic [$clog2(INST_DELAY)+1:0] ic_counter;
@@ -375,7 +395,9 @@ module l2_behav #(
 
     assign dc_wb_resp_error_o = HPDCACHE_MEM_RESP_OK;
 
-    // *** dCache uncacheable read & write channel ***
+    // *** dCache uncacheable write channel ***
+
+    logic is_tohost;
 
     logic uncached_write_valid, atomic_response, uncached_write_ready;
     logic [LINE_SIZE-1:0] atomic_data;
@@ -391,7 +413,7 @@ module l2_behav #(
         .req_id_i(dc_uc_wr_req_id_i),
         .req_data_i(dc_uc_wr_req_data_i),
         .req_be_i(dc_uc_wr_req_be_i),
-        .req_command_i(dc_uc_wr_req_command_i),
+        .req_command_i(is_tohost ? 2'b11 : dc_uc_wr_req_command_i),
         .req_atomic_i(dc_uc_wr_req_atomic_i),
 
         .rsp_valid_o(uncached_write_valid),
@@ -402,6 +424,38 @@ module l2_behav #(
     );
 
     assign dc_uc_wr_req_data_ready_o = dc_uc_wr_req_ready_o;
+
+    // tohost logic for simulations
+
+    assign is_tohost = dc_uc_wr_req_valid_i & dc_uc_wr_req_data_valid_i && dc_uc_wr_req_addr_i == tohost_addr;
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        logic [14:0] exit_code;
+        if(~rstn_i) begin
+        end else if (is_tohost) begin
+            if (tohost(dc_uc_wr_req_data_i[63:0])) begin
+                exit_code = dc_uc_wr_req_data_i[15:1];
+
+                if (exit_code == 0) begin
+                    $write("%c[1;32m", 27);
+                    $write("Run finished correctly");
+                    $write("%c[0m\n", 27);
+                    $finish;
+                end else begin
+                    $write("%c[1;31m", 27);
+                    $write("Simulation ended with error code %d", exit_code);
+                    $write("%c[0m\n", 27);
+                    `ifdef VERILATOR // Use $error because Verilator doesn't support exit codes in $finish
+                        $error;
+                    `else
+                        $finish(exit_code);
+                    `endif
+                end
+            end
+        end
+    end 
+
+    // *** dCache uncacheable read channel ***
 
     logic uncached_read_valid, uncached_read_ready;
     logic [LINE_SIZE-1:0] uncached_read_data;

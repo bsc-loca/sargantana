@@ -1482,7 +1482,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                                     commit_store_int && (commit_cu_int.gl_index == mem_gl_index_int);
 
     `ifdef SIM_COMMIT_LOG_DPI    
-    torture_dump_behav torture_dump
+    commit_log_behav commit_log
     (
         .clk(clk_i),
         .rst(rstn_i),

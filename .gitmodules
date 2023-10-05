@@ -10,7 +10,7 @@
 	path = tb/tb_torture/riscv-torture
 	url = https://github.com/ucb-bar/riscv-torture.git
 [submodule "simulator/riscv-isa-sim"]
-	path = simulator/riscv-isa-sim
+	path = simulator/reference/riscv-isa-sim
 	url = ../riscv-isa-sim.git
 [submodule "rtl/dcache"]
 	path = rtl/dcache
