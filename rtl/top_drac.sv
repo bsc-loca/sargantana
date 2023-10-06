@@ -22,6 +22,7 @@ module top_drac
     input logic                 rstn_i,
     input logic                 soft_rstn_i,
     input addr_t                reset_addr_i,
+    input logic [63:0]          core_id_i,
 
 //------------------------------------------------------------------------------------
 // DEBUG RING SIGNALS INPUT
@@ -106,7 +107,7 @@ module top_drac
     //PCR resp inputs
     input  logic                pcr_resp_valid_i,   // ready bit of the pcr
     input  logic [63:0]         pcr_resp_data_i,    // read data from performance counter module
-    input  logic                pcr_resp_core_id_i, // core id of the tile that the date is sended
+    input  logic [63:0]         pcr_resp_core_id_i, // core id of the tile that the date is sended
 
     //PCR outputs request
     output logic                pcr_req_valid_o,    // valid bit to make a pcr request
@@ -262,6 +263,9 @@ datapath datapath_inst(
 csr_bsc csr_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
+
+    .core_id_i(core_id_i),
+
     .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                  //read and write address form the core
     .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                   //specific operation to execute from the core 
     .w_data_core_i(req_datapath_csr_interface.csr_rw_data),              //write data from the core
