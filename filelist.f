@@ -1,5 +1,12 @@
 +incdir+./includes
 +incdir+./rtl
+./rtl/common_cells/include/common_cells/registers.svh
+./rtl/common_cells/include/common_cells/assertions.svh
+./rtl/common_cells/src/cf_math_pkg.sv
+./rtl/common_cells/src/lzc.sv
+./rtl/common_cells/src/fifo_v3.sv
+./rtl/common_cells/src/rr_arb_tree.sv
+./rtl/common_cells/src/exp_backoff.sv
 ./includes/fpuv_pkg.sv
 ./includes/fpuv_wrapper_pkg.sv
 ./includes/riscv_pkg.sv

@@ -1560,6 +1560,56 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     );
 `endif
 
+// OpenPiton PC control (for end of simulation)
+// ------------------------------------------------------------------------
+
+    localparam PC_QUEUE_DEPTH = 16;
+    localparam NR_COMMIT_PORTS = 2;
+
+    logic                                             piton_pc_vld;
+    logic [riscv_pkg::XLEN-1:0]                       piton_pc;
+    logic [NR_COMMIT_PORTS-1:0][riscv_pkg::XLEN-1:0]  pc_data;
+    logic [NR_COMMIT_PORTS-1:0]                       pc_pop, pc_empty;
+
+    for (genvar i = 0; i < NR_COMMIT_PORTS; i++) begin : gen_pc_fifo
+      fifo_v3 #(
+        .DATA_WIDTH(riscv_pkg::XLEN),
+        .DEPTH(PC_QUEUE_DEPTH))
+      i_pc_fifo (
+        .clk_i      ( clk_i                                               ),
+        .rst_ni     ( rstn_i                                              ),
+        .flush_i    ( '0                                                  ),
+        .testmode_i ( '0                                                  ),
+        .full_o     (                                                     ),
+        .empty_o    ( pc_empty[i]                                         ),
+        .usage_o    (                                                     ),
+        .data_i     ( instruction_to_commit[i].pc                         ),
+        .push_i     ( retire_inst_gl[i] & instruction_to_commit[i].valid &
+                        ~instruction_to_commit[i].ex_valid  ),
+        .data_o     ( pc_data[i]                                          ),
+        .pop_i      ( pc_pop[i]                                           )
+      );
+    end
+
+    rr_arb_tree #(
+      .NumIn(NR_COMMIT_PORTS),
+      .DataWidth(riscv_pkg::XLEN))
+    i_rr_arb_tree (
+      .clk_i   ( clk_i        ),
+      .rst_ni  ( rstn_i       ),
+      .flush_i ( '0           ),
+      .rr_i    ( '0           ),
+      .req_i   ( ~pc_empty    ),
+      .gnt_o   ( pc_pop       ),
+      .data_i  ( pc_data      ),
+      .gnt_i   ( piton_pc_vld ),
+      .req_o   ( piton_pc_vld ),
+      .data_o  ( piton_pc     ),
+      .idx_o   (              )
+    );
+
+// ------------------------------------------------------------------------
+
         // PCcommit_freg_we
     assign pc_if1  = stage_if_1_if_2_d.pc_inst;
     assign pc_if2  = stage_if_2_id_d.pc_inst;
