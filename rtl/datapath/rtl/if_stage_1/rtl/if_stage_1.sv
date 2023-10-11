@@ -68,6 +68,9 @@ module if_stage_1
     logic       branch_predict_taken;
     addrPC_t    branch_predict_addr;
 
+
+    logic is_in_dram, is_in_rom, is_in_deb, is_inside_exeregion ;
+
     always_comb begin
         priority case (cu_if_i.next_pc)
             NEXT_PC_SEL_KEEP_PC: begin
@@ -120,13 +123,19 @@ module if_stage_1
         end
     end
 
+    assign is_in_dram = (pc >= _DRAM_BASE_) & (pc < _DRAM_LEN_);
+    assign is_in_rom  = (pc >= _ROM_BASE_) & (pc < _ROM_LEN_);
+    assign is_in_deb  = (pc >= _DEB_BASE_) & (pc < _DEB_LEN_); 
+    assign is_inside_exeregion = is_in_dram | is_in_rom | is_in_deb ; 
+
     // check addr fault fetch
     always_comb begin
-            ex_if_addr_fault_int = en_translation_i && (pc[38] ? !(&pc[63:39]) : |pc[63:39]) ||
-                                  ~en_translation_i && (( pc >= UNMAPPED_ADDR_LOWER 
-                                                        && pc < UNMAPPED_ADDR_UPPER )
-                                                        || pc >= PHISIC_MEM_LIMIT);
+        if ((!((&pc[63:38])==1'b1 | (|pc[63:38])==1'b0) & en_translation_i) | 
+            (!is_inside_exeregion & !en_translation_i)
+           ) ex_if_addr_fault_int = 1'b1;
+        else ex_if_addr_fault_int = 1'b0;
     end
+    
     // check misaligned fetch
     always_comb begin
         if (|pc[1:0]) begin
@@ -156,7 +165,7 @@ module if_stage_1
         .rstn_i(rstn_i),
         .pc_fetch_i(pc),
         .pc_execution_i(exe_if_branch_pred_i.pc_execution),
-        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_target_exe),
+        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
         .branch_predict_is_branch_o(branch_predict_is_branch),
