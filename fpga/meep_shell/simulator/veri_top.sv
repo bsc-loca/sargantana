@@ -229,4 +229,26 @@ module veri_top
         .uart_irq(uart_irq)
     );
 
+    logic [63:0] cycles, max_cycles;
+
+    always @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) cycles <= 0;
+        else cycles <= cycles + 1;
+    end
+
+    initial begin
+        string dumpfile;
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("dump_file.vcd");
+            $dumpvars();
+        end
+        if (!$value$plusargs("max-cycles=%d", max_cycles)) max_cycles = 0;
+    end
+
+    always @(posedge clk_i) begin
+        if (max_cycles > 0 && cycles == max_cycles) begin
+            $error("Test timeout");
+        end
+    end
+
 endmodule // veri_top
