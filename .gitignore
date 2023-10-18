@@ -22,3 +22,5 @@ signature.txt
 .svls.toml
 *.gtkw
 benchmarks/
+.patched
+sim-meep

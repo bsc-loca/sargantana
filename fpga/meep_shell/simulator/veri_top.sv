@@ -2,17 +2,9 @@
 module veri_top
     (
     // debugring disable
-    input       i_dr_dis,
-    input         clk_p,
-    input         clk_n,
-    input         rst_top
+    input         clk_i,
+    input         rstn_i
     );
-
-    logic clk_i;
-    logic rstn_i;
-
-    assign clk_i = clk_p;
-    assign rstn_i = ~rst_top;
 
     // AXI Write Address Channel Signals
     logic   [`MEM_ID_WIDTH     -1:0]    mem_awid;

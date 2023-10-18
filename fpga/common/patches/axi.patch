@@ -1,0 +1,13 @@
+diff --git a/src/axi_to_detailed_mem.sv b/src/axi_to_detailed_mem.sv
+index 3e6cfdca..35b436a3 100644
+--- a/src/axi_to_detailed_mem.sv
++++ b/src/axi_to_detailed_mem.sv
+@@ -347,7 +347,7 @@ module axi_to_detailed_mem #(
+   );
+ 
+   stream_fifo #(
+-    .FALL_THROUGH ( 1'b1             ),
++    .FALL_THROUGH ( BufDepth == 0 ? 1'b1 : 1'b0 ),
+     .DEPTH        ( 32'd1 + BufDepth ),
+     .T            ( meta_t           )
+   ) i_meta_buf (
