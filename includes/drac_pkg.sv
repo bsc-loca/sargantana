@@ -42,11 +42,11 @@ parameter PHISIC_MEM_LIMIT = 64'h0ffffffff;
 parameter BROM_SIZE = 20'b000010000000000000000000;
 
 parameter _DRAM_BASE_   = 64'h0080000000;
-parameter _DRAM_LEN_    = 64'h0200000000;
+parameter _DRAM_END_    = 64'h0200000000;
 parameter _ROM_BASE_    = 64'hFFF1010000;
-parameter _ROM_LEN_     = 64'hFFF1020000;
+parameter _ROM_END_     = 64'hFFF1020000;
 parameter _DEB_BASE_    = 64'hFFF1000000;
-parameter _DEB_LEN_     = 64'hFFF1001000;
+parameter _DEB_END_     = 64'hFFF1001000;
 
 // RISCV
 //parameter OPCODE_WIDTH = 6;

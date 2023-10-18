@@ -123,9 +123,9 @@ module if_stage_1
         end
     end
 
-    assign is_in_dram = (pc >= _DRAM_BASE_) & (pc < _DRAM_LEN_);
-    assign is_in_rom  = (pc >= _ROM_BASE_) & (pc < _ROM_LEN_);
-    assign is_in_deb  = (pc >= _DEB_BASE_) & (pc < _DEB_LEN_); 
+    assign is_in_dram = (pc >= _DRAM_BASE_) & (pc < _DRAM_END_);
+    assign is_in_rom  = (pc >= _ROM_BASE_) & (pc < _ROM_END_);
+    assign is_in_deb  = (pc >= _DEB_BASE_) & (pc < _DEB_END_); 
     assign is_inside_exeregion = is_in_dram | is_in_rom | is_in_deb ; 
 
     // check addr fault fetch
