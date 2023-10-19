@@ -60,8 +60,18 @@ module axi_mem_behav (
     input                                  s_axi_mem_bready
 );
 
+    import "DPI-C" function void memory_init (input string path);
     import "DPI-C" function void memory_read (input bit [31:0] addr, output bit [512-1:0] data);
     import "DPI-C" function void memory_write (input bit [31:0] addr, input bit [(512/8)-1:0] byte_enable, input bit [512-1:0] data);
+
+    initial begin
+        string path;
+        if ($value$plusargs("load=%s", path)) begin
+            memory_init(path);
+        end else begin
+            $fatal(1, "No path provided for ELF to be loaded into the simulator's memory. Please provide one using +load=<path>");
+        end
+    end
 
     fpga_pkg::mem_axi_req_t  axi_req;
     fpga_pkg::mem_axi_resp_t axi_resp;
