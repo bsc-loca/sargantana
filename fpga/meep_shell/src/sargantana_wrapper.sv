@@ -82,6 +82,16 @@ module sargantana_wrapper(
     input                                uart_irq
 );
 
+    // Reset synchronization flipflops
+    logic reset_sync_q[1:0];
+
+    always_ff @(posedge clk_i) begin
+        reset_sync_q <= {reset_sync_q[0], rstn_i};
+    end
+
+    logic reset;
+    assign reset = reset_sync_q[1];
+
     // *** AXI Crossbar ***
 
     localparam axi_pkg::xbar_cfg_t xbar_cfg = '{
@@ -146,7 +156,7 @@ module sargantana_wrapper(
         .rule_t         ( rule_t          )
     ) xbar_inst (
         .clk_i                  ( clk_i    ),
-        .rst_ni                 ( rstn_i   ),
+        .rst_ni                 ( reset   ),
         .test_i                 ( 1'b0    ),
         .slv_ports              ( core2xbar_bus ),
         .mst_ports              ( xbar2tran_bus  ),
@@ -224,7 +234,7 @@ module sargantana_wrapper(
 
     axi_wrapper core_inst (
         .clk_i(clk_i),
-        .rstn_i(rstn_i),
+        .rstn_i(reset),
 
         .axi_o(core2xbar_bus[0]),
 
@@ -252,7 +262,7 @@ module sargantana_wrapper(
         .AXI_USER_WIDTH(`MEM_USER_WIDTH)
     ) mem_id_remap_inst (
         .clk_i(clk_i),
-        .rst_ni(rstn_i),
+        .rst_ni(reset),
         .slv(xbar2peri_bus[`MEM_XBAR_ID]),
         .mst(mem_bus)
     );
@@ -293,7 +303,7 @@ module sargantana_wrapper(
         .axi_slv_resp_t(peri_axi_resp_t)
     ) axi_downsizer_uart_inst (
         .clk_i(clk_i),
-        .rst_ni(rstn_i),
+        .rst_ni(reset),
         .slv_req_i(xbar2peri_req[`UART_XBAR_ID]),
         .slv_resp_o(xbar2peri_resp[`UART_XBAR_ID]),
         .mst_req_o(uart_axi32_req),
@@ -318,7 +328,7 @@ module sargantana_wrapper(
         .lite_resp_t(fpga_pkg::axi_lite_resp_t)
     ) axi_lite_uart_converter (
         .clk_i(clk_i),
-        .rst_ni(rstn_i),
+        .rst_ni(reset),
         .test_i(1'b0),
         .slv_req_i(uart_axi32_req),
         .slv_resp_o(uart_axi32_resp),
@@ -382,7 +392,7 @@ module sargantana_wrapper(
       .axi_slv_resp_t(peri_axi_resp_t)
   ) axi_downsizer_timer_inst (
       .clk_i(clk_i),
-      .rst_ni(rstn_i),
+      .rst_ni(reset),
       .slv_req_i(xbar2peri_req[`TIMER_XBAR_ID]),
       .slv_resp_o(xbar2peri_resp[`TIMER_XBAR_ID]),
       .mst_req_o(timer_axi32_req),
@@ -407,7 +417,7 @@ module sargantana_wrapper(
       .lite_resp_t(fpga_pkg::axi_lite_resp_t)
   ) axi_lite_timer_converter (
       .clk_i(clk_i),
-      .rst_ni(rstn_i),
+      .rst_ni(reset),
       .test_i(1'b0),
       .slv_req_i(timer_axi32_req),
       .slv_resp_o(timer_axi32_resp),
@@ -420,7 +430,7 @@ module sargantana_wrapper(
     .C_S_AXI_DATA_WIDTH  (32)
     ) axi_timer_inst (
       .S_AXI_ACLK     ( clk_i                           ),
-      .S_AXI_ARESETN  ( rstn_i                          ),
+      .S_AXI_ARESETN  ( reset                           ),
       .S_AXI_AWADDR   (timer_req.aw.addr                ),
       .S_AXI_AWPROT   (timer_req.aw.prot                ),
       .S_AXI_AWVALID  (timer_req.aw_valid               ),
