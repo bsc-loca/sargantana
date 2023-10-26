@@ -84,6 +84,7 @@ phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table;    // SRAM used to store the
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     integer i,j;
+    checkpoint_ptr version_head_tmp;
     if (~rstn_i) begin                  // On reset clean first table
         version_head <= 'b0;            // Current head pointer
         num_checkpoints <= 'b0;         // No checkpoints
@@ -177,10 +178,11 @@ begin
             // For checkpoint copy old free list in new. And copy pointers
             if (checkpoint_enable) begin
                 version_head <= version_head + checkpoint_enable;
+                version_head_tmp = version_head + 1'b1;
                 // Copy head position
-                head[version_head + 1'b1] <= head[version_head] + read_enable;
+                head[version_head_tmp] <= head[version_head] + read_enable;
                 // Copy number of free registers.
-                num_registers[version_head + 1'b1]  <= num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable;
+                num_registers[version_head_tmp]  <= num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable;
             end
         end
     end

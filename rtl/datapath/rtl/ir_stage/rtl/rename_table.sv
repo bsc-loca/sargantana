@@ -55,6 +55,7 @@ module rename_table
 
 // Point to the actual version of free list
 checkpoint_ptr version_head_q, version_head_d;
+checkpoint_ptr version_head_nxt;
 checkpoint_ptr version_tail_q, version_tail_d;
 
 //Num must be 1 bit bigger than checkpoint pointer
@@ -106,6 +107,7 @@ always_comb begin
     commit_table_d    = commit_table_q;
     version_head_d    = version_head_q;       
     num_checkpoints_d = num_checkpoints_q;
+    version_head_nxt  = version_head_q + 2'b1;
     if (recover_commit_i) begin // Recover commit table because exception
         for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
             register_table_d[j][0] = commit_table_q[j];
@@ -138,14 +140,14 @@ always_comb begin
             // For checkpoint advance pointers
             if (checkpoint_enable) begin
                 for (int i=0; i < NUM_ISA_REGISTERS; i++) begin
-                    register_table_d[i][version_head_q + 2'b1] = register_table_q[i][version_head_q];
-                    ready_table_d[i][version_head_q + 2'b1] = ready_table_q[i][version_head_q];
+                    register_table_d[i][version_head_nxt] = register_table_q[i][version_head_q];
+                    ready_table_d[i][version_head_nxt] = ready_table_q[i][version_head_q];
                 end
                 version_head_d = version_head_q + 2'b01;
 
                 if (write_enable) begin
-                    register_table_d[old_dst_i][version_head_q + 2'b1] = new_dst_i;
-                    ready_table_d[old_dst_i][version_head_q + 2'b1] = 1'b0;
+                    register_table_d[old_dst_i][version_head_nxt] = new_dst_i;
+                    ready_table_d[old_dst_i][version_head_nxt] = 1'b0;
                     register_table_d[old_dst_i][version_head_q] = new_dst_i;
                     ready_table_d[old_dst_i][version_head_q] = 1'b0;
                 end
@@ -178,7 +180,7 @@ always_comb begin
                         if ((register_table_q[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (checkpoint_ptr'(j) == version_head_q) )) 
                             ready_table_d[vaddr_i[i]][j] = 1'b1;
                     end else if ((register_table_q[vaddr_i[i]][version_head_q] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
-                        ready_table_d[vaddr_i[i]][version_head_q + 2'b1] = 1'b1; 
+                        ready_table_d[vaddr_i[i]][version_head_nxt] = 1'b1; 
                     end
                 end
             end
