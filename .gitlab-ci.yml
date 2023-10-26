@@ -39,6 +39,7 @@ stages:
   - linting
   - building
   - simulation
+  - fpga
 
 verilator:verilog:
   stage: linting
@@ -161,6 +162,16 @@ torture:
     when: on_failure
     paths:
     - tb/tb_torture/signatures
+
+fpga:
+  stage: fpga
+  variables:
+    COMMIT_SHA: $CI_COMMIT_SHA
+  trigger:
+    project: hwdesign/fpga/integration-lab/fpga-shell
+    branch: ft/ci_for_sargantana
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 #questa:verilog:
 #  image: localhost:5000/epi_rtl-vsim
