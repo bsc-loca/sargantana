@@ -1,2 +1,0 @@
-.PHONY: questasim
-questasim: libdisasm

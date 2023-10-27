@@ -1,26 +1,6 @@
-[submodule "drac-bench"]
-	path = drac-bench
-	url = ../drac-bench.git
-	branch = sargantana
-[submodule "rtl/mmu"]
-	path = rtl/mmu
-	url = ../mmu.git
-	branch = sargantana
-[submodule "tb/tb_torture/riscv-torture"]
-	path = tb/tb_torture/riscv-torture
-	url = https://github.com/ucb-bar/riscv-torture.git
-[submodule "simulator/reference/riscv-isa-sim"]
-	path = simulator/reference/riscv-isa-sim
-	url = ../riscv-isa-sim.git
-[submodule "rtl/dcache"]
-	path = rtl/dcache
-	url = ../cv-hpdcache.git
-[submodule "fpga/common/rtl/axi"]
-	path = fpga/common/rtl/axi
-	url = https://github.com/pulp-platform/axi.git
-[submodule "fpga/common/rtl/axi_riscv_atomics"]
-	path = fpga/common/rtl/axi_riscv_atomics
-	url = https://github.com/pulp-platform/axi_riscv_atomics.git
-[submodule "fpga/common/rtl/common_cells"]
-	path = fpga/common/rtl/common_cells
-	url = https://github.com/pulp-platform/common_cells.git
+[submodule "rtl/csr"]
+	path = rtl/csr
+	url = ../../core-tile/csr/csr_bsc.git
+[submodule "rtl/hpm"]
+	path = rtl/hpm
+	url = ../../core-tile/pmu/hpm_bsc.git

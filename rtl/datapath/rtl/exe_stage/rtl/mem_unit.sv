@@ -14,7 +14,6 @@
 module mem_unit 
     import drac_pkg::*;
     import riscv_pkg::*;
-    import mmu_pkg::*;
 (
     input  wire                  clk_i,                  // Clock signal
     input  wire                  rstn_i,                 // Reset signal

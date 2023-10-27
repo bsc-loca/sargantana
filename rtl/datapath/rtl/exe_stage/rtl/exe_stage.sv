@@ -15,7 +15,6 @@ module exe_stage
     import drac_pkg::*;
     import riscv_pkg::*;
     import fpuv_wrapper_pkg::*;
-    import mmu_pkg::*;
 (
     input logic                         clk_i,
     input logic                         rstn_i,

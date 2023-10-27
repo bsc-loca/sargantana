@@ -13,7 +13,7 @@
  */
 
 module load_store_queue
-    import drac_pkg::*, mmu_pkg::*, riscv_pkg::*;
+    import drac_pkg::*, riscv_pkg::*;
 (
     input logic                clk_i,            // Clock Singal
     input logic                rstn_i,           // Negated Reset Signal
