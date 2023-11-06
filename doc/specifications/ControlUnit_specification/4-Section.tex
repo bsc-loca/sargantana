@@ -1,0 +1,29 @@
+\section{Interface}
+\label{chapter 4}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+\hline
+clk\_i & 1 & in & Clock \\
+rstn\_i & 1 & in & Reset \\
+valid\_fetch & 1 & in & The instruction in Fetch is valid \\
+id\_cu\_i & struct & in & Signals from Decode stage \\
+rr\_cu\_i & struct & in & Signals from Read Register stage \\
+exe\_cu\_i & struct & in & Signals from Execution stage \\
+wb\_cu\_i & struct & in &  Signals from Write Back stage\\
+csr\_cu\_i & struct & in & Signals from the CSRs \\
+correct\_branch\_pred\_i & 1 & in & A branch instruction in the Execution \\
+ &  &  & stage has been predicted correctly \\
+
+pipeline\_ctrl\_o & struct & out & Signals to stall the stages and to \\
+ &  &  & select PC in case of jump \\
+pipeline\_flush\_o & struct & out & Signals to flush the stages \\
+cu\_if\_o & struct & out & Select next PC: PC, PC+4 or jump \\
+invalidate\_icache\_o & 1 & out & Invalidate ICache request \\
+invalidate\_buffer\_o & 1 & out & Invalidate the ICache buffer \\
+cu\_rr\_o & struct & out & Signals to Read Register stage \\
+
+\end{tabular}
+\end{table}

@@ -1,0 +1,15 @@
+\section{Behavior}
+
+\subsection{Description}
+The general case is when an instruction follows all the logic pipeline stages and does not produce any special event. There are 5 pipeline stages connected trough registers taking a new input at every cycle or retaining the last. Then, if there are no stalls, on the next cycles, the register output will enter to the next stage and then saved to the next register.
+
+The datapath module has the logic for handling the CSR and the commit stage.
+
+\subsubsection{Handling the CSR}
+The CSR are treated at commit time. They can flush all the pipeline and specially if there is an interrupt. 
+
+\subsubsection{Commit stage}
+The commit stage is implicit in the datapath and handles the writing in the registers and retiring of the instructions.
+
+
+

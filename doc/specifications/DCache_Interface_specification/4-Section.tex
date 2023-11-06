@@ -1,0 +1,73 @@
+\section{Interface}
+\label{chapter 4}
+
+%\begin{table}[H]
+%\centering
+%\begin{tabular}{llll}
+%\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+%\hline
+%clk\_i & 1 & in & Clock \\
+%rstn\_i & 1 & in & Reset \\
+%\end{tabular}
+%\end{table}
+
+Beside the clock (\textit{clk\_i}) and the reset (\textit{rstn\_i}) signals, we can differentiate two type of signals, the ones going to the datapath and the ones going to the data cache.
+To communicate with the datapath we use the following:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+\hline
+req\_cpu\_dcache\_i & struct & in & Signals from the CPU \\
+resp\_dcache\_cpu\_o & struct & out & Response to the CPU \\
+\end{tabular}
+\end{table}
+
+\textit{resp\_dcache\_cpu\_o} structure is explined in more detail in Section~\ref{behavior}.
+The signals of the \textit{req\_cpu\_dcache\_i} structure are the following:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+\hline
+io\_base\_addr & 40 & in & Lower limit of the address \\
+kill & 1 & in & Kill current operation \\
+valid & 1 & in & Sending valid operation \\
+instr\_type & enum & in & Instruction type: load, store or AMO \\
+data\_rs1 & 64 & in & For address calculation \\
+data\_rs2 & 64 & in & Data to store (only for stores) \\
+data\_rd & 64 & in & To build the tag (currently useless) \\
+imm & 64 & in & For address calculation \\
+mem\_size & 3 & in & Size of the request (byte, halfword, word) \\
+\end{tabular}
+\end{table}
+
+ (notice that signals to data cache are not gathered in a structure):
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\textbf{Signal name} & \textbf{Width} & \textbf{Type} & \textbf{Description} \\
+\hline
+dmem\_resp\_replay\_i & 1 & in & Miss ready \\
+dmem\_resp\_data\_i & 64 & in & Readed data from Cache \\
+dmem\_req\_ready\_i & 1 & in & Dcache ready to accept request \\
+dmem\_resp\_valid\_i & 1 & in & Response is valid \\
+dmem\_resp\_nack\_i & 1 & in & Readed data from Cache \\
+dmem\_xcpt\_ma\_st\_i & 1 & in & Missaligned store \\
+dmem\_xcpt\_ma\_ld\_i & 1 & in & Missaligned load \\
+dmem\_xcpt\_pf\_st\_i & 1 & in & DTLB miss on store \\
+dmem\_xcpt\_pf\_ld\_i & 1 & in & DTLB miss on load \\
+
+dmem\_req\_valid\_o & 1 & out & Sending valid request \\
+dmem\_req\_cmd\_o & 5 & out & Type of memory access \\
+dmem\_req\_addr\_o & 40 & out & Address of memory access \\
+dmem\_op\_type\_o & 4 & out & Granularity of memory access \\
+dmem\_req\_data\_o & 64 & out & Data to store \\
+dmem\_req\_tag\_o & 8 & out & Tag for the MSHR \\
+dmem\_req\_invalidate\_lr\_o & 1 & out & Reset load-reserved/store-conditional \\
+dmem\_req\_kill\_o & 1 & out & Kill actual memory access \\
+\end{tabular}
+\end{table}

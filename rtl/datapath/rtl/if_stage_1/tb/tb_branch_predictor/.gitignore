@@ -1,0 +1,5 @@
+*.ini
+lib_module/*
+*.vcd
+*.wlf
+Makefile

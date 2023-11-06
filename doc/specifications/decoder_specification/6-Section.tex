@@ -1,0 +1,11 @@
+\section{What can not happen}
+Three situations are clear that should not happen:
+
+\begin{itemize}
+	\item If the input is not valid, the output cannot be valid neither create an exception.
+	\item If there is an exception at the fetch level that arrives to the decoder (being a valid fetch), then the output of the decoder cannot change. This latter means that the exception originated at the fetch, remains and the instruction is not decoded.
+	\item If the input is valid and has an illegal exception, the output should be an exception of illegal instruction.
+	
+\end{itemize}
+
+    

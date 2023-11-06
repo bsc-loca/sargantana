@@ -1,0 +1,197 @@
+/*
+ * Copyright 2023 BSC*
+ * *Barcelona Supercomputing Center (BSC)
+ * 
+ * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+ * 
+ * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
+ * may not use this file except in compliance with the License, or, at your
+ * option, the Apache License version 2.0. You may obtain a copy of the
+ * License at
+ * 
+ * https://solderpad.org/licenses/SHL-2.1/
+ * 
+ * Unless required by applicable law or agreed to in writing, any work
+ * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+module if_stage_1
+    import drac_pkg::*;
+    import riscv_pkg::*;
+(
+    input logic                 clk_i,
+    input logic                 rstn_i,
+    input addr_t                reset_addr_i,
+
+    // Signals from debug
+    //input addr_t                deb_change_pc_addr_i,
+    
+    // Signals from Control Unit
+    input logic                 stall_i,
+    input logic                 stall_debug_i,
+    input cu_if_t               cu_if_i,
+    // Signals to invalidate buffer/icache
+    // from control unit
+    input logic                 invalidate_icache_i,
+    input logic                 invalidate_buffer_i,
+    input logic                 en_translation_i,
+    // PC comming from commit/decode/ecall/debug
+    input addrPC_t              pc_jump_i,
+    // Signals for branch predictor from exe stage 
+    input exe_if_branch_pred_t  exe_if_branch_pred_i,
+    // Retry requesto to icache
+    input logic                 retry_fetch_i,
+    // Request packet going from Icache
+    output req_cpu_icache_t     req_cpu_icache_o,  
+    // fetch data output
+    output if_1_if_2_stage_t    fetch_o
+    `ifdef SIM_KONATA_DUMP
+    ,
+    output logic[63:0]          id_o
+    `endif
+);
+    // next pc logic
+    addrPC_t next_pc;
+//    regPC_t pc;
+    reg[63:0] pc;
+    `ifdef SIM_KONATA_DUMP
+    logic[63:0] id, next_id;
+    `endif
+
+    // Exceptions
+    // misalgined is checked here while the others 
+    // on icache interface or icache itself
+    logic ex_addr_misaligned_int;
+    logic ex_if_addr_fault_int;
+
+    // Branch Predictor wires
+    logic       branch_predict_is_branch;
+    logic       branch_predict_taken;
+    addrPC_t    branch_predict_addr;
+
+    always_comb begin
+        priority case (cu_if_i.next_pc)
+            NEXT_PC_SEL_KEEP_PC: begin
+                next_pc = pc;
+                `ifdef SIM_KONATA_DUMP
+                next_id = id;
+                `endif
+            end
+            NEXT_PC_SEL_BP_OR_PC_4: begin 
+                if (branch_predict_is_branch && branch_predict_taken) 
+                    next_pc = branch_predict_addr;
+                else
+                    next_pc = pc + 64'h04;
+                
+                `ifdef SIM_KONATA_DUMP
+                next_id = id + 64'h01;
+                `endif
+            end
+            NEXT_PC_SEL_JUMP,
+            NEXT_PC_SEL_DEBUG: begin
+                next_pc = pc_jump_i;
+                `ifdef SIM_KONATA_DUMP
+                next_id = id + 64'h01;
+                `endif
+            end
+            default: begin
+                `ifdef VERIFICATION
+                    $error("next pc not defined error in if stage");
+                `endif
+                next_pc = pc + 64'h04;
+                `ifdef SIM_KONATA_DUMP
+                next_id = id + 64'h01;
+                `endif
+            end
+        endcase
+    end
+
+    // PC output is the next_pc after a latch
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (!rstn_i) begin
+            pc <= {24'b0,reset_addr_i};
+            `ifdef SIM_KONATA_DUMP
+            id <= 64'h0;
+            `endif
+        end else begin
+            pc <= next_pc;
+            `ifdef SIM_KONATA_DUMP
+            id <= next_id;
+            `endif
+        end
+    end
+
+    // check addr fault fetch
+    always_comb begin
+            ex_if_addr_fault_int = en_translation_i && (pc[38] ? !(&pc[63:39]) : |pc[63:39]) ||
+                                  ~en_translation_i && (( pc >= UNMAPPED_ADDR_LOWER 
+                                                        && pc < UNMAPPED_ADDR_UPPER )
+                                                        || pc >= PHISIC_MEM_LIMIT);
+    end
+    // check misaligned fetch
+    always_comb begin
+        if (|pc[1:0]) begin
+            ex_addr_misaligned_int = 1'b1;
+        end else begin
+            ex_addr_misaligned_int = 1'b0;
+        end
+    end
+
+    // logic for icache access: if not misaligned 
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !stall_debug_i && !stall_i;
+    assign req_cpu_icache_o.vaddr = pc[39:0];
+    assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
+    assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
+    assign req_cpu_icache_o.inval_fetch = /*inval_fetch_i |*/ retry_fetch_i;
+    
+    // Output fetch
+    assign fetch_o.pc_inst = pc;
+    assign fetch_o.valid   = !stall_debug_i && !stall_i;  // valid if the response of the cache is valid or xcpt
+    `ifdef SIM_KONATA_DUMP
+    assign fetch_o.id = id;
+    `endif
+
+    // Branch predictor and RAS
+    branch_predictor brach_predictor_inst (
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .pc_fetch_i(pc),
+        .pc_execution_i(exe_if_branch_pred_i.pc_execution),
+        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_target_exe),
+        .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
+        .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
+        .branch_predict_is_branch_o(branch_predict_is_branch),
+        .branch_predict_taken_o(branch_predict_taken),
+        .branch_predict_addr_o(branch_predict_addr)
+    );
+
+    // exceptions ordering
+    always_comb begin
+        if (ex_addr_misaligned_int) begin
+            fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
+            fetch_o.ex.valid = 1'b1;
+        end else 
+        if (ex_if_addr_fault_int) begin
+            fetch_o.ex.cause = INSTR_ACCESS_FAULT;
+            fetch_o.ex.valid = 1'b1;
+        end else begin
+            fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
+            fetch_o.ex.valid = 1'b0;
+        end
+    end
+
+    assign fetch_o.ex.origin = pc;
+   
+    // Pipeline branch prediction to exe stage
+    assign fetch_o.bpred.is_branch = branch_predict_is_branch;
+    assign fetch_o.bpred.decision  = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
+    assign fetch_o.bpred.pred_addr = branch_predict_addr;
+    `ifdef SIM_KONATA_DUMP
+    assign id_o = id;
+    `endif
+
+endmodule
+`default_nettype wire

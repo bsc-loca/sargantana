@@ -1,0 +1,6 @@
+[submodule "rtl/csr"]
+	path = rtl/csr
+	url = ../csr.git
+[submodule "rtl/hpm"]
+	path = rtl/hpm
+	url = ../hpm.git

@@ -1,0 +1,148 @@
+\section{Interface}
+\label{chapter 4}
+
+In this section we describe the interface signals of each module for the different components connected to it.
+
+\subsection{Execution Stage Interfaces}
+
+\subsubsection{Input Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|p{3cm}|l|p{4cm}}
+\hline
+\hline
+Signal name & Width or Struct & Input & Description \\
+\hline
+\hline
+clk\_i & 1 & exe\_stage <- datapath & Clock for the module \\
+\hline
+rstn\_i & 1 & exe\_stage <- datapath & Reset for the module. Asynchronous, acrive low reset \\
+\hline
+kill\_i & 1 & exe\_stage <- datapath & Kill signal, to abort current instruction execution \\
+\hline
+csr\_interrupt\_i & 1 & exe\_stage <- datapath & Interruption detected on the CSR \\
+\hline
+csr\_interrupt\_cause\_i & 64 & exe\_stage <- datapath & Cause of the interruption detected by the CSR \\
+\hline
+from\_rr\_i & rr\_exe\_instr\_t & exe\_stage <- datapath & Current instruction in execution stage\\
+\hline
+from\_wb\_i & wb\_exe\_instr\_t & exe\_stage <- datapath & Bypass information from writeback\\
+\hline
+io\_base\_addr\_i & 40 & exe\_stage <- datapath & Base pointer of the input/output address space \\
+\hline
+resp\_dcache\_cpu\_i & resp\_dcache\_cpu\_t & exe\_stage <- dcache\_interface & Response from dcache interface \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Output Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|p{3cm}|l|p{4cm}}
+\hline
+\hline
+Signal name & Width or Struct & Output & Description \\
+\hline
+\hline
+to\_wb\_o & exe\_wb\_instr\_t & exe\_stage -> datapath & Output instruction to datapath with writeback format\\
+\hline
+stall\_o & 1 & exe\_stage -> datapath & Execution unit needs to stop the pipeline (from fetch to execution)\\
+\hline
+correct\_branch\_pred\_o & 1 & exe\_stage -> control\_unit & Branch was predicted incorrectly\\
+\hline
+exe\_if\_branch\_pred\_o & 1 & exe\_stage -> datapath & Struct that contains all information about the branch being executed in execution stage. Enum type exe\_if\_branch\_pred\_t\\
+\hline
+req\_cpu\_dcache\_o & req\_cpu\_dcache\_t & exe\_stage -> dcache\_interface & Request to dcache interface \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+%--------------------------------------------------------------------------------------------
+
+\subsection{ALU Interfaces}
+
+\subsubsection{Input Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|l}
+\hline
+\hline
+Signal name & Width & Input & Description \\
+\hline
+\hline
+data\_rs1\_i & 64 & alu <- exe\_stage & Data operand number 1 \\
+\hline
+data\_rs2\_i & 64 & alu <- exe\_stage & Data operand number 2 \\
+\hline
+instr\_type\_i & 7 & alu <- exe\_stage & Enum containing the type of instruction\\ \hline
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Output Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|l}
+\hline
+\hline
+Signal name & Width & Output & Description \\
+\hline
+\hline
+result\_o & 64 & alu -> exe\_stage & Result of the alu operation\\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+
+%--------------------------------------------------------------------------------------------
+
+\subsection{Branch Unit Interfaces}
+
+\subsubsection{Input Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{7cm}}
+\hline
+\hline
+Signal name & Width & Input & Description \\
+\hline
+\hline
+instr\_type\_i & 7 & branch\_unit <- exe\_stage & Enum containing the type of instruction \\
+\hline
+pc\_i & 64 & branch\_unit <- exe\_stage & Program Counter of current instruction in Execution Stage \\
+\hline
+data\_rs1\_i & 64 & branch\_unit <- exe\_stage & Data operand number 1 \\
+\hline
+data\_rs2\_i & 64 & branch\_unit <- exe\_stage & Data operand number 2 \\
+\hline
+imm\_i & 64 & branch\_unit <- exe\_stage & Inmmediate operand \\
+\hline
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Output Interface}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{5cm}}
+\hline
+\hline
+Signal name & Width or Struct & Output & Description \\
+\hline
+\hline
+taken\_o & branch\_pred\_decision\_t & branch\_unit -> exe\_stage & Branch taken or not\\
+result\_o & 64 & branch\_unit -> exe\_stage & Branch target program counter\\
+\hline
+\hline
+\end{tabular}
+\end{table}

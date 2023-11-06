@@ -1,0 +1,48 @@
+\section{Interface}
+\label{chapter 4}
+
+In this section we describe the interface signals of the module. The structs are not explained and a definition of each parameter can be found in the include package drac\_pkg.sv and riscv\_pkg.sv. 
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline \hline
+Signal name & Width (bits) or struct & Input & Description \\
+\hline \hline
+clk\_i  & 1 & top & clock of the system \\ \hline
+rstn\_i & 1 & top & reset of the system \\ \hline
+reset\_addr\_i & addr\_t & top & addr to fetch on reset\\ \hline
+soft\_rstn\_i & 1 & top & sw reset\\ \hline
+resp\_icache\_cpu\_i & resp\_icache\_cpu\_t & icache interface & response from icache \\ \hline
+resp\_dcache\_cpu\_i & resp\_dcache\_cpu\_t & dcache interface & response from dcache \\ \hline 
+resp\_csr\_cpu\_i & resp\_csr\_cpu\_t & top & response from CSR \\ 
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline \hline
+Signal name & Width & Output & Description \\
+\hline \hline
+req\_cpu\_dcache\_o & req\_cpu\_dcache\_t & top & req to dcache \\ 
+\hline
+req\_cpu\_icache\_o & req\_cpu\_icache\_t & top & req to icache \\ 
+\hline
+req\_cpu\_csr\_o & req\_cpu\_csr\_t & top & req to CSR \\ 
+\hline
+\end{tabular}
+\end{table}
+
+%input logic             clk_i,
+%input logic             rstn_i,
+%input addr_t            reset_addr_i,
+%input logic             soft_rstn_i,
+%input resp_icache_cpu_t  resp_icache_cpu_i,
+%input resp_dcache_cpu_t  resp_dcache_cpu_i,
+%input resp_csr_cpu_t     resp_csr_cpu_i,
+
+%output req_cpu_dcache_t req_cpu_dcache_o, 
+%output req_cpu_icache_t req_cpu_icache_o,
+%output req_cpu_csr_t    req_cpu_csr_o

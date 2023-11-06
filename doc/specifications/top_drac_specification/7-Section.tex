@@ -1,0 +1,18 @@
+\section{Behavior}
+
+This module behaves as a wrapper that interfaces the SoC and the instance of the data path and cache interfaces. Does not contain sequential logic. 
+
+\subsection{Description}
+
+This module declares several structures from drac\_pkg.sv:
+
+\begin{itemize}
+	\item Response Interface icache to datapath. \emph{resp\_icache\_cpu\_t}. 
+	\item Request Datapath to Icache interface. \emph{req\_cpu\_icache\_t}. 
+	\item Response Interface dcache to datapath. \emph{resp\_dcache\_cpu\_t}. 
+	\item Request Datapath to Dcache interface. \emph{req\_cpu\_dcache\_t}. 
+	\item  Response CSR Interface to datapath. \emph{resp\_csr\_cpu\_t}. 
+\end{itemize}
+
+This structures are assigned one to one in most of the cases. Exceptions to this are \emph{resp\_csr\_interface\_datapath.csr\_evec} that needs to be sign extended. 
+

@@ -1,0 +1,15 @@
+\newpage
+\section{General purpose of the module}
+
+The exe\_stage module is the top view of the functional units of DRAC. Inside the exe\_stage, ALU, DIV, MUL and BRANCH modules are instantiated. Exe\_stage is also in charge of managing exceptions\&interruptions, stall signals, computing branch miss-prediction, bypasses and data operands. Exe\_stage receives:
+
+\begin{itemize}
+  \item Csr interrupt signals from the datapath to manage interruptions
+  \item Current instruction in execution stage to perform the execution phase
+  \item Previous instruction result, to bypass the result to the dependent data operands
+  \item Dcache interface response, with stall signal and load result
+\end{itemize}
+
+The Arithmetic Logic Unit (ALU) module is in charge of executing arithmetic (additions and subtractions), logic (OR, XOR, AND) and shift operations (Logical rigth and left, and arithmetic left). Operations pass from the exe\_stage module to ALU and then results return to exe\_stage module. ALU receives two data operands of 64 bits and an \emph{enum} type of 7 bits containing the type of instruction. And returns a 64 bit signal containing the result of the operation.
+
+The Branch Unit (BU) module is in charge of computing if a branch is taken or not and the target to jump in. Operations pass from the exe\_stage module to BU and then results return to exe\_stage module. BU receives three data operands of 64 bits, an \emph{enum} type of 7 bits containing the type of instruction and the PC of the instruction. And returns, if the branch was taken, what was the target of the branch.

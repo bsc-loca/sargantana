@@ -1,0 +1,13 @@
+\section{Parameters}
+\label{chapter3}
+
+Most parameters, enums and types used in this module are defined in drac\_pkg or risc\_pkg.
+
+However inside div\_unit uses a Finite State Machine (FSM) to perform the division algorithm. This FSM has four states declared as:
+
+\begin{itemize}
+    \item IDLE          // Not executing
+    \item OP            // Executing non-first iteration
+    \item FIRST         // Executing first iteration of the algorithm
+    \item DONE          // The division is finished
+\end{itemize}

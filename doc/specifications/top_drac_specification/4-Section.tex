@@ -1,0 +1,94 @@
+\section{Interface}
+\label{chapter 4}
+
+Interface signals of the module are listed in the table below. Detailed information of signals with examples of usage are specified on datapath, instruction cache interface and data cache interface reports.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllll}
+		\hline
+		Port\_Name                      & Direction & Width & Index      & Description \\
+		\hline
+		CLK                             & INPUT     & 1     & -          & Main clock, up to 200MHz      \\
+		RST                             & INPUT     & 1     & -          & Hard reset. Active LOW     \\
+		SOFT\_RST                       & INPUT     & 1     & -          & Soft reset. Active LOW       \\
+		RESET\_ADDRESS                  & INPUT     & 40    & -          & Inital address of PC after soft or hard reset       \\
+		CSR\_RW\_RDATA                  & INPUT     & 64    & -          & -       \\
+		CSR\_CSR\_STALL                 & INPUT     & 1     & -          & -       \\
+		CSR\_XCPT                       & INPUT     & 1     & -          & -       \\
+		CSR\_ERET                       & INPUT     & 1     & -          & -       \\
+		CSR\_EVEC                       & INPUT     & 64    & -          & -       \\
+		CSR\_INTERRUPT                  & INPUT     & 1     & -          & -       \\
+		CSR\_INTERRUPT\_CAUSE           & INPUT     & 64    & -          & -       \\
+		ICACHE\_RESP\_BITS\_DATABLOCK   & INPUT     & 128   & -          & Complete cache data block      \\
+		ICACHE\_RESP\_BITS\_VADDR       & INPUT     & 40    & -          & -       \\
+		ICACHE\_RESP\_VALID             & INPUT     & 1     & -          & -       \\
+		ICACHE\_REQ\_READY              & INPUT     & 1     & -          & -       \\
+		PTWINVALIDATE                   & INPUT     & 1     & -          & Page table walk invalidation       \\
+		TLB\_RESP\_MISS                 & INPUT     & 1     & -          & Translation lookaside buffer invalidate       \\
+		TLB\_RESP\_XCPT\_IF             & INPUT     & 1     & -          & -       \\
+		iptw\_resp\_valid\_i            & INPUT     & 1     & -          & -       \\
+		DMEM\_ORDERED                   & INPUT     & 1     & -          & -      \\
+		DMEM\_REQ\_READY                & INPUT     & 1     & -          & -       \\
+		DMEM\_RESP\_BITS\_DATA\_SUBW    & INPUT     & 64    & -          & -       \\
+		DMEM\_RESP\_BITS\_NACK          & INPUT     & 1     & -          & -       \\
+		DMEM\_RESP\_BITS\_REPLAY        & INPUT     & 1     & -          & -       \\
+		DMEM\_RESP\_VALID               & INPUT     & 1     & -          & -       \\
+		DMEM\_XCPT\_MA\_ST              & INPUT     & 1     & -          & -       \\
+		DMEM\_XCPT\_MA\_LD              & INPUT     & 1     & -          & -       \\
+		DMEM\_XCPT\_PF\_ST              & INPUT     & 1     & -          & -       \\
+		DMEM\_XCPT\_PF\_LD              & INPUT     & 1     & -          & -       \\
+		IO\_FETCH\_PC\_VALUE            & INPUT     & 40    & -          & -       \\
+		IO\_FETCH\_PC\_UPDATE           & INPUT     & 1     & -          & -       \\
+		IO\_REG\_READ                   & INPUT     & 1     & -          & -       \\
+		IO\_REG\_ADDR                   & INPUT     & 5     & {[}4:0{]}  & -       \\
+		IO\_REG\_WRITE                  & INPUT     & 1     & -          & -       \\
+		IO\_REG\_WRITE\_DATA            & INPUT     & 64    & {[}63:0{]} & -       \\
+		istall\_test                    & INPUT     & 1     & -          & -  \\
+	\end{tabular}
+\end{table}
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{lllll}
+				\hline
+				Port\_Name                      & Direction & Width & Index      & Description \\
+				\hline
+		CSR\_RW\_ADDR                   & OUTPUT    & 12    & {[}11:0{]} & -       \\
+		CSR\_RW\_CMD                    & OUTPUT    & 3     & {[}2:0{]}  & -       \\
+		CSR\_RW\_WDATA                  & OUTPUT    & 64    & -          & -       \\
+		CSR\_EXCEPTION                  & OUTPUT    & 1     & -          & -       \\
+		CSR\_RETIRE                     & OUTPUT    & 1     & -          & -       \\
+		CSR\_CAUSE                      & OUTPUT    & 64    & -          & -       \\
+		CSR\_PC                         & OUTPUT    & 40    & -          & -       \\
+		ICACHE\_INVALIDATE              & OUTPUT    & 1     & -          & -       \\
+		ICACHE\_REQ\_BITS\_IDX          & OUTPUT    & 12    & {[}11:0{]} & -       \\
+		ICACHE\_REQ\_BITS\_KILL         & OUTPUT    & 1     & -          & -       \\
+		ICACHE\_REQ\_VALID              & OUTPUT    & 1     & -          & -       \\
+		ICACHE\_RESP\_READY             & OUTPUT    & 1     & -          & -       \\
+		ICACHE\_REQ\_BITS\_VPN          & OUTPUT    & 28    & {[}27:0{]} & -       \\
+		TLB\_REQ\_BITS\_VPN             & OUTPUT    & 28    & {[}27:0{]} & -       \\
+		TLB\_REQ\_VALID                 & OUTPUT    & 1     & -          & -       \\
+		DMEM\_REQ\_VALID                & OUTPUT    & 1     & -          & -       \\
+		DMEM\_OP\_TYPE                  & OUTPUT    & 4     & {[}3:0{]}  & -       \\
+		DMEM\_REQ\_CMD                  & OUTPUT    & 5     & {[}4:0{]}  & -       \\
+		DMEM\_REQ\_BITS\_DATA           & OUTPUT    & 64    & -          & -       \\
+		DMEM\_REQ\_BITS\_ADDR           & OUTPUT    & 40    & -          & -       \\
+		DMEM\_REQ\_BITS\_TAG            & OUTPUT    & 8     & {[}7:0{]}  & -       \\
+		DMEM\_REQ\_INVALIDATE\_LR       & OUTPUT    & 1     & -          & -       \\
+		DMEM\_REQ\_BITS\_KILL           & OUTPUT    & 1     & -          & -       \\
+		IO\_FETCH\_PC                   & OUTPUT    & 40    & -          & -       \\
+		IO\_DEC\_PC                     & OUTPUT    & 40    & -          & -       \\
+		IO\_RR\_PC                      & OUTPUT    & 40    & -          & -       \\
+		IO\_EXE\_PC                     & OUTPUT    & 40    & -          & -       \\
+		IO\_WB\_PC                      & OUTPUT    & 40    & -          & -       \\
+		IO\_WB\_PC\_VALID               & OUTPUT    & 1     & -          & -       \\
+		IO\_WB\_ADDR                    & OUTPUT    & 5     & {[}4:0{]}  & -       \\
+		IO\_WB\_WE                      & OUTPUT    & 1     & -          & -       \\
+		IO\_WB\_BITS\_ADDR              & OUTPUT    & 64    & -          & -       \\
+		IO\_REG\_READ\_DATA             & OUTPUT    & 64    & -          & -       \\
+		io\_core\_pmu\_branch\_miss     & OUTPUT    & 1     & -          & -       \\
+		io\_core\_pmu\_EXE\_STORE       & OUTPUT    & 1     & -          & -       \\
+		io\_core\_pmu\_EXE\_LOAD        & OUTPUT    & 1     & -          & -       \\
+		io\_core\_pmu\_new\_instruction & OUTPUT    & 1     & -          & -       \\
+	\end{tabular}
+\end{table}

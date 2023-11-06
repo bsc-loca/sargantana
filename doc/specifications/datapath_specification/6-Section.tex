@@ -1,0 +1,15 @@
+\section{What can not happen, Special cases}
+\label{chapter-6}
+Some situations that are crucial to the correct working of the module.
+
+\begin{itemize}
+	\item Exceptions: They can occur at any stage in the pipeline but they are treated at commit time and sent to the CSRs. We need to wait for the response of the CSR to change the PC. It cannot happen that we don't receive a response.
+	\item Stalls: Whenever happens an special event, we make stalls on the previous stages of the pipeline of occurrence.  It cannot happen to make stalls on the stages after the one is producing the special event.
+	\item Fence: At decode stage we know if it is a fence instruction and hence start producing stalls until the fence arrives to commit. Then it is treated. It cannot happen to not make stalls.
+	\item CSR: At commit stage, the CSR events are treated. Some of them have 1-cycle latency but some of them can have more cycles of latency and the datapath is stalled until the response is received. At this point, we are basically stalled and possible deadlocks could occur. This should not happen.
+	\item Bubbles: When making stalls, it cannot happen to make the stall in the stage that is producing it. Hence producing  a deadlock.
+	\item Commit: It cannot happen to commit an instruction that is not valid and hence making any write to the register file.
+	
+\end{itemize}
+
+    

@@ -1,0 +1,47 @@
+\section{Interface}
+\label{chapter 4}
+
+In this section we describe the interface signals of the module.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline
+Signal name & Width (bits) or struct & Input & Description \\
+\hline
+clk\_i  & 1  & datapath & General input clock \\
+\hline
+rstn\_i & 1  & datapath & General neg reset \\
+\hline
+reset\_addr\_i & 40 & datapath & Reset addr from the SoC \\ 
+\hline
+stall\_i & 1 & control unit & Stalls the fetch (CU) \\
+\hline
+cu\_if\_i & struct cu\_if\_t & control unit & selects next pc (CU) \\
+\hline
+invalidate\_icache\_i  & 1 & control unit & Signal to Icache interface to invalidate the icache (e.g. fence) \\
+\hline
+invalidate\_buffer\_i  & 1 & control unit & Signal to Icache interface to invalidate the instruction buffer (e.g. fence) \\
+\hline
+pc\_jump\_i  & 64  & datapath & next pc addr coming from commit, ecall, decode \\
+\hline
+resp\_icache\_cpu\_i  &  resp\_icache\_cpu\_t & icache\_interface & Response from icache interface (instruction) \\ 
+\hline
+exe\_if\_branch\_pred\_i & exe\_stage & exe\_if\_branch\_pred\_t & Signal for branch predictor coming from exe stage (correct info of the branch) \\
+\hline
+retry\_fetch\_i & 1 & datapath & Retry fetch when there is an evec \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|l|l|p{3cm}}
+\hline \hline
+Signal name & Width & Output & Description \\
+\hline \hline
+req\_cpu\_icache\_o & req\_cpu\_icache\_t struct & if\_stage -> if\_interface & Request packet going to the Icache Interface\\ \hline
+if\_id\_stage\_t & if\_id\_stage\_t struct & if\_stage -> datapath (decoder) & Fetch data output\\
+\hline
+\end{tabular}
+\end{table}

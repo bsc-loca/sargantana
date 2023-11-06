@@ -1,0 +1,7 @@
+\newpage
+\section{General purpose of the module}
+\textit{Person in Charge; Guillem Lopez Paradis}
+
+The Decoder Unit module is in charge of decoding the instruction fetched previously and outputs all the necessary control signals to properly execute the instruction in the next stages of the pipeline. The input is the instruction fetched in the last cycle and the output are control signals and the immediate generated.
+
+It is also connected to the immediate module that handles the immediate generation. It can also generate a change of PC for some instructions, so it also sends this signal to the control unit.

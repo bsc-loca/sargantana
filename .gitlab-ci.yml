@@ -1,0 +1,187 @@
+image: registry.gitlab.bsc.es/hwdesign/containerhub/riscv:latest
+
+## This workflow avoids duplicate pipelines when there is an open merge request (commit_branch + merge_request) 
+## so only the open merge request will be executed and not the commit_branch. PIPELINE_BRANCH will be used to refer to
+## CI_COMMIT_BRANCH or CI_MERGE_REQUEST_SOURCE_BRANCH_NAME, we will not differentiate between them.
+## If a rule matches, when: always is the default, and when: never is the default if nothing matches
+workflow:
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "merge_request_event") # Merge requests 
+      variables: 
+        PIPELINE_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME 
+    - if: ($CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE != "schedule") # Fix detached merge request pipelines
+      when: never 
+    - if: ($CI_COMMIT_BRANCH) # All branches
+      variables: 
+        PIPELINE_BRANCH: $CI_COMMIT_BRANCH
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_SOURCES_ATTEMPTS: 4
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_CLEAN_FLAGS: -ffdx
+  GIT_DEPTH: 1
+  GIT_SUBMODULE_DEPTH: 1
+  RISCV_GCC: /opt/riscv-gnu-toolchain/rvv-1.0.0/bin/riscv64-unknown-elf-gcc 
+  RISCV_OBJDUMP: /opt/riscv-gnu-toolchain/rvv-1.0.0/bin/riscv64-unknown-elf-objcopy 
+
+before_script:
+  - echo $CI_PIPELINE_SOURCE
+  - echo $CI_COMMIT_BRANCH
+  - echo $CI_OPEN_MERGE_REQUESTS
+
+  - source /load_modulefiles_bash.sh
+  - module load verilator/5.014
+  - module load rvv/1.0.0
+  - module load gcc/10.5.0
+
+stages:
+  - linting
+  - building
+  - simulation
+  - fpga
+
+verilator:verilog:
+  stage: linting
+  tags:
+    - verilator
+  script:
+    - verilator --version
+    - make lint
+  allow_failure: true
+
+spyglass:verilog:
+  image: registry.gitlab.bsc.es/hwdesign/containerhub/spyglass:latest
+  stage: linting
+  tags:
+    - spyglass
+  script:
+    - make local_spyglass
+  allow_failure: true
+  artifacts:
+    paths:
+    - top_drac/consolidated_reports/top_drac_lint_lint_rtl/
+    expire_in: 1 week
+
+build-isa-tests:
+  stage: building
+  script:
+    - $RISCV_GCC --version
+    - make build-isa-tests
+  artifacts:
+    paths:
+    - tb/tb_isa_tests/build
+    expire_in: 1 week
+
+build-benchmarks:
+  stage: building
+  script:
+    - $RISCV_GCC --version
+    - make build-benchmarks
+  artifacts:
+    paths:
+    - benchmarks
+    expire_in: 1 week
+
+build-simulator:
+  stage: building
+  script:
+    - verilator --version
+    - gcc --version
+    - make sim
+  artifacts:
+    paths:
+    - simulator/reference/build/libdisasm.so
+    - sim
+    - bootrom.hex
+    expire_in: 1 week
+
+
+build-spike:
+  stage: building
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
+  script:
+    - gcc --version
+    - make spike
+  artifacts:
+    paths:
+    - simulator/reference/build/spike
+    expire_in: 1 week
+
+build-torture:
+  stage: building
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
+  script:
+    - $RISCV_GCC --version
+    - make build-torture
+  artifacts:
+    paths:
+    - tb/tb_torture/riscv-torture/output
+
+isa-tests:
+  stage: simulation
+  dependencies:
+    - build-simulator
+    - build-isa-tests
+  script:
+    - ./tb/tb_isa_tests/run-tests.py ./sim tb/tb_isa_tests/build/isa
+
+benchmarks:
+  stage: simulation
+  dependencies:
+    - build-simulator
+    - build-benchmarks
+  timeout: 4h
+  script:
+    - ./run-benchmarks.sh
+
+torture:
+  stage: simulation
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule")
+      when: always
+  dependencies:
+    - build-simulator
+    - build-torture
+    - build-spike
+  timeout: 4h
+  parallel:
+    matrix:
+      - CONFIG:
+        - peta
+        - large_fp
+        - tlb_large
+        - tlb_medium
+  script:
+    - tb/tb_torture/run_torture.sh $CONFIG
+  artifacts:
+    when: on_failure
+    paths:
+    - tb/tb_torture/signatures
+
+fpga:
+  stage: fpga
+  variables:
+    COMMIT_SHA: $CI_COMMIT_SHA
+  trigger:
+    project: hwdesign/fpga/integration-lab/fpga-shell
+    branch: ft/ci_for_sargantana
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+#questa:verilog:
+#  image: localhost:5000/epi_rtl-vsim
+#  stage: simulation
+#  tags:
+#    - questasim
+#  script:
+#    - make questa
+#  allow_failure: true
+#  artifacts:
+#    paths:
+#    - artifact_questa.log
+#    expire_in: 1 week

@@ -1,0 +1,167 @@
+
+rv64ui-p-jalr:     file format elf64-littleriscv
+
+
+Disassembly of section .text.init:
+
+0000000000000000 <_start>:
+   0:	0480006f          	j	48 <reset_vector>
+
+0000000000000004 <trap_vector>:
+   4:	34202f73          	csrr	t5,mcause
+   8:	00800f93          	li	t6,8
+   c:	03ff0a63          	beq	t5,t6,40 <write_tohost>
+  10:	00900f93          	li	t6,9
+  14:	03ff0663          	beq	t5,t6,40 <write_tohost>
+  18:	00b00f93          	li	t6,11
+  1c:	03ff0263          	beq	t5,t6,40 <write_tohost>
+  20:	00000f17          	auipc	t5,0x0
+  24:	fe0f0f13          	addi	t5,t5,-32 # 0 <_start>
+  28:	000f0463          	beqz	t5,30 <trap_vector+0x2c>
+  2c:	000f0067          	jr	t5
+  30:	34202f73          	csrr	t5,mcause
+  34:	000f5463          	bgez	t5,3c <handle_exception>
+  38:	0040006f          	j	3c <handle_exception>
+
+000000000000003c <handle_exception>:
+  3c:	5391e193          	ori	gp,gp,1337
+
+0000000000000040 <write_tohost>:
+  40:	9f019073          	csrw	0x9f0,gp
+  44:	ffdff06f          	j	40 <write_tohost>
+
+0000000000000048 <reset_vector>:
+  48:	f1402573          	csrr	a0,mhartid
+  4c:	00051063          	bnez	a0,4c <reset_vector+0x4>
+  50:	00000297          	auipc	t0,0x0
+  54:	01028293          	addi	t0,t0,16 # 60 <reset_vector+0x18>
+  58:	30529073          	csrw	mtvec,t0
+  5c:	18005073          	csrwi	satp,0
+  60:	00000297          	auipc	t0,0x0
+  64:	01c28293          	addi	t0,t0,28 # 7c <reset_vector+0x34>
+  68:	30529073          	csrw	mtvec,t0
+  6c:	fff00293          	li	t0,-1
+  70:	3b029073          	csrw	pmpaddr0,t0
+  74:	01f00293          	li	t0,31
+  78:	3a029073          	csrw	pmpcfg0,t0
+  7c:	00000297          	auipc	t0,0x0
+  80:	01828293          	addi	t0,t0,24 # 94 <reset_vector+0x4c>
+  84:	30529073          	csrw	mtvec,t0
+  88:	30205073          	csrwi	medeleg,0
+  8c:	30305073          	csrwi	mideleg,0
+  90:	30405073          	csrwi	mie,0
+  94:	00000193          	li	gp,0
+  98:	00000297          	auipc	t0,0x0
+  9c:	f6c28293          	addi	t0,t0,-148 # 4 <trap_vector>
+  a0:	30529073          	csrw	mtvec,t0
+  a4:	00100513          	li	a0,1
+  a8:	01f51513          	slli	a0,a0,0x1f
+  ac:	00055863          	bgez	a0,bc <reset_vector+0x74>
+  b0:	0ff0000f          	fence
+  b4:	00100193          	li	gp,1
+  b8:	00000073          	ecall
+  bc:	00000297          	auipc	t0,0x0
+  c0:	f4428293          	addi	t0,t0,-188 # 0 <_start>
+  c4:	00028e63          	beqz	t0,e0 <reset_vector+0x98>
+  c8:	10529073          	csrw	stvec,t0
+  cc:	0000b2b7          	lui	t0,0xb
+  d0:	1092829b          	addiw	t0,t0,265
+  d4:	30229073          	csrw	medeleg,t0
+  d8:	30202373          	csrr	t1,medeleg
+  dc:	f66290e3          	bne	t0,t1,3c <handle_exception>
+  e0:	30005073          	csrwi	mstatus,0
+  e4:	00000297          	auipc	t0,0x0
+  e8:	01428293          	addi	t0,t0,20 # f8 <test_2>
+  ec:	34129073          	csrw	mepc,t0
+  f0:	f1402573          	csrr	a0,mhartid
+  f4:	30200073          	mret
+
+00000000000000f8 <test_2>:
+  f8:	00200193          	li	gp,2
+  fc:	00000293          	li	t0,0
+ 100:	00000317          	auipc	t1,0x0
+ 104:	01030313          	addi	t1,t1,16 # 110 <target_2>
+ 108:	000302e7          	jalr	t0,t1
+
+000000000000010c <linkaddr_2>:
+ 10c:	0c00006f          	j	1cc <fail>
+
+0000000000000110 <target_2>:
+ 110:	00000317          	auipc	t1,0x0
+ 114:	ffc30313          	addi	t1,t1,-4 # 10c <linkaddr_2>
+ 118:	0a629a63          	bne	t0,t1,1cc <fail>
+
+000000000000011c <test_4>:
+ 11c:	00400193          	li	gp,4
+ 120:	00000213          	li	tp,0
+ 124:	00000317          	auipc	t1,0x0
+ 128:	01030313          	addi	t1,t1,16 # 134 <test_4+0x18>
+ 12c:	000309e7          	jalr	s3,t1
+ 130:	08301e63          	bne	zero,gp,1cc <fail>
+ 134:	00120213          	addi	tp,tp,1 # 1 <_start+0x1>
+ 138:	00200293          	li	t0,2
+ 13c:	fe5214e3          	bne	tp,t0,124 <test_4+0x8>
+
+0000000000000140 <test_5>:
+ 140:	00500193          	li	gp,5
+ 144:	00000213          	li	tp,0
+ 148:	00000317          	auipc	t1,0x0
+ 14c:	01430313          	addi	t1,t1,20 # 15c <test_5+0x1c>
+ 150:	00000013          	nop
+ 154:	000309e7          	jalr	s3,t1
+ 158:	06301a63          	bne	zero,gp,1cc <fail>
+ 15c:	00120213          	addi	tp,tp,1 # 1 <_start+0x1>
+ 160:	00200293          	li	t0,2
+ 164:	fe5212e3          	bne	tp,t0,148 <test_5+0x8>
+
+0000000000000168 <test_6>:
+ 168:	00600193          	li	gp,6
+ 16c:	00000213          	li	tp,0
+ 170:	00000317          	auipc	t1,0x0
+ 174:	01830313          	addi	t1,t1,24 # 188 <test_6+0x20>
+ 178:	00000013          	nop
+ 17c:	00000013          	nop
+ 180:	000309e7          	jalr	s3,t1
+ 184:	04301463          	bne	zero,gp,1cc <fail>
+ 188:	00120213          	addi	tp,tp,1 # 1 <_start+0x1>
+ 18c:	00200293          	li	t0,2
+ 190:	fe5210e3          	bne	tp,t0,170 <test_6+0x8>
+
+0000000000000194 <test_7>:
+ 194:	00100293          	li	t0,1
+ 198:	00000317          	auipc	t1,0x0
+ 19c:	01c30313          	addi	t1,t1,28 # 1b4 <test_7+0x20>
+ 1a0:	ffc30067          	jr	-4(t1)
+ 1a4:	00128293          	addi	t0,t0,1
+ 1a8:	00128293          	addi	t0,t0,1
+ 1ac:	00128293          	addi	t0,t0,1
+ 1b0:	00128293          	addi	t0,t0,1
+ 1b4:	00128293          	addi	t0,t0,1
+ 1b8:	00128293          	addi	t0,t0,1
+ 1bc:	00400e93          	li	t4,4
+ 1c0:	00700193          	li	gp,7
+ 1c4:	01d29463          	bne	t0,t4,1cc <fail>
+ 1c8:	00301c63          	bne	zero,gp,1e0 <pass>
+
+00000000000001cc <fail>:
+ 1cc:	0ff0000f          	fence
+ 1d0:	00018063          	beqz	gp,1d0 <fail+0x4>
+ 1d4:	00119193          	slli	gp,gp,0x1
+ 1d8:	0011e193          	ori	gp,gp,1
+ 1dc:	00000073          	ecall
+
+00000000000001e0 <pass>:
+ 1e0:	0ff0000f          	fence
+ 1e4:	00100193          	li	gp,1
+ 1e8:	00000073          	ecall
+ 1ec:	c0001073          	unimp
+ 1f0:	0000                	unimp
+ 1f2:	0000                	unimp
+ 1f4:	0000                	unimp
+ 1f6:	0000                	unimp
+ 1f8:	0000                	unimp
+ 1fa:	0000                	unimp
+ 1fc:	0000                	unimp
+ 1fe:	0000                	unimp
+ 200:	0000                	unimp
+ 202:	0000                	unimp

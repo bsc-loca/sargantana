@@ -1,0 +1,25 @@
+\section{Behaviour}
+
+\subsection{Description}
+
+In this section we describe the behaviour of the Control Unit module.
+For each output signal, the behaviour should be the following:
+
+\begin{itemize}
+    \item \textbf{pipeline\_ctrl\_o:} This structure has 6 signals. 5 of them to control when the stages should be stalled (\textit{stall\_\{if,id,rr,exe,wb\}}), and another one to select the next PC in case of jump (\textit{sel\_addr\_i}) from the following options:
+    \begin{itemize}
+        \item From the CSRs. An exception has been produced.
+        \item From the execution stage. A branch misprediction has been produced.
+        \item From the decode stage. A JAL instruction has been executed.
+    \end{itemize}
+    \item \textbf{pipeline\_flush\_o:} This structure has 5 signals. Each signals controls if a stage should be flushed (\textit{flush\_\{if,id,rr,exe,wb\}}).
+    \item \textbf{cu\_if\_o:} From this structure only one signal is used: \textit{next\_pc}. It controls the multiplexer that selects which PC should be selected in the fetch stage:
+    \begin{itemize}
+        \item Same PC as the last cycle. The fetch stage is stalled.
+        \item Current PC plus 4. The fetch stage is not stalled.
+        \item Jump to another address. Select PC from \textit{pipeline\_ctrl\_o.sel\_addr\_if}.
+    \end{itemize}
+    \item \textbf{invalidate\_icache\_o:} Invalidate ICache request.
+    \item \textbf{invalidate\_buffer\_o:} Invalidate the ICache buffer.
+    \item \textbf{cu\_rr\_o:} Write the register bank, when the instruction in the write back stage wants to do it.
+\end{itemize}

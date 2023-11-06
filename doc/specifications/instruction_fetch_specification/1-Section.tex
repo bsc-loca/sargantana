@@ -1,0 +1,6 @@
+\section{General purpose of the module}
+\textit{Person in Charge; Guillem Lopez Paradis}
+
+The Instruction Fetch Unit module is in charge of controlling the PC register  and making requests to the icache interface in order to pass the instruction to the decoder. It sends requests to the Icache through the Icache Interface and receives an instruction (32 bits) or the corresponding exception. Then, it passes the data, from the Icache, to the decoder.
+
+It is also connected to the Control Logic, which can change the next PC, and also to the branch predictor.
