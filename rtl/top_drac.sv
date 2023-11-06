@@ -122,6 +122,7 @@ resp_csr_cpu_t resp_csr_interface_datapath;
 logic [1:0] ld_st_priv_lvl;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
+logic [1:0] vcsr_vs;
 logic en_ld_st_translation;
 logic en_translation;
 logic [39:0] vpu_csr;
@@ -246,6 +247,7 @@ datapath datapath_inst(
     .csr_priv_lvl_i(ld_st_priv_lvl),
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
+    .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .dtlb_comm_o(dtlb_comm_o),
     //PMU                                                   
@@ -294,6 +296,7 @@ csr_bsc csr_inst (
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
     .fcsr_rm_o(fcsr_rm),
     .fcsr_fs_o(fcsr_fs),
+    .vcsr_vs_o(vcsr_vs),
 
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
     .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled

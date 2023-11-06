@@ -25,6 +25,7 @@ module decoder
     input   if_id_stage_t    decode_i,
     input   [2:0]            frm_i, // FP rounding Mode from CSR
     input   [1:0]            csr_fs_i, 
+    input   [1:0]            csr_vs_i, 
     output  id_ir_stage_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
 );
@@ -606,35 +607,47 @@ module decoder
                     decode_instr_int.use_rs1    = 1'b1;
                     case (decode_i.inst.itype.func3)
                         F3_FLW: begin
-                            decode_instr_int.instr_type = FLW;
-                            decode_instr_int.fregfile_we = 1'b1;
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FLW;
+                                decode_instr_int.fregfile_we = 1'b1;
+                            end
                         end
                         F3_FLD: begin
-                            decode_instr_int.instr_type = FLD;
-                            decode_instr_int.fregfile_we = 1'b1;
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FLD;
+                                decode_instr_int.fregfile_we = 1'b1;
+                            end
                         end
                         F3_VSEW: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vltype.vm;
-                            if (decode_i.inst.vltype.nf == 0) begin
-                                case (decode_i.inst.vltype.mop)
-                                    MOP_UNIT_STRIDE: begin
-                                        case (decode_i.inst.vltype.lumop)
-                                            LUMOP_UNIT_STRIDE: begin
-                                                decode_instr_int.vregfile_we = 1'b1;
-                                                decode_instr_int.instr_type = VLE;
-                                                decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
-                                            end
-                                            default: begin
-                                                xcpt_illegal_instruction_int = 1'b1;
-                                            end
-                                        endcase
-                                    end
-                                    default: begin
-                                        xcpt_illegal_instruction_int = 1'b1;
-                                    end
-                                endcase
-                            end else begin
+                            if (csr_vs_i == 2'b00) begin
                                 xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                if (decode_i.inst.vltype.nf == 0) begin
+                                    case (decode_i.inst.vltype.mop)
+                                        MOP_UNIT_STRIDE: begin
+                                            case (decode_i.inst.vltype.lumop)
+                                                LUMOP_UNIT_STRIDE: begin
+                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.instr_type = VLE;
+                                                    decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end
+                                            endcase
+                                        end
+                                        default: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    endcase
+                                end else begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
                             end
                         end
                         default: begin
@@ -651,9 +664,7 @@ module decoder
                         F3_FLW: begin
                             //decode_instr_int.regfile_src = FPU_RF;
                             if (csr_fs_i == 2'b00) begin
-                                decode_instr_int.unit = UNIT_ALU;
-                                decode_instr_int.mem_type = NOT_MEM;
-                                decode_instr_int.use_rs1 = 1'b0; 
+                                xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 decode_instr_int.instr_type = FSW;
                                 decode_instr_int.use_fs2    = 1'b1;
@@ -662,9 +673,7 @@ module decoder
                         F3_FLD: begin
                             //decode_instr_int.regfile_src = FPU_RF;
                             if (csr_fs_i == 2'b00) begin
-                                decode_instr_int.unit = UNIT_ALU;
-                                decode_instr_int.mem_type = NOT_MEM;
-                                decode_instr_int.use_rs1 = 1'b0; 
+                                xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 decode_instr_int.instr_type = FSD;
                                 decode_instr_int.use_fs2    = 1'b1;
@@ -672,28 +681,32 @@ module decoder
                         end
                         F3_VSEW: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vstype.vm;
-                            if (decode_i.inst.vstype.nf == 0) begin
-                                case (decode_i.inst.vstype.mop)
-                                    MOP_UNIT_STRIDE: begin
-                                        case (decode_i.inst.vstype.sumop)
-                                            SUMOP_UNIT_STRIDE: begin
-                                                
-                                                decode_instr_int.use_vs2 = 1'b1;
-                                                decode_instr_int.instr_type = VSE;
-                                                decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
-                                                decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
-                                            end
-                                            default: begin
-                                                xcpt_illegal_instruction_int = 1'b1;
-                                            end
-                                        endcase
-                                    end
-                                    default: begin
-                                        xcpt_illegal_instruction_int = 1'b1;
-                                    end
-                                endcase
-                            end else begin
+                            if (csr_vs_i == 2'b00) begin
                                 xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                if (decode_i.inst.vstype.nf == 0) begin
+                                    case (decode_i.inst.vstype.mop)
+                                        MOP_UNIT_STRIDE: begin
+                                            case (decode_i.inst.vstype.sumop)
+                                                SUMOP_UNIT_STRIDE: begin
+                                                    
+                                                    decode_instr_int.use_vs2 = 1'b1;
+                                                    decode_instr_int.instr_type = VSE;
+                                                    decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
+                                                    decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
+                                                end
+                                                default: begin
+                                                    xcpt_illegal_instruction_int = 1'b1;
+                                                end
+                                            endcase
+                                        end
+                                        default: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    endcase
+                                end else begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
                             end
                         end
                         default: begin
@@ -705,299 +718,303 @@ module decoder
                     decode_instr_int.vregfile_we = 1'b1;
                     decode_instr_int.unit = UNIT_SIMD;
                     decode_instr_int.use_mask = ~decode_i.inst.vtype.vm;
-                    case (decode_i.inst.vtype.func3)
-                        F3_OPIVV: begin
-                            decode_instr_int.use_vs1     = 1'b1;
-                            decode_instr_int.use_vs2     = 1'b1;
-                            case (decode_i.inst.vtype.func6)
-                                F6_VADD: begin
-                                    decode_instr_int.instr_type = VADD;
-                                end
-                                F6_VSUB: begin
-                                    decode_instr_int.instr_type = VSUB;
-                                end
-                                F6_VMIN: begin
-                                    decode_instr_int.instr_type = VMIN;
-                                end
-                                F6_VMINU: begin
-                                    decode_instr_int.instr_type = VMINU;
-                                end
-                                F6_VMAX: begin
-                                    decode_instr_int.instr_type = VMAX;
-                                end
-                                F6_VMAXU: begin
-                                    decode_instr_int.instr_type = VMAXU;
-                                end
-                                F6_VAND: begin
-                                    decode_instr_int.instr_type = VAND;
-                                end
-                                F6_VOR: begin
-                                    decode_instr_int.instr_type = VOR;
-                                end
-                                F6_VXOR: begin
-                                    decode_instr_int.instr_type = VXOR;
-                                end
-                                F6_VMSEQ: begin
-                                    decode_instr_int.instr_type = VMSEQ;
-                                end
-                                F6_VSLL: begin
-                                    decode_instr_int.instr_type = VSLL;
-                                end
-                                F6_VSRL: begin
-                                    decode_instr_int.instr_type = VSRL;
-                                end
-                                F6_VSRA: begin
-                                    decode_instr_int.instr_type = VSRA;
-                                end
-                                F6_VMV: begin
-                                    decode_instr_int.instr_type = VMV;
-                                end
-                                default: begin
-                                    xcpt_illegal_instruction_int = 1'b1;
-                                end
-                            endcase
-                        end
-                        F3_OPIVX: begin
-                            decode_instr_int.is_opvx     = 1'b1;
-                            decode_instr_int.use_rs1     = 1'b1;
-                            decode_instr_int.use_vs2     = 1'b1;
-                            case (decode_i.inst.vtype.func6)
-                                F6_VADD: begin
-                                    decode_instr_int.instr_type = VADD;
-                                end
-                                F6_VSUB: begin
-                                    decode_instr_int.instr_type = VSUB;
-                                end
-                                F6_VMIN: begin
-                                    decode_instr_int.instr_type = VMIN;
-                                end
-                                F6_VMINU: begin
-                                    decode_instr_int.instr_type = VMINU;
-                                end
-                                F6_VMAX: begin
-                                    decode_instr_int.instr_type = VMAX;
-                                end
-                                F6_VMAXU: begin
-                                    decode_instr_int.instr_type = VMAXU;
-                                end
-                                F6_VAND: begin
-                                    decode_instr_int.instr_type = VAND;
-                                end
-                                F6_VOR: begin
-                                    decode_instr_int.instr_type = VOR;
-                                end
-                                F6_VXOR: begin
-                                    decode_instr_int.instr_type = VXOR;
-                                end
-                                F6_VMSEQ: begin
-                                    decode_instr_int.instr_type = VMSEQ;
-                                end
-                                F6_VSLL: begin
-                                    decode_instr_int.instr_type = VSLL;
-                                end
-                                F6_VSRL: begin
-                                    decode_instr_int.instr_type = VSRL;
-                                end
-                                F6_VSRA: begin
-                                    decode_instr_int.instr_type = VSRA;
-                                end
-                                F6_VMV: begin
-                                    decode_instr_int.use_vs2 = 1'b0;
-                                    decode_instr_int.instr_type = VMV;
-                                end
-                                default: begin
-                                    xcpt_illegal_instruction_int = 1'b1;
-                                end
-                            endcase
-                        end
-                        F3_OPIVI: begin
-                            decode_instr_int.is_opvi     = 1'b1;
-                            decode_instr_int.use_imm     = 1'b1;
-                            decode_instr_int.use_vs2     = 1'b1;
-                            case (decode_i.inst.vtype.func6)
-                                F6_VADD: begin
-                                    decode_instr_int.instr_type = VADD;
-                                end
-                                F6_VAND: begin
-                                    decode_instr_int.instr_type = VAND;
-                                end
-                                F6_VOR: begin
-                                    decode_instr_int.instr_type = VOR;
-                                end
-                                F6_VXOR: begin
-                                    decode_instr_int.instr_type = VXOR;
-                                end
-                                F6_VMSEQ: begin
-                                    decode_instr_int.instr_type = VMSEQ;
-                                end
-                                F6_VSLL: begin
-                                    decode_instr_int.instr_type = VSLL;
-                                end
-                                F6_VSRL: begin
-                                    decode_instr_int.instr_type = VSRL;
-                                end
-                                F6_VSRA: begin
-                                    decode_instr_int.instr_type = VSRA;
-                                end
-                                F6_VMV: begin
-                                    decode_instr_int.use_vs2 = 1'b0;
-                                    decode_instr_int.instr_type = VMV;
-                                end
-                                default: begin
-                                    xcpt_illegal_instruction_int = 1'b1;
-                                end
-                            endcase
-                        end
-                        F3_OPMVV: begin
-                            case (decode_i.inst.vtype.func6)
-                                `ifdef MULTICYCLE_SIMD
-                                F6_VREDSUM: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VREDSUM;
-                                end
-                                F6_VREDAND: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VREDAND;
-                                end
-                                F6_VREDOR: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VREDOR;
-                                end
-                                F6_VREDXOR: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VREDXOR;
-                                end
-                                `endif
-                                F6_VEXT: begin
-                                    decode_instr_int.vregfile_we = 1'b0;
-                                    decode_instr_int.regfile_we = 1'b1;
-                                    decode_instr_int.use_rs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VEXT;
-                                end
-                                F6_VCNT: begin
-                                    decode_instr_int.vregfile_we = 1'b0;
-                                    decode_instr_int.regfile_we = 1'b1;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VCNT;
-                                end
-                                F6_VMUNARY0: begin
-                                    if (decode_i.inst.vtype.vs1 == VS1_VID) begin
-                                        decode_instr_int.instr_type = VID;
-                                    end else begin
+                    if (csr_vs_i == 2'b00) begin
+                        xcpt_illegal_instruction_int = 1'b1;
+                    end else begin
+                        case (decode_i.inst.vtype.func3)
+                            F3_OPIVV: begin
+                                decode_instr_int.use_vs1     = 1'b1;
+                                decode_instr_int.use_vs2     = 1'b1;
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VADD: begin
+                                        decode_instr_int.instr_type = VADD;
+                                    end
+                                    F6_VSUB: begin
+                                        decode_instr_int.instr_type = VSUB;
+                                    end
+                                    F6_VMIN: begin
+                                        decode_instr_int.instr_type = VMIN;
+                                    end
+                                    F6_VMINU: begin
+                                        decode_instr_int.instr_type = VMINU;
+                                    end
+                                    F6_VMAX: begin
+                                        decode_instr_int.instr_type = VMAX;
+                                    end
+                                    F6_VMAXU: begin
+                                        decode_instr_int.instr_type = VMAXU;
+                                    end
+                                    F6_VAND: begin
+                                        decode_instr_int.instr_type = VAND;
+                                    end
+                                    F6_VOR: begin
+                                        decode_instr_int.instr_type = VOR;
+                                    end
+                                    F6_VXOR: begin
+                                        decode_instr_int.instr_type = VXOR;
+                                    end
+                                    F6_VMSEQ: begin
+                                        decode_instr_int.instr_type = VMSEQ;
+                                    end
+                                    F6_VSLL: begin
+                                        decode_instr_int.instr_type = VSLL;
+                                    end
+                                    F6_VSRL: begin
+                                        decode_instr_int.instr_type = VSRL;
+                                    end
+                                    F6_VSRA: begin
+                                        decode_instr_int.instr_type = VSRA;
+                                    end
+                                    F6_VMV: begin
+                                        decode_instr_int.instr_type = VMV;
+                                    end
+                                    default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
-                                end
-                                F6_VWXUNARY0: begin
-                                    if (decode_i.inst.vtype.vs1 == VS1_VMV_X_S) begin
+                                endcase
+                            end
+                            F3_OPIVX: begin
+                                decode_instr_int.is_opvx     = 1'b1;
+                                decode_instr_int.use_rs1     = 1'b1;
+                                decode_instr_int.use_vs2     = 1'b1;
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VADD: begin
+                                        decode_instr_int.instr_type = VADD;
+                                    end
+                                    F6_VSUB: begin
+                                        decode_instr_int.instr_type = VSUB;
+                                    end
+                                    F6_VMIN: begin
+                                        decode_instr_int.instr_type = VMIN;
+                                    end
+                                    F6_VMINU: begin
+                                        decode_instr_int.instr_type = VMINU;
+                                    end
+                                    F6_VMAX: begin
+                                        decode_instr_int.instr_type = VMAX;
+                                    end
+                                    F6_VMAXU: begin
+                                        decode_instr_int.instr_type = VMAXU;
+                                    end
+                                    F6_VAND: begin
+                                        decode_instr_int.instr_type = VAND;
+                                    end
+                                    F6_VOR: begin
+                                        decode_instr_int.instr_type = VOR;
+                                    end
+                                    F6_VXOR: begin
+                                        decode_instr_int.instr_type = VXOR;
+                                    end
+                                    F6_VMSEQ: begin
+                                        decode_instr_int.instr_type = VMSEQ;
+                                    end
+                                    F6_VSLL: begin
+                                        decode_instr_int.instr_type = VSLL;
+                                    end
+                                    F6_VSRL: begin
+                                        decode_instr_int.instr_type = VSRL;
+                                    end
+                                    F6_VSRA: begin
+                                        decode_instr_int.instr_type = VSRA;
+                                    end
+                                    F6_VMV: begin
+                                        decode_instr_int.use_vs2 = 1'b0;
+                                        decode_instr_int.instr_type = VMV;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+                            F3_OPIVI: begin
+                                decode_instr_int.is_opvi     = 1'b1;
+                                decode_instr_int.use_imm     = 1'b1;
+                                decode_instr_int.use_vs2     = 1'b1;
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VADD: begin
+                                        decode_instr_int.instr_type = VADD;
+                                    end
+                                    F6_VAND: begin
+                                        decode_instr_int.instr_type = VAND;
+                                    end
+                                    F6_VOR: begin
+                                        decode_instr_int.instr_type = VOR;
+                                    end
+                                    F6_VXOR: begin
+                                        decode_instr_int.instr_type = VXOR;
+                                    end
+                                    F6_VMSEQ: begin
+                                        decode_instr_int.instr_type = VMSEQ;
+                                    end
+                                    F6_VSLL: begin
+                                        decode_instr_int.instr_type = VSLL;
+                                    end
+                                    F6_VSRL: begin
+                                        decode_instr_int.instr_type = VSRL;
+                                    end
+                                    F6_VSRA: begin
+                                        decode_instr_int.instr_type = VSRA;
+                                    end
+                                    F6_VMV: begin
+                                        decode_instr_int.use_vs2 = 1'b0;
+                                        decode_instr_int.instr_type = VMV;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+                            F3_OPMVV: begin
+                                case (decode_i.inst.vtype.func6)
+                                    `ifdef MULTICYCLE_SIMD
+                                    F6_VREDSUM: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREDSUM;
+                                    end
+                                    F6_VREDAND: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREDAND;
+                                    end
+                                    F6_VREDOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREDOR;
+                                    end
+                                    F6_VREDXOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREDXOR;
+                                    end
+                                    `endif
+                                    F6_VEXT: begin
                                         decode_instr_int.vregfile_we = 1'b0;
                                         decode_instr_int.regfile_we = 1'b1;
+                                        decode_instr_int.use_rs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VMV_X_S;
-                                    end else begin
+                                        decode_instr_int.instr_type = VEXT;
+                                    end
+                                    F6_VCNT: begin
+                                        decode_instr_int.vregfile_we = 1'b0;
+                                        decode_instr_int.regfile_we = 1'b1;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCNT;
+                                    end
+                                    F6_VMUNARY0: begin
+                                        if (decode_i.inst.vtype.vs1 == VS1_VID) begin
+                                            decode_instr_int.instr_type = VID;
+                                        end else begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VWXUNARY0: begin
+                                        if (decode_i.inst.vtype.vs1 == VS1_VMV_X_S) begin
+                                            decode_instr_int.vregfile_we = 1'b0;
+                                            decode_instr_int.regfile_we = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VMV_X_S;
+                                        end else begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    `ifdef MULTICYCLE_SIMD
+                                    F6_VMULHU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMULHU;
+                                    end
+                                    F6_VMUL: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMUL;
+                                    end
+                                    F6_VMULHSU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMULHSU;
+                                    end
+                                    F6_VMULH: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMULH;
+                                    end
+                                    `endif
+                                    default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
-                                end
-                                `ifdef MULTICYCLE_SIMD
-                                F6_VMULHU: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VMULHU;
-                                end
-                                F6_VMUL: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VMUL;
-                                end
-                                F6_VMULHSU: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VMULHSU;
-                                end
-                                F6_VMULH: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.use_vs1 = 1'b1;
-                                    decode_instr_int.use_vs2 = 1'b1;
-                                    decode_instr_int.instr_type = VMULH;
-                                end
-                                `endif
-                                default: begin
+                                endcase
+                            end
+                            F3_OPMVX: begin
+                                decode_instr_int.is_opvx     = 1'b1;
+                                decode_instr_int.use_vs1 = 1'b0;
+                                decode_instr_int.use_vs2 = 1'b1;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VMULHU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VMULHU;
+                                    end
+                                    F6_VMUL: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VMUL;
+                                    end
+                                    F6_VMULHSU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VMULHSU;
+                                    end
+                                    F6_VMULH: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VMULH;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+                            F3_OPCFG: begin
+                                decode_instr_int.regfile_we = 1'b1;
+                                decode_instr_int.vregfile_we = 1'b0;
+                                decode_instr_int.unit = UNIT_SYSTEM;
+                                decode_instr_int.use_mask = 1'b0;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                decode_instr_int.stall_csr_fence = 1'b1;
+                                if (decode_i.inst[31] && (decode_i.inst[30:25] == 6'd0)) begin
+                                    decode_instr_int.instr_type = VSETVL;
+                                    decode_instr_int.use_rs2 = 1'b1;
+                                end else if (!decode_i.inst[31]) begin
+                                    decode_instr_int.instr_type = VSETVLI;
+                                    decode_instr_int.use_imm = 1'b1;
+                                end else begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
-                            endcase
-                        end
-                        F3_OPMVX: begin
-                            decode_instr_int.is_opvx     = 1'b1;
-                            decode_instr_int.use_vs1 = 1'b0;
-                            decode_instr_int.use_vs2 = 1'b1;
-                            decode_instr_int.use_rs1 = 1'b1;
-                            case (decode_i.inst.vtype.func6)
-                                F6_VMULHU: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.instr_type = VMULHU;
-                                end
-                                F6_VMUL: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.instr_type = VMUL;
-                                end
-                                F6_VMULHSU: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.instr_type = VMULHSU;
-                                end
-                                F6_VMULH: begin
-                                    decode_instr_int.vregfile_we = 1'b1;
-                                    decode_instr_int.regfile_we = 1'b0;
-                                    decode_instr_int.instr_type = VMULH;
-                                end
-                                default: begin
-                                    xcpt_illegal_instruction_int = 1'b1;
-                                end
-                            endcase
-                        end
-                        F3_OPCFG: begin
-                            decode_instr_int.regfile_we = 1'b1;
-                            decode_instr_int.vregfile_we = 1'b0;
-                            decode_instr_int.unit = UNIT_SYSTEM;
-                            decode_instr_int.use_mask = 1'b0;
-                            decode_instr_int.use_rs1 = 1'b1;
-                            decode_instr_int.stall_csr_fence = 1'b1;
-                            if (decode_i.inst[31] && (decode_i.inst[30:25] == 6'd0)) begin
-                                decode_instr_int.instr_type = VSETVL;
-                                decode_instr_int.use_rs2 = 1'b1;
-                            end else if (!decode_i.inst[31]) begin
-                                decode_instr_int.instr_type = VSETVLI;
-                                decode_instr_int.use_imm = 1'b1;
-                            end else begin
+                            end
+                            default: begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
-                        end
-                        default: begin
-                            xcpt_illegal_instruction_int = 1'b1;
-                        end
-                    endcase
+                        endcase
+                    end
                 end
                 OP_FENCE: begin
                     // Prior riscv isa spec has both fence and
@@ -1159,66 +1176,70 @@ module decoder
                 OP_FNMSUB,
                 OP_FNMADD: begin
                     // Fused Multiply Add
-                    decode_instr_int.unit = UNIT_FPU;
-                    decode_instr_int.fregfile_we = 1'b1;
-                    decode_instr_int.use_imm = 1'b0;
-                    decode_instr_int.use_fs1 = 1'b1;
-                    decode_instr_int.use_fs2 = 1'b1;
-                    decode_instr_int.use_fs3 = 1'b1;
-                    check_frm = 1'b1;
-                    // Select the instruction
-                    unique case (decode_i.inst.r4type.opcode) 
-                        OP_FMADD: begin
-                            decode_instr_int.instr_type = FMADD;
-                        end
-                        OP_FMSUB: begin
-                            decode_instr_int.instr_type = FMSUB;
-                        end
-                        OP_FNMSUB: begin
-                            decode_instr_int.instr_type = FNMSUB;
-                        end
-                        default: begin // OP_FNMADD
-                            decode_instr_int.instr_type = FNMADD;
-                        end
-                    endcase
-                    // func2 is the fmt
-                    // we only support the first two modes (S,D)
-                    case (decode_i.inst.r4type.fmt)
-                        FMT_S: begin
-                            decode_instr_int.fmt = 1'b0;
-                        end
-                        FMT_D: begin
-                            decode_instr_int.fmt = 1'b1;
-                        end
-                        default: begin
-                            xcpt_illegal_instruction_int = 1'b1;
-                        end
-                    endcase
-
-                    if (check_frm) begin
-                        unique case (decode_i.inst.fprtype.rm)
-                            // Illegal modes
-                            FRM_INV_1,
-                            FRM_INV_2: begin
-                                xcpt_illegal_instruction_int = 1'b1;
+                    if (csr_fs_i == 2'b00) begin
+                        xcpt_illegal_instruction_int = 1'b1;
+                    end else begin
+                        decode_instr_int.unit = UNIT_FPU;
+                        decode_instr_int.fregfile_we = 1'b1;
+                        decode_instr_int.use_imm = 1'b0;
+                        decode_instr_int.use_fs1 = 1'b1;
+                        decode_instr_int.use_fs2 = 1'b1;
+                        decode_instr_int.use_fs3 = 1'b1;
+                        check_frm = 1'b1;
+                        // Select the instruction
+                        unique case (decode_i.inst.r4type.opcode) 
+                            OP_FMADD: begin
+                                decode_instr_int.instr_type = FMADD;
                             end
-                            FRM_DYN: begin // check dynamic one
-                                unique case (frm_i) inside // FRM from CSR
-                                    FRM_INV_1,
-                                    FRM_INV_2,
-                                    FRM_DYN: begin
-                                        xcpt_illegal_instruction_int = 1'b1;
-                                    end
-                                    default: begin
-                                        //xcpt_illegal_instruction_int = 1'b0;
-                                        decode_instr_int.frm = op_frm_fp_t'(frm_i);
-                                    end 
-                                endcase
+                            OP_FMSUB: begin
+                                decode_instr_int.instr_type = FMSUB;
                             end
-                            default: begin
-                                //xcpt_illegal_instruction_int = 1'b0;
+                            OP_FNMSUB: begin
+                                decode_instr_int.instr_type = FNMSUB;
+                            end
+                            default: begin // OP_FNMADD
+                                decode_instr_int.instr_type = FNMADD;
                             end
                         endcase
+                        // func2 is the fmt
+                        // we only support the first two modes (S,D)
+                        case (decode_i.inst.r4type.fmt)
+                            FMT_S: begin
+                                decode_instr_int.fmt = 1'b0;
+                            end
+                            FMT_D: begin
+                                decode_instr_int.fmt = 1'b1;
+                            end
+                            default: begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        endcase
+
+                        if (check_frm) begin
+                            unique case (decode_i.inst.fprtype.rm)
+                                // Illegal modes
+                                FRM_INV_1,
+                                FRM_INV_2: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                                FRM_DYN: begin // check dynamic one
+                                    unique case (frm_i) inside // FRM from CSR
+                                        FRM_INV_1,
+                                        FRM_INV_2,
+                                        FRM_DYN: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                        default: begin
+                                            //xcpt_illegal_instruction_int = 1'b0;
+                                            decode_instr_int.frm = op_frm_fp_t'(frm_i);
+                                        end 
+                                    endcase
+                                end
+                                default: begin
+                                    //xcpt_illegal_instruction_int = 1'b0;
+                                end
+                            endcase
+                        end
                     end
                 end
                 OP_FP: begin
@@ -1227,176 +1248,180 @@ module decoder
                     decode_instr_int.use_imm = 1'b0;
                     decode_instr_int.use_fs1 = 1'b1;
                     decode_instr_int.use_fs2 = 1'b1;
-                    case (decode_i.inst.fprtype.func5)
-                        F5_FP_FADD: begin
-                            decode_instr_int.instr_type = FADD;
-                            check_frm = 1'b1;
-                        end
-                        F5_FP_FSUB: begin
-                            decode_instr_int.instr_type = FSUB;
-                            check_frm = 1'b1;
-                        end
-                        F5_FP_FMUL: begin
-                            decode_instr_int.instr_type = FMUL;
-                            check_frm = 1'b1;
-                        end
-                        F5_FP_FDIV: begin
-                            decode_instr_int.instr_type = FDIV;
-                            check_frm = 1'b1;
-                        end
-                        F5_FP_FSQRT: begin
-                            decode_instr_int.instr_type = FSQRT;
-                            check_frm = 1'b1;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            // TODO (guillemlp) not sure if the following is required
-                            /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end*/
-                        end
-                        F5_FP_FSGNJ: begin
-                            decode_instr_int.instr_type = FSGNJ;
-                            // Check through rounding modes if illegal instr
-                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
-                                xcpt_illegal_instruction_int = 1'b1;
+                    if (csr_fs_i == 2'b00) begin
+                        xcpt_illegal_instruction_int = 1'b1;
+                    end else begin
+                        case (decode_i.inst.fprtype.func5)
+                            F5_FP_FADD: begin
+                                decode_instr_int.instr_type = FADD;
+                                check_frm = 1'b1;
                             end
-                        end
-                        F5_FP_FMIN_MAX: begin
-                            decode_instr_int.instr_type = FMIN_MAX;
-                            // Check through rounding modes if illegal instr
-                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
-                                xcpt_illegal_instruction_int = 1'b1;
+                            F5_FP_FSUB: begin
+                                decode_instr_int.instr_type = FSUB;
+                                check_frm = 1'b1;
                             end
-                        end
-                        F5_FP_FCVT_F2I: begin // FP to Integer
-                            decode_instr_int.instr_type = FCVT_F2I;
-                            check_frm = 1'b1;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            decode_instr_int.fregfile_we = 1'b0;
-                            decode_instr_int.regfile_we = 1'b1;
-                            // Check if FMT is FP32 then INT 32 then extens sign
-                            decode_instr_int.op_32   = !decode_instr_int.rs2[1];
-                            // Check through rounding modes if illegal instr
-                            /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end*/
-                        end
-                        F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
-                            decode_instr_int.fregfile_we = 1'b0;
-                            decode_instr_int.regfile_we = 1'b1;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            case (decode_i.inst.fprtype.rm)
-                                3'b000: begin
-                                    if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
-                                        decode_instr_int.instr_type    = ADDW;
-                                        decode_instr_int.op_32         = 1'b1;
-                                    end else begin
-                                        decode_instr_int.instr_type    = ADD;
-                                        decode_instr_int.op_32         = 1'b0;
-                                    end
-                                    decode_instr_int.regfile_we    = 1'b1;
-                                    decode_instr_int.use_imm       = 1'b0;
-                                    decode_instr_int.unit          = UNIT_ALU;
-                                    decode_instr_int.rs2           = 'h0;
-                                    decode_instr_int.fregfile_we = 1'b0;
-                                    decode_instr_int.use_imm       = 1'b0;
-                                    decode_instr_int.use_rs1       = 1'b0;
-                                    decode_instr_int.use_rs2       = 1'b1; // hack to sum with 0
-                                    decode_instr_int.use_fs1       = 1'b1;
-                                    decode_instr_int.use_fs2       = 1'b0;
+                            F5_FP_FMUL: begin
+                                decode_instr_int.instr_type = FMUL;
+                                check_frm = 1'b1;
+                            end
+                            F5_FP_FDIV: begin
+                                decode_instr_int.instr_type = FDIV;
+                                check_frm = 1'b1;
+                            end
+                            F5_FP_FSQRT: begin
+                                decode_instr_int.instr_type = FSQRT;
+                                check_frm = 1'b1;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                // TODO (guillemlp) not sure if the following is required
+                                /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end*/
+                            end
+                            F5_FP_FSGNJ: begin
+                                decode_instr_int.instr_type = FSGNJ;
+                                // Check through rounding modes if illegal instr
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
                                 end
-                                3'b001: begin
-                                    decode_instr_int.instr_type = FCLASS;
+                            end
+                            F5_FP_FMIN_MAX: begin
+                                decode_instr_int.instr_type = FMIN_MAX;
+                                // Check through rounding modes if illegal instr
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            end
+                            F5_FP_FCVT_F2I: begin // FP to Integer
+                                decode_instr_int.instr_type = FCVT_F2I;
+                                check_frm = 1'b1;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                decode_instr_int.fregfile_we = 1'b0;
+                                decode_instr_int.regfile_we = 1'b1;
+                                // Check if FMT is FP32 then INT 32 then extens sign
+                                decode_instr_int.op_32   = !decode_instr_int.rs2[1];
+                                // Check through rounding modes if illegal instr
+                                /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end*/
+                            end
+                            F5_FP_FMV_F2I_FCLASS: begin // FP moves and classify
+                                decode_instr_int.fregfile_we = 1'b0;
+                                decode_instr_int.regfile_we = 1'b1;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                case (decode_i.inst.fprtype.rm)
+                                    3'b000: begin
+                                        if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                            decode_instr_int.instr_type    = ADDW;
+                                            decode_instr_int.op_32         = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type    = ADD;
+                                            decode_instr_int.op_32         = 1'b0;
+                                        end
+                                        decode_instr_int.regfile_we    = 1'b1;
+                                        decode_instr_int.use_imm       = 1'b0;
+                                        decode_instr_int.unit          = UNIT_ALU;
+                                        decode_instr_int.rs2           = 'h0;
+                                        decode_instr_int.fregfile_we = 1'b0;
+                                        decode_instr_int.use_imm       = 1'b0;
+                                        decode_instr_int.use_rs1       = 1'b0;
+                                        decode_instr_int.use_rs2       = 1'b1; // hack to sum with 0
+                                        decode_instr_int.use_fs1       = 1'b1;
+                                        decode_instr_int.use_fs2       = 1'b0;
+                                    end
+                                    3'b001: begin
+                                        decode_instr_int.instr_type = FCLASS;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+                            F5_FP_FCMP: begin // FP comp
+                                decode_instr_int.instr_type = FCMP;
+                                decode_instr_int.fregfile_we = 1'b0;
+                                decode_instr_int.regfile_we = 1'b1;
+                                // Check through rounding modes if illegal instr
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            end
+                            F5_FP_FCVT_I2F: begin
+                                decode_instr_int.instr_type    = FCVT_I2F;
+                                decode_instr_int.use_fs1 = 1'b0;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                decode_instr_int.fregfile_we = 1'b1;
+                                decode_instr_int.regfile_we = 1'b0;
+                                check_frm = 1'b1;
+                                // Check through rounding modes if illegal instr
+                                /*if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end*/
+                            end
+                            F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
+                                decode_instr_int.instr_type = FMV_X2F;
+                                decode_instr_int.use_fs1 = 1'b0;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                decode_instr_int.use_rs2 = 1'b0;
+                                // Check if FMT is FP32 then INT 32 then extens sign
+                                if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                    decode_instr_int.op_32   = 1'b1;
+                                end else begin
+                                    decode_instr_int.op_32   = 1'b0;
+                                end
+                                if (decode_i.inst.fprtype.rm != 3'b000) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            end
+                            // D2S & S2D specific 
+                            F5_FP_FCVT_SD: begin
+                                decode_instr_int.instr_type = FCVT_F2F;
+                                decode_instr_int.use_fs2 = 1'b0;
+                                check_frm = 1'b1;
+                            end
+                            default: begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
+                        endcase
+
+                        unique case (decode_i.inst.fprtype.fmt)
+                            FMT_FP_S: begin
+                                decode_instr_int.fmt = FMT_S;
+                            end
+                            FMT_FP_D: begin
+                                decode_instr_int.fmt = FMT_D;
+                            end
+                            default: begin
+                                xcpt_illegal_instruction_int = 1'b0;
+                            end
+                        endcase
+
+                        if (check_frm) begin
+                            unique case (decode_i.inst.fprtype.rm)
+                                // Illegal modes
+                                FRM_INV_1,
+                                FRM_INV_2: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                                FRM_DYN: begin // check dynamic one
+                                    unique case (frm_i) inside // FRM from CSR
+                                        FRM_INV_1,
+                                        FRM_INV_2,
+                                        FRM_DYN: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                        default: begin
+                                            //xcpt_illegal_instruction_int = 1'b0;
+                                            decode_instr_int.frm = op_frm_fp_t'(frm_i);
+                                        end 
+                                    endcase
                                 end
                                 default: begin
-                                    xcpt_illegal_instruction_int = 1'b1;
+                                    //xcpt_illegal_instruction_int = 1'b0;
                                 end
                             endcase
                         end
-                        F5_FP_FCMP: begin // FP comp
-                            decode_instr_int.instr_type = FCMP;
-                            decode_instr_int.fregfile_we = 1'b0;
-                            decode_instr_int.regfile_we = 1'b1;
-                            // Check through rounding modes if illegal instr
-                            if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end
-                        end
-                        F5_FP_FCVT_I2F: begin
-                            decode_instr_int.instr_type    = FCVT_I2F;
-                            decode_instr_int.use_fs1 = 1'b0;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            decode_instr_int.use_rs1 = 1'b1;
-                            decode_instr_int.fregfile_we = 1'b1;
-                            decode_instr_int.regfile_we = 1'b0;
-                            check_frm = 1'b1;
-                            // Check through rounding modes if illegal instr
-                            /*if (!(decode_i.inst.rtype.func3 inside {[5'b00000:5'b00011]})) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end*/
-                        end
-                        F5_FP_FMV_I2F: begin // Move from integer reg to fp reg
-                            decode_instr_int.instr_type = FMV_X2F;
-                            decode_instr_int.use_fs1 = 1'b0;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            decode_instr_int.use_rs1 = 1'b1;
-                            decode_instr_int.use_rs2 = 1'b0;
-                            // Check if FMT is FP32 then INT 32 then extens sign
-                            if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
-                                decode_instr_int.op_32   = 1'b1;
-                            end else begin
-                                decode_instr_int.op_32   = 1'b0;
-                            end
-                            if (decode_i.inst.fprtype.rm != 3'b000) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end
-                        end
-                        // D2S & S2D specific 
-                        F5_FP_FCVT_SD: begin
-                            decode_instr_int.instr_type = FCVT_F2F;
-                            decode_instr_int.use_fs2 = 1'b0;
-                            check_frm = 1'b1;
-                        end
-                        default: begin
-                            xcpt_illegal_instruction_int = 1'b1;
-                        end
-                    endcase
-
-                    unique case (decode_i.inst.fprtype.fmt)
-                        FMT_FP_S: begin
-                            decode_instr_int.fmt = FMT_S;
-                        end
-                        FMT_FP_D: begin
-                            decode_instr_int.fmt = FMT_D;
-                        end
-                        default: begin
-                            xcpt_illegal_instruction_int = 1'b0;
-                        end
-                    endcase
-
-                    if (check_frm) begin
-                        unique case (decode_i.inst.fprtype.rm)
-                            // Illegal modes
-                            FRM_INV_1,
-                            FRM_INV_2: begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end
-                            FRM_DYN: begin // check dynamic one
-                                unique case (frm_i) inside // FRM from CSR
-                                    FRM_INV_1,
-                                    FRM_INV_2,
-                                    FRM_DYN: begin
-                                        xcpt_illegal_instruction_int = 1'b1;
-                                    end
-                                    default: begin
-                                        //xcpt_illegal_instruction_int = 1'b0;
-                                        decode_instr_int.frm = op_frm_fp_t'(frm_i);
-                                    end 
-                                endcase
-                            end
-                            default: begin
-                                //xcpt_illegal_instruction_int = 1'b0;
-                            end
-                        endcase
                     end
                 end
                 default: begin

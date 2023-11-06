@@ -35,6 +35,7 @@ package def_pkg;
     localparam bit RVD = 1'b1; // Is D extension enabled
 `endif
     localparam bit RVA = 1'b1; // Is A extension enabled
+    localparam bit RVV = 1'b1; // Is V extension enabled
 
     // Transprecision floating-point extensions configuration
     localparam bit XF16    = 1'b0; // Is half-precision float extension (Xf16) enabled
@@ -55,6 +56,8 @@ package def_pkg;
     // --------------------------------------
     // vvvv Don't change these by hand! vvvv
     localparam bit FP_PRESENT = RVF | RVD | XF16 | XF16ALT | XF8;
+
+    localparam bit V_PRESENT = RVV;
 
     // Length of widest floating-point format
     localparam FLEN    = RVD     ? 64 : // D ext.

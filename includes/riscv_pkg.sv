@@ -549,7 +549,7 @@ typedef struct packed {
     xs_t          xs;     // extension register - hardwired to zero
     xs_t          fs;     // floating point extension register
     priv_lvl_t    mpp;    // holds the previous privilege mode up to machine
-    logic [1:0]   wpri2;  // writes preserved reads ignored
+    logic [1:0]   vs;  // writes preserved reads ignored
     logic         spp;    // holds the previous privilege mode up to supervisor
     logic         mpie;   // machine interrupts enable bit active prior to trap
     logic         wpri1;  // writes preserved reads ignored
