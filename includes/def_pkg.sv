@@ -125,16 +125,5 @@ package def_pkg;
     // (e.g. 27*4K == 39bit address space).
     localparam PPN4K_WIDTH = 38;
 
-    // static debug hartinfo
-    localparam dm::hartinfo_t DebugHartInfo = '{
-                                                zero1:        '0,
-                                                nscratch:      2, // Debug module needs at least two scratch regs
-                                                zero0:        '0,
-                                                dataaccess: 1'b1, // data registers are memory mapped in the debugger
-                                                datasize: dm::DataCount,
-                                                dataaddr: dm::DataAddr
-                                              };
-
-
 endpackage
 `endif
