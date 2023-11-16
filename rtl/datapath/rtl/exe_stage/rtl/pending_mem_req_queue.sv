@@ -87,20 +87,20 @@ begin
             tag_table[j] <= '0;
         end
     end else begin
-	if (write_enable) begin     // Write tail
-            instruction_table[tail]      <= instruction_i;
-            tag_table[tail]              <= tag_i;
-
-            instruction_table[tail].data_rs2 <= 'h0;
-            finish_bit_table[tail]           <= 1'b0;
-	end
-
         // Table initial state
         for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
             if (replay_valid_i && (tag_table[j] == tag_next_i)) begin
                 finish_bit_table[j] <= 1'b1;
                 instruction_table[j].data_rs2 <= replay_data_i;
             end
+        end
+        
+        if (write_enable) begin     // Write tail
+            instruction_table[tail]      <= instruction_i;
+            tag_table[tail]              <= tag_i;
+
+            instruction_table[tail].data_rs2 <= 'h0;
+            finish_bit_table[tail]           <= 1'b0;
         end
     end
 end
