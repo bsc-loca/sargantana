@@ -265,9 +265,6 @@ datapath datapath_inst(
 // inorder core any access to the CSR/PCR will be available. In multicore
 // scenarios or higher performance cores you may need csr_replay.
 
-bus64_t csr_evec;
-assign resp_csr_interface_datapath.csr_evec = {{25{csr_evec[39]}},csr_evec[38:0]};
-
 csr_bsc csr_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
@@ -278,7 +275,7 @@ csr_bsc csr_inst (
 
     .ex_i(req_datapath_csr_interface.csr_exception),                       // exception produced in the core
     .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                 //cause of the exception
-    .pc_i(req_datapath_csr_interface.csr_pc[39:0]),                       //pc were the exception is produced
+    .pc_i(req_datapath_csr_interface.csr_pc),                       //pc were the exception is produced
 
     .retire_i(req_datapath_csr_interface.csr_retire),                   // shows if a instruction is retired from the core.
     .time_irq_i(time_irq_i),                 // timer interrupt
@@ -319,7 +316,7 @@ csr_bsc csr_inst (
 
     .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
 
-    .evec_o(csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
+    .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
     .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
