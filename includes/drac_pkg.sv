@@ -407,8 +407,8 @@ typedef struct packed {
     mem_type_t mem_type;                // Mem instruction type
     `ifdef SIM_COMMIT_LOG
     riscv_pkg::instruction_t inst;
-    `endif
-    `ifdef SIM_KONATA_DUMP
+    bus64_t id;
+    `elsif SIM_KONATA_DUMP
     bus64_t id;
     `endif
 } instr_entry_t;
@@ -611,12 +611,12 @@ typedef struct packed {
     logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
-    `ifdef SIM_KONATA_DUMP
-    bus64_t id;
-    `endif
     `ifdef SIM_COMMIT_LOG
     riscv_pkg::instruction_t inst;
+    bus64_t id;
     addr_t addr;
+    `elsif SIM_KONATA_DUMP
+    bus64_t id;
     `endif
     phreg_t prd;                        // Physical register destination
 
