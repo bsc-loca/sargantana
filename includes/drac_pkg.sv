@@ -43,8 +43,13 @@ parameter BROM_SIZE = 20'b000010000000000000000000;
 
 parameter _DRAM_BASE_   = 64'h0080000000;
 parameter _DRAM_END_    = 64'h0200000000;
+`ifdef PITON_SARG // TODO: Make this parametrizable
 parameter _ROM_BASE_    = 64'hFFF1010000;
 parameter _ROM_END_     = 64'hFFF1020000;
+`else
+parameter _ROM_BASE_    = 64'h0000000100;
+parameter _ROM_END_     = 64'h0000000200;
+`endif
 parameter _DEB_BASE_    = 64'hFFF1000000;
 parameter _DEB_END_     = 64'hFFF1001000;
 
