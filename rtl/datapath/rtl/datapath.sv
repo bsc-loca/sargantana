@@ -1188,7 +1188,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
-            branch_addr_result_wb <=  40'h0040000000;
+            branch_addr_result_wb <=  40'h0000000000;
             correct_branch_pred_wb <=  1'b1;
         end else if(!control_int.stall_exe) begin
             branch_addr_result_wb <=  exe_if_branch_pred_int.branch_addr_result_exe;
