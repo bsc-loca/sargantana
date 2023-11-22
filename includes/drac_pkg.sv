@@ -161,6 +161,16 @@ function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, addr_t address);
     return |pass;
 endfunction : is_inside_IO_sections
 
+function automatic logic is_inside_mem_sections (drac_cfg_t Cfg, addr_t address);
+    // if we don't specify any region we assume everything is accessible
+    logic[NrMaxRules-1:0] pass;
+    pass = '0;
+    for (int unsigned k = 0; k < Cfg.NMemSections; k++) begin
+        pass[k] = range_check(Cfg.InitMemBase[k], Cfg.InitMemEnd[k], address);
+    end
+    return |pass;
+endfunction : is_inside_mem_sections
+
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
     NEXT_PC_SEL_KEEP_PC     = 2'b01,
