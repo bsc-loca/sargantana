@@ -128,7 +128,7 @@ always_comb begin
         translated_instr.ex.cause       = LD_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;
-    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[38] ? !(&instr_to_translate.data_rs1[63:39]) : |instr_to_translate.data_rs1[63:39]) ||
+    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : |instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) ||
                   ~en_ld_st_translation_i && (( instr_to_translate.data_rs1 >= UNMAPPED_ADDR_LOWER 
                                              && instr_to_translate.data_rs1 < UNMAPPED_ADDR_UPPER )
                                              || instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) begin // invalid address

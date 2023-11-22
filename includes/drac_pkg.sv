@@ -15,31 +15,37 @@ package drac_pkg;
 
 import riscv_pkg::*;
 
-//parameter XLEN = 64; 
-//parameter VLEN = 256;
-parameter ICACHELINE_SIZE = 127;
-parameter ADDR_SIZE = 40;
+// Address size
+
+
+`ifndef CONF_SARGANTANA_PHY_ADDR_SIZE
+    `define CONF_SARGANTANA_PHY_ADDR_SIZE 32
+`endif
+parameter PHY_ADDR_SIZE = `CONF_SARGANTANA_PHY_ADDR_SIZE;
+
+parameter VIRT_ADDR_SIZE = 39;
+parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_SIZE : PHY_ADDR_SIZE;
+
+parameter PHISIC_MEM_LIMIT = (64'h01 << PHY_ADDR_SIZE) - 64'h01; 
+parameter UNMAPPED_ADDR_LOWER = 64'h0; 
+parameter UNMAPPED_ADDR_UPPER = 64'h0; 
+
+parameter BROM_SIZE = 20'b000010000000000000000000;
+
+parameter ICACHE_IDX_BITS_SIZE = 12;
+parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
+
+parameter ICACHELINE_SIZE = 128;
 parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
-//parameter INST_SIZE = 32;
 parameter REGFILE_WIDTH = 5;
 parameter VREGFILE_WIDTH = 5;
-parameter ICACHE_IDX_BITS_SIZE = 12;
-parameter ICACHE_VPN_BITS_SIZE = 28;
 parameter CSR_ADDR_SIZE = 12;
 parameter CSR_CMD_SIZE = 3;
 parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
 
-parameter UNMAPPED_ADDR_LOWER = 64'h0; 
-parameter UNMAPPED_ADDR_UPPER = 64'h0; 
-`ifdef PADDR_39
-parameter PHISIC_MEM_LIMIT = 64'h07fffffffff; 
-`else
-parameter PHISIC_MEM_LIMIT = 64'h0ffffffff; 
-`endif
-parameter BROM_SIZE = 20'b000010000000000000000000;
 
 parameter _DRAM_BASE_   = 64'h0080000000;
 parameter _DRAM_END_    = 64'h0200000000;
@@ -69,16 +75,16 @@ typedef logic [REGFILE_WIDTH-1:0] reg_t;
 typedef logic [VREGFILE_WIDTH-1:0] vreg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
 typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
-typedef logic [ADDR_SIZE-1:0] addr_t;
-typedef reg   [ADDR_SIZE-1:0] reg_addr_t;
+typedef logic [PHY_VIRT_MAX_ADDR_SIZE-1:0] addr_t;
+typedef reg   [PHY_VIRT_MAX_ADDR_SIZE-1:0] reg_addr_t;
 typedef logic [CSR_ADDR_SIZE-1:0] csr_addr_t;
 typedef reg   [CSR_ADDR_SIZE-1:0] reg_csr_addr_t;
 //typedef logic [CSR_CMD_SIZE-1:0] csr_cmd_t;
 //typedef reg   [CSR_CMD_SIZE-1:0] reg_csr_cmd_t;
 
 typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
-typedef logic [ICACHELINE_SIZE:0] icache_line_t;
-typedef reg   [ICACHELINE_SIZE:0] icache_line_reg_t;
+typedef logic [ICACHELINE_SIZE-1:0] icache_line_t;
+typedef reg   [ICACHELINE_SIZE-1:0] icache_line_reg_t;
 typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
 typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 

@@ -42,8 +42,8 @@ module branch_predictor
 localparam NUM_IS_BRANCH_ENTRIES = 128; 
 
 // Tags stored in is_branch_table
-typedef logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
-typedef reg   [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
+typedef logic [PHY_VIRT_MAX_ADDR_SIZE - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag;
+typedef reg   [PHY_VIRT_MAX_ADDR_SIZE - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] tag_reg;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////// Declaration of local signals and modules                                               /////////////////////
@@ -72,8 +72,8 @@ bimodal_predictor bimodal_predictor_inst(
 /////////// Instantiation of is branch predictor                                                   /////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    logic [39 - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
-    logic                                                 is_branch_table_valid [0 : NUM_IS_BRANCH_ENTRIES-1];
+    logic [PHY_VIRT_MAX_ADDR_SIZE - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
+    logic                                                                     is_branch_table_valid [0 : NUM_IS_BRANCH_ENTRIES-1];
 
 
 `ifdef QUESTASIM     

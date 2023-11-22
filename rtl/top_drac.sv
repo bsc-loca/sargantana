@@ -260,7 +260,9 @@ datapath datapath_inst(
 // inorder core any access to the CSR/PCR will be available. In multicore
 // scenarios or higher performance cores you may need csr_replay.
 
-csr_bsc csr_inst (
+csr_bsc #(
+    .paddr_width(drac_pkg::PHY_ADDR_SIZE)
+) csr_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
 

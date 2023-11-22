@@ -69,9 +69,9 @@ module tb_module();
     // MEMORY TO READ FILES
     ////////////////////////////////////////
 
-    logic [39:0] pc_table     [0:4096];
+    logic [PHY_VIRT_MAX_ADDR_SIZE:0] pc_table     [0:4096];
     logic [1:0]  taken_table  [0:4096];
-    logic [39:0] target_table [0:4096];
+    logic [PHY_VIRT_MAX_ADDR_SIZE:0] target_table [0:4096];
 
 
     ////////////////////////////////////////

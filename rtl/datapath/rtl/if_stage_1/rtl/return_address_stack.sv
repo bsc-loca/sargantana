@@ -29,7 +29,7 @@ module return_address_stack
     // Number of entries of the RAS.
     localparam _NUM_RAS_ENTRIES_ = 2 ** _LENGTH_RAS_;
     // Bits needed to store a single address location
-    localparam _ADDRESS_LENGTH_ = 40;
+    localparam _ADDRESS_LENGTH_ = PHY_VIRT_MAX_ADDR_SIZE;
 
     // Registers representing the actual address stack.
     addrPC_t address_stack [0:_NUM_RAS_ENTRIES_ -1];
