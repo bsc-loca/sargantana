@@ -148,7 +148,9 @@ assign instruction_to_lsq.vaddr = instruction_to_lsq.data_rs1;
 `endif
 
 // LSQ
-load_store_queue load_store_queue_inst (
+load_store_queue  #(
+    .DracCfg(DracCfg)
+) load_store_queue_inst (
     .clk_i              (clk_i),
     .rstn_i             (rstn_i),
     .instruction_i      (instruction_to_lsq),
