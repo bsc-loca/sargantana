@@ -46,19 +46,6 @@ parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
 
-
-parameter _DRAM_BASE_   = 64'h0080000000;
-parameter _DRAM_END_    = 64'h0200000000;
-`ifdef PITON_ARIANE_HPDC // TODO: Make this parametrizable
-parameter _ROM_BASE_    = 64'hFFF1010000;
-parameter _ROM_END_     = 64'hFFF1020000;
-`else
-parameter _ROM_BASE_    = 64'h0000000100;
-parameter _ROM_END_     = 64'h0000000200;
-`endif
-parameter _DEB_BASE_    = 64'hFFF1000000;
-parameter _DEB_END_     = 64'hFFF1001000;
-
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -144,14 +131,17 @@ typedef struct packed {
     int                                   NMemSections;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemBase;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemEnd;
+
+    logic [PHY_ADDR_SIZE-1:0] InitBROMBase;
+    logic [PHY_ADDR_SIZE-1:0] InitBROMEnd;
 } drac_cfg_t;
 
-function automatic logic range_check(addr_t start_region, addr_t end_region, addr_t address);
+function automatic logic range_check(addr_t start_region, addr_t end_region, bus64_t address);
     // if len is a power of two, and base is properly aligned, this check could be simplified
-    return (address >= start_region) && (address < end_region);
+    return ({{{64-PHY_ADDR_SIZE}{1'b0}}, address} >= start_region) && ({{{64-PHY_ADDR_SIZE}{1'b0}}, address} < end_region);
 endfunction : range_check
 
-function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, addr_t address);
+function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, bus64_t address);
     // if we don't specify any region we assume everything is accessible
     logic[NrMaxRules-1:0] pass;
     pass = '0;
@@ -161,7 +151,7 @@ function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, addr_t address);
     return |pass;
 endfunction : is_inside_IO_sections
 
-function automatic logic is_inside_mem_sections (drac_cfg_t Cfg, addr_t address);
+function automatic logic is_inside_mem_sections (drac_cfg_t Cfg, bus64_t address);
     // if we don't specify any region we assume everything is accessible
     logic[NrMaxRules-1:0] pass;
     pass = '0;
@@ -1075,8 +1065,11 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
 
     NMemSections: 2, // number of Memory space sections
-    InitMemBase: {40'h0040000000, 40'h0000000000}, // Memory base address after reset
-    InitMemEnd: {40'h3fffffffff, 40'h000000ffff} // Memory end 0 address after reset
+    InitMemBase: {40'h0040000000, 40'h0000000100}, // Memory base address after reset
+    InitMemEnd: {40'h3fffffffff, 40'h000000ffff}, // Memory end 0 address after reset
+
+    InitBROMBase: 40'h0000000100,
+    InitBROMEnd: 40'h000000ffff
 };
 
 localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{

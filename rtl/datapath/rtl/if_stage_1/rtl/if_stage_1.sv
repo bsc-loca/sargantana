@@ -17,7 +17,9 @@
 module if_stage_1
     import drac_pkg::*;
     import riscv_pkg::*;
-(
+#(
+    parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
+) (
     input logic                 clk_i,
     input logic                 rstn_i,
     input addr_t                reset_addr_i,
@@ -67,9 +69,6 @@ module if_stage_1
     logic       branch_predict_is_branch;
     logic       branch_predict_taken;
     addrPC_t    branch_predict_addr;
-
-
-    logic is_in_dram, is_in_rom, is_in_deb, is_inside_exeregion ;
 
     always_comb begin
         priority case (cu_if_i.next_pc)
@@ -123,15 +122,10 @@ module if_stage_1
         end
     end
 
-    assign is_in_dram = (pc >= _DRAM_BASE_) & (pc < _DRAM_END_);
-    assign is_in_rom  = (pc >= _ROM_BASE_) & (pc < _ROM_END_);
-    assign is_in_deb  = (pc >= _DEB_BASE_) & (pc < _DEB_END_); 
-    assign is_inside_exeregion = is_in_dram | is_in_rom | is_in_deb ; 
-
     // check addr fault fetch
     always_comb begin
         if ((!((&pc[63:VIRT_ADDR_SIZE-1])==1'b1 | (|pc[63:VIRT_ADDR_SIZE-1])==1'b0) & en_translation_i) | 
-            (!is_inside_exeregion & !en_translation_i)
+            (!is_inside_mem_sections(DracCfg, pc) & !en_translation_i)
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;
     end

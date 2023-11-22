@@ -389,7 +389,9 @@ module datapath
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // IF Stage
-    if_stage_1 if_stage_1_inst(
+    if_stage_1 #(
+        .DracCfg(DracCfg)    
+    ) if_stage_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
