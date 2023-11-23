@@ -128,9 +128,9 @@ typedef struct packed {
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOBase;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOEnd;
   
-    int                                   NMemSections;
-    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemBase;
-    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMemEnd;
+    int                                   NMappedSections;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedBase;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedEnd;
 
     logic [PHY_ADDR_SIZE-1:0] InitBROMBase;
     logic [PHY_ADDR_SIZE-1:0] InitBROMEnd;
@@ -151,15 +151,15 @@ function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, bus64_t address)
     return |pass;
 endfunction : is_inside_IO_sections
 
-function automatic logic is_inside_mem_sections (drac_cfg_t Cfg, bus64_t address);
+function automatic logic is_inside_mapped_sections (drac_cfg_t Cfg, bus64_t address);
     // if we don't specify any region we assume everything is accessible
     logic[NrMaxRules-1:0] pass;
     pass = '0;
-    for (int unsigned k = 0; k < Cfg.NMemSections; k++) begin
-        pass[k] = range_check(Cfg.InitMemBase[k], Cfg.InitMemEnd[k], address);
+    for (int unsigned k = 0; k < Cfg.NMappedSections; k++) begin
+        pass[k] = range_check(Cfg.InitMappedBase[k], Cfg.InitMappedEnd[k], address);
     end
     return |pass;
-endfunction : is_inside_mem_sections
+endfunction : is_inside_mapped_sections
 
 typedef enum logic [1:0] {
     NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
@@ -1064,9 +1064,9 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitIOBase:  {40'h40000000}, // IO base 0 address after reset
     InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
 
-    NMemSections: 2, // number of Memory space sections
-    InitMemBase: {40'h0040000000, 40'h0000000100}, // Memory base address after reset
-    InitMemEnd: {40'h3fffffffff, 40'h000000ffff}, // Memory end 0 address after reset
+    NMappedSections: 2, // number of Memory space sections
+    InitMappedBase: {40'h0040000000, 40'h0000000100}, // Memory base address after reset
+    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff}, // Memory end 0 address after reset
 
     InitBROMBase: 40'h0000000100,
     InitBROMEnd: 40'h000000ffff
