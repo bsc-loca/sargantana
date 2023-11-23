@@ -48,7 +48,8 @@ logic [1:0] past_state_pht;
     // This array stores 1024 states machines for predicting the branches
 
     reg [_BITS_BIMODAL_STATE_MACHINE_ -1:0] pattern_history_table [0:_NUM_BIMODAL_ENTRIES_ -1]; 
-    reg [PHY_VIRT_MAX_ADDR_SIZE-1:0] branch_target_buffer [0:_NUM_BIMODAL_ENTRIES_-1];
+    // We need to store the PHY_VIRT_MAX_ADDR_SIZE + 1 bits in order to perform properly the sign extension 
+    reg [PHY_VIRT_MAX_ADDR_SIZE:0] branch_target_buffer [0:_NUM_BIMODAL_ENTRIES_-1];
 
     
  /*   `ifndef SYNTHESIS_BIMODAL_PREDICTOR
@@ -64,13 +65,13 @@ logic [1:0] past_state_pht;
 
 
     // Read pattern history table at addres pc_fetch_i
-    logic [PHY_VIRT_MAX_ADDR_SIZE-1:0] short_pred_addr;
+    logic [PHY_VIRT_MAX_ADDR_SIZE:0] short_pred_addr;
     always_comb
     begin
         readed_state_pht = pattern_history_table[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
         past_state_pht = pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
         short_pred_addr = branch_target_buffer[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
-        bimodal_predict_addr_o = { {XLEN-PHY_VIRT_MAX_ADDR_SIZE{short_pred_addr[PHY_VIRT_MAX_ADDR_SIZE-1]}}, short_pred_addr};
+        bimodal_predict_addr_o = { {(XLEN-PHY_VIRT_MAX_ADDR_SIZE-1){short_pred_addr[PHY_VIRT_MAX_ADDR_SIZE]}}, short_pred_addr};
     end
    
     always_comb begin
@@ -93,7 +94,7 @@ logic [1:0] past_state_pht;
 			end
         end else if(is_branch_EX_i) begin 
             pattern_history_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= new_state_to_pht;
-            branch_target_buffer[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= branch_addr_result_exec_i;
+            branch_target_buffer[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= branch_addr_result_exec_i[PHY_VIRT_MAX_ADDR_SIZE:0];
 		end
     end    
     // If state is 00 or 01 predict not taken, if 10 or 11 predict taken

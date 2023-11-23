@@ -147,7 +147,7 @@ module if_stage_1
 
     // logic for icache access: if not misaligned 
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !stall_debug_i && !stall_i;
-    assign req_cpu_icache_o.vaddr = pc[PHY_VIRT_MAX_ADDR_SIZE:0];
+    assign req_cpu_icache_o.vaddr = pc[PHY_VIRT_MAX_ADDR_SIZE-1:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
     assign req_cpu_icache_o.inval_fetch = /*inval_fetch_i |*/ retry_fetch_i;
