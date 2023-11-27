@@ -78,9 +78,9 @@ logic [31:0] res_l1 [7:0];
 logic [15:0] res_l2 [3:0];
 logic [7:0] res_l3 [1:0];
 always_comb begin
-    res_l1 = '{default:'{default:'0}};
-    res_l2 = '{default:'{default:'0}};
-    res_l3 = '{default:'{default:'0}};
+    res_l1 = '{default:'0};
+    res_l2 = '{default:'0};
+    res_l3 = '{default:'0};
     case (instr_type_1)
         //Vector Reduction Sum 
         VREDSUM: begin
@@ -187,9 +187,9 @@ always_comb begin
             endcase
         end
         default: begin
-            res_l1 = '{default:'{default:'0}};
-            res_l2 = '{default:'{default:'0}};
-            res_l3 = '{default:'{default:'0}};
+            res_l1 = '{default:'0};
+            res_l2 = '{default:'0};
+            res_l3 = '{default:'0};
             red_data_vd_o = '0;
         end 
     endcase
