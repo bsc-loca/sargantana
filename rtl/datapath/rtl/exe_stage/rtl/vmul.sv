@@ -256,9 +256,9 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
         negative_results_2       <= 8'b0;
-        products_8b_2            <= '{default:'{default:'0}};
-        products_16b_2           <= '{default:'{default:'0}};
-        products_32b_2           <= '{default:'{default:'0}};
+        products_8b_2            <= '{default:'0};
+        products_16b_2           <= '{default:'0};
+        products_32b_2           <= '{default:'0};
     end
     else begin
         sew_2                    <= sew_1;
