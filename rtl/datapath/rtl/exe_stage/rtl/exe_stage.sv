@@ -204,6 +204,7 @@ always_comb begin
     arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     arith_instr.chkp                = from_rr_i.chkp;
     arith_instr.gl_index            = from_rr_i.gl_index;
+    arith_instr.instr               = from_rr_i.instr;
 
     mem_instr.data_rs1            = from_rr_i.data_rs1;
     mem_instr.data_rs2            = from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
@@ -225,7 +226,7 @@ always_comb begin
     mem_instr.old_fprd            = from_rr_i.old_fprd;
     mem_instr.translated          = 1'b0;
     mem_instr.ex                  = 0;
-
+    mem_instr.instr               = from_rr_i.instr;
 
     fp_instr.data_rs1            = rs1_data_def;
     fp_instr.data_rs2            = rs2_data_def;
@@ -241,6 +242,7 @@ always_comb begin
     fp_instr.checkpoint_done      = from_rr_i.checkpoint_done;
     fp_instr.chkp                 = from_rr_i.chkp;
     fp_instr.gl_index             = from_rr_i.gl_index;
+    fp_instr.instr                = from_rr_i.instr;
 
     simd_instr.data_rs1            = from_rr_i.data_rs1;
     simd_instr.data_vs1            = from_rr_i.data_vs1;
@@ -261,16 +263,13 @@ always_comb begin
     simd_instr.gl_index            = from_rr_i.gl_index;
     simd_instr.is_vmul             = is_vmul;
     simd_instr.is_vred             = is_vred;
+    simd_instr.instr               = from_rr_i.instr;
+    
     if (stall_int || kill_i) begin
-        arith_instr.instr   = '0;
-        mem_instr.instr     = '0;
-        fp_instr.instr      = '0;
-        simd_instr.instr    = '0;
-    end else begin
-        arith_instr.instr   = from_rr_i.instr;
-        mem_instr.instr     = from_rr_i.instr;
-        fp_instr.instr      = from_rr_i.instr;
-        simd_instr.instr    = from_rr_i.instr;
+        arith_instr.instr.valid   = 1'b0;
+        mem_instr.instr.valid     = 1'b0;
+        fp_instr.instr.valid      = 1'b0;
+        simd_instr.instr.valid    = 1'b0;
     end
 
     if (~ready || kill_i) begin
