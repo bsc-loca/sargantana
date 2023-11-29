@@ -88,7 +88,9 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
             resp_icache_cpu_d.data = 32'b0;
             resp_icache_cpu_d.instr_page_fault = 1'b0;
         end else if (resp_icache_cpu_i.valid && stall_i) begin
+            resp_icache_cpu_d.valid = 1'b1;
             resp_icache_cpu_d = resp_icache_cpu_i;
+            resp_icache_cpu_d.instr_page_fault = resp_icache_cpu_i.instr_page_fault;
         end else if (resp_icache_cpu_q.valid && !stall_i) begin
             resp_icache_cpu_d.valid = 1'b0;
             resp_icache_cpu_d.data = 32'b0;

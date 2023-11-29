@@ -317,7 +317,6 @@ module datapath
     phvreg_t   vreg_wr_addr;
     phreg_t    reg_prd1_addr;
     // stall IF
-    logic stall_if;
     logic miss_icache;
     `ifdef SIM_KONATA_DUMP
         bus64_t id_fetch;
@@ -382,8 +381,6 @@ module datapath
         end
     end
 
-    assign stall_if_1 = control_int.stall_if_1 || debug_i.halt_valid;
-
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// FETCH                  STAGE                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -396,7 +393,7 @@ module datapath
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
         .stall_debug_i(debug_i.halt_valid),
-        .stall_i(stall_if_1),
+        .stall_i(control_int.stall_if_1),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
         .invalidate_buffer_i(invalidate_buffer_int),
@@ -416,7 +413,7 @@ module datapath
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
-        .load_i(!control_int.stall_if_1),
+        .load_i(!control_int.stall_if_2),
         .input_i(stage_if_1_if_2_d),
         .output_o(stage_if_1_if_2_q)
     );
@@ -437,7 +434,7 @@ module datapath
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
-    .load_i(!control_int.stall_if_2),
+    .load_i(!control_int.stall_id),
     .input_i(stage_if_2_id_d),
     .output_o(stage_if_2_id_q)
     );
