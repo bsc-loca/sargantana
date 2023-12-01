@@ -61,6 +61,7 @@ typedef logic [VREGFILE_WIDTH-1:0] vreg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
 typedef logic [riscv_pkg::XLEN-1:0] addrPC_t;
 typedef logic [PHY_VIRT_MAX_ADDR_SIZE-1:0] addr_t;
+typedef logic [PHY_ADDR_SIZE-1:0] phy_addr_t;
 typedef reg   [PHY_VIRT_MAX_ADDR_SIZE-1:0] reg_addr_t;
 typedef logic [CSR_ADDR_SIZE-1:0] csr_addr_t;
 typedef reg   [CSR_ADDR_SIZE-1:0] reg_csr_addr_t;

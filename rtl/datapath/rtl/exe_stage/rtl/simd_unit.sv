@@ -126,7 +126,7 @@ generate
         assign vs2_elements[i] = instruction_i.data_vs2[((i+1)*DATA_SIZE)-1:(i*DATA_SIZE)];
 
         functional_unit functional_unit_inst(
-            .fu_id_i       (i),
+            .fu_id_i       (fu_id_t'(i)),
             .instruction_i (instruction_i),
             .data_vs1_i    (vs1_elements[i]),
             .data_vs2_i    (vs2_elements[i]),

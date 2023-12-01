@@ -179,8 +179,8 @@ assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
 
-logic [31:0] csr_satp;
-assign csr_ptw_comm_o.satp = {32'b0, csr_satp}; // PTW expects 64 bits
+phy_addr_t csr_satp;
+assign csr_ptw_comm_o.satp = {{(XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 
 //-- HPM conection
 
@@ -299,7 +299,7 @@ csr_bsc #(
     .pcr_req_we_o(pcr_req_we_o),               // Cmd of the petition
     .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
 
-    .fcsr_flags_valid_i(req_datapath_csr_interface.csr_retire),
+    .fcsr_flags_valid_i(|req_datapath_csr_interface.csr_retire),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
     .fcsr_rm_o(fcsr_rm),
     .fcsr_fs_o(fcsr_fs),
