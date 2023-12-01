@@ -220,6 +220,10 @@ pending_fp_ops_queue pending_fp_ops_queue_inst (
     .full_o(stall_pending_fp_ops)                  // fifo full
 );
 
+typedef logic [3:0]W4_logic;
+typedef logic [2:0]W3_logic;
+typedef logic [1:0]W2_logic;
+
 fpnew_top #(
    .Features       ( Features ),
    .Implementation ( Implementation )
@@ -229,12 +233,13 @@ fpnew_top #(
    .flush_i        ( flush_i ),
    // Input
    .operands_i     ( operands ),
-   .rnd_mode_i     ( rnd_mode_sel ? opcode_rnd_mode : roundmode_e'(instruction_i.instr.frm)),
-   .op_i           ( op ),
+   .rnd_mode_i     ( rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mode)) : 
+    fpnew_pkg::roundmode_e'(W3_logic'(instruction_i.instr.frm))),
+   .op_i           ( fpnew_pkg::operation_e'(W4_logic'(op ))),
    .op_mod_i       ( op_mod ),
-   .src_fmt_i      ( src_fmt ),
-   .dst_fmt_i      ( dst_fmt ),
-   .int_fmt_i      ( int_fmt ),
+   .src_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(src_fmt ))),
+   .dst_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt ))),
+   .int_fmt_i      ( fpnew_pkg::int_format_e'(W2_logic'(int_fmt ))),
    .simd_mask_i    ( '0 ),
    //.inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( '0 ),
