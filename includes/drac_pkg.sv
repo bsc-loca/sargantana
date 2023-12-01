@@ -1096,6 +1096,8 @@ typedef struct packed {
 } csr_ptw_comm_t;
 
 typedef struct packed {
+    logic exe_load;
+    logic exe_store;
     logic icache_req;
     logic icache_kill;
     logic icache_miss_l2_hit;
