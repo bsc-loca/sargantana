@@ -16,7 +16,9 @@ package drac_pkg;
 import riscv_pkg::*;
 
 // Address size
-
+`ifdef MEEP_SHELL
+    `include "cincoranch_proto_config.v"
+`endif
 
 `ifndef CONF_SARGANTANA_PHY_ADDR_SIZE
     `define CONF_SARGANTANA_PHY_ADDR_SIZE 32
