@@ -58,6 +58,7 @@ module top_drac
 
     input resp_dcache_cpu_t resp_dcache_cpu_i,
     output req_cpu_dcache_t req_cpu_dcache_o, 
+    output logic killed_dcache_req_o,
 
 //----------------------------------------------------------------------------------
 // MMU INTERFACE
@@ -255,6 +256,7 @@ datapath #(
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .dtlb_comm_o(dtlb_comm_o),
+    .killed_dcache_req_o(killed_dcache_req_o),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );

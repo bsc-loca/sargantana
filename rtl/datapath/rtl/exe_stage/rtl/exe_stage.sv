@@ -55,6 +55,7 @@ module exe_stage
     output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
     output exe_if_branch_pred_t         exe_if_branch_pred_o,   // Branch prediction (taken, target) and result (take, target)
     output cache_tlb_comm_t             dtlb_comm_o,
+    output logic                        killed_dcache_req_o,    // Killed a request that was valid but was not sent to dcache
 
     input logic [1:0] priv_lvl_i,
 
@@ -347,6 +348,7 @@ mem_unit #(
     .mem_gl_index_o         (mem_gl_index_o),
     .lock_o                 (stall_mem),
     .empty_o                (empty_mem),
+    .killed_dcache_req_o    (killed_dcache_req_o),
 
     `ifdef SIM_COMMIT_LOG
     .store_addr_o(store_addr_o),

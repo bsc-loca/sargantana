@@ -41,6 +41,7 @@ module mem_unit
     output logic                 lock_o,                 // Mem unit is able to accept more petitions
     output logic                 empty_o,                // Mem unit has no pending Ops
     output cache_tlb_comm_t      dtlb_comm_o,
+    output logic                 killed_dcache_req_o,    // Killed a request that was valid but was not sent to dcache
 
     input logic [1:0] priv_lvl_i,
 
@@ -75,6 +76,11 @@ logic empty_lsq;
 logic flush_to_lsq;
 logic read_next_lsq;
 logic blocked_store;
+logic reg_valid_req;
+logic reg_ready_resp;
+logic killed_dcache_req_q;
+logic req_cpu_dcache_valid_int;
+logic stall_after_flush_lsq;
 
 // Instruction to LSQ and pipline
 rr_exe_mem_instr_t instruction_to_lsq;
@@ -188,13 +194,13 @@ end
 
 // Mealy Output and Next State
 always_comb begin
-    req_cpu_dcache_o.valid      = 1'b0;     // No Request
+    req_cpu_dcache_valid_int    = 1'b0;     // No Request
     read_next_lsq               = 1'b1;     // No Advance LSQ
     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
     instruction_s1_d            =  'h0;     // No Instruction to next stage
     next_state                  = ReadHead; // Next state Read Head
     if (flush_to_lsq) begin
-        req_cpu_dcache_o.valid      = 1'b0;     // No Request
+        req_cpu_dcache_valid_int    = 1'b0;     // No Request
         read_next_lsq               = 1'b1;     // No Advance LSQ
         mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
         instruction_s1_d            =  'h0;     // No Instruction to next stage
@@ -203,7 +209,7 @@ always_comb begin
         case(state)
             ////////////////////////////////////////////////// Reset state
             ResetState: begin
-                req_cpu_dcache_o.valid      = 1'b0;         // No Request
+                req_cpu_dcache_valid_int    = 1'b0;         // No Request
                 read_next_lsq               = 1'b0;         // No Read of LSQ
                 mem_commit_stall_s0         = 1'b0;         // No Stall of Commit
                 instruction_s1_d            =  'h0;         // No Instruction to next stage
@@ -212,7 +218,7 @@ always_comb begin
             ////////////////////////////////////////////////// Read head of LSQ
             ReadHead: begin
                 if (empty_lsq || blocked_store) begin
-                    req_cpu_dcache_o.valid      = 1'b0;     // No Request
+                    req_cpu_dcache_valid_int    = 1'b0;     // No Request
                     read_next_lsq               = 1'b0;     // No Advance LSQ 
                     mem_commit_stall_s0         = 1'b0;     // No Stall of Commit
                     instruction_s1_d            =  'h0;     // No Instruction to next stage
@@ -225,12 +231,12 @@ always_comb begin
                     if (!instruction_to_dcache.instr.valid | full_pmrq) begin
                         // If not valid instruction or full Pending Request Memory Queue
                         // Wait until next state
-                        req_cpu_dcache_o.valid = 1'b0;
+                        req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d        = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_or_store) begin
                         // If the instruction is not a Store or AMO
-                        req_cpu_dcache_o.valid = ~instruction_to_dcache.ex.valid;
+                        req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d = resp_dcache_cpu_i.ready | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else if (!((store_on_fly & req_cpu_dcache_o.is_amo) | amo_on_fly) |
@@ -240,7 +246,7 @@ always_comb begin
                         
                         // Make request If L1 ready and current instruction is either load
                         //  or store with commit permission
-                        req_cpu_dcache_o.valid = 
+                        req_cpu_dcache_valid_int = 
                                           (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])
                                            & ~instruction_to_dcache.ex.valid;
                        
@@ -252,27 +258,41 @@ always_comb begin
                         instruction_s1_d = (resp_dcache_cpu_i.ready & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])) 
                                             | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
                     end else begin
-                        req_cpu_dcache_o.valid = 1'b0;
+                        req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d = 'h0;
                     end
 
                     // Advance LSQ when a transaction is performed OR if the instruction has an exception
-                    read_next_lsq = (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) | instruction_to_dcache.ex.valid;
+                    read_next_lsq = (req_cpu_dcache_valid_int & resp_dcache_cpu_i.ready) | instruction_to_dcache.ex.valid;
                 end
             end
         endcase
     end
 end
 
+assign killed_dcache_req_o = ~reg_ready_resp & reg_valid_req & ~req_cpu_dcache_valid_int;
+assign req_cpu_dcache_o.valid = req_cpu_dcache_valid_int | killed_dcache_req_o | killed_dcache_req_q;
+
 // Update State Machine and Stored Instruction
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         tag_id <= 'h0;
+        reg_ready_resp <= 1'b0;
+        reg_valid_req <= 1'b0;
+        killed_dcache_req_q <= 1'b0;
+        stall_after_flush_lsq <= 1'b0;
     end else begin
-        if (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) begin
+        if (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) begin // Sent or killed request
             tag_id <= tag_id + 5'h1;
+            killed_dcache_req_q <= 1'b0;
+            stall_after_flush_lsq <= 1'b0;
+        end else if (killed_dcache_req_o) begin
+            killed_dcache_req_q <= 1'b1;
+            stall_after_flush_lsq <= flush_to_lsq;
         end
+        reg_ready_resp <= resp_dcache_cpu_i.ready;
+        reg_valid_req <= req_cpu_dcache_o.valid;
     end
 end
 
@@ -587,7 +607,7 @@ assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~flush_store) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
 
 //// Block incoming Mem instructions
-assign lock_o   = full_lsq;
+assign lock_o   = full_lsq | (stall_after_flush_lsq & ~resp_dcache_cpu_i.ready);
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 `ifdef SIM_COMMIT_LOG
