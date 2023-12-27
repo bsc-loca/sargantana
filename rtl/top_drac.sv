@@ -326,13 +326,13 @@ csr_bsc #(
     .vpu_csr_o(vpu_csr),
 
     // Unused interfaces
-    .pcr_update_data_i(0),
-    .pcr_update_addr_i(0),
-    .pcr_update_core_id_i(0),
-    .pcr_update_broadcast_i(0),
-    .pcr_update_valid_i(0),
-    .m_soft_irq_i(0),
-    .rocc_interrupt_i(0),
+    .pcr_update_data_i(64'b0),
+    .pcr_update_addr_i(12'b0),
+    .pcr_update_core_id_i(64'b0),
+    .pcr_update_broadcast_i(1'b0),
+    .pcr_update_valid_i(1'b0),
+    .m_soft_irq_i(1'b0),
+    .rocc_interrupt_i(1'b0),
 
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module
