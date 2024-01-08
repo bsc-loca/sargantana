@@ -597,6 +597,7 @@ localparam int unsigned IRQ_S_TIMER = 5;
 localparam int unsigned IRQ_M_TIMER = 7;
 localparam int unsigned IRQ_S_EXT   = 9;
 localparam int unsigned IRQ_M_EXT   = 11;
+localparam int unsigned IRQ_LCOF    = 13;
 
 localparam logic [63:0] MIP_SSIP = 1 << IRQ_S_SOFT;
 localparam logic [63:0] MIP_MSIP = 1 << IRQ_M_SOFT;
@@ -604,6 +605,7 @@ localparam logic [63:0] MIP_STIP = 1 << IRQ_S_TIMER;
 localparam logic [63:0] MIP_MTIP = 1 << IRQ_M_TIMER;
 localparam logic [63:0] MIP_SEIP = 1 << IRQ_S_EXT;
 localparam logic [63:0] MIP_MEIP = 1 << IRQ_M_EXT;
+localparam logic [63:0] MIP_LCOFIP = 1 << IRQ_LCOF;
 
 localparam logic [63:0] S_SW_INTERRUPT    = (1 << 63) | IRQ_S_SOFT;
 localparam logic [63:0] M_SW_INTERRUPT    = (1 << 63) | IRQ_M_SOFT;
@@ -611,6 +613,7 @@ localparam logic [63:0] S_TIMER_INTERRUPT = (1 << 63) | IRQ_S_TIMER;
 localparam logic [63:0] M_TIMER_INTERRUPT = (1 << 63) | IRQ_M_TIMER;
 localparam logic [63:0] S_EXT_INTERRUPT   = (1 << 63) | IRQ_S_EXT;
 localparam logic [63:0] M_EXT_INTERRUPT   = (1 << 63) | IRQ_M_EXT;
+localparam logic [63:0] LCOF_INTERRUPT    = (1 << 63) | IRQ_LCOF;
 
 // -----
 // CSRs
@@ -632,6 +635,7 @@ typedef enum logic [11:0] {
     CSR_STVAL          = 12'h143,
     CSR_SIP            = 12'h144,
     CSR_SATP           = 12'h180,
+    CSR_SCOUNTOVF      = 12'hDA0,
     // Machine Mode CSRs
     CSR_MSTATUS        = 12'h300,
     CSR_MISA           = 12'h301,
@@ -640,6 +644,7 @@ typedef enum logic [11:0] {
     CSR_MIE            = 12'h304,
     CSR_MTVEC          = 12'h305,
     CSR_MCOUNTEREN     = 12'h306,
+    CSR_MCOUNTINHIBIT  = 12'h320,
     CSR_MHPM_EVENT_3   = 12'h323,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_4   = 12'h324,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_5   = 12'h325,  //Machine performance monitoring Event Selector

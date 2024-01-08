@@ -143,6 +143,7 @@ to_PMU_t       pmu_flags    ;
 logic [CSR_ADDR_SIZE-1:0] addr_csr_hpm;
 logic [63:0]              data_csr_hpm, data_hpm_csr;
 logic                     we_csr_hpm;
+logic [31:0]              mcountinhibit_hpm;
 
 assign debug_in.halt_valid=debug_halt_i;
 assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
@@ -183,7 +184,40 @@ phy_addr_t csr_satp;
 assign csr_ptw_comm_o.satp = {{(XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 
 //-- HPM conection
+logic count_ovf_int_req;
+bus32_t mhpm_ovf_bits;
+localparam HPM_NUM_EVENTS = 28;
+logic [HPM_NUM_EVENTS:1] hpm_events;
 
+assign hpm_events[1]  = pmu_flags.branch_miss;
+assign hpm_events[2]  = pmu_flags.is_branch;
+assign hpm_events[3]  = pmu_flags.branch_taken;
+assign hpm_events[4]  = pmu_interface_i.exe_store;
+assign hpm_events[5]  = pmu_interface_i.exe_load;
+assign hpm_events[6]  = pmu_interface_i.icache_req;
+assign hpm_events[7]  = pmu_interface_i.icache_kill;
+assign hpm_events[8]  = pmu_flags.stall_if;
+assign hpm_events[9]  = pmu_flags.stall_id;
+assign hpm_events[10] = pmu_flags.stall_rr;
+assign hpm_events[11] = pmu_flags.stall_exe;
+assign hpm_events[12] = pmu_flags.stall_wb;
+assign hpm_events[13] = pmu_interface_i.icache_miss_l2_hit;
+assign hpm_events[14] = pmu_interface_i.icache_miss_kill;
+assign hpm_events[15] = pmu_interface_i.icache_busy;
+assign hpm_events[16] = pmu_interface_i.icache_miss_time;
+assign hpm_events[17] = pmu_flags.load_store;
+assign hpm_events[18] = pmu_flags.data_depend;
+assign hpm_events[19] = pmu_flags.struct_depend;
+assign hpm_events[20] = pmu_flags.grad_list_full;
+assign hpm_events[21] = pmu_flags.free_list_empty;
+assign hpm_events[22] = pmu_interface_i.itlb_access;
+assign hpm_events[23] = pmu_interface_i.itlb_miss;
+assign hpm_events[24] = pmu_interface_i.dtlb_access;
+assign hpm_events[25] = pmu_interface_i.dtlb_miss;
+assign hpm_events[26] = pmu_interface_i.ptw_buffer_hit;
+assign hpm_events[27] = pmu_interface_i.ptw_buffer_miss;
+assign hpm_events[28] = pmu_interface_i.itlb_stall;
+                
 hpm_counters hpm_counters_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
@@ -193,36 +227,15 @@ hpm_counters hpm_counters_inst (
     .we_i(we_csr_hpm),
     .data_i(data_csr_hpm),
     .data_o(data_hpm_csr),
+    
+    .mcountinhibit_i(mcountinhibit_hpm),
+    .priv_lvl_i(csr_priv_lvl),
 
     // Events
-    .branch_miss_i(pmu_flags.branch_miss),
-    .is_branch_i(pmu_flags.is_branch),
-    .branch_taken_i(pmu_flags.branch_taken),
-    .exe_store_i(pmu_interface_i.exe_store),
-    .exe_load_i(pmu_interface_i.exe_load),
-    .icache_req_i(pmu_interface_i.icache_req),
-    .icache_kill_i(pmu_interface_i.icache_kill),
-    .stall_if_i(pmu_flags.stall_if),
-    .stall_id_i(pmu_flags.stall_id),
-    .stall_rr_i(pmu_flags.stall_rr),
-    .stall_exe_i(pmu_flags.stall_exe),
-    .stall_wb_i(pmu_flags.stall_wb ),
-    .buffer_miss_i(pmu_interface_i.icache_miss_l2_hit),
-    .imiss_kill_i(pmu_interface_i.icache_miss_kill),
-    .icache_bussy_i(pmu_interface_i.icache_busy),
-    .imiss_time_i(pmu_interface_i.icache_miss_time),
-    .load_store_i(pmu_flags.load_store ),
-    .data_depend_i(pmu_flags.data_depend),
-    .struct_depend_i(pmu_flags.struct_depend),
-    .grad_list_full_i(pmu_flags.grad_list_full),
-    .free_list_empty_i(pmu_flags.free_list_empty),
-    .itlb_access_i(pmu_interface_i.itlb_access),
-    .itlb_miss_i(pmu_interface_i.itlb_miss),
-    .dtlb_access_i(pmu_interface_i.dtlb_access),
-    .dtlb_miss_i(pmu_interface_i.dtlb_miss),
-    .ptw_hit_i(pmu_interface_i.ptw_buffer_hit),
-    .ptw_miss_i(pmu_interface_i.ptw_buffer_miss),
-    .itlb_miss_cycle_i(pmu_interface_i.itlb_stall)
+    .events_i(hpm_events),
+    
+    .count_ovf_int_req_o(count_ovf_int_req),
+    .mhpm_ovf_bits_o(mhpm_ovf_bits)
 );
 
 sew_t sew;
@@ -337,7 +350,10 @@ csr_bsc #(
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module
     .perf_data_i(data_hpm_csr),                // read data from performance counter module
-    .perf_we_o(we_csr_hpm)
+    .perf_we_o(we_csr_hpm),
+    .perf_mcountinhibit_o(mcountinhibit_hpm),
+    .perf_count_ovf_int_req_i(count_ovf_int_req),
+    .perf_mhpm_ovf_bits_i(mhpm_ovf_bits)
 );
 
 

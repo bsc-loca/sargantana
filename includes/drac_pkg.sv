@@ -41,7 +41,7 @@ parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
 parameter REGFILE_WIDTH = 5;
 parameter VREGFILE_WIDTH = 5;
 parameter CSR_ADDR_SIZE = 12;
-parameter CSR_CMD_SIZE = 3;
+parameter CSR_CMD_SIZE = 4;
 parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
@@ -328,14 +328,15 @@ typedef enum logic [7:0] {
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {
-    CSR_CMD_NOPE    = 3'b000,
-    CSR_CMD_WRITE   = 3'b001,
-    CSR_CMD_SET     = 3'b010,
-    CSR_CMD_CLEAR   = 3'b011,
-    CSR_CMD_SYS     = 3'b100,
-    CSR_CMD_READ    = 3'b101,
-    CSR_CMD_VSELVL  = 3'b110,
-    CSR_CMD_N2      = 3'b111
+    CSR_CMD_NOPE      = 4'b0000,
+    CSR_CMD_RW        = 4'b0001,
+    CSR_CMD_SET       = 4'b0010,
+    CSR_CMD_CLEAR     = 4'b0011,
+    CSR_CMD_SYS       = 4'b0100,
+    CSR_CMD_READ      = 4'b0101,
+    CSR_CMD_VSETVL    = 4'b0110,
+    CSR_CMD_VSETVLMAX = 4'b0111,
+    CSR_CMD_WRITE     = 4'b1000
 } csr_cmd_t;                // Comands to lowrisc CSR
 
 

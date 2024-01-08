@@ -78,5 +78,5 @@
 ./rtl/datapath/rtl/rr_stage/rtl/regfile_fp.sv
 ./rtl/datapath/rtl/wb_stage/rtl/graduation_list.sv
 ./rtl/csr/rtl/csr_bsc.sv
-./rtl/hpm/rtl/hpm_counters.sv
+./rtl/csr/rtl/hpm_counters.sv
 ./rtl/top_drac.sv

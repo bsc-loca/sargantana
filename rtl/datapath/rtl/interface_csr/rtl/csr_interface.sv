@@ -46,7 +46,7 @@ always_comb begin
     if (instruction_to_commit_i[0].valid && !instruction_to_commit_i[0].ex_valid) begin
         case (instruction_to_commit_i[0].instr_type)
             CSRRW: begin
-                csr_cmd_int = CSR_CMD_WRITE;
+                csr_cmd_int = (instruction_to_commit_i[0].rd == 'h0) ? CSR_CMD_WRITE : CSR_CMD_RW;
                 csr_rw_data_int = result_gl_i;
                 csr_ena_int = 1'b1;
             end
@@ -61,7 +61,7 @@ always_comb begin
                 csr_ena_int = 1'b1;
             end
             CSRRWI: begin
-                csr_cmd_int = CSR_CMD_WRITE;
+                csr_cmd_int = (instruction_to_commit_i[0].rd == 'h0) ? CSR_CMD_WRITE : CSR_CMD_RW;
                 csr_rw_data_int = {59'b0,instruction_to_commit_i[0].rs1};
                 csr_ena_int = 1'b1;
             end
@@ -89,7 +89,7 @@ always_comb begin
             end
             VSETVLI,
             VSETVL: begin
-                csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_N2 : CSR_CMD_VSELVL;
+                csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
                 csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
                 csr_ena_int = 1'b1;
             end
