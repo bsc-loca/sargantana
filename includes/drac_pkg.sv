@@ -35,7 +35,7 @@ parameter UNMAPPED_ADDR_UPPER = 64'h0;
 parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
 
-parameter ICACHELINE_SIZE = 128;
+parameter ICACHELINE_SIZE = 256;
 parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
 parameter REGFILE_WIDTH = 5;
