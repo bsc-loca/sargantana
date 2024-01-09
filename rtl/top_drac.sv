@@ -122,7 +122,7 @@ module top_drac
 
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
-logic [1:0] ld_st_priv_lvl;
+logic [1:0] csr_priv_lvl, ld_st_priv_lvl;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
@@ -130,6 +130,7 @@ logic en_ld_st_translation;
 logic en_translation;
 logic [39:0] vpu_csr;
 assign en_translation_o = en_translation;
+assign priv_lvl_o = csr_priv_lvl;
 
 addr_t dcache_addr;
 
@@ -326,7 +327,7 @@ csr_bsc #(
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
     .status_o(csr_ptw_comm_o.mstatus),                   //actual mstatus of the core
-    .priv_lvl_o(priv_lvl_o),                 // actual privialge level of the core
+    .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
     .ld_st_priv_lvl_o(ld_st_priv_lvl),
     .en_ld_st_translation_o(en_ld_st_translation),
     .en_translation_o(en_translation),
