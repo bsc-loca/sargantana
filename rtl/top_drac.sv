@@ -117,7 +117,7 @@ module top_drac
     output logic  [11:0]        pcr_req_addr_o,     // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
     output logic  [63:0]        pcr_req_data_o,     // write data to performance counter module
     output logic  [2:0]         pcr_req_we_o,       // Cmd of the petition
-    output logic                pcr_req_core_id_o   // core id of the tile
+    output logic  [63:0]        pcr_req_core_id_o   // core id of the tile
 
 );
 
