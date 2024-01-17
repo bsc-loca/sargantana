@@ -42,7 +42,6 @@ module datapath
     output req_cpu_csr_t    req_cpu_csr_o,
     output debug_out_t      debug_o,
     output cache_tlb_comm_t dtlb_comm_o,
-    output logic            killed_dcache_req_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
@@ -1157,7 +1156,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .ex_gl_index_o(ex_from_exe_index_int),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
-        .killed_dcache_req_o(killed_dcache_req_o),
     
         //PMU Neiel-Leyva
         .pmu_is_branch_o          (pmu_flags_o.is_branch),      
