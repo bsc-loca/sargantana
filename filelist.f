@@ -19,8 +19,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/vshift.sv
 ./rtl/datapath/rtl/exe_stage/rtl/div_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_mem_req_queue.sv
-./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/cf_math_pkg.sv
-./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/lzc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/defs_div_sqrt_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/control_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/div_sqrt_top_mvp.sv
@@ -29,7 +27,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/nrbd_nrsc_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/preprocess_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_pkg.sv
-./rtl/datapath/rtl/exe_stage/rtl/fpu/rr_arb_tree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_cast_multi.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_classifier.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_divsqrt_multi.sv
