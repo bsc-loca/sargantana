@@ -186,8 +186,7 @@ assign csr_ptw_comm_o.satp = {{(XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW ex
 
 //-- HPM conection
 logic count_ovf_int_req;
-bus32_t mhpm_ovf_bits;
-localparam HPM_NUM_EVENTS = 28;
+logic [HPM_NUM_COUNTERS+3-1:3] mhpm_ovf_bits;
 logic [HPM_NUM_EVENTS:1] hpm_events;
 
 assign hpm_events[1]  = pmu_flags.branch_miss;
@@ -219,7 +218,10 @@ assign hpm_events[26] = pmu_interface_i.ptw_buffer_hit;
 assign hpm_events[27] = pmu_interface_i.ptw_buffer_miss;
 assign hpm_events[28] = pmu_interface_i.itlb_stall;
                 
-hpm_counters hpm_counters_inst (
+hpm_counters #(
+    .HPM_NUM_EVENTS(HPM_NUM_EVENTS),
+    .HPM_NUM_COUNTERS(HPM_NUM_COUNTERS)
+) hpm_counters_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
 

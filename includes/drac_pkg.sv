@@ -45,6 +45,8 @@ parameter CSR_CMD_SIZE = 4;
 parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
+parameter HPM_NUM_EVENTS = 28;
+parameter HPM_NUM_COUNTERS = 29;
 
 // RISCV
 //parameter OPCODE_WIDTH = 6;
