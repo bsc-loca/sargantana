@@ -7,8 +7,7 @@
 ./rtl/common_cells/src/fifo_v3.sv
 ./rtl/common_cells/src/rr_arb_tree.sv
 ./rtl/common_cells/src/exp_backoff.sv
-./includes/fpuv_pkg.sv
-./includes/fpuv_wrapper_pkg.sv
+./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_pkg.sv
 ./includes/riscv_pkg.sv
 ./includes/def_pkg.sv
 ./includes/drac_pkg.sv
@@ -26,7 +25,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/norm_div_sqrt_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/nrbd_nrsc_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_div_sqrt/preprocess_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_cast_multi.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_classifier.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_divsqrt_multi.sv

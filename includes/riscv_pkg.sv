@@ -549,7 +549,7 @@ typedef struct packed {
     xs_t          xs;     // extension register - hardwired to zero
     xs_t          fs;     // floating point extension register
     priv_lvl_t    mpp;    // holds the previous privilege mode up to machine
-    logic [1:0]   vs;  // writes preserved reads ignored
+    xs_t          vs;     // vector extension register
     logic         spp;    // holds the previous privilege mode up to supervisor
     logic         mpie;   // machine interrupts enable bit active prior to trap
     logic         wpri1;  // writes preserved reads ignored
@@ -624,6 +624,11 @@ typedef enum logic [11:0] {
     CSR_FRM            = 12'h002,
     CSR_FCSR           = 12'h003,
     CSR_FTRAN          = 12'h800,
+    // Vector CSRs
+    CSR_VXSAT          = 12'h009, // RVV-1.0
+    CSR_VXRM           = 12'h00A, // RVV-1.0
+    CSR_VL             = 12'hC20,
+    CSR_VTYPE          = 12'hC21,
     // Supervisor Mode CSRs
     CSR_SSTATUS        = 12'h100,
     CSR_SIE            = 12'h104,
@@ -840,9 +845,6 @@ typedef enum logic [11:0] {
     TO_HOST         = 12'h9F0,  // to host csr used for simulation
     FROM_HOST       = 12'h9F1,  // from host csr used for simulation
 
-    CSR_VL          = 12'hC20,  // Vector extension CSR
-    CSR_VTYPE       = 12'hC21,  // Vector extension CSR
-
     CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
     CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
     CSR_SPI_CONFIG = 12'h7F2  // SPI Configuration CSR
@@ -853,6 +855,7 @@ localparam logic [63:0] SSTATUS_UIE    = 64'h00000001;
 localparam logic [63:0] SSTATUS_SIE    = 64'h00000002;
 localparam logic [63:0] SSTATUS_SPIE   = 64'h00000020;
 localparam logic [63:0] SSTATUS_SPP    = 64'h00000100;
+localparam logic [63:0] SSTATUS_VS     = 64'h00000600;
 localparam logic [63:0] SSTATUS_FS     = 64'h00006000;
 localparam logic [63:0] SSTATUS_XS     = 64'h00018000;
 localparam logic [63:0] SSTATUS_SUM    = 64'h00040000;
@@ -903,8 +906,9 @@ typedef union packed {
 
 // Floating-Point control and status register (32-bit!)
 typedef struct packed {
-    logic [31:15] reserved;  // reserved for L extension, return 0 otherwise
-    logic [6:0]   fprec;     // div/sqrt precision control
+    logic [31:11] reserved;  // reserved for L extension, return 0 otherwise
+    logic [1:0]   vxrm;      // vector fixed-point rounding mode (RVV-0.7.1)
+    logic         vxsat;     // vector fixed-point accrued saturation flag (RVV-0.7.1)
     logic [2:0]   frm;       // float rounding mode
     logic [4:0]   fflags;    // float exception flags
 } fcsr_t;

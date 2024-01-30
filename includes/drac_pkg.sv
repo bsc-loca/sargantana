@@ -653,7 +653,7 @@ typedef struct packed {
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
 
-    fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
+    fpnew_pkg::status_t fp_status;      // FP status of the executed instruction
 
     gl_index_t gl_index;                // Graduation List entry
     mem_type_t mem_type;                // Mem instruction type
@@ -713,7 +713,7 @@ typedef struct packed {
     addr_t addr;
     `endif
     phreg_t fprd;                       // Physical register destination
-    fpuv_pkg::status_t fp_status;       // FP status of the executed instruction
+    fpnew_pkg::status_t fp_status;      // FP status of the executed instruction
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -1014,7 +1014,7 @@ typedef struct packed {
     `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
-    fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
+    fpnew_pkg::status_t fp_status;          // FP status of the executed instruction
     mem_type_t mem_type;                // Mem instruction type
 } gl_instruction_t;
 
@@ -1026,7 +1026,7 @@ typedef struct packed {
     `ifdef SIM_COMMIT_LOG
     addr_t addr;                            // Virtual address of memory op.
     `endif
-    fpuv_pkg::status_t fp_status;           // FP status of the executed instruction
+    fpnew_pkg::status_t fp_status;          // FP status of the executed instruction
 } gl_wb_data_t;
 
 
@@ -1076,7 +1076,7 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitBROMEnd: 40'h000000ffff
 };
 
-localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
+localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{
     Width:         64,
     EnableVectors: 1'b0,
     EnableNanBox:  1'b1,
@@ -1084,16 +1084,16 @@ localparam fpuv_pkg::fpu_features_t EPI_RV64D = '{
     IntFmtMask:    4'b0011
 };
 
-localparam fpuv_pkg::fpu_implementation_t EPI_INIT = '{
+localparam fpnew_pkg::fpu_implementation_t EPI_INIT = '{
     PipeRegs:   '{'{default: 5}, // ADDMUL
                 '{default: 5},   // DIVSQRT
                 '{default: 5},   // NONCOMP
                 '{default: 5}},  // CONV
-    UnitTypes:  '{'{default: fpuv_pkg::MERGED}, // ADDMUL
-                '{default: fpuv_pkg::MERGED},   // DIVSQRT
-                '{default: fpuv_pkg::PARALLEL}, // NONCOMP
-                '{default: fpuv_pkg::MERGED}},  // CONV
-    PipeConfig: fpuv_pkg::DISTRIBUTED
+    UnitTypes:  '{'{default: fpnew_pkg::MERGED}, // ADDMUL
+                '{default: fpnew_pkg::MERGED},   // DIVSQRT
+                '{default: fpnew_pkg::PARALLEL}, // NONCOMP
+                '{default: fpnew_pkg::MERGED}},  // CONV
+    PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
 localparam int unsigned DIVSQRT_ITER = 3; //This parameter configure the number of iterations per cycle of the divsqrt unit.
