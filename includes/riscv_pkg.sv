@@ -625,10 +625,13 @@ typedef enum logic [11:0] {
     CSR_FCSR           = 12'h003,
     CSR_FTRAN          = 12'h800,
     // Vector CSRs
+    CSR_VSTART         = 12'h008, // RVV-0.7,1.0
     CSR_VXSAT          = 12'h009, // RVV-1.0
     CSR_VXRM           = 12'h00A, // RVV-1.0
+    CSR_VCSR           = 12'h00F, // RVV-1.0 
     CSR_VL             = 12'hC20,
     CSR_VTYPE          = 12'hC21,
+    CSR_VLENB          = 12'hC22, // RVV-1.0 
     // Supervisor Mode CSRs
     CSR_SSTATUS        = 12'h100,
     CSR_SIE            = 12'h104,
@@ -906,12 +909,17 @@ typedef union packed {
 
 // Floating-Point control and status register (32-bit!)
 typedef struct packed {
-    logic [31:11] reserved;  // reserved for L extension, return 0 otherwise
-    logic [1:0]   vxrm;      // vector fixed-point rounding mode (RVV-0.7.1)
-    logic         vxsat;     // vector fixed-point accrued saturation flag (RVV-0.7.1)
+    logic [31:8]  reserved;  // reserved for L extension, return 0 otherwise
+
     logic [2:0]   frm;       // float rounding mode
     logic [4:0]   fflags;    // float exception flags
 } fcsr_t;
+
+// Vector control and status register (RVV 1.0)
+typedef struct packed {
+    logic [1:0]   vxrm;      // vector fixed-point rounding mode
+    logic         vxsat;     // vector fixed-point accrued saturation flag
+} vcsr_t;
 
 // -----
 // Debug
