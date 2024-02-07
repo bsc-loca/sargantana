@@ -718,6 +718,9 @@ typedef enum logic [11:0] {
     CSR_MARCHID        = 12'hF12,
     CSR_MIMPID         = 12'hF13,
     CSR_MHARTID        = 12'hF14,
+    `ifdef PITON_CINCORANCH
+    CSR_MBOOT_MAIN_ID  = 12'hFC0,
+    `endif
     CSR_MCYCLE         = 12'hB00,
     CSR_MINSTRET       = 12'hB02,
     // Performance counters (Machine Mode)

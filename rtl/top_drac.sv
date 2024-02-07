@@ -25,6 +25,9 @@ module top_drac
     input logic                 soft_rstn_i,
     input addr_t                reset_addr_i,
     input logic [63:0]          core_id_i,
+    `ifdef PITON_CINCORANCH
+    input logic [1:0]           boot_main_id_i,
+    `endif  // Custom for CincoRanch
 
 //------------------------------------------------------------------------------------
 // DEBUG RING SIGNALS INPUT
@@ -290,6 +293,9 @@ csr_bsc #(
     .rstn_i(rstn_i),
 
     .core_id_i(core_id_i),
+    `ifdef PITON_CINCORANCH
+    .boot_main_id_i(boot_main_id_i),
+    `endif  // Custom for CincoRanch
 
     .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                  //read and write address form the core
     .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                   //specific operation to execute from the core 
