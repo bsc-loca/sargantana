@@ -57,7 +57,8 @@ module graduation_list
     output logic                               empty_o,                           // GL has no filled entries
     output reg_csr_addr_t                      csr_addr_o,                        // CSR Address
     output exception_t                         exception_o,                       // Exceptions
-    output bus64_t                             result_o                           // Result used by the CSR instructions
+    output bus64_t                             result_o,                          // Result used by the CSR instructions
+    output csr_addr_t                          vsetvl_vtype_o                     // Vtype for VSETVL
 );
 
 
@@ -84,6 +85,8 @@ reg_csr_addr_t  csr_addr_q;               // CSR Address
 exception_t     exception_q;              // Exceptions
 gl_index_t      exception_index_q;
 bus64_t         result_q;                 // Result or immediate
+csr_addr_t      vsetvl_vtype_q;           // Vtype for VSETVL
+
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
@@ -94,8 +97,8 @@ assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES-1) & ~(flus
 assign read_enable = {1'b0,read_head_i[1]} + {1'b0,read_head_i[0]}; // & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
 
 
-assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO);
-
+assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || 
+                         (instruction_i.instr_type == VSSE) || (instruction_i.instr_type == VSXE);
 
 gl_instruction_t entries [0:NUM_ENTRIES-1];
 
@@ -191,6 +194,7 @@ begin
 
         if (instruction_writeback_enable_i[0]) begin
             result_q <= instruction_writeback_data_i[0].result[63:0];
+            vsetvl_vtype_q <= instruction_writeback_data_i[0].csr_addr[CSR_ADDR_SIZE-1:0];
         end
     end
 end
@@ -242,5 +246,6 @@ assign full_o  = (int'(num) == NUM_ENTRIES-1);
 assign result_o = result_q;
 assign exception_o = exception_q;
 assign csr_addr_o = csr_addr_q;
+assign vsetvl_vtype_o = vsetvl_vtype_q;
 
 endmodule

@@ -101,13 +101,9 @@ always_comb begin
 
     if (use_mask_i) begin
         if (bypassm) begin
-            for (int i = 0; i<VLEN/8; ++i) begin
-                read_mask_o[i] = bypass_mask[8*i]; //LSB of each byte
-            end
+            read_mask_o = bypass_mask[VMAXELEM-1:0];
         end else begin
-            for (int i = 0; i<VLEN/8; ++i) begin
-                read_mask_o[i] = registers[read_addrm_i][8*i]; //LSB of each byte
-            end
+            read_mask_o = registers[read_addrm_i][VMAXELEM-1:0];
         end
     end else begin
         read_mask_o = '1;

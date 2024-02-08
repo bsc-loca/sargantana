@@ -27,6 +27,7 @@ module functional_unit_mc
 );
 
 bus64_t result_vaddsub;
+bus64_t result_vwaddsub;
 bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
@@ -37,6 +38,14 @@ vaddsub vaddsub_inst(
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vaddsub)
+);
+
+vwaddsub vwaddsub_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs1_i    (data_vs1_i[31:0]),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_vwaddsub)
 );
 
 vcomp vcomp_inst(
@@ -67,26 +76,62 @@ vmul vmul_inst(
 
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
-        VADD, VSUB, VREDSUM: begin
+        VADD, VSUB: begin
             data_vd_o = result_vaddsub;
+        end
+        VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
+            data_vd_o = result_vwaddsub;
         end
         VMUL, VMULH, VMULHU, VMULHSU: begin
             data_vd_o = result_vmul;
         end
-        VMIN, VMINU, VMAX, VMAXU, VMSEQ, VCNT: begin
+        VMIN, VMINU, VMAX, VMAXU, VMSEQ, VMSLTU, VMSLT, VMSLEU, VMSLE, VCNT: begin
             data_vd_o = result_vcomp;
         end
-        VAND, VREDAND: begin
+        VAND: begin
             data_vd_o = data_vs1_i & data_vs2_i;
         end
-        VOR, VREDOR: begin
+        VOR: begin
             data_vd_o = data_vs1_i | data_vs2_i;
         end
-        VXOR, VREDXOR: begin
+        VXOR: begin
             data_vd_o = data_vs1_i ^ data_vs2_i;
         end
+        VMAND, VMOR, VMXOR: begin
+            data_vd_o = '1;
+            case (sel_out_instr_i.sew)
+                SEW_8: begin
+                    for (int i = 0; i<VLEN/8; ++i) begin
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
+                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
+                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                    end
+                end
+                SEW_16: begin
+                    for (int i = 0; i<VLEN/16; ++i) begin
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
+                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
+                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                    end
+                end
+                SEW_32: begin
+                    for (int i = 0; i<VLEN/32; ++i) begin
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
+                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
+                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                    end
+                end
+                SEW_64: begin
+                    for (int i = 0; i<VLEN/64; ++i) begin
+                        data_vd_o = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
+                                    (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
+                                                                                  data_vs1_i[i] ^ data_vs2_i[i];
+                    end
+                end
+            endcase
+        end
 
-        VSLL, VSRA, VSRL: begin
+        VSLL, VSRA, VSRL, VNSRL, VNSRA: begin
             data_vd_o = result_vshift;
         end
 
@@ -112,7 +157,7 @@ always_comb begin
                 end
             endcase
         end
-        VMV: begin
+        VMERGE, VMV, VREDSUM, VREDAND, VREDOR, VREDXOR: begin
             data_vd_o = data_vs1_i;
         end
         default: begin

@@ -302,20 +302,26 @@ typedef enum logic [2:0] {
 } op_func3_vector_t;
 
 typedef enum logic [5:0] {
-    F6_VADD   = 6'b000000,
-    F6_VSUB   = 6'b000010,
-    F6_VMINU  = 6'b000100,
-    F6_VMIN   = 6'b000101,
-    F6_VMAXU  = 6'b000110,
-    F6_VMAX   = 6'b000111,
-    F6_VAND   = 6'b001001,
-    F6_VOR    = 6'b001010,
-    F6_VXOR   = 6'b001011,
-    F6_VMV    = 6'b010111,
-    F6_VMSEQ  = 6'b011000,
-    F6_VSLL   = 6'b100101,
-    F6_VSRL   = 6'b101000,
-    F6_VSRA   = 6'b101001
+    F6_VADD         = 6'b000000,
+    F6_VSUB         = 6'b000010,
+    F6_VMINU        = 6'b000100,
+    F6_VMIN         = 6'b000101,
+    F6_VMAXU        = 6'b000110,
+    F6_VMAX         = 6'b000111,
+    F6_VAND         = 6'b001001,
+    F6_VOR          = 6'b001010,
+    F6_VXOR         = 6'b001011,
+    F6_VMERGE_VMV   = 6'b010111,
+    F6_VMSEQ        = 6'b011000,
+    F6_VMSLTU       = 6'b011010,
+    F6_VMSLT        = 6'b011011,
+    F6_VMSLEU       = 6'b011100,
+    F6_VMSLE        = 6'b011101,
+    F6_VSLL         = 6'b100101,
+    F6_VSRL         = 6'b101000,
+    F6_VSRA         = 6'b101001,
+    F6_VNSRL        = 6'b101100,
+    F6_VNSRA        = 6'b101101
 } op_func6_vector_opi_t;
 
 typedef enum logic [5:0] {
@@ -324,13 +330,24 @@ typedef enum logic [5:0] {
     F6_VREDOR    = 6'b000010,
     F6_VREDXOR   = 6'b000011,
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
-    F6_VWXUNARY0 = 6'b010000,
-    F6_VCNT      = 6'b000110, //Custom instruction, for now we use vredmaxu encoding
-    F6_VMUNARY0  = 6'b010110,  //This encoding changes on v1.0 of specs. For now we keep it like this
+    F6_VRWXUNARY0 = 6'b010000,
+    F6_VCNT       = 6'b010001, //Custom instruction
+    F6_VMAND     = 6'b011001,
+    F6_VMOR      = 6'b011010,
+    F6_VMXOR     = 6'b011011,
+    F6_VMUNARY0  = 6'b010100,  //This encoding changes on v1.0 of specs. For now we keep it like this
     F6_VMULHU    = 6'b100100,
     F6_VMUL      = 6'b100101,
     F6_VMULHSU   = 6'b100110,
-    F6_VMULH     = 6'b100111
+    F6_VMULH     = 6'b100111,
+    F6_VWADDU    = 6'b110000,
+    F6_VWADD     = 6'b110001,
+    F6_VWSUBU    = 6'b110010,
+    F6_VWSUB     = 6'b110011,
+    F6_VWADDUW   = 6'b110100,
+    F6_VWADDW    = 6'b110101,
+    F6_VWSUBUW   = 6'b110110,
+    F6_VWSUBW    = 6'b110111
 } op_func6_vector_opm_t;
 
 typedef enum logic [5:0] {
@@ -346,16 +363,24 @@ typedef enum logic [4:0] {
     VS1_VID     = 5'b10001
 } op_vs1_vector_t;
 
+typedef enum logic [4:0] {
+    VS2_VMV_S_X = 5'b00000
+} op_vs2_vector_t;
+
 typedef enum logic [1:0] {
-    MOP_UNIT_STRIDE = 2'b00
+    MOP_UNIT_STRIDE = 2'b00,
+    MOP_STRIDED     = 2'b10,
+    MOP_INDEXED     = 2'b11
 } mop_t;
 
 typedef enum logic [4:0] {
-    LUMOP_UNIT_STRIDE = 5'b00000
+    LUMOP_UNIT_STRIDE = 5'b00000,
+    LUMOP_MASK        = 5'b01011
 } lumop_t;
 
 typedef enum logic [4:0] {
-    SUMOP_UNIT_STRIDE = 5'b00000
+    SUMOP_UNIT_STRIDE = 5'b00000,
+    SUMOP_MASK        = 5'b01011
 } sumop_t;
 
 typedef enum logic [2:0] {
@@ -447,11 +472,13 @@ typedef enum logic [1:0] {
 } op_fmt_fp_t;
 
 typedef enum logic [2:0] {
-    F3_UNIMP1 = 3'b000,
     F3_UNIMP2 = 3'b001,
     F3_FLW    = 3'b010,
     F3_FLD    = 3'b011,
-    F3_VSEW   = 3'b111
+    F3_V8B    = 3'b000,
+    F3_V16B   = 3'b101,
+    F3_V32B   = 3'b110,
+    F3_V64B   = 3'b111
 } op_func3_fp_t;
 
 // Rounding modes FP
@@ -509,7 +536,7 @@ typedef enum logic[XLEN-1:0] {
 } exception_cause_t;
 
 // Hack to codify Vector Element Loads and Stores
-parameter __vector_element = 4'b0111;
+parameter __vector_element = 4'b1000;
 
 // --------------------
 // Privilege Spec

@@ -128,7 +128,7 @@ logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
 logic en_ld_st_translation;
 logic en_translation;
-logic [39:0] vpu_csr;
+logic [42:0] vpu_csr;
 assign en_translation_o = en_translation;
 assign priv_lvl_o = csr_priv_lvl;
 
@@ -242,7 +242,9 @@ hpm_counters #(
 );
 
 sew_t sew;
-assign sew = sew_t'(vpu_csr[37:36]);
+logic [14:0] vl;
+assign sew = sew_t'(vpu_csr[38:37]); 	//SEW extracted from VPU-CSR
+assign vl = vpu_csr[28:14];		//Vector Length extracted from VPU-CSR
 
 datapath #(
     .DracCfg(DracCfg)
@@ -256,6 +258,7 @@ datapath #(
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .sew_i(sew),//.sew_i(CSR_SEW),
+    .vl_i(vl),
     .en_translation_i( en_translation ), 
     .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready_i),

@@ -95,7 +95,7 @@ assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.in
 assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD) && translate_incoming && translate_enable;
 
 // We can translate the incoming instruction if there are no instructions to translate in the queue
-assign translate_incoming = instruction_i.instr.valid & num_to_translate == '0;
+assign translate_incoming = instruction_i.instr.valid & num_to_translate == '0 & ~full_o;
 
 rr_exe_mem_instr_t instr_to_translate;
 assign instr_to_translate = translate_incoming ? instruction_i : control_table[tlb_tail];
@@ -118,7 +118,8 @@ always_comb begin
         (instr_to_translate.instr.mem_size == 4'b0011 & |instr_to_translate.data_rs1[2:0]) |
         (instr_to_translate.instr.mem_size == 4'b0101 & |instr_to_translate.data_rs1[0:0]) |
         (instr_to_translate.instr.mem_size == 4'b0110 & |instr_to_translate.data_rs1[1:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0111 & |instr_to_translate.data_rs1[2:0])) begin // Misaligned address
+        (instr_to_translate.instr.mem_size == 4'b0111 & |instr_to_translate.data_rs1[2:0]) |
+         instr_to_translate.vmisalign_xcpt) begin // Misaligned address
         translated_instr.ex.cause       = instr_to_translate.is_amo_or_store ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;

@@ -27,6 +27,7 @@ module exe_stage
     input rr_exe_instr_t                from_rr_i,
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input sew_t                         sew_i,                  // SEW from vl CSR
+    input [14:0]                        vl_i,
 
     input wire [1:0]                    commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
@@ -77,6 +78,7 @@ bus_simd_t rs2_data_def;
 
 rr_exe_arith_instr_t arith_instr;
 rr_exe_mem_instr_t   mem_instr;
+rr_exe_mem_instr_t   vagu_mem_instr;
 rr_exe_simd_instr_t  simd_instr;
 
 exe_wb_scalar_instr_t alu_to_scalar_wb;
@@ -94,7 +96,9 @@ exe_wb_fp_instr_t     fp_to_wb;
 
 bus64_t result_mem;
 logic stall_mem;
+logic stall_vagu;
 logic stall_int;
+logic stall_simd;
 logic stall_simd_int;
 logic stall_fpu_int;
 logic stall_fpu;
@@ -126,14 +130,17 @@ logic ready_div_32_inst;
 logic div_unit_sel;
 logic ready_div_unit;
 
-logic set_vmul_32_inst;
-logic set_vmul_64_inst;
-logic ready_vec_1cycle_inst;
-logic is_vmul;
-logic is_vred;
+logic [3:0] simd_exe_stages;
 
 exception_t mem_ex_int;
 gl_index_t mem_ex_index_int;
+
+logic is_input_inst_gl_head;
+logic vagu_mask_valid;
+logic [2:0] vagu_mop;
+logic [VLEN+VMAXELEM-1:0] vagu_mask;
+logic vagu_store_data_valid;
+logic [VMAXELEM_LOG:0] vagu_vl;
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -169,10 +176,11 @@ score_board_simd score_board_simd_inst(
     .clk_i               (clk_i),
     .rstn_i              (rstn_i),
     .flush_i             (flush_i),
-    .set_vmul_3cycle_i   (set_vmul_64_inst),
-    .set_vmul_2cycle_i   (set_vmul_32_inst),
-    .ready_vec_1cycle_o  (ready_vec_1cycle_inst),
-    .ready_vec_2cycle_o  (ready_vec_2cycle_inst)
+    .ready_i             (ready),
+    .instr_entry_i       (simd_instr.instr),
+    .sew_i               (simd_instr.sew),
+    .simd_exe_stages_o   (simd_exe_stages),
+    .stall_simd_o        (stall_simd)
 );
 
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
@@ -226,6 +234,7 @@ always_comb begin
     mem_instr.translated          = 1'b0;
     mem_instr.ex                  = 0;
     mem_instr.instr               = from_rr_i.instr;
+    mem_instr.instr.instr_type    = from_rr_i.instr.instr_type;
 
     fp_instr.data_rs1            = rs1_data_def;
     fp_instr.data_rs2            = rs2_data_def;
@@ -260,15 +269,15 @@ always_comb begin
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     simd_instr.chkp                = from_rr_i.chkp;
     simd_instr.gl_index            = from_rr_i.gl_index;
-    simd_instr.is_vmul             = is_vmul;
-    simd_instr.is_vred             = is_vred;
     simd_instr.instr               = from_rr_i.instr;
-    
+    simd_instr.exe_stages          = simd_exe_stages;
     if (stall_int || kill_i) begin
         arith_instr.instr.valid   = 1'b0;
         mem_instr.instr.valid     = 1'b0;
         fp_instr.instr.valid      = 1'b0;
         simd_instr.instr.valid    = 1'b0;
+    end else begin
+        simd_instr.instr.valid = (stall_simd_int || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
     end
 
     if (~ready || kill_i) begin
@@ -321,13 +330,84 @@ simd_unit simd_unit_inst (
 );
 `endif
 
+assign vagu_vl = (from_rr_i.instr.instr_type == VLM || from_rr_i.instr.instr_type == VSM)  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
+                 (from_rr_i.instr.instr_type == VLXE || from_rr_i.instr.instr_type == VSXE)?  vl_i[VMAXELEM_LOG:0]             :
+                 ((VLEN >> from_rr_i.instr.mem_size[1:0]) >> 3) ;
+assign vagu_mask_valid = (mem_instr.instr.use_mask | (mem_instr.instr.instr_type == VLXE || mem_instr.instr.instr_type == VSXE)) & !stall_vagu;
+assign vagu_mop = (mem_instr.instr.instr_type == VLSE || mem_instr.instr.instr_type == VSSE) ? 3'b010 : 
+                  (mem_instr.instr.instr_type == VLXE || mem_instr.instr.instr_type == VSXE) ? 3'b011 : 3'b000;
+assign vagu_store_data_valid = mem_instr.instr.valid && 
+                            (mem_instr.instr.instr_type == VSE
+                            || mem_instr.instr.instr_type == VSM
+                            || mem_instr.instr.instr_type == VSSE 
+                            || mem_instr.instr.instr_type == VSXE) 
+                            && !stall_vagu;
+
+always_comb begin
+    vagu_mask = 'h0;
+    if (mem_instr.instr.instr_type == VLXE) begin
+        vagu_mask[VLEN+VMAXELEM-1:VMAXELEM] = from_rr_i.data_vs2;
+    end else begin
+        vagu_mask[VLEN+VMAXELEM-1:VMAXELEM] = from_rr_i.data_vs1;
+    end
+    case (mem_instr.sew)
+        SEW_8: begin
+            vagu_mask[VMAXELEM-1:0] = mem_instr.data_vm;
+        end
+        SEW_16: begin
+            for (int i = 0; i<VLEN/16; ++i) begin
+                vagu_mask[i] = mem_instr.data_vm[i];  
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i<VLEN/32; ++i) begin
+                vagu_mask[i] = mem_instr.data_vm[i];  
+            end
+        end
+        default: begin
+            for (int i = 0; i<VLEN/64; ++i) begin
+                vagu_mask[i] = mem_instr.data_vm[i];  
+            end
+        end
+    endcase
+end
+
+vagu #(
+    .DCACHE_RESP_DATA_WIDTH(VLEN),
+    .MAX_VELEM(VMAXELEM)
+) vagu_inst (
+    .clk_i      (clk_i),
+    .rstn_i     (rstn_i),
+    .memp_instr_i(mem_instr),
+    .flush_i(flush_i),
+    .stall_i(stall_mem),
+    .ovi_mask_idx_valid_i(vagu_mask_valid),
+    .ovi_mask_idx_item_i(vagu_mask),
+    .vsew_i(mem_instr.sew),
+    .mop_i(vagu_mop),
+    .vl_i(vagu_vl),
+    .stride_i(from_rr_i.data_rs2),
+    .masked_op_i(mem_instr.instr.use_mask),
+    .vstore_data_valid_i(vagu_store_data_valid),
+    .vstore_data_i(from_rr_i.data_vs2),
+    .stall_o(stall_vagu),
+    .end_o(),
+    .vstore_data_ack_o(),
+    .velem_off_o(),
+    .velem_incr_o(),
+    .velem_id_o(),
+    .ovi_mask_idx_credit_o(),
+    .load_mask_o(),
+    .memp_instr_o(vagu_mem_instr)
+);
+
 mem_unit #(
     .DracCfg(DracCfg)
 ) mem_unit_inst (
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
     .en_ld_st_translation_i (en_ld_st_translation_i),
-    .instruction_i          (mem_instr),
+    .instruction_i          (vagu_mem_instr),
     .flush_i                (flush_i),
     .kill_i                 (1'b0),
     .resp_dcache_cpu_i      (resp_dcache_cpu_i),
@@ -393,13 +473,8 @@ always_comb begin
         arith_to_scalar_wb_o = 'h0;
     end
 
-    if (simd_to_scalar_wb.valid | simd_to_simd_wb.valid) begin
-        simd_to_scalar_wb_o = simd_to_scalar_wb;
-        simd_to_simd_wb_o = simd_to_simd_wb;
-    end else begin
-        simd_to_scalar_wb_o = 'h0;
-        simd_to_simd_wb_o = 'h0;
-    end
+    simd_to_scalar_wb_o = (simd_to_scalar_wb.valid) ? simd_to_scalar_wb : 'h0;
+    simd_to_simd_wb_o = (simd_to_simd_wb.valid) ? simd_to_simd_wb : 'h0;
 
     // FP write-back struct
     if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
@@ -418,8 +493,6 @@ always_comb begin
     set_div_64_inst = 1'b0;
     set_mul_32_inst = 1'b0;
     set_mul_64_inst = 1'b0;
-    set_vmul_32_inst = 1'b0;
-    set_vmul_64_inst = 1'b0;
     pmu_stall_mem_o = 1'b0; 
     stall_fpu_int   = 1'b0;
     if (from_rr_i.instr.valid && !kill_i) begin
@@ -443,25 +516,16 @@ always_comb begin
             stall_int = ~ready;
         end
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
-            stall_int = stall_mem | (~ready);
-            pmu_stall_mem_o = stall_mem | (~ready);
+            stall_int = stall_mem | stall_vagu | (~ready);
+            pmu_stall_mem_o = stall_mem | stall_vagu | (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_FPU) begin
             stall_fpu_int = stall_fpu;
             stall_int = (~ready);
         end
-        else if (from_rr_i.instr.unit == UNIT_SIMD & is_vmul & sew_i == SEW_64) begin
-            stall_int = ~ready;
-            set_vmul_64_inst = ready;
-        end
-        else if (from_rr_i.instr.unit == UNIT_SIMD & (is_vmul || is_vred)) begin
-            stall_int = (~ready);
-            stall_simd_int = ~ready_vec_2cycle_inst;
-            set_vmul_32_inst = ready & ready_vec_2cycle_inst;
-        end
         else if (from_rr_i.instr.unit == UNIT_SIMD) begin
-            stall_simd_int = ~ready_vec_1cycle_inst;
-            stall_int = ~ready;
+            stall_simd_int = stall_simd;
+            stall_int = (~ready);
         end
     end
 end

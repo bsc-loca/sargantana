@@ -26,6 +26,7 @@ module immediate
     bus32_t imm_jtype;
     bus64_t imm_uitype;
     bus64_t imm_vtype;
+    bus64_t imm_uvtype;
     bus64_t imm_shamt, imm_shamt_big;
     bus32_t sign_extended;
 
@@ -45,9 +46,10 @@ module immediate
                                          instr_i.jtype.imm11,
                                          instr_i.jtype.imm1, 1'b0};
     
-    assign imm_vtype = {{58{instr_i[19]}}, instr_i.vtype.vs1};
+    assign imm_vtype = {{59{instr_i[19]}}, instr_i.vtype.vs1};
     // No sign extended
     assign imm_uitype = {{59{1'b0}}, instr_i.common.rs1};
+    assign imm_uvtype = {{59{1'b0}}, instr_i.vtype.vs1};
     assign sign_extended = {32{instr_i[31]}}; 
 
     always_comb begin
@@ -115,8 +117,19 @@ module immediate
             end
             riscv_pkg::OP_V: begin
                 case (instr_i.itype.func3)
+                    F3_OPIVI: begin
+                        case (instr_i.vtype.func6)
+                            F6_VNSRL: imm_o = imm_uvtype;
+                            F6_VNSRA: imm_o = imm_uvtype;
+                            default: imm_o = imm_vtype;
+                        endcase
+                    end
                     F3_OPCFG: begin
-                        imm_o = imm_itype;
+                        if (instr_i[31] & instr_i[30]) begin //VSETIVLI
+                            imm_o = {28'b0, instr_i[19:15], 23'b0, instr_i[29:20]};
+                        end else begin
+                            imm_o = imm_itype;
+                        end
                     end
                     default: begin
                         imm_o = imm_vtype;

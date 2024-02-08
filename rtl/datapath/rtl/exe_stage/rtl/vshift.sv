@@ -33,6 +33,7 @@ bus64_t data_vd;
 bus64_t data_vd_flipped;
 logic is_signed;
 logic is_left;
+logic is_narrow;
 
 always_comb begin
     //If we need to perform a left shift, we flip all of the vs2 bits invert
@@ -65,36 +66,66 @@ always_comb begin
     endcase
             
 
-    is_signed = instr_type_i == VSRA ? 1'b1 : 1'b0;
-    is_left   = instr_type_i == VSLL ? 1'b1 : 1'b0;
+    is_signed = (instr_type_i == VSRA || instr_type_i == VNSRA) ? 1'b1 : 1'b0;
+    is_left   = (instr_type_i == VSLL) ? 1'b1 : 1'b0;
+    is_narrow = (instr_type_i == VNSRL || instr_type_i == VNSRA) ? 1'b1 : 1'b0;
 
     data_a = is_left ? data_vs2_flipped : data_vs2_i;
     data_b = is_left ? data_vs1_flipped : data_vs1_i;
 
-    case (sew_i)
-        //If the operation is signed, we append the most significant bit of
-        //the element to itself. Otherwise, we append
-        //a 0 to ensure an unsigned shift.
+    
+    data_vd = '0;
+    if (is_narrow) begin
+        case (sew_i)
+            SEW_8: begin
+                bit [15:0] data_int;
+                for (int i = 0; i<4; ++i) begin
+                    data_int = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*8)+:4];
+                    data_vd[(i*8)+:8] = data_int[7:0];
+                end
+            end
+            SEW_16: begin
+                bit [31:0] data_int;
+                for (int i = 0; i<2; ++i) begin
+                    data_int = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*16)+:5];
+                    data_vd[(i*16)+:16] = data_int[15:0];
+                end
+            end
+            SEW_32: begin
+                bit [63:0] data_int;
+                data_int = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
+                data_vd[31:0] = data_int[31:0];
+            end
+            default: begin
+                data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
+            end
+        endcase
+    end else begin
+        case (sew_i)
+            //If the operation is signed, we append the most significant bit of
+            //the element to itself. Otherwise, we append
+            //a 0 to ensure an unsigned shift.
 
-        SEW_8: begin
-            for (int i = 0; i<8; ++i) begin
-                data_vd[(i*8)+:8] = $signed({is_signed & data_a[(i*8)+7], data_a[(i*8)+:8]}) >>> data_b[(i*8)+:3];
+            SEW_8: begin
+                for (int i = 0; i<8; ++i) begin
+                    data_vd[(i*8)+:8] = $signed({is_signed & data_a[(i*8)+7], data_a[(i*8)+:8]}) >>> data_b[(i*8)+:3];
+                end
             end
-        end
-        SEW_16: begin
-            for (int i = 0; i<4; ++i) begin
-                data_vd[(i*16)+:16] = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*16)+:4];
+            SEW_16: begin
+                for (int i = 0; i<4; ++i) begin
+                    data_vd[(i*16)+:16] = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*16)+:4];
+                end
             end
-        end
-        SEW_32: begin
-            for (int i = 0; i<2; ++i) begin
-                data_vd[(i*32)+:32] = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*32)+:5];
+            SEW_32: begin
+                for (int i = 0; i<2; ++i) begin
+                    data_vd[(i*32)+:32] = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*32)+:5];
+                end
             end
-        end
-        SEW_64: begin
-            data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
-        end
-    endcase
+            SEW_64: begin
+                data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
+            end
+        endcase
+    end
 
     for (int i = 0; i<64; ++i) begin
         //If the shift was to the left, we flip the result back.

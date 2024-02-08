@@ -23,13 +23,13 @@ module pending_mem_req_queue
     input logic                 replay_valid_i,         // A replay is being executed
     input logic                 response_valid_i,       // A response is being executed
     input logic [6:0]           tag_next_i,             // Instruction that finishes
-    input bus_simd_t            replay_data_i,          // Replay asociated data
+    input bus_dcache_data_t     replay_data_i,          // Replay asociated data
     
     input logic                 flush_i,                // Flush all entries
     input logic                 advance_head_i,         // Advance head pointer one position
     input logic                 mv_back_tail_i,         // Move Back tail pointer one position
 
-    output rr_exe_mem_instr_t   finish_instr_o,         // Next Instruction to Write Back
+    output pmrq_instr_t   finish_instr_o,         // Next Instruction to Write Back
        
     output logic                full_o                  // pmrq is full
 );
@@ -67,7 +67,7 @@ assign mv_back_head_enable = mv_back_tail_i & (!instruction_i.instr.valid) & (nu
 
 
 // FIFO Memory structure, stores instructions
-rr_exe_mem_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
+pmrq_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
 // Tag Storage
 logic [6:0]    tag_table                [0:PMRQ_NUM_ENTRIES-1];
 // Instruction already finished
@@ -91,7 +91,37 @@ begin
         end
         
         if (write_enable) begin     // Write tail
-            instruction_table[tail]      <= instruction_i;
+            instruction_table[tail].instr           <= instruction_i.instr;            
+            instruction_table[tail].data_rs1        <= instruction_i.data_rs1;                                 
+            instruction_table[tail].data_old_vd     <= instruction_i.data_old_vd;            
+            instruction_table[tail].data_vm         <= instruction_i.data_vm;                
+            instruction_table[tail].sew             <= instruction_i.sew;                    
+            instruction_table[tail].imm             <= instruction_i.imm;                       
+            instruction_table[tail].prs1            <= instruction_i.prs1;                      
+            instruction_table[tail].rdy1            <= instruction_i.rdy1;                      
+            instruction_table[tail].prs2            <= instruction_i.prs2;                      
+            instruction_table[tail].rdy2            <= instruction_i.rdy2;                      
+            instruction_table[tail].prd             <= instruction_i.prd;                       
+            instruction_table[tail].pvd             <= instruction_i.pvd;                      
+            instruction_table[tail].old_prd         <= instruction_i.old_prd;                   
+            instruction_table[tail].old_pvd         <= instruction_i.old_pvd;                  
+            instruction_table[tail].fprd            <= instruction_i.fprd;                      
+            instruction_table[tail].old_fprd        <= instruction_i.old_fprd;                  
+            instruction_table[tail].is_amo_or_store <= instruction_i.is_amo_or_store;             
+            instruction_table[tail].is_amo          <= instruction_i.is_amo;                      
+            instruction_table[tail].is_store        <= instruction_i.is_store;                    
+            instruction_table[tail].checkpoint_done <= instruction_i.checkpoint_done;             
+            instruction_table[tail].chkp            <= instruction_i.chkp;               
+            instruction_table[tail].translated      <= instruction_i.translated;                  
+            instruction_table[tail].ex              <= instruction_i.ex;
+            instruction_table[tail].gl_index        <= instruction_i.gl_index;               
+            instruction_table[tail].agu_req_tag     <= instruction_i.agu_req_tag;
+            instruction_table[tail].vmisalign_xcpt  <= instruction_i.vmisalign_xcpt;              
+            instruction_table[tail].velem_id        <= instruction_i.velem_id;  
+            instruction_table[tail].load_mask       <= instruction_i.load_mask;     
+            instruction_table[tail].velem_off       <= instruction_i.velem_off; 
+            instruction_table[tail].velem_incr      <= instruction_i.velem_incr;  
+            instruction_table[tail].neg_stride      <= instruction_i.neg_stride;                  
             tag_table[tail]              <= tag_i;
 
             instruction_table[tail].data_rs2 <= 'h0;

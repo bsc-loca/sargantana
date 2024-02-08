@@ -622,9 +622,10 @@ module decoder
                                 decode_instr_int.fregfile_we = 1'b1;
                             end
                         end
-                        F3_VSEW: begin
+                        F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vltype.vm;
-                            if (csr_vs_i == 2'b00) begin
+                            decode_instr_int.mem_size = {1'b0, decode_i.inst.vltype.width};
+                            if ((csr_vs_i == 2'b00) || (decode_i.inst.vltype.mew != 1'b0)) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 if (decode_i.inst.vltype.nf == 0) begin
@@ -634,12 +635,25 @@ module decoder
                                                 LUMOP_UNIT_STRIDE: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
                                                     decode_instr_int.instr_type = VLE;
-                                                    decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
+                                                end
+                                                LUMOP_MASK: begin
+                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.instr_type = VLM;
                                                 end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end
                                             endcase
+                                        end
+                                        MOP_STRIDED: begin
+                                            decode_instr_int.vregfile_we = 1'b1;
+                                            decode_instr_int.instr_type = VLSE;
+                                            decode_instr_int.use_rs2 = 1'b1;
+                                        end
+                                        MOP_INDEXED: begin
+                                            decode_instr_int.vregfile_we = 1'b1;
+                                            decode_instr_int.instr_type = VLXE;
+                                            decode_instr_int.use_vs2 = 1'b1;
                                         end
                                         default: begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -679,9 +693,10 @@ module decoder
                                 decode_instr_int.use_fs2    = 1'b1;
                             end
                         end
-                        F3_VSEW: begin
+                        F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vstype.vm;
-                            if (csr_vs_i == 2'b00) begin
+                            decode_instr_int.mem_size = {1'b0, decode_i.inst.vstype.width};
+                            if ((csr_vs_i == 2'b00) || (decode_i.inst.vstype.mew != 1'b0)) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 if (decode_i.inst.vstype.nf == 0) begin
@@ -689,16 +704,32 @@ module decoder
                                         MOP_UNIT_STRIDE: begin
                                             case (decode_i.inst.vstype.sumop)
                                                 SUMOP_UNIT_STRIDE: begin
-                                                    
                                                     decode_instr_int.use_vs2 = 1'b1;
                                                     decode_instr_int.instr_type = VSE;
-                                                    decode_instr_int.mem_size = __vector_element; //TODO: Fix this hardcoding
+                                                    decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
+                                                end
+                                                SUMOP_MASK: begin
+                                                    decode_instr_int.use_vs2 = 1'b1;
+                                                    decode_instr_int.instr_type = VSM;
                                                     decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
                                                 end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end
                                             endcase
+                                        end
+                                        MOP_STRIDED: begin
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VSSE;
+                                            decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
+                                            decode_instr_int.use_rs2 = 1'b1;
+                                        end
+                                        MOP_INDEXED: begin
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VSXE;
+                                            decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
+                                            decode_instr_int.use_vs1 = 1'b1;
+                                            decode_instr_int.vs1 = decode_i.inst.vstype.sumop;
                                         end
                                         default: begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -756,6 +787,18 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSLTU: begin
+                                        decode_instr_int.instr_type = VMSLTU;
+                                    end
+                                    F6_VMSLT: begin
+                                        decode_instr_int.instr_type = VMSLT;
+                                    end
+                                    F6_VMSLEU: begin
+                                        decode_instr_int.instr_type = VMSLEU;
+                                    end
+                                    F6_VMSLE: begin
+                                        decode_instr_int.instr_type = VMSLE;
+                                    end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;
                                     end
@@ -765,8 +808,15 @@ module decoder
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
                                     end
-                                    F6_VMV: begin
-                                        decode_instr_int.instr_type = VMV;
+                                    F6_VNSRL: begin
+                                        decode_instr_int.instr_type = VNSRL;
+                                    end
+                                    F6_VNSRA: begin
+                                        decode_instr_int.instr_type = VNSRA;
+                                    end
+                                    F6_VMERGE_VMV: begin
+                                        decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
+                                        decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -808,6 +858,18 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSLTU: begin
+                                        decode_instr_int.instr_type = VMSLTU;
+                                    end
+                                    F6_VMSLT: begin
+                                        decode_instr_int.instr_type = VMSLT;
+                                    end
+                                    F6_VMSLEU: begin
+                                        decode_instr_int.instr_type = VMSLEU;
+                                    end
+                                    F6_VMSLE: begin
+                                        decode_instr_int.instr_type = VMSLE;
+                                    end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;
                                     end
@@ -817,9 +879,16 @@ module decoder
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
                                     end
-                                    F6_VMV: begin
-                                        decode_instr_int.use_vs2 = 1'b0;
-                                        decode_instr_int.instr_type = VMV;
+                                    F6_VNSRL: begin
+                                        decode_instr_int.instr_type = VNSRL;
+                                    end
+                                    F6_VNSRA: begin
+                                        decode_instr_int.instr_type = VNSRA;
+                                    end
+                                    F6_VMERGE_VMV: begin
+                                        decode_instr_int.use_vs1 = 1'b0;
+                                        decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
+                                        decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -846,6 +915,12 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSLEU: begin
+                                        decode_instr_int.instr_type = VMSLEU;
+                                    end
+                                    F6_VMSLE: begin
+                                        decode_instr_int.instr_type = VMSLE;
+                                    end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;
                                     end
@@ -855,9 +930,16 @@ module decoder
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
                                     end
-                                    F6_VMV: begin
-                                        decode_instr_int.use_vs2 = 1'b0;
-                                        decode_instr_int.instr_type = VMV;
+                                    F6_VNSRL: begin
+                                        decode_instr_int.instr_type = VNSRL;
+                                    end
+                                    F6_VNSRA: begin
+                                        decode_instr_int.instr_type = VNSRA;
+                                    end
+                                    F6_VMERGE_VMV: begin
+                                        decode_instr_int.use_vs1 = 1'b0;
+                                        decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
+                                        decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -903,6 +985,83 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VEXT;
                                     end
+                                    F6_VMAND: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMAND;
+                                    end
+                                    F6_VMOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMOR;
+                                    end
+                                    F6_VMXOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMXOR;
+                                    end
+                                    F6_VWADDU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWADDU;
+                                    end
+                                    F6_VWADD: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWADD;
+                                    end
+                                    F6_VWSUBU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWSUBU;
+                                    end
+                                    F6_VWSUB: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWSUB;
+                                    end
+                                    F6_VWADDUW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWADDUW;
+                                    end
+                                    F6_VWADDW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWADDW;
+                                    end
+                                    F6_VWSUBUW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWSUBUW;
+                                    end
+                                    F6_VWSUBW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VWSUBW;
+                                    end
                                     F6_VCNT: begin
                                         decode_instr_int.vregfile_we = 1'b0;
                                         decode_instr_int.regfile_we = 1'b1;
@@ -917,7 +1076,7 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
-                                    F6_VWXUNARY0: begin
+                                    F6_VRWXUNARY0: begin
                                         if (decode_i.inst.vtype.vs1 == VS1_VMV_X_S) begin
                                             decode_instr_int.vregfile_we = 1'b0;
                                             decode_instr_int.regfile_we = 1'b1;
@@ -963,7 +1122,7 @@ module decoder
                                 endcase
                             end
                             F3_OPMVX: begin
-                                decode_instr_int.is_opvx     = 1'b1;
+                                decode_instr_int.is_opvx = 1'b1;
                                 decode_instr_int.use_vs1 = 1'b0;
                                 decode_instr_int.use_vs2 = 1'b1;
                                 decode_instr_int.use_rs1 = 1'b1;
@@ -987,6 +1146,46 @@ module decoder
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULH;
+                                    end
+                                    F6_VWADDU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWADDU;
+                                    end
+                                    F6_VWADD: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWADD;
+                                    end
+                                    F6_VWSUBU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWSUBU;
+                                    end
+                                    F6_VWSUB: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWSUB;
+                                    end
+                                    F6_VWADDUW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWADDUW;
+                                    end
+                                    F6_VWADDW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWADDW;
+                                    end
+                                    F6_VWSUBUW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWSUBUW;
+                                    end
+                                    F6_VWSUBW: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VWSUBW;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;

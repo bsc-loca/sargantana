@@ -21,6 +21,7 @@ module csr_interface
     input  logic            commit_xcpt_i,            // Exception at Commit
     input  bus64_t          result_gl_i,
     input  reg_csr_addr_t   csr_addr_gl_i,
+    input  reg_csr_addr_t   vsetvl_vtype_i,
     input  gl_instruction_t [1:0] instruction_to_commit_i,  // Instruction to be Committed
     input  logic            stall_exe_i,              // Exe Stage is Stalled
     input  logic            commit_store_or_amo_i,    // The Commit Instruction is AMO or STORE
@@ -37,12 +38,14 @@ module csr_interface
 bus64_t csr_rw_data_int;
 logic   csr_ena_int;
 csr_cmd_t csr_cmd_int;
+csr_addr_t csr_addr_int;
 
 
 always_comb begin
     csr_cmd_int = CSR_CMD_NOPE;
     csr_rw_data_int = 64'b0;
     csr_ena_int = 1'b0;
+    csr_addr_int = csr_addr_gl_i;
     if (instruction_to_commit_i[0].valid && !instruction_to_commit_i[0].ex_valid) begin
         case (instruction_to_commit_i[0].instr_type)
             CSRRW: begin
@@ -87,10 +90,20 @@ always_comb begin
                 csr_rw_data_int = 64'b0;
                 csr_ena_int = 1'b1;
             end
-            VSETVLI,
+            VSETVLI: begin
+                csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
+                csr_rw_data_int = result_gl_i; //(instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
+                csr_ena_int = 1'b1;
+            end
             VSETVL: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
                 csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
+                csr_ena_int = 1'b1;
+                csr_addr_int = vsetvl_vtype_i;
+            end
+            VSETIVLI: begin
+                csr_cmd_int = CSR_CMD_VSETVL;
+                csr_rw_data_int = result_gl_i;
                 csr_ena_int = 1'b1;
             end
             default: begin
@@ -130,7 +143,7 @@ end
                                 instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid;
 
 // CSR and Exceptions
-assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? csr_addr_gl_i : {CSR_ADDR_SIZE{1'b0}};
+assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? csr_addr_int : {CSR_ADDR_SIZE{1'b0}};
 // if csr not enabled send command NOP
 assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
 // if csr not enabled send the interesting addr that you are accesing, exception help

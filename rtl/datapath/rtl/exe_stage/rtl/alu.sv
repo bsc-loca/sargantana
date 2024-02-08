@@ -77,6 +77,9 @@ always_comb begin
         AND: begin
             instruction_o.result = data_rs1 & data_rs2;
         end
+        VSETIVLI: begin
+            instruction_o.result = {32'b0, instruction_i.instr.imm[63:32]};
+        end
         default: begin
             if (instruction_i.instr.unit == UNIT_SYSTEM)
                 instruction_o.result = data_rs1;
@@ -99,7 +102,7 @@ assign instruction_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
 assign instruction_o.regfile_we      = instruction_i.instr.regfile_we;
 assign instruction_o.instr_type      = instruction_i.instr.instr_type;
 assign instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-assign instruction_o.csr_addr        = instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_o.csr_addr        = (instruction_i.instr.instr_type == VSETVL) ? data_rs2[CSR_ADDR_SIZE-1:0] : instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
 assign instruction_o.prd             = instruction_i.prd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;

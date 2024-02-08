@@ -35,6 +35,7 @@ module datapath
     input [1:0]             csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
+    input [14:0]            vl_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
@@ -174,6 +175,7 @@ module datapath
 
     bus64_t result_gl_out_int;
     reg_csr_addr_t csr_addr_gl_out_int;
+    reg_csr_addr_t vsetvl_vtype_int;
     exception_t ex_gl_out_int;
 
     exception_t interrupt_ex;
@@ -827,7 +829,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                         stage_ir_rr_q.instr.instr_type == CSRRSI ||
                         stage_ir_rr_q.instr.instr_type == CSRRCI ||
                         stage_ir_rr_q.instr.instr_type == VSETVL ||
-                        stage_ir_rr_q.instr.instr_type == VSETVLI);
+                        stage_ir_rr_q.instr.instr_type == VSETVLI||
+                        stage_ir_rr_q.instr.instr_type == VSETIVLI);
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     
 
@@ -860,6 +863,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .empty_o(debug_o.reg_backend_empty),
         .csr_addr_o(csr_addr_gl_out_int),
         .result_o(result_gl_out_int),
+        .vsetvl_vtype_o(vsetvl_vtype_int),
         .exception_o(ex_gl_out_int)
     );
 
@@ -1029,9 +1033,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             snoop_exe_data_vs1 |= snoop_exe_vs1[i] ? simd_data_wb_to_exe[i] : 'h0;
             snoop_exe_data_vs2 |= snoop_exe_vs2[i] ? simd_data_wb_to_exe[i] : 'h0;
             snoop_exe_data_old_vd |= snoop_exe_old_vd[i] ? simd_data_wb_to_exe[i] : 'h0;
-            for (int j = 0; j<VLEN/8; ++j) begin
-                snoop_exe_data_vm[j]  |= snoop_exe_vm[i]  ? simd_data_wb_to_exe[i][j*8] : 'h0; //LSB of every byte
-            end
+            snoop_exe_data_vm |= snoop_exe_vm[i] ? simd_data_wb_to_exe[i][VMAXELEM-1:0] : 'h0;
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
@@ -1118,6 +1120,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
         .from_rr_i(reg_to_exe),
         .sew_i(sew_i),
+        .vl_i(vl_i),
         
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
@@ -1337,6 +1340,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .commit_xcpt_i              (commit_xcpt),
         .result_gl_i                (result_gl_out_int),
         .csr_addr_gl_i              (csr_addr_gl_out_int),
+        .vsetvl_vtype_i             (vsetvl_vtype_int),
         .instruction_to_commit_i    (instruction_to_commit),
         .stall_exe_i                (control_int.stall_exe),
         .commit_store_or_amo_i      (commit_store_or_amo_int[0]),
@@ -1395,7 +1399,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                                          instruction_to_commit[0].instr_type == CSRRSI ||
                                          instruction_to_commit[0].instr_type == CSRRCI ||
                                          instruction_to_commit[0].instr_type == VSETVL ||
-                                         instruction_to_commit[0].instr_type == VSETVLI);
+                                         instruction_to_commit[0].instr_type == VSETVLI||
+                                         instruction_to_commit[0].instr_type == VSETIVLI);
 
     assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid);

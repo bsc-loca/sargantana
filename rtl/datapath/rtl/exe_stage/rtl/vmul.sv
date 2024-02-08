@@ -38,8 +38,8 @@ wire is_mulh_0 = (instr_type_i != VMUL);
 wire is_signed_0 = (instr_type_i != VMULHU);
 wire is_mixed_signed_0 = (instr_type_i == VMULHSU);
 
-wire src1_signed_0 = (is_signed_0);
-wire src2_signed_0 = (is_signed_0 ^ is_mixed_signed_0);
+wire src1_signed_0 = (is_signed_0 ^ is_mixed_signed_0);
+wire src2_signed_0 = (is_signed_0);
 
 logic [7:0] negative_results_0;
 
@@ -256,9 +256,15 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
         negative_results_2       <= 8'b0;
-        products_8b_2            <= '{default:'0};
-        products_16b_2           <= '{default:'0};
-        products_32b_2           <= '{default:'0};
+        for (int i=0; i < 8; i++) begin
+            products_8b_2[i]     <= '{default:'0};
+        end
+        for (int i=0; i < 4; i++) begin
+            products_16b_2[i]    <= '{default:'0};
+        end
+        for (int i=0; i < 2; i++) begin
+            products_32b_2[i]    <= '{default:'0};
+        end
     end
     else begin
         sew_2                    <= sew_1;

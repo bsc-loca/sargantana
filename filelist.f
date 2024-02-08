@@ -44,7 +44,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/functional_unit_mc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/functional_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/vcomp.sv
-./rtl/datapath/rtl/exe_stage/rtl/vred.sv
+./rtl/datapath/rtl/exe_stage/rtl/vredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv
@@ -54,8 +54,10 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd_unit_mc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd_unit.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/vaddsub.sv 
+./rtl/datapath/rtl/exe_stage/rtl/vwaddsub.sv
 ./rtl/datapath/rtl/exe_stage/rtl/div_4bits.sv 
 ./rtl/datapath/rtl/exe_stage/rtl/store_buffer.sv 
+./rtl/datapath/rtl/exe_stage/rtl/vagu.sv
 ./rtl/datapath/rtl/if_stage_1/rtl/bimodal_predictor.sv
 ./rtl/datapath/rtl/if_stage_1/rtl/return_address_stack.sv
 ./rtl/datapath/rtl/if_stage_1/rtl/branch_predictor.sv
