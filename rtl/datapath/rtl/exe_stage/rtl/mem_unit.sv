@@ -45,10 +45,11 @@ module mem_unit
     output cache_tlb_comm_t      dtlb_comm_o,
 
     input logic [1:0] priv_lvl_i,
+    input logic [14:0] vl_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
-    output bus64_t               store_data_o,
+    output bus_simd_t            store_data_o,
     `endif
 
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
@@ -144,7 +145,6 @@ logic vstore_packer_complete;
 logic [VECTOR_PACKER_NUM_LOG:0] vstore_packer_nfree_d, vstore_packer_nfree_q;
 logic [VECTOR_PACKER_NUM_LOG-1:0] vstore_packer_write_idx;
 logic vstore_packer_write, vstore_packer_free;
-logic [VMAXELEM_LOG:0] vload_vl_to_wb, vstore_vl_to_wb, vl_to_dcache;
 logic vload_packer_full, vstore_packer_full;
 logic vlm_inst_wb, vlsm_inst_s1;
 
@@ -505,7 +505,10 @@ always_comb begin
         instruction_to_wb.load_mask       = instruction_from_pmrq.load_mask;     
         instruction_to_wb.velem_off       = instruction_from_pmrq.velem_off; 
         instruction_to_wb.velem_incr      = instruction_from_pmrq.velem_incr;  
-        instruction_to_wb.neg_stride      = instruction_from_pmrq.neg_stride;      
+        instruction_to_wb.neg_stride      = instruction_from_pmrq.neg_stride;     
+        `ifdef SIM_COMMIT_LOG
+        instruction_to_wb.vaddr      = instruction_from_pmrq.vaddr; 
+        `endif
         advance_head_prmq      = 1'b1;
         flush_amo_prmq         = instruction_from_pmrq.is_amo;
         data_dcache            = instruction_from_pmrq.data_rs2;
@@ -541,6 +544,7 @@ always_comb begin
 end
 
 bus_simd_t masked_data_to_wb;
+logic [VMAXELEM_LOG:0] packed_velems;
 assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 assign vlsm_inst_s1 = ((instruction_s1_d.instr.instr_type == VLM) || (instruction_s1_d.instr.instr_type == VSM)) ? 1'b1 : 1'b0;
 
@@ -561,8 +565,8 @@ always_comb begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
-                            vdata_to_wb_d[(8*(j+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
-                            j = j + 1;
+                            vdata_to_wb_d[(8*(packed_velems+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
+                            packed_velems = packed_velems + 1'b1;
                         end
                     end
                 end
@@ -570,8 +574,8 @@ always_comb begin
                 automatic int j = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb_d[(8*(j+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
-                        j = j - 1;
+                        vdata_to_wb_d[(8*(packed_velems+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
+                        packed_velems = packed_velems - 1'b1;
                     end
                 end 
             end
@@ -587,8 +591,8 @@ always_comb begin
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb_d[(16*(j+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
-                            j = j + 1;
+                            vdata_to_wb_d[(16*(packed_velems+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
+                            packed_velems = packed_velems + 1'b1;
                         end
                     end
                 end
@@ -596,8 +600,8 @@ always_comb begin
                 automatic int j = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb_d[(16*(j+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
-                        j = j - 1;
+                        vdata_to_wb_d[(16*(packed_velems+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
+                        packed_velems = packed_velems - 1'b1;
                     end
                 end 
             end
@@ -613,8 +617,8 @@ always_comb begin
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb_d[(32*(j+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
-                            j = j + 1;
+                            vdata_to_wb_d[(32*(packed_velems+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
+                            packed_velems = packed_velems + 1'b1;
                         end
                     end
                 end
@@ -622,8 +626,8 @@ always_comb begin
                 automatic int j = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb_d[(32*(j+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
-                        j = j - 1;
+                        vdata_to_wb_d[(32*(packed_velems+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
+                        packed_velems = packed_velems - 1'b1;
                     end
                 end 
             end
@@ -639,8 +643,8 @@ always_comb begin
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb_d[(64*(j+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
-                            j = j + 1;
+                            vdata_to_wb_d[(64*(packed_velems+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
+                            packed_velems = packed_velems + 1'b1;
                         end
                     end
                 end
@@ -648,8 +652,8 @@ always_comb begin
                 automatic int j = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb_d[(64*(j+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
-                        j = j - 1;
+                        vdata_to_wb_d[(64*(packed_velems+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
+                        packed_velems = packed_velems - 1'b1;
                     end
                 end 
             end
@@ -754,7 +758,7 @@ always_comb begin
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                 if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;
-                    if ((vload_packer_nelem_q[i] + instruction_to_wb.velem_incr) >= vload_vl_to_wb) begin
+                    if ((vload_packer_nelem_q[i] + instruction_to_wb.velem_incr) >= vl_i[VMAXELEM_LOG:0]) begin
                         vload_packer_nelem_d[i] = '1;
                         vload_packer_complete = 1'b1;
                         vload_packer_free = 1'b1;
@@ -771,7 +775,7 @@ always_comb begin
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s1_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
-                        if ((vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr) >= vstore_vl_to_wb) begin
+                        if ((vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr) >= vl_i[VMAXELEM_LOG:0]) begin
                             vstore_packer_nelem_d[i] = '1;
                             vstore_packer_complete = 1'b1;
                             vstore_packer_free = 1'b1;

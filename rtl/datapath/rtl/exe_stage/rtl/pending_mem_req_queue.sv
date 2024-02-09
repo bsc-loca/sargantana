@@ -121,7 +121,10 @@ begin
             instruction_table[tail].load_mask       <= instruction_i.load_mask;     
             instruction_table[tail].velem_off       <= instruction_i.velem_off; 
             instruction_table[tail].velem_incr      <= instruction_i.velem_incr;  
-            instruction_table[tail].neg_stride      <= instruction_i.neg_stride;                  
+            instruction_table[tail].neg_stride      <= instruction_i.neg_stride;
+            `ifdef SIM_COMMIT_LOG
+            instruction_table[tail].vaddr           <= instruction_i.vaddr;
+            `endif
             tag_table[tail]              <= tag_i;
 
             instruction_table[tail].data_rs2 <= 'h0;

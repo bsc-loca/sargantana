@@ -55,7 +55,7 @@ module datapath
     logic commit_valid[1:0];
     commit_data_t commit_data[1:0];
     addr_t store_addr;
-    bus64_t store_data;
+    bus_simd_t store_data;
 `endif
 
     bus64_t pc_if1, pc_if2, pc_id, pc_rr, pc_exe, pc_wb;
