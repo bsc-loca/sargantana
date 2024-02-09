@@ -391,6 +391,7 @@ mem_unit #(
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
     .priv_lvl_i(priv_lvl_i),
+    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),
