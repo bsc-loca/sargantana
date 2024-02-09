@@ -729,6 +729,8 @@ always_comb begin
             vstore_packer_nelem_d[i] = '1;
             vstore_packer_nfree_d = 1'b1 << VECTOR_PACKER_NUM_LOG;
         end
+        vload_packer_complete = 1'b1;
+        vstore_packer_complete = 1'b1;
     end else begin
         if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_to_dcache) && ~vlsm_inst_s1) begin
             for (int i = VECTOR_PACKER_NUM_ENTRIES-1; i>=0; --i) begin
