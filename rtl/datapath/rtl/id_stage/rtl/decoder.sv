@@ -1074,7 +1074,8 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
-                                    F6_VRWXUNARY0: begin
+                                    //F6_VRXUNARY0: begin
+                                    F6_VWXUNARY0: begin
                                         if (decode_i.inst.vtype.vs1 == VS1_VMV_X_S) begin
                                             decode_instr_int.vregfile_we = 1'b0;
                                             decode_instr_int.regfile_we = 1'b1;
