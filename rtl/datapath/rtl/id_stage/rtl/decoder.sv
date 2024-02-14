@@ -1074,8 +1074,7 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
-                                    //F6_VRXUNARY0: begin
-                                    F6_VWXUNARY0: begin
+                                    F6_VRWXUNARY0: begin
                                         if (decode_i.inst.vtype.vs1 == VS1_VMV_X_S) begin
                                             decode_instr_int.vregfile_we = 1'b0;
                                             decode_instr_int.regfile_we = 1'b1;
@@ -1188,6 +1187,12 @@ module decoder
                                         decode_instr_int.use_vs1 = 1'b0;
                                         decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
+                                    end
+                                    F6_VRWXUNARY0: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMV_S_X;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
