@@ -330,7 +330,8 @@ typedef enum logic [5:0] {
     F6_VREDOR    = 6'b000010,
     F6_VREDXOR   = 6'b000011,
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
-    F6_VRWXUNARY0 = 6'b010000,
+    F6_VWXUNARY0 = 6'b010000,
+    F6_VRXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
     F6_VMAND     = 6'b011001,
     F6_VMOR      = 6'b011010,

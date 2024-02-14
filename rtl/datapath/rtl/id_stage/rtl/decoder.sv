@@ -1183,6 +1183,11 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VWSUBW;
                                     end
+                                    F6_VMERGE_VMV: begin
+                                        decode_instr_int.use_vs1 = 1'b0;
+                                        decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
+                                        decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
