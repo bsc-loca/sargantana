@@ -1212,6 +1212,9 @@ module decoder
                                 end else if (!decode_i.inst[31]) begin
                                     decode_instr_int.instr_type = VSETVLI;
                                     decode_instr_int.use_imm = 1'b1;
+                                end else if (decode_i.inst[31] && decode_i.inst[30]) begin
+                                    decode_instr_int.instr_type = VSETIVLI;
+                                    decode_instr_int.use_imm = 1'b1;
                                 end else begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
