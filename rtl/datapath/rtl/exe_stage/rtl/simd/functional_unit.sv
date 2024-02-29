@@ -76,7 +76,7 @@ vmul vmul_inst(
 
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
-        VADD, VSUB: begin
+        VADD, VSUB, VRSUB: begin
             data_vd_o = result_vaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin

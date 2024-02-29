@@ -30,26 +30,34 @@ logic is_sub;
 logic [7:0] carry_in;
 logic [7:0] carry_out;
 bus64_t data_vs1;
+bus64_t data_vs2;
 logic [7:0][7:0] data_a;  // byte source vs2
 logic [7:0][7:0] data_b;  // byte source vs1
 logic [7:0][8:0] result;  // byte + carry_out partial results
 
-assign is_sub = (instr_type_i == VSUB) ? 1'b1 : 1'b0;
+assign is_sub = ((instr_type_i == VSUB)) ? 1'b1 : 1'b0;
+assign is_rsub = ((instr_type_i == VRSUB)) ? 1'b1 : 1'b0;
 
 always_comb begin
     //If a subtraction is performed, the operand is flipped and a 1'b1 is
     //selected as carry_in (vs2 - vs1 = vs2 + (-vs1))
     if (is_sub) begin
         data_vs1 = ~data_vs1_i;
+        data_vs2 = data_vs2_i;
+        carry_in[0] = 1'b1;
+    end else if (is_rsub) begin
+        data_vs2 = ~data_vs2_i;
+        data_vs1 = data_vs1_i;
         carry_in[0] = 1'b1;
     end else begin
         data_vs1 = data_vs1_i;
+        data_vs2 = data_vs2_i;
         carry_in[0] = 1'b0;
     end
 
     //The source operands are split into byte arrays
     for (int i = 0; i<8; ++i) begin
-        data_a[i] = data_vs2_i[(8*i)+:8];
+        data_a[i] = data_vs2[(8*i)+:8];
         data_b[i] = data_vs1[(8*i)+:8];
     end
 end
@@ -90,17 +98,17 @@ assign data_vd_o[63:56] = result[7][7:0];
 // - Otherwise, if the operation is a sub, a 1'b1 is selected
 // - Otherwise, 1'b0 is selected
 assign carry_in[1] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[0] : (is_sub) ? 1'b1 : 1'b0;
+                        carry_out[0] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[2] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[1] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[1] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[3] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[2] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[2] : (is_sub|| is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[4] = ((sew_i == SEW_64)) ? 
-                        carry_out[3] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[3] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ?
-                        carry_out[4] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[4] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[5] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[5] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 assign carry_in[7] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[6] : is_sub ? 1'b1 : 1'b0;
+                        carry_out[6] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
 endmodule

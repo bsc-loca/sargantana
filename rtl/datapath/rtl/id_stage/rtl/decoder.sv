@@ -836,6 +836,9 @@ module decoder
                                     F6_VSUB: begin
                                         decode_instr_int.instr_type = VSUB;
                                     end
+                                    F6_VRSUB: begin
+                                        decode_instr_int.instr_type = VRSUB;
+                                    end
                                     F6_VMIN: begin
                                         decode_instr_int.instr_type = VMIN;
                                     end
@@ -904,6 +907,9 @@ module decoder
                                 case (decode_i.inst.vtype.func6)
                                     F6_VADD: begin
                                         decode_instr_int.instr_type = VADD;
+                                    end
+                                    F6_VRSUB: begin
+                                        decode_instr_int.instr_type = VRSUB;
                                     end
                                     F6_VAND: begin
                                         decode_instr_int.instr_type = VAND;

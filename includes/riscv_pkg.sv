@@ -304,6 +304,7 @@ typedef enum logic [2:0] {
 typedef enum logic [5:0] {
     F6_VADD         = 6'b000000,
     F6_VSUB         = 6'b000010,
+    F6_VRSUB        = 6'b000011,
     F6_VMINU        = 6'b000100,
     F6_VMIN         = 6'b000101,
     F6_VMAXU        = 6'b000110,
