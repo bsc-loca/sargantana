@@ -36,7 +36,7 @@ module regfile
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [1:NUM_PHISICAL_REGISTERS-1];
+reg64_t registers [NUM_PHISICAL_REGISTERS-1:1];
 bus64_t bypass_data1;
 bus64_t bypass_data2;
 logic   bypass1;
@@ -52,12 +52,12 @@ always_comb begin
     bypass2 = 1'b0;
 
     for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-        if (write_addr_i[i] == read_addr1_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr1_i) && write_enable_i[i]) begin
             bypass_data1 |= write_data_i[i];
             bypass1      |= 1'b1;
         end
 
-        if (write_addr_i[i] == read_addr2_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr2_i) && write_enable_i[i]) begin
             bypass_data2 |= write_data_i[i];
             bypass2      |= 1'b1;
         end

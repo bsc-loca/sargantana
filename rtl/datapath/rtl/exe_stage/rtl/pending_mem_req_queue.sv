@@ -51,6 +51,7 @@ logic [$clog2(PMRQ_NUM_ENTRIES):0] num;
 logic write_enable;
 logic read_enable;
 logic advance_head_enable;
+logic mv_back_head_enable;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
@@ -67,11 +68,11 @@ assign mv_back_head_enable = mv_back_tail_i & (!instruction_i.instr.valid) & (nu
 
 
 // FIFO Memory structure, stores instructions
-pmrq_instr_t instruction_table    [0:PMRQ_NUM_ENTRIES-1];
+pmrq_instr_t instruction_table    [PMRQ_NUM_ENTRIES-1:0];
 // Tag Storage
-logic [6:0]    tag_table                [0:PMRQ_NUM_ENTRIES-1];
+logic [6:0]    tag_table                [PMRQ_NUM_ENTRIES-1:0];
 // Instruction already finished
-logic          finish_bit_table         [0:PMRQ_NUM_ENTRIES-1];
+logic          finish_bit_table         [PMRQ_NUM_ENTRIES-1:0];
 
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
@@ -96,7 +97,6 @@ begin
             instruction_table[tail].data_old_vd     <= instruction_i.data_old_vd;            
             instruction_table[tail].data_vm         <= instruction_i.data_vm;                
             instruction_table[tail].sew             <= instruction_i.sew;                    
-            instruction_table[tail].imm             <= instruction_i.imm;                       
             instruction_table[tail].prs1            <= instruction_i.prs1;                      
             instruction_table[tail].rdy1            <= instruction_i.rdy1;                      
             instruction_table[tail].prs2            <= instruction_i.prs2;                      

@@ -12,7 +12,7 @@
  * -----------------------------------------------
  */
 
-module functional_unit_mc
+module functional_unit
     import drac_pkg::*;
     import riscv_pkg::*;
 (
@@ -101,28 +101,28 @@ always_comb begin
             data_vd_o = '1;
             case (sel_out_instr_i.sew)
                 SEW_8: begin
-                    for (int i = 0; i<VLEN/8; ++i) begin
+                    for (int i = 0; i<(VLEN/8); ++i) begin
                         data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
                                        (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
                                                                                      data_vs1_i[i] ^ data_vs2_i[i];
                     end
                 end
                 SEW_16: begin
-                    for (int i = 0; i<VLEN/16; ++i) begin
+                    for (int i = 0; i<(VLEN/16); ++i) begin
                         data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
                                        (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
                                                                                      data_vs1_i[i] ^ data_vs2_i[i];
                     end
                 end
                 SEW_32: begin
-                    for (int i = 0; i<VLEN/32; ++i) begin
+                    for (int i = 0; i<(VLEN/32); ++i) begin
                         data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
                                        (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
                                                                                      data_vs1_i[i] ^ data_vs2_i[i];
                     end
                 end
                 SEW_64: begin
-                    for (int i = 0; i<VLEN/64; ++i) begin
+                    for (int i = 0; i<(VLEN/64); ++i) begin
                         data_vd_o = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
                                     (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
                                                                                   data_vs1_i[i] ^ data_vs2_i[i];

@@ -128,14 +128,14 @@ always_comb begin
     instruction_o.ex.origin = 0;
     instruction_o.ex.valid  = 0;
     if(instruction_i.instr.valid) begin // Check exceptions in exe stage
-        if (result[1:0] != 0 && instruction_i.instr.unit == UNIT_BRANCH &&
-             (instruction_i.instr.instr_type == JALR ||
-               ((instruction_i.instr.instr_type == BLT  || 
-                 instruction_i.instr.instr_type == BLTU || 
-                 instruction_i.instr.instr_type == BGE  ||
-                 instruction_i.instr.instr_type == BGEU || 
-                 instruction_i.instr.instr_type == BEQ  || 
-                 instruction_i.instr.instr_type == BNE ) &&
+        if ((result[1:0] != 0) && (instruction_i.instr.unit == UNIT_BRANCH) &&
+             ((instruction_i.instr.instr_type == JALR) ||
+               (((instruction_i.instr.instr_type == BLT)  || 
+                 (instruction_i.instr.instr_type == BLTU) || 
+                 (instruction_i.instr.instr_type == BGE)  ||
+                 (instruction_i.instr.instr_type == BGEU) || 
+                 (instruction_i.instr.instr_type == BEQ)  || 
+                 (instruction_i.instr.instr_type == BNE) ) &&
                 branch_taken ))) begin // invalid address
             instruction_o.ex.cause = INSTR_ADDR_MISALIGNED;
             instruction_o.ex.origin = result;

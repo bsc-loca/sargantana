@@ -72,8 +72,8 @@ bimodal_predictor bimodal_predictor_inst(
 /////////// Instantiation of is branch predictor                                                   /////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    logic [PHY_VIRT_MAX_ADDR_SIZE - MOST_SIGNIFICATIVE_INDEX_BIT_BP - 1  : 0] is_branch_table [0 : NUM_IS_BRANCH_ENTRIES-1]; 
-    logic                                                                     is_branch_table_valid [0 : NUM_IS_BRANCH_ENTRIES-1];
+    logic [PHY_VIRT_MAX_ADDR_SIZE-MOST_SIGNIFICATIVE_INDEX_BIT_BP-1:0] is_branch_table [NUM_IS_BRANCH_ENTRIES-1:0]; 
+    logic                                                                     is_branch_table_valid [NUM_IS_BRANCH_ENTRIES-1:0];
 
 
 `ifdef QUESTASIM     
@@ -99,11 +99,12 @@ bimodal_predictor bimodal_predictor_inst(
         is_branch_tag_valid = is_branch_table_valid[pc_fetch_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]];
     end
     
-    always @(posedge clk_i, negedge rstn_i) 
+    always_ff @(posedge clk_i, negedge rstn_i) 
     begin
         if(~rstn_i)begin
             for (int i = 0; i < NUM_IS_BRANCH_ENTRIES; i++) begin
                 is_branch_table_valid[i] <= 1'b0;
+                is_branch_table[i] <= 'h0;
             end
         end else if(is_branch_EX_i) begin
             is_branch_table[pc_execution_i[MOST_SIGNIFICATIVE_INDEX_BIT_BP:LEAST_SIGNIFICATIVE_INDEX_BIT_BP]] <= pc_execution_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1];
@@ -113,7 +114,7 @@ bimodal_predictor bimodal_predictor_inst(
 
 
 
-assign is_branch_prediction = (is_branch_tag == pc_fetch_i[39:MOST_SIGNIFICATIVE_INDEX_BIT_BP+1] && is_branch_tag_valid);
+assign is_branch_prediction = ((is_branch_tag == pc_fetch_i[39:(MOST_SIGNIFICATIVE_INDEX_BIT_BP + 1)]) && is_branch_tag_valid);
 
 
 // MUX that decides wheter the predicted address comes from Bimodal

@@ -48,7 +48,7 @@ assign write_enable = instruction_i.instr.valid & (num < INSTRUCTION_QUEUE_NUM_E
 assign read_enable = read_head_i & (num > 0) ;
 
 
-id_ir_stage_t instruction_buffer[0:INSTRUCTION_QUEUE_NUM_ENTRIES-1];
+id_ir_stage_t instruction_buffer[INSTRUCTION_QUEUE_NUM_ENTRIES-1:0];
 
 always_ff @(posedge clk_i)
 begin

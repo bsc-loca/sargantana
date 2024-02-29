@@ -556,7 +556,7 @@ typedef enum logic [1:0] {
 
 typedef enum logic [1:0] {
     Off     = 2'b00,
-    Initial = 2'b01,
+    Init_xs = 2'b01,
     Clean   = 2'b10,
     Dirty   = 2'b11
 } xs_t;

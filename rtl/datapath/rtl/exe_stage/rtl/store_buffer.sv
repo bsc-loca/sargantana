@@ -36,6 +36,14 @@ module store_buffer
 
 typedef logic [$clog2(ST_BUF_NUM_ENTRIES)-1:0] st_buf_entry_pointer;
 
+function [$clog2(ST_BUF_NUM_ENTRIES)-1:0] trunc_sum_st_buf(input [$clog2(ST_BUF_NUM_ENTRIES):0] val_in);
+  trunc_sum_st_buf = val_in[$clog2(ST_BUF_NUM_ENTRIES)-1:0];
+endfunction
+
+function [$clog2(ST_BUF_NUM_ENTRIES):0] trunc_sum_st_buf_plus(input [$clog2(ST_BUF_NUM_ENTRIES)+1:0] val_in);
+  trunc_sum_st_buf_plus = val_in[$clog2(ST_BUF_NUM_ENTRIES):0];
+endfunction
+
 // Points to the next available entry
 st_buf_entry_pointer tail;
 
@@ -66,7 +74,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 
 // FIFO Memory structure
-rr_exe_mem_instr_t instruction_table [0:ST_BUF_NUM_ENTRIES-1];
+rr_exe_mem_instr_t instruction_table [ST_BUF_NUM_ENTRIES-1:0];
 logic [ST_BUF_NUM_ENTRIES-1:0] valid_table;
 
 always_ff @(posedge clk_i, negedge rstn_i)
@@ -106,9 +114,9 @@ begin
         num  <= 4'b0;
     end
     else begin
-        head <= head + {2'b00, advance_head_enable};
-        tail <= tail + {2'b00, write_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, advance_head_enable};
+        head <= trunc_sum_st_buf(head + {2'b00, advance_head_enable});
+        tail <= trunc_sum_st_buf(tail + {2'b00, write_enable});
+        num  <= trunc_sum_st_buf_plus(num  + {3'b0, write_enable} - {3'b0, advance_head_enable});
     end
 end
 
@@ -116,19 +124,19 @@ always_comb begin : collision_detector
     collision = 1'b0;
     for (integer j = 0; j < ST_BUF_NUM_ENTRIES; j++) begin
         if (valid_table[j]) begin
-            if (load_size_i == 4'b1010 || instruction_table[j].instr.mem_size == 4'b1010) begin
+            if ((load_size_i == 4'b1010) || (instruction_table[j].instr.mem_size == 4'b1010)) begin
                 collision |= instruction_table[j].data_rs1[11:6] == load_addr_i[11:6];
-            end else if (load_size_i == 4'b1001 || instruction_table[j].instr.mem_size == 4'b1001) begin
+            end else if ((load_size_i == 4'b1001) || (instruction_table[j].instr.mem_size == 4'b1001)) begin
                 collision |= instruction_table[j].data_rs1[11:5] == load_addr_i[11:5];
-            end else if (load_size_i == 4'b1000 || instruction_table[j].instr.mem_size == 4'b1000) begin
+            end else if ((load_size_i == 4'b1000) || (instruction_table[j].instr.mem_size == 4'b1000)) begin
                 collision |= instruction_table[j].data_rs1[11:4] == load_addr_i[11:4];
-            end else if (load_size_i == 4'b0011 || instruction_table[j].instr.mem_size == 4'b0011) begin
+            end else if ((load_size_i == 4'b0011) || (instruction_table[j].instr.mem_size == 4'b0011)) begin
                 collision |= instruction_table[j].data_rs1[11:3] == load_addr_i[11:3];
-            end else if (load_size_i[1:0] == 2'b10 || instruction_table[j].instr.mem_size[1:0] == 2'b10) begin
+            end else if ((load_size_i[1:0] == 2'b10) || (instruction_table[j].instr.mem_size[1:0] == 2'b10)) begin
                 collision |= instruction_table[j].data_rs1[11:2] == load_addr_i[11:2];
-            end else if (load_size_i[1:0] == 2'b01 || instruction_table[j].instr.mem_size[1:0] == 2'b01) begin
+            end else if ((load_size_i[1:0] == 2'b01) || (instruction_table[j].instr.mem_size[1:0] == 2'b01)) begin
                 collision |= instruction_table[j].data_rs1[11:1] == load_addr_i[11:1];
-            end else if (load_size_i[1:0] == 2'b00 || instruction_table[j].instr.mem_size[1:0] == 2'b00) begin
+            end else if ((load_size_i[1:0] == 2'b00) || (instruction_table[j].instr.mem_size[1:0] == 2'b00)) begin
                 collision |= instruction_table[j].data_rs1[11:0] == load_addr_i[11:0];
             end
         end

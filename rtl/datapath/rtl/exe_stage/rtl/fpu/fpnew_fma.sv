@@ -17,13 +17,13 @@
 
 module fpnew_fma #(
   parameter fpnew_pkg::fp_format_e   FpFormat    = fpnew_pkg::fp_format_e'(0),
-  parameter int unsigned             NumPipeRegs = 0,
-  parameter fpnew_pkg::pipe_config_t PipeConfig  = fpnew_pkg::BEFORE,
-  parameter type                     TagType     = logic,
-  parameter type                     AuxType     = logic,
+  parameter int unsigned             NUM_PIPE_REGS = 0,
+  parameter fpnew_pkg::pipe_config_t PIPE_CONFIG  = fpnew_pkg::BEFORE_INPUTS,
+  parameter type                     TAG_TYPE     = logic,
+  parameter type                     AUX_TYPE     = logic,
   // Do not change
   localparam int unsigned WIDTH = fpnew_pkg::fp_width(FpFormat),
-  localparam int unsigned ExtRegEnaWidth = NumPipeRegs == 0 ? 1 : NumPipeRegs
+  localparam int unsigned EXT_REG_ENA_WIDTH = ((NUM_PIPE_REGS == 0) ? 1 : NUM_PIPE_REGS)
 ) (
   input logic                      clk_i,
   input logic                      rst_ni,
@@ -33,9 +33,9 @@ module fpnew_fma #(
   input fpnew_pkg::roundmode_e     rnd_mode_i,
   input fpnew_pkg::operation_e     op_i,
   input logic                      op_mod_i,
-  input TagType                    tag_i,
+  input TAG_TYPE                    tag_i,
   input logic                      mask_i,
-  input AuxType                    aux_i,
+  input AUX_TYPE                    aux_i,
   // Input Handshake
   input  logic                     in_valid_i,
   output logic                     in_ready_o,
@@ -44,16 +44,16 @@ module fpnew_fma #(
   output logic [WIDTH-1:0]         result_o,
   output fpnew_pkg::status_t       status_o,
   output logic                     extension_bit_o,
-  output TagType                   tag_o,
+  output TAG_TYPE                   tag_o,
   output logic                     mask_o,
-  output AuxType                   aux_o,
+  output AUX_TYPE                   aux_o,
   // Output handshake
   output logic                     out_valid_o,
   input  logic                     out_ready_i,
   // Indication of valid data in flight
   output logic                     busy_o,
   // External register enable override
-  input  logic [ExtRegEnaWidth-1:0] reg_ena_i
+  input  logic [EXT_REG_ENA_WIDTH-1:0] reg_ena_i
 );
 
   // ----------
@@ -74,20 +74,20 @@ module fpnew_fma #(
   // Shift amount width: maximum internal mantissa size is 3p+4 bits
   localparam int unsigned SHIFT_AMOUNT_WIDTH = $clog2(3 * PRECISION_BITS + 5);
   // Pipelines
-  localparam NUM_INP_REGS = PipeConfig == fpnew_pkg::BEFORE
-                            ? NumPipeRegs
-                            : (PipeConfig == fpnew_pkg::DISTRIBUTED
-                               ? ((NumPipeRegs + 1) / 3) // Second to get distributed regs
+  localparam NUM_INP_REGS = PIPE_CONFIG == fpnew_pkg::BEFORE_INPUTS
+                            ? NUM_PIPE_REGS
+                            : (PIPE_CONFIG == fpnew_pkg::DISTRIBUTED
+                               ? ((NUM_PIPE_REGS + 1) / 3) // Second to get distributed regs
                                : 0); // no regs here otherwise
-  localparam NUM_MID_REGS = PipeConfig == fpnew_pkg::INSIDE
-                          ? NumPipeRegs
-                          : (PipeConfig == fpnew_pkg::DISTRIBUTED
-                             ? ((NumPipeRegs + 2) / 3) // First to get distributed regs
+  localparam NUM_MID_REGS = PIPE_CONFIG == fpnew_pkg::INSIDE_UNIT
+                          ? NUM_PIPE_REGS
+                          : (PIPE_CONFIG == fpnew_pkg::DISTRIBUTED
+                             ? ((NUM_PIPE_REGS + 2) / 3) // First to get distributed regs
                              : 0); // no regs here otherwise
-  localparam NUM_OUT_REGS = PipeConfig == fpnew_pkg::AFTER
-                            ? NumPipeRegs
-                            : (PipeConfig == fpnew_pkg::DISTRIBUTED
-                               ? (NumPipeRegs / 3) // Last to get distributed regs
+  localparam NUM_OUT_REGS = PIPE_CONFIG == fpnew_pkg::AFTER_OUTPUTS
+                            ? NUM_PIPE_REGS
+                            : (PIPE_CONFIG == fpnew_pkg::DISTRIBUTED
+                               ? (NUM_PIPE_REGS / 3) // Last to get distributed regs
                                : 0); // no regs here otherwise
 
   // ----------------
@@ -103,17 +103,17 @@ module fpnew_fma #(
   // Input pipeline
   // ---------------
   // Input pipeline signals, index i holds signal after i register stages
-  logic                  [0:NUM_INP_REGS][2:0][WIDTH-1:0] inp_pipe_operands_q;
-  logic                  [0:NUM_INP_REGS][2:0]            inp_pipe_is_boxed_q;
-  fpnew_pkg::roundmode_e [0:NUM_INP_REGS]                 inp_pipe_rnd_mode_q;
-  fpnew_pkg::operation_e [0:NUM_INP_REGS]                 inp_pipe_op_q;
-  logic                  [0:NUM_INP_REGS]                 inp_pipe_op_mod_q;
-  TagType                [0:NUM_INP_REGS]                 inp_pipe_tag_q;
-  logic                  [0:NUM_INP_REGS]                 inp_pipe_mask_q;
-  AuxType                [0:NUM_INP_REGS]                 inp_pipe_aux_q;
-  logic                  [0:NUM_INP_REGS]                 inp_pipe_valid_q;
+  logic                  [NUM_INP_REGS:0][2:0][WIDTH-1:0] inp_pipe_operands_q;
+  logic                  [NUM_INP_REGS:0][2:0]            inp_pipe_is_boxed_q;
+  fpnew_pkg::roundmode_e [NUM_INP_REGS:0]                 inp_pipe_rnd_mode_q;
+  fpnew_pkg::operation_e [NUM_INP_REGS:0]                 inp_pipe_op_q;
+  logic                  [NUM_INP_REGS:0]                 inp_pipe_op_mod_q;
+  TAG_TYPE                [NUM_INP_REGS:0]                 inp_pipe_tag_q;
+  logic                  [NUM_INP_REGS:0]                 inp_pipe_mask_q;
+  AUX_TYPE                [NUM_INP_REGS:0]                 inp_pipe_aux_q;
+  logic                  [NUM_INP_REGS:0]                 inp_pipe_valid_q;
   // Ready signal is combinatorial for all stages
-  logic [0:NUM_INP_REGS] inp_pipe_ready;
+  logic [NUM_INP_REGS:0] inp_pipe_ready;
 
   // Input stage: First element of pipeline is taken from inputs
   assign inp_pipe_operands_q[0] = operands_i;
@@ -145,9 +145,9 @@ module fpnew_fma #(
     `FFL(inp_pipe_rnd_mode_q[i+1], inp_pipe_rnd_mode_q[i], reg_ena, fpnew_pkg::RNE)
     `FFL(inp_pipe_op_q[i+1],       inp_pipe_op_q[i],       reg_ena, fpnew_pkg::FMADD)
     `FFL(inp_pipe_op_mod_q[i+1],   inp_pipe_op_mod_q[i],   reg_ena, '0)
-    `FFL(inp_pipe_tag_q[i+1],      inp_pipe_tag_q[i],      reg_ena, TagType'('0))
+    `FFL(inp_pipe_tag_q[i+1],      inp_pipe_tag_q[i],      reg_ena, TAG_TYPE'('0))
     `FFL(inp_pipe_mask_q[i+1],     inp_pipe_mask_q[i],     reg_ena, '0)
-    `FFL(inp_pipe_aux_q[i+1],      inp_pipe_aux_q[i],      reg_ena, AuxType'('0))
+    `FFL(inp_pipe_aux_q[i+1],      inp_pipe_aux_q[i],      reg_ena, AUX_TYPE'('0))
   end
 
   // -----------------
@@ -403,24 +403,24 @@ module fpnew_fma #(
   fp_t                           special_result_q;
   fpnew_pkg::status_t            special_status_q;
   // Internal pipeline signals, index i holds signal after i register stages
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_eff_sub_q;
-  logic signed           [0:NUM_MID_REGS][EXP_WIDTH-1:0]          mid_pipe_exp_prod_q;
-  logic signed           [0:NUM_MID_REGS][EXP_WIDTH-1:0]          mid_pipe_exp_diff_q;
-  logic signed           [0:NUM_MID_REGS][EXP_WIDTH-1:0]          mid_pipe_tent_exp_q;
-  logic                  [0:NUM_MID_REGS][SHIFT_AMOUNT_WIDTH-1:0] mid_pipe_add_shamt_q;
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_sticky_q;
-  logic                  [0:NUM_MID_REGS][3*PRECISION_BITS+3:0]   mid_pipe_sum_q;
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_final_sign_q;
-  fpnew_pkg::roundmode_e [0:NUM_MID_REGS]                         mid_pipe_rnd_mode_q;
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_res_is_spec_q;
-  fp_t                   [0:NUM_MID_REGS]                         mid_pipe_spec_res_q;
-  fpnew_pkg::status_t    [0:NUM_MID_REGS]                         mid_pipe_spec_stat_q;
-  TagType                [0:NUM_MID_REGS]                         mid_pipe_tag_q;
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_mask_q;
-  AuxType                [0:NUM_MID_REGS]                         mid_pipe_aux_q;
-  logic                  [0:NUM_MID_REGS]                         mid_pipe_valid_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_eff_sub_q;
+  logic signed           [NUM_MID_REGS:0][EXP_WIDTH-1:0]          mid_pipe_exp_prod_q;
+  logic signed           [NUM_MID_REGS:0][EXP_WIDTH-1:0]          mid_pipe_exp_diff_q;
+  logic signed           [NUM_MID_REGS:0][EXP_WIDTH-1:0]          mid_pipe_tent_exp_q;
+  logic                  [NUM_MID_REGS:0][SHIFT_AMOUNT_WIDTH-1:0] mid_pipe_add_shamt_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_sticky_q;
+  logic                  [NUM_MID_REGS:0][3*PRECISION_BITS+3:0]   mid_pipe_sum_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_final_sign_q;
+  fpnew_pkg::roundmode_e [NUM_MID_REGS:0]                         mid_pipe_rnd_mode_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_res_is_spec_q;
+  fp_t                   [NUM_MID_REGS:0]                         mid_pipe_spec_res_q;
+  fpnew_pkg::status_t    [NUM_MID_REGS:0]                         mid_pipe_spec_stat_q;
+  TAG_TYPE                [NUM_MID_REGS:0]                         mid_pipe_tag_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_mask_q;
+  AUX_TYPE                [NUM_MID_REGS:0]                         mid_pipe_aux_q;
+  logic                  [NUM_MID_REGS:0]                         mid_pipe_valid_q;
   // Ready signal is combinatorial for all stages
-  logic [0:NUM_MID_REGS] mid_pipe_ready;
+  logic [NUM_MID_REGS:0] mid_pipe_ready;
 
   // Input stage: First element of pipeline is taken from upstream logic
   assign mid_pipe_eff_sub_q[0]     = effective_subtraction;
@@ -467,9 +467,9 @@ module fpnew_fma #(
     `FFL(mid_pipe_res_is_spec_q[i+1], mid_pipe_res_is_spec_q[i], reg_ena, '0)
     `FFL(mid_pipe_spec_res_q[i+1],    mid_pipe_spec_res_q[i],    reg_ena, '0)
     `FFL(mid_pipe_spec_stat_q[i+1],   mid_pipe_spec_stat_q[i],   reg_ena, '0)
-    `FFL(mid_pipe_tag_q[i+1],         mid_pipe_tag_q[i],         reg_ena, TagType'('0))
+    `FFL(mid_pipe_tag_q[i+1],         mid_pipe_tag_q[i],         reg_ena, TAG_TYPE'('0))
     `FFL(mid_pipe_mask_q[i+1],        mid_pipe_mask_q[i],        reg_ena, '0)
-    `FFL(mid_pipe_aux_q[i+1],         mid_pipe_aux_q[i],         reg_ena, AuxType'('0))
+    `FFL(mid_pipe_aux_q[i+1],         mid_pipe_aux_q[i],         reg_ena, AUX_TYPE'('0))
   end
   // Output stage: assign selected pipe outputs to signals for later use
   assign effective_subtraction_q = mid_pipe_eff_sub_q[NUM_MID_REGS];
@@ -585,7 +585,7 @@ module fpnew_fma #(
   logic                         rounded_sign;
   logic [EXP_BITS+MAN_BITS-1:0] rounded_abs; // absolute value of result after rounding
 
-  // Classification before round. RISC-V mandates checking underflow AFTER rounding!
+  // Classification before round. RISC-V mandates checking underflow AFTER_OUTPUTS rounding!
   assign of_before_round = final_exponent >= 2**(EXP_BITS)-1; // infinity exponent is all ones
   assign uf_before_round = final_exponent == 0;               // exponent for subnormals capped to 0
 
@@ -642,14 +642,14 @@ module fpnew_fma #(
   // Output Pipeline
   // ----------------
   // Output pipeline signals, index i holds signal after i register stages
-  fp_t                [0:NUM_OUT_REGS] out_pipe_result_q;
-  fpnew_pkg::status_t [0:NUM_OUT_REGS] out_pipe_status_q;
-  TagType             [0:NUM_OUT_REGS] out_pipe_tag_q;
-  logic               [0:NUM_OUT_REGS] out_pipe_mask_q;
-  AuxType             [0:NUM_OUT_REGS] out_pipe_aux_q;
-  logic               [0:NUM_OUT_REGS] out_pipe_valid_q;
+  fp_t                [NUM_OUT_REGS:0] out_pipe_result_q;
+  fpnew_pkg::status_t [NUM_OUT_REGS:0] out_pipe_status_q;
+  TAG_TYPE             [NUM_OUT_REGS:0] out_pipe_tag_q;
+  logic               [NUM_OUT_REGS:0] out_pipe_mask_q;
+  AUX_TYPE             [NUM_OUT_REGS:0] out_pipe_aux_q;
+  logic               [NUM_OUT_REGS:0] out_pipe_valid_q;
   // Ready signal is combinatorial for all stages
-  logic [0:NUM_OUT_REGS] out_pipe_ready;
+  logic [NUM_OUT_REGS:0] out_pipe_ready;
 
   // Input stage: First element of pipeline is taken from inputs
   assign out_pipe_result_q[0] = result_d;
@@ -675,9 +675,9 @@ module fpnew_fma #(
     // Generate the pipeline registers within the stages, use enable-registers
     `FFL(out_pipe_result_q[i+1], out_pipe_result_q[i], reg_ena, '0)
     `FFL(out_pipe_status_q[i+1], out_pipe_status_q[i], reg_ena, '0)
-    `FFL(out_pipe_tag_q[i+1],    out_pipe_tag_q[i],    reg_ena, TagType'('0))
+    `FFL(out_pipe_tag_q[i+1],    out_pipe_tag_q[i],    reg_ena, TAG_TYPE'('0))
     `FFL(out_pipe_mask_q[i+1],   out_pipe_mask_q[i],   reg_ena, '0)
-    `FFL(out_pipe_aux_q[i+1],    out_pipe_aux_q[i],    reg_ena, AuxType'('0))
+    `FFL(out_pipe_aux_q[i+1],    out_pipe_aux_q[i],    reg_ena, AUX_TYPE'('0))
   end
   // Output stage: Ready travels backwards from output side, driven by downstream circuitry
   assign out_pipe_ready[NUM_OUT_REGS] = out_ready_i;

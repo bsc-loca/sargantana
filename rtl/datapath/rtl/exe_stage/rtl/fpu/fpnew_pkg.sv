@@ -47,12 +47,12 @@ package fpnew_pkg;
   } fp_format_e;
 
   // Encodings for supported FP formats
-  localparam fp_encoding_t [0:NUM_FP_FORMATS-1] FP_ENCODINGS  = '{
-    '{8,  23}, // IEEE binary32 (single)
-    '{11, 52}, // IEEE binary64 (double)
-    '{5,  10}, // IEEE binary16 (half)
+  localparam fp_encoding_t [NUM_FP_FORMATS-1:0] FP_ENCODINGS  = '{
+    '{8,  7},   // custom binary16alt
     '{5,  2},  // custom binary8
-    '{8,  7}   // custom binary16alt
+    '{5,  10}, // IEEE binary16 (half)
+    '{11, 52}, // IEEE binary64 (double)
+    '{8,  23} // IEEE binary32 (single)
     // add new formats here
   };
 
@@ -177,10 +177,10 @@ package fpnew_pkg;
   // ------------------
   // Pipelining registers can be inserted (at elaboration time) into operational units
   typedef enum logic [1:0] {
-    BEFORE,     // registers are inserted at the inputs of the unit
-    AFTER,      // registers are inserted at the outputs of the unit
-    INSIDE,     // registers are inserted at predetermined (suboptimal) locations in the unit
-    DISTRIBUTED // registers are evenly distributed, INSIDE >= AFTER >= BEFORE
+    BEFORE_INPUTS,     // registers are inserted at the inputs of the unit
+    AFTER_OUTPUTS,     // registers are inserted at the outputs of the unit
+    INSIDE_UNIT,       // registers are inserted at predetermined (suboptimal) locations in the unit
+    DISTRIBUTED        // registers are evenly distributed, INSIDE >= AFTER_OUTPUTS >= BEFORE
   } pipe_config_t;
 
   // Arithmetic units can be arranged in parallel (per format), merged (multi-format) or not at all.
@@ -269,7 +269,7 @@ package fpnew_pkg;
                   '{default: MERGED},   // DIVSQRT
                   '{default: PARALLEL}, // NONCOMP
                   '{default: MERGED}},  // CONV
-    PipeConfig: BEFORE
+    PipeConfig: BEFORE_INPUTS
   };
 
   localparam fpu_implementation_t DEFAULT_SNITCH = '{
@@ -278,7 +278,7 @@ package fpnew_pkg;
                   '{default: DISABLED}, // DIVSQRT
                   '{default: PARALLEL}, // NONCOMP
                   '{default: MERGED}},  // CONV
-    PipeConfig: BEFORE
+    PipeConfig: BEFORE_INPUTS
   };
 
   // -----------------------
@@ -335,7 +335,7 @@ package fpnew_pkg;
 
   // Returns the bias value for a given format (as per IEEE 754-2008)
   function automatic int unsigned bias(fp_format_e fmt);
-    return unsigned'(2**(FP_ENCODINGS[fmt].exp_bits-1)-1); // symmetrical bias
+    return unsigned'((2**(FP_ENCODINGS[fmt].exp_bits-1))-1); // symmetrical bias
   endfunction
 
   function automatic fp_encoding_t super_format(fmt_logic_t cfg);
@@ -403,7 +403,7 @@ package fpnew_pkg;
     automatic fmt_logic_t res;
     for (int unsigned fmt = 0; fmt < NUM_FP_FORMATS; fmt++)
       // Mask active formats with the number of lanes for that format
-      res[fmt] = cfg[fmt] & (width / fp_width(fp_format_e'(fmt)) > lane_no);
+      res[fmt] = cfg[fmt] & ((width / fp_width(fp_format_e'(fmt))) > lane_no);
     return res;
   endfunction
 
@@ -432,7 +432,7 @@ package fpnew_pkg;
     automatic fmt_logic_t res;
     for (int unsigned fmt = 0; fmt < NUM_FP_FORMATS; fmt++)
       // Mask active formats with the number of lanes for that format, CPK at least twice
-      res[fmt] = cfg[fmt] && ((width / fp_width(fp_format_e'(fmt)) > lane_no) ||
+      res[fmt] = cfg[fmt] && (((width / fp_width(fp_format_e'(fmt))) > lane_no) ||
                              (CPK_FORMATS[fmt] && (lane_no < 2)));
     return res;
   endfunction
@@ -458,7 +458,7 @@ package fpnew_pkg;
   // Return whether any active format is set as MERGED
   function automatic logic any_enabled_multi(fmt_unit_types_t types, fmt_logic_t cfg);
     for (int unsigned i = 0; i < NUM_FP_FORMATS; i++)
-      if (cfg[i] && types[i] == MERGED)
+      if (cfg[i] && (types[i] == MERGED))
         return 1'b1;
       return 1'b0;
   endfunction
@@ -468,7 +468,7 @@ package fpnew_pkg;
                                                   fmt_unit_types_t types,
                                                   fmt_logic_t cfg);
     for (int unsigned i = 0; i < NUM_FP_FORMATS; i++) begin
-      if (cfg[i] && types[i] == MERGED) return (fp_format_e'(i) == fmt);
+      if (cfg[i] && (types[i] == MERGED)) return (fp_format_e'(i) == fmt);
     end
     return 1'b0;
   endfunction
@@ -476,7 +476,7 @@ package fpnew_pkg;
   // Returns the first format that is active and is set as MERGED
   function automatic fp_format_e get_first_enabled_multi(fmt_unit_types_t types, fmt_logic_t cfg);
     for (int unsigned i = 0; i < NUM_FP_FORMATS; i++)
-      if (cfg[i] && types[i] == MERGED)
+      if (cfg[i] && (types[i] == MERGED))
         return fp_format_e'(i);
       return fp_format_e'(0);
   endfunction
@@ -487,7 +487,7 @@ package fpnew_pkg;
                                                      fmt_logic_t cfg);
     automatic int unsigned res = 0;
     for (int unsigned i = 0; i < NUM_FP_FORMATS; i++) begin
-      if (cfg[i] && types[i] == MERGED) res = maximum(res, regs[i]);
+      if (cfg[i] && (types[i] == MERGED)) res = maximum(res, regs[i]);
     end
     return res;
   endfunction

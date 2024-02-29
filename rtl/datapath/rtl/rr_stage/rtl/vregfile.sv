@@ -39,7 +39,7 @@ module vregfile
 
 localparam MASK_BITS = VLEN/8;
 
-reg_simd_t registers [0:NUM_PHISICAL_VREGISTERS-1];
+reg_simd_t registers [NUM_PHISICAL_VREGISTERS-1:0];
 bus_simd_t bypass_data1;
 bus_simd_t bypass_data2;
 bus_simd_t bypass_data_old_vd;
@@ -60,22 +60,22 @@ always_comb begin
     bypassm = 1'b0;
 
     for (int i = 0; i<NUM_SIMD_WB; ++i) begin
-        if (write_addr_i[i] == read_addr1_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr1_i) && write_enable_i[i]) begin
             bypass_data1        |= write_data_i[i];
             bypass1             |= 1'b1;
         end
 
-        if (write_addr_i[i] == read_addr2_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr2_i) && write_enable_i[i]) begin
             bypass_data2        |= write_data_i[i];
             bypass2             |= 1'b1;
         end
 
-        if (write_addr_i[i] == read_addr_old_vd_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr_old_vd_i) && write_enable_i[i]) begin
             bypass_data_old_vd  |= write_data_i[i];
             bypass_old_vd       |= 1'b1;
         end
 
-        if (use_mask_i && write_addr_i[i] == read_addrm_i && write_enable_i[i]) begin
+        if ((use_mask_i && (write_addr_i[i] == read_addrm_i)) && write_enable_i[i]) begin
             bypass_mask         |= write_data_i[i];
             bypassm             |= 1'b1;
         end

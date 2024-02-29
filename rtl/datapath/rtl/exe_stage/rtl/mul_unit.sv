@@ -52,7 +52,7 @@ assign data_src2 = instruction_i.data_rs2;
 
 assign same_sign = instruction_i.instr.op_32 ? ~(data_src2[31] ^ data_src1[31]) : ~(data_src2[63] ^ data_src1[63]);
 
-assign type_0_d = instruction_i.instr.mem_size;
+assign type_0_d = instruction_i.instr.mem_size[2:0];
 
 assign int_32_0_d = instruction_i.instr.op_32 & instruction_0_d.valid;
 

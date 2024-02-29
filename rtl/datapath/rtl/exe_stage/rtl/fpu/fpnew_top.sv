@@ -19,7 +19,7 @@ module fpnew_top #(
   parameter fpnew_pkg::fpu_implementation_t Implementation = fpnew_pkg::DEFAULT_NOREGS,
   // PulpDivSqrt = 0 enables T-head-based DivSqrt unit. Supported only for FP32-only instances of Fpnew
   parameter logic                           PulpDivsqrt    = 1'b1,
-  parameter type                            TagType        = logic[4:0],
+  parameter type                            TAG_TYPE        = logic[4:0],
   parameter int unsigned                    TrueSIMDClass  = 0,
   parameter int unsigned                    EnableSIMDMask = 0,
   // Do not change
@@ -39,7 +39,7 @@ module fpnew_top #(
   input fpnew_pkg::fp_format_e              dst_fmt_i,
   input fpnew_pkg::int_format_e             int_fmt_i,
   input logic                               vectorial_op_i,
-  input TagType                             tag_i,
+  input TAG_TYPE                             tag_i,
   input MaskType                            simd_mask_i,
   // Input Handshake
   input  logic                              in_valid_i,
@@ -48,7 +48,7 @@ module fpnew_top #(
   // Output signals
   output logic [WIDTH-1:0]                  result_o,
   output fpnew_pkg::status_t                status_o,
-  output TagType                            tag_o,
+  output TAG_TYPE                            tag_o,
   // Output handshake
   output logic                              out_valid_o,
   input  logic                              out_ready_i,
@@ -65,7 +65,7 @@ module fpnew_top #(
   typedef struct packed {
     logic [WIDTH-1:0]   result;
     fpnew_pkg::status_t status;
-    TagType             tag;
+    TAG_TYPE             tag;
   } output_t;
 
   // Handshake signals for the blocks
@@ -124,8 +124,8 @@ module fpnew_top #(
       .IntFmtMask    ( Features.IntFmtMask             ),
       .FmtPipeRegs   ( Implementation.PipeRegs[opgrp]  ),
       .FmtUnitTypes  ( Implementation.UnitTypes[opgrp] ),
-      .PipeConfig    ( Implementation.PipeConfig       ),
-      .TagType       ( TagType                         ),
+      .PIPE_CONFIG    ( Implementation.PipeConfig       ),
+      .TAG_TYPE       ( TAG_TYPE                         ),
       .TrueSIMDClass ( TrueSIMDClass                   )
     ) i_opgroup_block (
       .clk_i,

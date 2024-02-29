@@ -23,9 +23,9 @@ module decoder
     input   logic            flush_i,
     input   logic            stall_i,
     input   if_id_stage_t    decode_i,
-    input   [2:0]            frm_i, // FP rounding Mode from CSR
-    input   [1:0]            csr_fs_i, 
-    input   [1:0]            csr_vs_i, 
+    input   logic [2:0]      frm_i, // FP rounding Mode from CSR
+    input   logic [1:0]      csr_fs_i, 
+    input   logic [1:0]      csr_vs_i, 
     output  id_ir_stage_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
 );
@@ -83,8 +83,8 @@ module decoder
         decode_instr_int.use_fs3 = 1'b0;
 
         // Information for the ras performance
-        ras_link_rd_int = decode_instr_int.rd == 5'h1 || decode_instr_int.rd == 5'h5;
-        ras_link_rs1_int = decode_instr_int.rs1 == 5'h1 || decode_instr_int.rs1 == 5'h5;
+        ras_link_rd_int = (decode_instr_int.rd == 5'h1) || (decode_instr_int.rd == 5'h5);
+        ras_link_rs1_int = (decode_instr_int.rs1 == 5'h1) || (decode_instr_int.rs1 == 5'h5);
         ras_push_int = 1'b0; //default value
         ras_pop_int = 1'b0; //default value
 
@@ -138,7 +138,7 @@ module decoder
                     decode_instr_int.regfile_we  = 1'b1;
                     decode_instr_int.use_imm = 1'b1;
                     decode_instr_int.rs1 = '0;
-                    decode_instr_int.instr_type = OR;
+                    decode_instr_int.instr_type = OR_INST;
                 end
                 OP_AUIPC:begin
                     decode_instr_int.regfile_we  = 1'b1;
@@ -181,7 +181,7 @@ module decoder
                             ras_pop_int = 1'b1;
                         end else if (ras_link_rd_int && !ras_link_rs1_int) begin
                             ras_push_int = 1'b1;
-                        end else if (ras_link_rd_int && ras_link_rs1_int && decode_instr_int.rs1 == decode_instr_int.rd) begin
+                        end else if ((ras_link_rd_int && ras_link_rs1_int) && (decode_instr_int.rs1 == decode_instr_int.rd)) begin
                             ras_push_int = 1'b1;
                         end else if (ras_link_rd_int && ras_link_rs1_int) begin
                             ras_pop_int = 1'b1;
@@ -189,11 +189,11 @@ module decoder
                         end
                     end
                     jal_id_if_o.jump_addr = ras_pc_int; 
-                    jal_id_if_o.valid = ras_pop_int && !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
-                                        (decode_i.bpred.decision == PRED_TAKEN) && !flush_i && !stall_i);
+                    jal_id_if_o.valid = ras_pop_int && !((((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) &
+                                                        (decode_i.bpred.decision == PRED_TAKEN)) && (!flush_i)) && !stall_i);
 
                     decode_instr_int.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
-                    decode_instr_int.bpred.decision = (jal_id_if_o.valid || decode_i.bpred.decision == PRED_TAKEN) 
+                    decode_instr_int.bpred.decision = (jal_id_if_o.valid || (decode_i.bpred.decision == PRED_TAKEN)) 
                                                     ? PRED_TAKEN : PRED_NOT_TAKEN;
                     decode_instr_int.bpred.is_branch = 1'b1;
 
@@ -406,13 +406,13 @@ module decoder
                             decode_instr_int.instr_type = SLTU;
                         end
                         F3_XORI: begin
-                            decode_instr_int.instr_type = XOR;
+                            decode_instr_int.instr_type = XOR_INST;
                         end
                         F3_ORI: begin
-                            decode_instr_int.instr_type = OR;
+                            decode_instr_int.instr_type = OR_INST;
                         end
                         F3_ANDI: begin
-                            decode_instr_int.instr_type = AND;
+                            decode_instr_int.instr_type = AND_INST;
                         end
                         F3_SLLI: begin
                             decode_instr_int.instr_type = SLL;
@@ -459,7 +459,7 @@ module decoder
                             decode_instr_int.instr_type = SLTU;
                         end
                         {F7_NORMAL,F3_XOR}: begin
-                            decode_instr_int.instr_type = XOR;
+                            decode_instr_int.instr_type = XOR_INST;
                         end
                         {F7_NORMAL,F3_SRL_SRA}: begin
                             decode_instr_int.instr_type = SRL;
@@ -468,10 +468,10 @@ module decoder
                             decode_instr_int.instr_type = SRA;
                         end
                         {F7_NORMAL,F3_OR}: begin
-                            decode_instr_int.instr_type = OR;
+                            decode_instr_int.instr_type = OR_INST;
                         end
                         {F7_NORMAL,F3_AND}: begin
-                            decode_instr_int.instr_type = AND;
+                            decode_instr_int.instr_type = AND_INST;
                         end
                         // Mults and Divs
                         {F7_MUL_DIV,F3_MUL}: begin
@@ -948,7 +948,6 @@ module decoder
                             end
                             F3_OPMVV: begin
                                 case (decode_i.inst.vtype.func6)
-                                    `ifdef MULTICYCLE_SIMD
                                     F6_VREDSUM: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
@@ -977,7 +976,6 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDXOR;
                                     end
-                                    `endif
                                     F6_VEXT: begin
                                         decode_instr_int.vregfile_we = 1'b0;
                                         decode_instr_int.regfile_we = 1'b1;
@@ -1086,7 +1084,6 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
-                                    `ifdef MULTICYCLE_SIMD
                                     F6_VMULHU: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
@@ -1115,7 +1112,6 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMULH;
                                     end
-                                    `endif
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end

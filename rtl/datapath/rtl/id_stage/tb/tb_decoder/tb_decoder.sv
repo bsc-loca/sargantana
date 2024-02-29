@@ -1604,7 +1604,7 @@ module tb_decoder();
             $display ("Checking alui 4: XORI");
             tb_test_name = "test_9_alui_xori";
             tb_decode_i.inst.itype.func3 = F3_XORI;
-            expected_out.instr_type = XOR;
+            expected_out.instr_type = XOR_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);
@@ -1616,7 +1616,7 @@ module tb_decoder();
             $display ("Checking alui 5: ORI");
             tb_test_name = "test_9_alui_ori";
             tb_decode_i.inst.itype.func3 = F3_ORI;
-            expected_out.instr_type = OR;
+            expected_out.instr_type = OR_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);
@@ -1628,7 +1628,7 @@ module tb_decoder();
             $display ("Checking alui 6: ANDI");
             tb_test_name = "test_9_alui_andi";
             tb_decode_i.inst.itype.func3 = F3_ANDI;
-            expected_out.instr_type = AND;
+            expected_out.instr_type = AND_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);
@@ -1785,7 +1785,7 @@ module tb_decoder();
             tb_test_name = "test_10_alu_xor";
             tb_decode_i.inst.itype.func3 = F3_XOR;
             tb_decode_i.inst.rtype.func7 = F7_NORMAL;
-            expected_out.instr_type = XOR;
+            expected_out.instr_type = XOR_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);
@@ -1824,7 +1824,7 @@ module tb_decoder();
             tb_test_name = "test_10_alu_or";
             tb_decode_i.inst.itype.func3 = F3_OR;
             tb_decode_i.inst.rtype.func7 = F7_NORMAL;
-            expected_out.instr_type = OR;
+            expected_out.instr_type = OR_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);
@@ -1837,7 +1837,7 @@ module tb_decoder();
             tb_test_name = "test_10_alu_and";
             tb_decode_i.inst.itype.func3 = F3_AND;
             tb_decode_i.inst.rtype.func7 = F7_NORMAL;
-            expected_out.instr_type = AND;
+            expected_out.instr_type = AND_INST;
             half_tick();
 
             checkALU(expected_out,1,differ);

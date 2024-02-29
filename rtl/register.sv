@@ -1,27 +1,28 @@
-`default_nettype none
-
 module register #(
     parameter WIDTH = 64
 ) (
-    input wire clk_i,
-    input wire rstn_i,
-    input wire flush_i,
-    input wire load_i,
-    input wire [WIDTH-1:0] input_i,
-    output reg [WIDTH-1:0] output_o
+    input logic clk_i,
+    input logic rstn_i,
+    input logic flush_i,
+    input logic load_i,
+    input logic [WIDTH-1:0] input_i,
+    output logic [WIDTH-1:0] output_o
 );
+logic [WIDTH-1:0] register_q;
     
-    always @(posedge clk_i, negedge rstn_i) begin
+    always_ff @(posedge clk_i, negedge rstn_i) begin
         if (~rstn_i) begin
-            output_o <= 0;
+            register_q <= 0;
         end else if (flush_i) begin
-            output_o <= 0;
+            register_q <= 0;
         end else if (load_i) begin
-            output_o <= input_i;
+            register_q <= input_i;
         end else begin
-            output_o <= output_o;
+            register_q <= register_q;
         end
     end
+
+    assign output_o = register_q;
 
 endmodule
 

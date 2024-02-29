@@ -39,6 +39,7 @@ bus64_t csr_rw_data_int;
 logic   csr_ena_int;
 csr_cmd_t csr_cmd_int;
 csr_addr_t csr_addr_int;
+logic commit_2_blocked;
 
 
 always_comb begin
@@ -97,7 +98,7 @@ always_comb begin
             end
             VSETVL: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
-                csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
+                csr_rw_data_int = ((instruction_to_commit_i[0].rs1 == 'h0) && (instruction_to_commit_i[0].rd == 'h0)) ? 64'b1 : result_gl_i;
                 csr_ena_int = 1'b1;
                 csr_addr_int = vsetvl_vtype_i;
             end
@@ -117,30 +118,31 @@ always_comb begin
 end
 
 // tell cu that ecall was taken
-    assign commit_2_blocked = !instruction_to_commit_i[0].valid || 
-                                instruction_to_commit_i[0].ex_valid || 
-                                csr_ena_int || !instruction_to_commit_i[1].valid ||
-                                instruction_to_commit_i[1].valid &
-                                (instruction_to_commit_i[1].instr_type == ECALL ||
-                                instruction_to_commit_i[1].instr_type == SRET   ||
-                                instruction_to_commit_i[1].instr_type == MRET   ||
-                                instruction_to_commit_i[1].instr_type == URET   ||
-                                instruction_to_commit_i[1].instr_type == WFI    ||
-                                instruction_to_commit_i[1].instr_type == EBREAK ||
-                                instruction_to_commit_i[1].instr_type == FENCE  || 
-                                instruction_to_commit_i[1].instr_type == SFENCE_VMA || 
-                                instruction_to_commit_i[1].instr_type == FENCE_I|| 
-                                instruction_to_commit_i[1].instr_type == CSRRW  ||
-                                instruction_to_commit_i[1].instr_type == CSRRS  ||
-                                instruction_to_commit_i[1].instr_type == CSRRC  ||
-                                instruction_to_commit_i[1].instr_type == CSRRWI ||
-                                instruction_to_commit_i[1].instr_type == CSRRSI ||
-                                instruction_to_commit_i[1].instr_type == CSRRCI ||
-                                instruction_to_commit_i[1].instr_type == VSETVL ||
-                                instruction_to_commit_i[1].instr_type == VSETVLI|| 
-                                instruction_to_commit_i[1].mem_type == STORE    || 
-                                instruction_to_commit_i[1].mem_type == AMO)     ||
-                                instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid;
+    assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
+                                    instruction_to_commit_i[0].ex_valid) ||
+                                    csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
+                                    (instruction_to_commit_i[1].valid &
+                                    ((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    (instruction_to_commit_i[1].instr_type == SRET)) ||
+                                    (instruction_to_commit_i[1].instr_type == MRET)) ||
+                                    (instruction_to_commit_i[1].instr_type == URET)) ||
+                                    (instruction_to_commit_i[1].instr_type == WFI)) ||
+                                    (instruction_to_commit_i[1].instr_type == EBREAK)) ||
+                                    (instruction_to_commit_i[1].instr_type == FENCE)) ||
+                                    (instruction_to_commit_i[1].instr_type == SFENCE_VMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == FENCE_I)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRW)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRS)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRC)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRWI)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRSI)) ||
+                                    (instruction_to_commit_i[1].instr_type == CSRRCI)) ||
+                                    (instruction_to_commit_i[1].instr_type == VSETVL)) ||
+                                    (instruction_to_commit_i[1].instr_type == VSETVLI)) ||
+                                    (instruction_to_commit_i[1].mem_type == STORE)) ||
+                                    (instruction_to_commit_i[1].mem_type == AMO)) ||
+                                    instruction_to_commit_i[1].stall_csr_fence))) ||
+                                    (instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid));
 
 // CSR and Exceptions
 assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? csr_addr_int : {CSR_ADDR_SIZE{1'b0}};
@@ -151,16 +153,16 @@ assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_st
 
 assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
 
-assign req_cpu_csr_o.fp_status = {instruction_to_commit_i[0].fp_status.NV, 
-                                  instruction_to_commit_i[0].fp_status.DZ, 
-                                  instruction_to_commit_i[0].fp_status.OF,
-                                  instruction_to_commit_i[0].fp_status.UF,
-                                  instruction_to_commit_i[0].fp_status.NX} & {5{retire_inst_o[0]}} | 
-                                  {instruction_to_commit_i[1].fp_status.NV, 
-                                  instruction_to_commit_i[1].fp_status.DZ, 
-                                  instruction_to_commit_i[1].fp_status.OF,
-                                  instruction_to_commit_i[1].fp_status.UF,
-                                  instruction_to_commit_i[1].fp_status.NX} & {5{retire_inst_o[1]}}; // TODO
+assign req_cpu_csr_o.fp_status = (({instruction_to_commit_i[0].fp_status.NV,
+                                    instruction_to_commit_i[0].fp_status.DZ,
+                                    instruction_to_commit_i[0].fp_status.OF,
+                                    instruction_to_commit_i[0].fp_status.UF,
+                                    instruction_to_commit_i[0].fp_status.NX} & {5 {retire_inst_o[0]}}) |
+                                    ({instruction_to_commit_i[1].fp_status.NV,
+                                    instruction_to_commit_i[1].fp_status.DZ,
+                                    instruction_to_commit_i[1].fp_status.OF,
+                                    instruction_to_commit_i[1].fp_status.UF,
+                                    instruction_to_commit_i[1].fp_status.NX} & {5 {retire_inst_o[1]}}));
 
 // if we can retire an instruction
 //assign req_cpu_csr_o.csr_retire = instruction_to_commit_i[0].valid && !commit_xcpt_i && !mem_commit_stall_i; //!stall_exe_i;

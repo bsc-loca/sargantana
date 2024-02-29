@@ -68,7 +68,7 @@ logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_exe;
 logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
 // FIFO Memory structure
-rr_exe_mem_instr_t control_table[0:LSQ_NUM_ENTRIES-1];
+rr_exe_mem_instr_t control_table[LSQ_NUM_ENTRIES-1:0];
 
 // Internal Control Signals
 logic write_enable;
@@ -86,16 +86,16 @@ gl_index_t rob_store_gl_idx_next;
 
 // User can write to the tail of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES) & !(empty_int && instruction_i.instr.mem_type == LOAD && read_enable);
+assign write_enable = instruction_i.instr.valid & (num_to_exe < LSQ_NUM_ENTRIES) & !((empty_int && (instruction_i.instr.mem_type == LOAD)) && read_enable);
 
 // User can read the next executable instruction of the buffer if there is data
 // stored in the queue
-assign read_enable = read_next_i & (!empty_int || (empty_int && instruction_i.instr.valid && instruction_i.instr.mem_type == LOAD && translate_incoming && translate_enable));
+assign read_enable = read_next_i & (!empty_int || (empty_int && (instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD)) && translate_incoming && translate_enable));
 
 assign bypass_lsq = empty_int && instruction_i.instr.valid && (instruction_i.instr.mem_type == LOAD) && translate_incoming && translate_enable;
 
 // We can translate the incoming instruction if there are no instructions to translate in the queue
-assign translate_incoming = instruction_i.instr.valid & num_to_translate == '0 & ~full_o;
+assign translate_incoming = (instruction_i.instr.valid & (num_to_translate == '0)) & ~full_o;
 
 rr_exe_mem_instr_t instr_to_translate;
 assign instr_to_translate = translate_incoming ? instruction_i : control_table[tlb_tail];
@@ -113,18 +113,18 @@ always_comb begin
     translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
     
     // Exception treatment
-    if ((instr_to_translate.instr.mem_size == 4'b0001 & |instr_to_translate.data_rs1[0:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0010 & |instr_to_translate.data_rs1[1:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0011 & |instr_to_translate.data_rs1[2:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0101 & |instr_to_translate.data_rs1[0:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0110 & |instr_to_translate.data_rs1[1:0]) |
-        (instr_to_translate.instr.mem_size == 4'b0111 & |instr_to_translate.data_rs1[2:0]) |
+    if (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
+        ((instr_to_translate.instr.mem_size == 4'b0010) & (|instr_to_translate.data_rs1[1:0])) |
+        ((instr_to_translate.instr.mem_size == 4'b0011) & (|instr_to_translate.data_rs1[2:0])) |
+        ((instr_to_translate.instr.mem_size == 4'b0101) & (|instr_to_translate.data_rs1[0:0])) |
+        ((instr_to_translate.instr.mem_size == 4'b0110) & (|instr_to_translate.data_rs1[1:0])) |
+        ((instr_to_translate.instr.mem_size == 4'b0111) & (|instr_to_translate.data_rs1[2:0])) |
          instr_to_translate.vmisalign_xcpt) begin // Misaligned address
         translated_instr.ex.cause       = instr_to_translate.is_amo_or_store ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;
-    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : |instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) ||
-                  ~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) begin // invalid address
+    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
+                  (~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
 
         translated_instr.ex.cause  = instr_to_translate.is_amo_or_store ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
         translated_instr.ex.origin = instr_to_translate.data_rs1;
@@ -149,7 +149,7 @@ begin
         control_table[tail] <= (translate_enable & translate_incoming) ? translated_instr : instruction_i;
     end
     // Update entry to be translated
-    if (translate_enable & ~translate_incoming && (num_to_translate > 0)) begin
+    if (translate_enable && ~translate_incoming && (num_to_translate > 0)) begin
         control_table[tlb_tail] <= translated_instr;
     end
 end
@@ -174,9 +174,9 @@ begin
     else begin
         head <= head + {2'b00, read_enable_lsq};
         tail <= tail + {2'b00, write_enable};
-        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)};
-        num_to_exe      <= num_to_exe + {3'b0, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)} - {3'b0, read_enable_lsq};
-        tlb_tail <= tlb_tail + {2'b00, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || num_to_translate > 0)};
+        num_to_translate <= num_to_translate + {3'b0, write_enable} - {3'b0, translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || (num_to_translate > 0))};
+        num_to_exe      <= num_to_exe + {3'b0, translate_enable & ((translate_incoming & ((~bypass_lsq) | (bypass_lsq & (~read_next_i)))) || (num_to_translate > 0))} - {3'b0, read_enable_lsq};
+        tlb_tail <= tlb_tail + {2'b00, (translate_enable & ((translate_incoming & (~bypass_lsq | (bypass_lsq & ~read_next_i))) || (num_to_translate > 0)))};
     end
 end
 
@@ -188,13 +188,13 @@ always_comb begin
     sb_write_enable = 1'b0;
     if (read_enable && is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
         read_enable_lsq = 1'b1;
-    end else if (read_enable && rob_store_ack_i && !st_buff_empty && (st_buff_inst_out.gl_index == rob_store_gl_idx_i || st_buff_inst_out.gl_index == rob_store_gl_idx_next)) begin // Store inside SB
+    end else if (read_enable && rob_store_ack_i && !st_buff_empty && ((st_buff_inst_out.gl_index == rob_store_gl_idx_i) || (st_buff_inst_out.gl_index == rob_store_gl_idx_next))) begin // Store inside SB
         read_enable_sb = 1'b1;
-    end else if (read_enable && rob_store_ack_i && is_next_store && (control_table[head].gl_index == rob_store_gl_idx_i || control_table[head].gl_index == rob_store_gl_idx_next)) begin // Store inside LSQ
+    end else if (read_enable && rob_store_ack_i && is_next_store && ((control_table[head].gl_index == rob_store_gl_idx_i) || (control_table[head].gl_index == rob_store_gl_idx_next))) begin // Store inside LSQ
         read_enable_lsq = 1'b1;
     end else if (read_enable && is_next_load && !st_buff_collision && io_address_space) begin // Load inside LSQ (IO)
         read_enable_lsq = 1'b1;
-    end else if ((!read_enable || !rob_store_ack_i || (control_table[head].gl_index != rob_store_gl_idx_i && control_table[head].gl_index != rob_store_gl_idx_next)) && is_next_store && !st_buff_full) begin
+    end else if ((!read_enable || !rob_store_ack_i || ((control_table[head].gl_index != rob_store_gl_idx_i) && (control_table[head].gl_index != rob_store_gl_idx_next))) && is_next_store && !st_buff_full) begin
         sb_write_enable = 1'b1;
         read_enable_lsq = 1'b1;
     end
@@ -204,13 +204,13 @@ always_comb begin
     next_instr_exe_o = 'h0;
     if (bypass_lsq) begin
         next_instr_exe_o = translated_instr;
-    end else if (is_next_load && !st_buff_collision & control_table[head].translated && !io_address_space) begin // Load inside LSQ
+    end else if (is_next_load && !st_buff_collision && control_table[head].translated && !io_address_space) begin // Load inside LSQ
         next_instr_exe_o = control_table[head];
-    end else if (rob_store_ack_i && !st_buff_empty && (st_buff_inst_out.gl_index == rob_store_gl_idx_i || st_buff_inst_out.gl_index == rob_store_gl_idx_next)) begin // Store inside SB
+    end else if (rob_store_ack_i && !st_buff_empty && ((st_buff_inst_out.gl_index == rob_store_gl_idx_i) || (st_buff_inst_out.gl_index == rob_store_gl_idx_next))) begin // Store inside SB
         next_instr_exe_o = st_buff_inst_out;
-    end else if (rob_store_ack_i && is_next_store && (control_table[head].gl_index == rob_store_gl_idx_i || control_table[head].gl_index == rob_store_gl_idx_next) & control_table[head].translated) begin // Store inside LSQ
+    end else if ((rob_store_ack_i && is_next_store) && (((control_table[head].gl_index == rob_store_gl_idx_i) || (control_table[head].gl_index == rob_store_gl_idx_next)) & control_table[head].translated)) begin // Store inside LSQ
         next_instr_exe_o = control_table[head];
-    end else if (is_next_load && !st_buff_collision & control_table[head].translated && io_address_space) begin // Load inside LSQ (IO)
+    end else if (is_next_load && !st_buff_collision && control_table[head].translated && io_address_space) begin // Load inside LSQ (IO)
         next_instr_exe_o = control_table[head];
     end
 end
@@ -225,9 +225,9 @@ always_comb begin
         blocked_store_o = 1'b0;
     end else if (is_next_load && !st_buff_collision && !io_address_space) begin // Load inside LSQ
         blocked_store_o = 1'b0;
-    end else if (!st_buff_empty && rob_store_ack_i && (st_buff_inst_out.gl_index == rob_store_gl_idx_i || st_buff_inst_out.gl_index == rob_store_gl_idx_next)) begin // Store inside SB
+    end else if (!st_buff_empty && rob_store_ack_i && ((st_buff_inst_out.gl_index == rob_store_gl_idx_i) || (st_buff_inst_out.gl_index == rob_store_gl_idx_next))) begin // Store inside SB
         blocked_store_o = 1'b0;
-    end else if (st_buff_empty && is_next_store && rob_store_ack_i && (control_table[head].gl_index == rob_store_gl_idx_i || control_table[head].gl_index == rob_store_gl_idx_next)) begin // Store inside LSQ
+    end else if (st_buff_empty && is_next_store && rob_store_ack_i && ((control_table[head].gl_index == rob_store_gl_idx_i) || (control_table[head].gl_index == rob_store_gl_idx_next))) begin // Store inside LSQ
         blocked_store_o = 1'b0;
     end else if (is_next_load && st_buff_empty && io_address_space) begin // Load inside LSQ (IO)
         blocked_store_o = 1'b0; 
@@ -236,21 +236,21 @@ end
 
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;
 assign dtlb_comm_o.priv_lvl = priv_lvl_i;
-assign dtlb_comm_o.req.valid = num_to_translate > 0 || translate_incoming;
-assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[63:12];
+assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
+assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
 assign dtlb_comm_o.req.store = instr_to_translate.is_amo_or_store; // TODO: Check this, might not be exactly right...
 
-assign empty_int = num_to_exe == '0 && st_buff_empty && num_to_translate == '0;
+assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);
 assign empty_o = empty_int && !bypass_lsq;
 assign full_o  = (((num_to_exe + num_to_translate) == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
-assign is_next_load = num_to_exe > '0 && (control_table[head].instr.mem_type == LOAD);
+assign is_next_load = (num_to_exe > '0) && (control_table[head].instr.mem_type == LOAD);
 
-assign is_next_store = num_to_exe > '0 && (control_table[head].instr.mem_type == STORE     || 
-                                        control_table[head].instr.mem_type == AMO);
+assign is_next_store = (num_to_exe > '0) && ((control_table[head].instr.mem_type == STORE)     || 
+                                        (control_table[head].instr.mem_type == AMO));
 
 assign pmu_load_after_store_o = st_buff_collision;
 

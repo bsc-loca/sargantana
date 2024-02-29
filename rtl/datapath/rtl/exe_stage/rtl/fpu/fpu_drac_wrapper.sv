@@ -57,7 +57,7 @@ always_comb begin
    rnd_mode_sel    = 0;
    opcode_rnd_mode = RNE;
    src_fmt         = dst_fmt;
-   int_fmt         = dst_fmt == FP32 ? INT32 : INT64;
+   int_fmt         = ((dst_fmt == FP32) ? INT32 : INT64);
    sign_extend_int = 0;
    op_mod = 0;
 

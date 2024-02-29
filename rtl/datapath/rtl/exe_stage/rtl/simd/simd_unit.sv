@@ -13,7 +13,7 @@
  */
 
 
-module simd_unit_mc
+ module simd_unit
     import drac_pkg::*;
     import riscv_pkg::*;
 (
@@ -24,7 +24,7 @@ module simd_unit_mc
     output exe_wb_simd_instr_t    instruction_simd_o      // Out instruction
 );
 
-localparam MAX_STAGES = $clog2(VLEN/8); // The vector reduction tree module will have the maximum stages
+localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module will have the maximum stages
 
 bus64_t [drac_pkg::VELEMENTS-1:0] vs1_elements;
 bus64_t [drac_pkg::VELEMENTS-1:0] vs2_elements;
@@ -38,49 +38,49 @@ rr_exe_simd_instr_t sel_fu_out;   // Which instruction output should return the 
 
 logic [3:0] simd_exe_stages;
 
-function logic is_vred(rr_exe_simd_instr_t instr);
-    is_vred = (instr.instr.instr_type == VREDSUM   ||
-               instr.instr.instr_type == VREDAND   ||
-               instr.instr.instr_type == VREDOR    ||
-               instr.instr.instr_type == VREDXOR) ? 1'b1 : 1'b0;
+function logic is_vred(input rr_exe_simd_instr_t instr);
+    is_vred = ((instr.instr.instr_type == VREDSUM)   ||
+               (instr.instr.instr_type == VREDAND)   ||
+               (instr.instr.instr_type == VREDOR)    ||
+               (instr.instr.instr_type == VREDXOR)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vmul(rr_exe_simd_instr_t instr);
-    is_vmul = (instr.instr.instr_type == VMUL   ||
-               instr.instr.instr_type == VMULH  ||
-               instr.instr.instr_type == VMULHU ||
-               instr.instr.instr_type == VMULHSU) ? 1'b1 : 1'b0;
+function logic is_vmul(input rr_exe_simd_instr_t instr);
+    is_vmul = ((instr.instr.instr_type == VMUL)   ||
+               (instr.instr.instr_type == VMULH)  ||
+               (instr.instr.instr_type == VMULHU) ||
+               (instr.instr.instr_type == VMULHSU)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vw(rr_exe_simd_instr_t instr);
-    is_vw = (instr.instr.instr_type == VWADD    ||
-             instr.instr.instr_type == VWADDU   ||
-             instr.instr.instr_type == VWSUB    ||
-             instr.instr.instr_type == VWSUBU   ||
-             instr.instr.instr_type == VWADDW   ||
-             instr.instr.instr_type == VWADDUW  ||
-             instr.instr.instr_type == VWSUBW   ||
-             instr.instr.instr_type == VWSUBUW) ? 1'b1 : 1'b0;
+function logic is_vw(input rr_exe_simd_instr_t instr);
+    is_vw = ((instr.instr.instr_type == VWADD)    ||
+             (instr.instr.instr_type == VWADDU)   ||
+             (instr.instr.instr_type == VWSUB)    ||
+             (instr.instr.instr_type == VWSUBU)   ||
+             (instr.instr.instr_type == VWADDW)   ||
+             (instr.instr.instr_type == VWADDUW)  ||
+             (instr.instr.instr_type == VWSUBW)   ||
+             (instr.instr.instr_type == VWSUBUW)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vn(rr_exe_simd_instr_t instr);
-    is_vn = (instr.instr.instr_type == VNSRL    ||
-             instr.instr.instr_type == VNSRA) ? 1'b1 : 1'b0;
+function logic is_vn(input rr_exe_simd_instr_t instr);
+    is_vn = ((instr.instr.instr_type == VNSRL)    ||
+             (instr.instr.instr_type == VNSRA)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vww(rr_exe_simd_instr_t instr);
-    is_vww = (instr.instr.instr_type == VWADDW   ||
-             instr.instr.instr_type == VWADDUW  ||
-             instr.instr.instr_type == VWSUBW   ||
-             instr.instr.instr_type == VWSUBUW) ? 1'b1 : 1'b0;
+function logic is_vww(input rr_exe_simd_instr_t instr);
+    is_vww = ((instr.instr.instr_type == VWADDW) ||
+             (instr.instr.instr_type == VWADDUW) ||
+             (instr.instr.instr_type == VWSUBW)  ||
+             (instr.instr.instr_type == VWSUBUW)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vm(rr_exe_simd_instr_t instr);
-    is_vm = (instr.instr.instr_type == VMSEQ || 
-             instr.instr.instr_type == VMSLTU ||
-             instr.instr.instr_type == VMSLT || 
-             instr.instr.instr_type == VMSLEU ||
-             instr.instr.instr_type == VMSLE) ? 1'b1 : 1'b0;
+function logic is_vm(input rr_exe_simd_instr_t instr);
+    is_vm = ((instr.instr.instr_type == VMSEQ)  || 
+             (instr.instr.instr_type == VMSLTU) ||
+             (instr.instr.instr_type == VMSLT)  || 
+             (instr.instr.instr_type == VMSLEU) || 
+             (instr.instr.instr_type == VMSLE)) ? 1'b1 : 1'b0;
 endfunction
 
 typedef struct packed {
@@ -88,12 +88,8 @@ typedef struct packed {
     rr_exe_simd_instr_t simd_instr;
 } instr_pipe_t;
 
-genvar i_pipe;
-generate
-    for (i_pipe = 2; i_pipe <= MAX_STAGES; i_pipe++) begin : simd_pipe
-        instr_pipe_t slot [0:i_pipe-1];
-    end
-endgenerate
+instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
+instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -108,9 +104,9 @@ always_comb begin
     end 
     else if (is_vred(instruction_i)) begin
         case (instruction_i.sew)
-            SEW_8, SEW_16 : simd_exe_stages = 4'($clog2(VLEN >> 3));
-            SEW_32 : simd_exe_stages = 4'($clog2(VLEN >> 3) - 1);
-            SEW_64 : simd_exe_stages = 4'($clog2(VLEN >> 3) - 2);
+            SEW_8, SEW_16 : simd_exe_stages = 4'($clog2(VLEN >> 3) + 1);
+            SEW_32 : simd_exe_stages = 4'($clog2(VLEN >> 3));
+            SEW_64 : simd_exe_stages = 4'($clog2(VLEN >> 3) - 1);
             default : simd_exe_stages = 4'($clog2(VLEN >> 3));
         endcase
     end else begin
@@ -118,67 +114,63 @@ always_comb begin
     end
 end
 
-for (genvar i=2; i <= MAX_STAGES; i++) begin
-    always_comb begin
-        if (simd_exe_stages == i) begin
-            simd_pipe[i].slot[0].valid = instruction_i.instr.valid;
-            simd_pipe[i].slot[0].simd_instr = instruction_i;
-        end else begin
-            simd_pipe[i].slot[0].valid = 1'b0;
-            simd_pipe[i].slot[0].simd_instr = '{default: '0, sew: SEW_8};
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if (~rstn_i) begin
+        for (int i = 2; i <= MAX_STAGES; i++) begin
+            for (int j = 0; j < MAX_STAGES; j++) begin
+                simd_pipe_q[i][j] <= '0;
+            end
+        end
+    end else begin
+        for (int i = 2; i <= MAX_STAGES; i++) begin
+            for (int j = 0; j < MAX_STAGES; j++) begin
+                simd_pipe_q[i][j] <= simd_pipe_d[i][j];
+            end
         end
     end
 end
 
 // Each cycle, each instruction go forward 1 slot
-for (genvar i = 2; i <= MAX_STAGES; i++) begin
-    always_ff @(posedge clk_i, negedge rstn_i) begin
-        if (~rstn_i) begin
-            for (int j = 1; j < $size(simd_pipe[i].slot); j++) begin
-                simd_pipe[i].slot[j].valid <= 1'b0;
-                simd_pipe[i].slot[j].simd_instr <= '{default: '0, sew: SEW_8};
-            end
-        end else begin
-            for (int j = 1; j < $size(simd_pipe[i].slot); j++) begin
-                simd_pipe[i].slot[j].valid <= simd_pipe[i].slot[j-1].valid;
-                simd_pipe[i].slot[j].simd_instr <= simd_pipe[i].slot[j-1].simd_instr;
+always_comb begin
+    for (int i = 2; i <= MAX_STAGES; i++) begin
+        for (int j = 0; j < MAX_STAGES; j++) begin
+            if (j==0) begin
+                if (simd_exe_stages == i) begin
+                    simd_pipe_d[i][0].valid = instruction_i.instr.valid;
+                    simd_pipe_d[i][0].simd_instr = instruction_i;
+                end else begin
+                    simd_pipe_d[i][0].valid = 1'b0;
+                    simd_pipe_d[i][0].simd_instr = '0; // Implicitly sets SEW_8
+                end
+            end else begin
+                if (j < i) begin
+                    simd_pipe_d[i][j].valid = simd_pipe_q[i][j-1].valid;
+                    simd_pipe_d[i][j].simd_instr = simd_pipe_q[i][j-1].simd_instr;
+                end else begin
+                    simd_pipe_d[i][j].valid = 1'b0;
+                    simd_pipe_d[i][j].simd_instr = '0;
+                end
             end
         end
     end
 end
 
 //Select the instruction that completes its correspondent pipeline
-logic mc_commit_output;
-logic [MAX_STAGES:0] or_reduction;
-assign or_reduction[1:0] = 2'b0; 
-for (genvar i = 2; i <= MAX_STAGES; i++) begin
-    always_comb begin
-        or_reduction[i] = simd_pipe[i].slot[i-1].valid;
-    end
-end
-assign mc_commit_output = |or_reduction;
-
-rr_exe_simd_instr_t valid_instructions[MAX_STAGES:2];
-generate
-    for (genvar i = 2; i <= MAX_STAGES; i++) begin : gen_valid_instr
-        assign valid_instructions[i] = (or_reduction[i]) ? simd_pipe[i].slot[i-1].simd_instr : '0;
-    end
-endgenerate
-
 rr_exe_simd_instr_t instr_score_board;
+logic valid_found;
 always_comb begin
     instr_score_board = '0;
-    for (int i = 2; i <= MAX_STAGES; i++) begin
-        if (or_reduction[i]) begin
-            instr_score_board = valid_instructions[i];
-            break;
+    valid_found = 1'b0;
+    for (int i = 2; (i <= MAX_STAGES) && (!valid_found); i++) begin
+        if (simd_pipe_q[i][i-2].valid) begin
+            instr_score_board = simd_pipe_q[i][i-2].simd_instr;
+            valid_found = 1'b1;
         end
     end
 end
 
-
 always_comb begin
-    if (mc_commit_output) begin
+    if (valid_found) begin
         instr_to_out = instr_score_board;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
@@ -191,25 +183,25 @@ end
 always_comb begin
     case (instruction_i.sew)
         SEW_8: begin
-            for (int i=0; i<VLEN/8; ++i) begin
+            for (int i=0; i<(VLEN/8); ++i) begin
                 if (instruction_i.instr.is_opvx) rs1_replicated[(i*8)+:8] = instruction_i.data_rs1[7:0];
                 else rs1_replicated[(i*8)+:8] = instruction_i.instr.imm[7:0];
             end
         end
         SEW_16: begin
-            for (int i=0; i<VLEN/16; ++i) begin
+            for (int i=0; i<(VLEN/16); ++i) begin
                 if (instruction_i.instr.is_opvx) rs1_replicated[(i*16)+:16] = instruction_i.data_rs1[15:0];
                 else rs1_replicated[(i*16)+:16] = instruction_i.instr.imm[15:0];
             end
         end
         SEW_32: begin
-            for (int i=0; i<VLEN/32; ++i) begin
+            for (int i=0; i<(VLEN/32); ++i) begin
                 if (instruction_i.instr.is_opvx) rs1_replicated[(i*32)+:32] = instruction_i.data_rs1[31:0];
                 else rs1_replicated[(i*32)+:32] = instruction_i.instr.imm[31:0];
             end
         end
         SEW_64: begin
-            for (int i=0; i<VLEN/64; ++i) begin
+            for (int i=0; i<(VLEN/64); ++i) begin
                 if (instruction_i.instr.is_opvx) rs1_replicated[(i*64)+:64] = instruction_i.data_rs1[63:0];
                 else rs1_replicated[(i*64)+:64] = instruction_i.instr.imm[63:0];
             end
@@ -221,36 +213,44 @@ assign sel_fu_out = (is_vred(instruction_i)) ? instruction_i : instr_to_out;
 
 //The source operands are separated into an array of 64-bit wide elements, each of which
 //go into the Functional Units
+
+fu_id_t fu_id[drac_pkg::VELEMENTS-1:0];
+always_comb begin
+    for (int i = 0; i < drac_pkg::VELEMENTS; i++) begin
+        fu_id[i] = fu_id_t'(i);
+    end
+end
+
 localparam int unsigned HALF_SIZE = DATA_SIZE >> 1;
-genvar i;
+genvar gv_fu;
 generate
-    for (i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
+    for (gv_fu=0; gv_fu<drac_pkg::VELEMENTS; gv_fu=gv_fu+1) begin
         always_comb begin
             if (is_vw(instruction_i) || is_vn(instruction_i)) begin
-                vs1_elements[i] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
-                                        {{HALF_SIZE{1'b0}}, rs1_replicated[i*(HALF_SIZE) +: (HALF_SIZE)]} : 
-                                        {{HALF_SIZE{1'b0}}, instruction_i.data_vs1[i*(HALF_SIZE) +: (HALF_SIZE)]};
-                vs2_elements[i] = (is_vww(instruction_i) || is_vn(instruction_i)) ? 
-                                        instruction_i.data_vs2[(i*DATA_SIZE) +: DATA_SIZE] :
-                                        {{HALF_SIZE{1'b0}}, instruction_i.data_vs2[i*(HALF_SIZE) +: (HALF_SIZE)]};
+                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
+                                        {{HALF_SIZE{1'b0}}, rs1_replicated[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]} : 
+                                        {{HALF_SIZE{1'b0}}, instruction_i.data_vs1[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]};
+                vs2_elements[gv_fu] = (is_vww(instruction_i) || is_vn(instruction_i)) ? 
+                                        instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE] :
+                                        {{HALF_SIZE{1'b0}}, instruction_i.data_vs2[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]};
             end else begin
                 //vs1 is either the data_vs1, or the replicated rs1/imm
-                vs1_elements[i] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
-                                        rs1_replicated[(i*DATA_SIZE) +: DATA_SIZE] : 
-                                        instruction_i.data_vs1[(i*DATA_SIZE) +: DATA_SIZE];
-                vs2_elements[i] = instruction_i.data_vs2[(i*DATA_SIZE) +: DATA_SIZE];
+                vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
+                                        rs1_replicated[(gv_fu*DATA_SIZE) +: DATA_SIZE] : 
+                                        instruction_i.data_vs1[(gv_fu*DATA_SIZE) +: DATA_SIZE];
+                vs2_elements[gv_fu] = instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE];
             end
         end
-        
-        functional_unit_mc functional_unit_mc_inst(
+
+        functional_unit functional_unit_inst(
             .clk_i           (clk_i),
             .rstn_i          (rstn_i),
-            .fu_id_i         (i),
+            .fu_id_i         (fu_id[gv_fu]),
             .instruction_i   (instruction_i),
             .sel_out_instr_i (sel_fu_out),
-            .data_vs1_i      (vs1_elements[i]),
-            .data_vs2_i      (vs2_elements[i]),
-            .data_vd_o       (vd_elements[i])
+            .data_vs1_i      (vs1_elements[gv_fu]),
+            .data_vs2_i      (vs2_elements[gv_fu]),
+            .data_vd_o       (vd_elements[gv_fu])
         );
     end
 endgenerate
@@ -278,13 +278,13 @@ always_comb begin
         //Extract element 0
         case (instr_to_out.sew)
             SEW_8: begin
-                data_rd = {{56{vs2_elements[0][7]}}, vs2_elements[0]};
+                data_rd = {{56{vs2_elements[0][7]}}, vs2_elements[0][7:0]};
             end
             SEW_16: begin
-                data_rd = {{48{vs2_elements[0][15]}}, vs2_elements[0]};
+                data_rd = {{48{vs2_elements[0][15]}}, vs2_elements[0][15:0]};
             end
             SEW_32: begin
-                data_rd = {{32{vs2_elements[0][31]}}, vs2_elements[0]};
+                data_rd = {{32{vs2_elements[0][31]}}, vs2_elements[0][31:0]};
             end
             SEW_64: begin
                 data_rd = vs2_elements[0];
@@ -294,24 +294,24 @@ always_comb begin
         //Extract element specified by rs1
         case (instr_to_out.sew)
             SEW_8: begin
-                if (instr_to_out.data_rs1 >= VELEMENTS*8) begin
+                if (instr_to_out.data_rs1 >= (VELEMENTS*8)) begin
                     ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
                 end else begin
                     ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]/8)];
                 end
                 case(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]%8)
-                    4'b000: data_rd = {56'h0,ext_element[7:0]};
-                    4'b001: data_rd = {56'h0,ext_element[15:8]};
-                    4'b010: data_rd = {56'h0,ext_element[23:16]};
-                    4'b011: data_rd = {56'h0,ext_element[31:24]};
-                    4'b100: data_rd = {56'h0,ext_element[39:32]};
-                    4'b101: data_rd = {56'h0,ext_element[47:40]};
-                    4'b110: data_rd = {56'h0,ext_element[55:48]};
-                    4'b111: data_rd = {56'h0,ext_element[63:56]};
+                    3'b000: data_rd = {56'h0,ext_element[7:0]};
+                    3'b001: data_rd = {56'h0,ext_element[15:8]};
+                    3'b010: data_rd = {56'h0,ext_element[23:16]};
+                    3'b011: data_rd = {56'h0,ext_element[31:24]};
+                    3'b100: data_rd = {56'h0,ext_element[39:32]};
+                    3'b101: data_rd = {56'h0,ext_element[47:40]};
+                    3'b110: data_rd = {56'h0,ext_element[55:48]};
+                    3'b111: data_rd = {56'h0,ext_element[63:56]};
                 endcase
             end
             SEW_16: begin
-                if (instr_to_out.data_rs1 >= VELEMENTS*4) begin
+                if (instr_to_out.data_rs1 >= (VELEMENTS*4)) begin
                     ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
                 end else begin
                     ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*4)-1:0]/4)];
@@ -324,7 +324,7 @@ always_comb begin
                 endcase
             end
             SEW_32: begin
-                if (instr_to_out.data_rs1 >= VELEMENTS*2) begin
+                if (instr_to_out.data_rs1 >= (VELEMENTS*2)) begin
                     ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
                 end else begin
                     ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*2)-1:0]/2)];
@@ -349,25 +349,25 @@ always_comb begin
         data_rd = 0;
         case (instr_to_out.sew)
             SEW_8: begin
-                for (int i = 0; i<VLEN/8; ++i) begin
+                for (int i = 0; i<(VLEN/8); ++i) begin
                     if (!fu_data_vd[i]) break;
                     data_rd = i+1;
                 end
             end
             SEW_16: begin
-                for (int i = 0; i<VLEN/16; ++i) begin
+                for (int i = 0; i<(VLEN/16); ++i) begin
                     if (!fu_data_vd[i]) break;
                     data_rd = i+1;
                 end
             end
             SEW_32: begin
-                for (int i = 0; i<VLEN/32; ++i) begin
+                for (int i = 0; i<(VLEN/32); ++i) begin
                     if (!fu_data_vd[i]) break;
                     data_rd = i+1;
                 end
             end
             SEW_64: begin
-                for (int i = 0; i<VLEN/64; ++i) begin
+                for (int i = 0; i<(VLEN/64); ++i) begin
                     if (!fu_data_vd[i]) break;
                     data_rd = i+1;
                 end
@@ -390,6 +390,7 @@ vbpm vbpm_inst (
 
 // Vector Reduction Module
 bus_simd_t red_data_vd;
+
 vredtree vredtree_inst(
     .clk_i         (clk_i),
     .rstn_i        (rstn_i),
@@ -427,12 +428,12 @@ always_comb begin
     end else if (instr_to_out.instr.instr_type == VPIG) begin
         result_data_vd = {instr_to_out.data_vs2[(VLEN-1) -: 2], instr_to_out.data_vs1[(VLEN-3):0]};
     `endif
-    end else if (instr_to_out.instr.instr_type == VMAND || instr_to_out.instr.instr_type == VMOR || instr_to_out.instr.instr_type == VMXOR) begin
+    end else if ((instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) || (instr_to_out.instr.instr_type == VMXOR)) begin
         result_data_vd = '1;
         result_data_vd[63:0] = fu_data_vd[63:0]; // Works with VLEN up to 512, higher than that requires concatenation of results from FU
-    end else if (instr_to_out.instr.instr_type == VMSEQ || instr_to_out.instr.instr_type == VMSLTU ||
-                 instr_to_out.instr.instr_type == VMSLT || instr_to_out.instr.instr_type == VMSLEU ||
-                 instr_to_out.instr.instr_type == VMSLE) begin
+    end else if ((instr_to_out.instr.instr_type == VMSEQ) || (instr_to_out.instr.instr_type == VMSLTU) ||
+                 (instr_to_out.instr.instr_type == VMSLT) || (instr_to_out.instr.instr_type == VMSLEU) ||
+                 (instr_to_out.instr.instr_type == VMSLE)) begin
         result_data_vd = '1;
         case (instr_to_out.sew)
             SEW_8: begin
@@ -467,8 +468,12 @@ sew_t masked_sew;
 //Unaffected elements are filled with the old vd data
 always_comb begin
     if (is_vw(instr_to_out) && (instr_to_out.sew != SEW_64)) begin
-        bit [1:0] sew_inc = instr_to_out.sew + 1;
-        masked_sew = sew_t'(sew_inc);
+        case (instr_to_out.sew)
+            SEW_8: masked_sew = SEW_16;
+            SEW_16: masked_sew = SEW_32;
+            SEW_32: masked_sew = SEW_64;
+            default: masked_sew = SEW_64;
+        endcase
     end else begin
         masked_sew = instr_to_out.sew;
     end
@@ -479,22 +484,22 @@ always_comb begin
         masked_data_vd = '1;
         case (masked_sew)
             SEW_8: begin
-                for (int i = 0; i<VLEN/8; ++i) begin
+                for (int i = 0; i<(VLEN/8); ++i) begin
                     masked_data_vd[i] = (instr_to_out.data_vm[i]) ? result_data_vd[i]: instr_to_out.data_old_vd[i];
                 end
             end
             SEW_16: begin
-                for (int i = 0; i<VLEN/16; ++i) begin
+                for (int i = 0; i<(VLEN/16); ++i) begin
                     masked_data_vd[i] = (instr_to_out.data_vm[i]) ? result_data_vd[i]: instr_to_out.data_old_vd[i];
                 end
             end
             SEW_32: begin
-                for (int i = 0; i<VLEN/32; ++i) begin
+                for (int i = 0; i<(VLEN/32); ++i) begin
                     masked_data_vd[i] = (instr_to_out.data_vm[i]) ? result_data_vd[i]: instr_to_out.data_old_vd[i];
                 end
             end
             SEW_64: begin
-                for (int i = 0; i<VLEN/64; ++i) begin
+                for (int i = 0; i<(VLEN/64); ++i) begin
                     masked_data_vd[i] = (instr_to_out.data_vm[i]) ? result_data_vd[i]: instr_to_out.data_old_vd[i];
                 end
             end
@@ -503,28 +508,28 @@ always_comb begin
         masked_data_vd = (instr_to_out.instr.instr_type == VMERGE) ? instr_to_out.data_vs2 : instr_to_out.data_old_vd;
         case (masked_sew)
             SEW_8: begin
-                for (int i = 0; i<VLEN/8; ++i) begin
+                for (int i = 0; i<(VLEN/8); ++i) begin
                     if (instr_to_out.data_vm[i]) begin
                         masked_data_vd[(8*i)+:8] = result_data_vd[(8*i)+:8];
                     end
                 end
             end
             SEW_16: begin
-                for (int i = 0; i<VLEN/16; ++i) begin
+                for (int i = 0; i<(VLEN/16); ++i) begin
                     if (instr_to_out.data_vm[i]) begin
                         masked_data_vd[(16*i)+:16] = result_data_vd[(16*i)+:16];
                     end
                 end
             end
             SEW_32: begin
-                for (int i = 0; i<VLEN/32; ++i) begin
+                for (int i = 0; i<(VLEN/32); ++i) begin
                     if (instr_to_out.data_vm[i]) begin
                         masked_data_vd[(32*i)+:32] = result_data_vd[(32*i)+:32];
                     end
                 end
             end
             SEW_64: begin
-                for (int i = 0; i<VLEN/64; ++i) begin
+                for (int i = 0; i<(VLEN/64); ++i) begin
                     if (instr_to_out.data_vm[i]) begin
                         masked_data_vd[(64*i)+:64] = result_data_vd[(64*i)+:64];
                     end

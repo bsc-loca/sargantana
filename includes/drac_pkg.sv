@@ -38,10 +38,10 @@ parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
 parameter ICACHELINE_SIZE = 512;
 parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
-parameter VMAXELEM = riscv_pkg::VLEN/8;
+parameter logic [6:0] VMAXELEM = riscv_pkg::VLEN/8;
 parameter VMAXELEM_LOG = $clog2(VMAXELEM);
-parameter DCACHE_BUS_WIDTH = 512; // must be equal to hpdcache_params_pkg::PARAM_REQ_WORDS * 64
-parameter DCACHE_MAXELEM = DCACHE_BUS_WIDTH/8;
+parameter DCACHE_BUS_WIDTH = 10'd512; // must be equal to hpdcache_params_pkg::PARAM_REQ_WORDS * 64
+parameter logic [6:0] DCACHE_MAXELEM = DCACHE_BUS_WIDTH/8;
 parameter DCACHE_MAXELEM_LOG = $clog2(DCACHE_MAXELEM);
 parameter REGFILE_WIDTH = 5;
 parameter VREGFILE_WIDTH = 5;
@@ -286,7 +286,7 @@ typedef enum logic [7:0] {
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
    // logic operations
-   XOR, OR, AND,
+   XOR_INST, OR_INST, AND_INST,
    // shifts
    SRA, SRL, SLL, SRLW, SLLW, SRAW,
    // comparisons
@@ -552,7 +552,6 @@ typedef struct packed {
     bus_simd_t data_old_vd;             // Data simd old destination
     bus_mask_t data_vm;                 // Data simd mask
     sew_t      sew;                     // Element width
-    bus64_t imm;                        // Immediate
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -584,7 +583,7 @@ typedef struct packed {
     logic vmisalign_xcpt;               // Vector memory instruction has a misaligned access
     logic [VMAXELEM_LOG-1:0] velem_id;  // Id of the lowest vector element in a request
     logic [VMAXELEM-1:0] load_mask;     // Mask of valid elements in a vector load request
-    logic [VMAXELEM_LOG-1:0] velem_off; // Offset in number of elements until the first valid one in a request
+    logic [DCACHE_MAXELEM_LOG-1:0] velem_off; // Offset in number of elements until the first valid one in a request
     logic [VMAXELEM_LOG:0] velem_incr;  // Number of valid elements in a request
     logic neg_stride;                   // Vector load with negative stride
 
@@ -597,7 +596,6 @@ typedef struct packed {
     bus_simd_t data_old_vd;             // Data simd old destination
     bus_mask_t data_vm;                 // Data simd mask
     sew_t      sew;                     // Element width
-    bus64_t imm;                        // Immediate
     phreg_t prs1;                       // Physical register source 1
     logic   rdy1;                       // Ready register source 1
     phreg_t prs2;                       // Physical register source 2
@@ -629,7 +627,7 @@ typedef struct packed {
     logic vmisalign_xcpt;               // Vector memory instruction has a misaligned access
     logic [VMAXELEM_LOG-1:0] velem_id;  // Id of the lowest vector element in a request
     logic [VMAXELEM-1:0] load_mask;     // Mask of valid elements in a vector load request
-    logic [VMAXELEM_LOG-1:0] velem_off; // Offset in number of elements until the first valid one in a request
+    logic [DCACHE_MAXELEM_LOG-1:0] velem_off; // Offset in number of elements until the first valid one in a request
     logic [VMAXELEM_LOG:0] velem_incr;  // Number of valid elements in a request
     logic neg_stride;                   // Vector load with negative stride
 
@@ -660,7 +658,6 @@ typedef struct packed {
     gl_index_t gl_index;                // Graduation List entry
 
     logic [3:0] exe_stages;              // Number of executuion stages
-    logic translated;                   // Has been translated by the MMU
 } rr_exe_simd_instr_t;
 
 

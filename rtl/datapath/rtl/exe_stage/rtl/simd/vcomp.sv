@@ -29,7 +29,7 @@ module vcomp
 logic [7:0] use_sign_bit;
 logic is_signed;
 logic is_max;
-logic is_min;
+//logic is_min;
 logic is_seq;
 logic is_slt;
 logic is_sle;
@@ -39,12 +39,12 @@ bus64_t data_a, data_b;
 
 //vcnt performs the same operations as vmseq. The equal counts is performed
 //outside the FUs.
-assign is_signed = instr_type_i == VMAX || instr_type_i == VMIN || instr_type_i == VMSLT || instr_type_i == VMSLE ? 1'b1 : 1'b0;
-assign is_max = instr_type_i == VMAX || instr_type_i == VMAXU ? 1'b1 : 1'b0;
-assign is_min = instr_type_i == VMIN || instr_type_i == VMINU ? 1'b1 : 1'b0;
-assign is_seq = instr_type_i == VMSEQ || instr_type_i == VCNT ? 1'b1 : 1'b0;
-assign is_slt = instr_type_i == VMSLTU || instr_type_i == VMSLT ? 1'b1 : 1'b0;
-assign is_sle = instr_type_i == VMSLEU || instr_type_i == VMSLE ? 1'b1 : 1'b0;
+assign is_signed = ((instr_type_i == VMAX)   || (instr_type_i == VMIN )|| (instr_type_i == VMSLT) || (instr_type_i == VMSLE)) ? 1'b1 : 1'b0;
+assign is_max =    ((instr_type_i == VMAX)   || (instr_type_i == VMAXU))    ? 1'b1 : 1'b0;
+//assign is_min =    ((instr_type_i == VMIN)   || (instr_type_i == VMINU))    ? 1'b1 : 1'b0;
+assign is_seq =    ((instr_type_i == VMSEQ)  || (instr_type_i == VCNT))     ? 1'b1 : 1'b0;
+assign is_slt =    ((instr_type_i == VMSLTU) || (instr_type_i == VMSLT))    ? 1'b1 : 1'b0;
+assign is_sle =    ((instr_type_i == VMSLEU) || (instr_type_i == VMSLE))    ? 1'b1 : 1'b0;
 
 always_comb begin
     for (int i = 0; i<8; ++i) begin
@@ -120,7 +120,7 @@ always_comb begin
                     data_vd_o[i] = is_greater[(2*i)+1] | (is_equal[(2*i)+1] & is_greater[2*i]);
                 //VMSLE
                 end else if (is_sle) begin
-                    data_vd_o[i] = (&is_equal[(2*i)+:2] | (is_greater[(2*i)+1] |
+                    data_vd_o[i] = ((&is_equal[(2*i)+:2]) | (is_greater[(2*i)+1] |
                                                         (is_equal[(2*i)+1] & is_greater[2*i])));
 
                 //VMAX and VMIN
@@ -154,7 +154,7 @@ always_comb begin
                                     (is_equal[(4*i)+1] & (is_greater[4*i])))))));
                 //VMSLE
                 end else if (is_sle) begin
-                    data_vd_o[i] =  (&is_equal[(4*i)+:4] | (is_greater[(4*i)+3] |
+                    data_vd_o[i] =  ((&is_equal[(4*i)+:4]) | (is_greater[(4*i)+3] |
                                     (is_equal[(4*i)+3] & (is_greater[(4*i)+2] |
                                     (is_equal[(4*i)+2] & (is_greater[(4*i)+1] |
                                     (is_equal[(4*i)+1] & (is_greater[4*i]))))))));
@@ -193,7 +193,7 @@ always_comb begin
                                 (is_equal[1] & (is_greater[0])))))))))))))));
             //VMSLE
             end else if (is_sle) begin
-                data_vd_o = (&is_equal | (is_greater[7] |
+                data_vd_o = ((&is_equal) | (is_greater[7] |
                             (is_equal[7] & (is_greater[6] |
                             (is_equal[6] & (is_greater[5] |
                             (is_equal[5] & (is_greater[4] |

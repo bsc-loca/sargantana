@@ -40,7 +40,7 @@ typedef logic [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
 
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
-reg_free_list_entry head [0:NUM_CHECKPOINTS-1];
+reg_free_list_entry head [NUM_CHECKPOINTS-1:0];
 reg_free_list_entry tail;
 reg_free_list_entry tail_plus_one;
 // Point to the actual version of free list
@@ -48,7 +48,7 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [0:NUM_CHECKPOINTS-1];
+logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [NUM_CHECKPOINTS-1:0];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -58,6 +58,9 @@ logic write_enable_0;
 logic write_enable_1;
 logic read_enable;
 logic checkpoint_enable;
+
+// Temporal Checkpoint 
+checkpoint_ptr version_head_tmp;
 
 // Internal signal to do checkpoints 
 // User can do checkpoints when there is at least one free copy of the free list
@@ -81,10 +84,12 @@ assign tail_plus_one = tail + 5'b00001;
 phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table;    // SRAM used to store the free registers. Read syncronous.
 (* keep="TRUE" *) (* mark_debug="TRUE" *) phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table_reg;    // SRAM used to store the free registers. Read syncronous.
 
+// For Checkpoint copy old free list
+assign version_head_tmp = version_head + 1'b1;
+
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     integer i,j;
-    checkpoint_ptr version_head_tmp;
     if (~rstn_i) begin                  // On reset clean first table
         version_head <= 'b0;            // Current head pointer
         num_checkpoints <= 'b0;         // No checkpoints
@@ -96,7 +101,7 @@ begin
             num_registers[j]  <= 6'b100000; // Number of free registers 32
         end 
         for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
-            register_table[i] <= i[5:0] + 6'b100000;
+            register_table[i] <= 6'b100000 + i;
         end
     end
     else if (commit_roll_back_i) begin
@@ -178,7 +183,6 @@ begin
             // For checkpoint copy old free list in new. And copy pointers
             if (checkpoint_enable) begin
                 version_head <= version_head + checkpoint_enable;
-                version_head_tmp = version_head + 1'b1;
                 // Copy head position
                 head[version_head_tmp] <= head[version_head] + read_enable;
                 // Copy number of free registers.

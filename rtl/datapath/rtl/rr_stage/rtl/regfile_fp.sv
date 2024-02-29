@@ -40,7 +40,7 @@ module regfile_fp
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [0:NUM_PHYSICAL_FREGISTERS-1];
+reg64_t registers [NUM_PHYSICAL_FREGISTERS-1:0];
 bus64_t bypass_data1;
 bus64_t bypass_data2;
 bus64_t bypass_data3;
@@ -57,7 +57,7 @@ always_comb begin
     bypass_data3 = 64'b0;
 
     for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-        if (write_addr_i[i] == read_addr1_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr1_i) && write_enable_i[i]) begin
             bypass_data1 |= write_data_i[i];
             bypass1[i]    = 1'b1;
         end else begin
@@ -65,7 +65,7 @@ always_comb begin
             bypass1[i]    = 1'b0;
         end
 
-        if (write_addr_i[i] == read_addr2_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr2_i) && write_enable_i[i]) begin
             bypass_data2 |= write_data_i[i];
             bypass2[i]    = 1'b1;
         end else begin
@@ -73,7 +73,7 @@ always_comb begin
             bypass2[i]    = 1'b0;
         end
 
-        if (write_addr_i[i] == read_addr3_i && write_enable_i[i]) begin
+        if ((write_addr_i[i] == read_addr3_i) && write_enable_i[i]) begin
             bypass_data3 |= write_data_i[i];
             bypass3[i]    = 1'b1;
         end else begin

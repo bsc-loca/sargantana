@@ -33,42 +33,42 @@ module top_drac
 // DEBUG RING SIGNALS INPUT
 // debug_halt_i is istall_test 
 //------------------------------------------------------------------------------------    
-    input                       debug_halt_i,
+    input logic                 debug_halt_i,
 
     input addr_t                IO_FETCH_PC_VALUE,
-    input                       IO_FETCH_PC_UPDATE,
+    input logic                 IO_FETCH_PC_UPDATE,
     
-    input                       IO_REG_READ,
-    input  [4:0]                IO_REG_ADDR,
-    input                       IO_REG_WRITE,
+    input logic                 IO_REG_READ,
+    input logic [4:0]           IO_REG_ADDR,
+    input logic                 IO_REG_WRITE,
     input bus64_t               IO_REG_WRITE_DATA,
-    input  [5:0]	            IO_REG_PADDR,
-    input                       IO_REG_PREAD,
+    input logic [5:0] 	        IO_REG_PADDR,
+    input logic                 IO_REG_PREAD,
 
 //------------------------------------------------------------------------------------
 // I-CACHE INTERFACE
 //------------------------------------------------------------------------------------
     
-    input logic req_icache_ready_i,
-    output req_cpu_icache_t req_cpu_icache_o,
-    output logic en_translation_o,
-    output logic [1:0] priv_lvl_o,
-    input resp_icache_cpu_t resp_icache_cpu_i,
+    input  logic                req_icache_ready_i,
+    output req_cpu_icache_t     req_cpu_icache_o,
+    output logic                en_translation_o,
+    output logic [1:0]          priv_lvl_o,
+    input  resp_icache_cpu_t    resp_icache_cpu_i,
 
 //----------------------------------------------------------------------------------
 // D-CACHE INTERFACE
 //----------------------------------------------------------------------------------
 
-    input resp_dcache_cpu_t resp_dcache_cpu_i,
-    output req_cpu_dcache_t req_cpu_dcache_o, 
+    input  resp_dcache_cpu_t    resp_dcache_cpu_i,
+    output req_cpu_dcache_t     req_cpu_dcache_o, 
 
 //----------------------------------------------------------------------------------
 // MMU INTERFACE
 //----------------------------------------------------------------------------------
 
-    output csr_ptw_comm_t csr_ptw_comm_o,
-    output cache_tlb_comm_t dtlb_comm_o,
-    input tlb_cache_comm_t dtlb_comm_i,
+    output csr_ptw_comm_t       csr_ptw_comm_o,
+    output cache_tlb_comm_t     dtlb_comm_o,
+    input  tlb_cache_comm_t     dtlb_comm_i,
 
 //-----------------------------------------------------------------------------------
 // DEBUGGING MODULE SIGNALS
@@ -86,22 +86,22 @@ module top_drac
     output logic                IO_WB_WE,
     output bus64_t              IO_WB_BITS_ADDR,
 
-    output logic		IO_REG_BACKEND_EMPTY,
-    output logic  [5:0]		IO_REG_LIST_PADDR,
+    output logic		        IO_REG_BACKEND_EMPTY,
+    output logic  [5:0]		    IO_REG_LIST_PADDR,
     output bus64_t              IO_REG_READ_DATA,
 
 
 //-----------------------------------------------------------------------------
 // PMU INTERFACE
 //-----------------------------------------------------------------------------
-    input  pmu_interface_t pmu_interface_i,
+    input  pmu_interface_t      pmu_interface_i,
 
 //-----------------------------------------------------------------------------
 // INTERRUPTS
 //-----------------------------------------------------------------------------
-    input logic                 time_irq_i, // timer interrupt
-    input logic                 irq_i,      // external interrupt in
-    input  logic [63:0]         time_i,     // time passed since the core is reset
+    input  logic                 time_irq_i, // timer interrupt
+    input  logic                 irq_i,      // external interrupt in
+    input  logic [63:0]          time_i,     // time passed since the core is reset
 
 //-----------------------------------------------------------------------------
 // PCR
@@ -172,11 +172,11 @@ assign IO_REG_LIST_PADDR=debug_out.reg_list_paddr;
 assign IO_REG_BACKEND_EMPTY=debug_out.reg_backend_empty;
 
 // Register to save the last access to memory 
-always @(posedge clk_i, negedge rstn_i) begin
+always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i)
         dcache_addr <= 0;
     else
-        dcache_addr <= req_cpu_dcache_o.data_rs1;
+        dcache_addr <= req_cpu_dcache_o.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:0];
 end
 
 assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
@@ -184,8 +184,8 @@ assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
 
-phy_addr_t csr_satp;
-assign csr_ptw_comm_o.satp = {{(XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
+logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
+assign csr_ptw_comm_o.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 
 //-- HPM conection
 logic count_ovf_int_req;
@@ -245,9 +245,9 @@ hpm_counters #(
 );
 
 sew_t sew;
-logic [14:0] vl;
-assign sew = sew_t'(vpu_csr[38:37]); 	//SEW extracted from VPU-CSR
-assign vl = vpu_csr[28:14];		//Vector Length extracted from VPU-CSR
+logic [VMAXELEM_LOG:0] vl;
+assign sew = sew_t'(vpu_csr[38:37]);            //SEW extracted from VPU-CSR
+assign vl = vpu_csr[14 +: (VMAXELEM_LOG+1)];    //Vector Length extracted from VPU-CSR
 
 datapath #(
     .DracCfg(DracCfg)
@@ -287,7 +287,7 @@ datapath #(
 // scenarios or higher performance cores you may need csr_replay.
 
 csr_bsc #(
-    .paddr_width(drac_pkg::PHY_ADDR_SIZE)
+    .PPN_WIDTH(drac_pkg::PPN_SIZE)
 ) csr_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
@@ -351,13 +351,7 @@ csr_bsc #(
     .vpu_csr_o(vpu_csr),
 
     // Unused interfaces
-    .pcr_update_data_i(64'b0),
-    .pcr_update_addr_i(12'b0),
-    .pcr_update_core_id_i(64'b0),
-    .pcr_update_broadcast_i(1'b0),
-    .pcr_update_valid_i(1'b0),
     .m_soft_irq_i(1'b0),
-    .rocc_interrupt_i(1'b0),
 
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module

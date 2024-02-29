@@ -19,20 +19,20 @@ module fpnew_opgroup_multifmt_slice #(
   parameter fpnew_pkg::opgroup_e     OpGroup       = fpnew_pkg::CONV,
   parameter int unsigned             Width         = 64,
   // FPU configuration
-  parameter fpnew_pkg::fmt_logic_t   FpFmtConfig   = '1,
-  parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig  = '1,
+  parameter fpnew_pkg::fmt_logic_t   FP_FMT_CONFIG   = '1,
+  parameter fpnew_pkg::ifmt_logic_t  INT_FMT_CONFIG  = '1,
   parameter logic                    EnableVectors = 1'b1,
   parameter logic                    PulpDivsqrt   = 1'b1,
-  parameter int unsigned             NumPipeRegs   = 0,
-  parameter fpnew_pkg::pipe_config_t PipeConfig    = fpnew_pkg::BEFORE,
+  parameter int unsigned             NUM_PIPE_REGS   = 0,
+  parameter fpnew_pkg::pipe_config_t PIPE_CONFIG    = fpnew_pkg::BEFORE_INPUTS,
   parameter logic                    ExtRegEna     = 1'b0,
-  parameter type                     TagType       = logic,
+  parameter type                     TAG_TYPE       = logic,
   // Do not change
   localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS,
-  localparam int unsigned NUM_SIMD_LANES = fpnew_pkg::max_num_lanes(Width, FpFmtConfig, EnableVectors),
+  localparam int unsigned NUM_SIMD_LANES = fpnew_pkg::max_num_lanes(Width, FP_FMT_CONFIG, EnableVectors),
   localparam type         MaskType     = logic [NUM_SIMD_LANES-1:0],
-  localparam int unsigned ExtRegEnaWidth = NumPipeRegs == 0 ? 1 : NumPipeRegs
+  localparam int unsigned EXT_REG_ENA_WIDTH = ((NUM_PIPE_REGS == 0) ? 1 : NUM_PIPE_REGS)
 ) (
   input logic                                     clk_i,
   input logic                                     rst_ni,
@@ -46,7 +46,7 @@ module fpnew_opgroup_multifmt_slice #(
   input fpnew_pkg::fp_format_e                    dst_fmt_i,
   input fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
-  input TagType                                   tag_i,
+  input TAG_TYPE                                   tag_i,
   input MaskType                                  simd_mask_i,
   // Input Handshake
   input  logic                                    in_valid_i,
@@ -56,26 +56,26 @@ module fpnew_opgroup_multifmt_slice #(
   output logic [Width-1:0]                        result_o,
   output fpnew_pkg::status_t                      status_o,
   output logic                                    extension_bit_o,
-  output TagType                                  tag_o,
+  output TAG_TYPE                                  tag_o,
   // Output handshake
   output logic                                    out_valid_o,
   input  logic                                    out_ready_i,
   // Indication of valid data in flight
   output logic                                    busy_o,
   // External register enable override
-  input  logic [ExtRegEnaWidth-1:0]               reg_ena_i
+  input  logic [EXT_REG_ENA_WIDTH-1:0]               reg_ena_i
 );
 
   if ((OpGroup == fpnew_pkg::DIVSQRT) && !PulpDivsqrt &&
-      !((FpFmtConfig[0] == 1) && (FpFmtConfig[1:NUM_FORMATS-1] == '0))) begin
+      !((FP_FMT_CONFIG[0] == 1) && (FP_FMT_CONFIG[1:NUM_FORMATS-1] == '0))) begin
     $fatal(1, "T-Head-based DivSqrt unit supported only in FP32-only configurations. \
 Set PulpDivsqrt to 1 not to use the PULP DivSqrt unit \
 or set Features.FpFmtMask to support only FP32");
   end
 
-  localparam int unsigned MAX_FP_WIDTH   = fpnew_pkg::max_fp_width(FpFmtConfig);
-  localparam int unsigned MAX_INT_WIDTH  = fpnew_pkg::max_int_width(IntFmtConfig);
-  localparam int unsigned NUM_LANES = fpnew_pkg::max_num_lanes(Width, FpFmtConfig, 1'b1);
+  localparam int unsigned MAX_FP_WIDTH   = fpnew_pkg::max_fp_width(FP_FMT_CONFIG);
+  localparam int unsigned MAX_INT_WIDTH  = fpnew_pkg::max_int_width(INT_FMT_CONFIG);
+  localparam int unsigned NUM_LANES = fpnew_pkg::max_num_lanes(Width, FP_FMT_CONFIG, 1'b1);
   localparam int unsigned NUM_INT_FORMATS = fpnew_pkg::NUM_INT_FORMATS;
   // We will send the format information along with the data
   localparam int unsigned FMT_BITS =
@@ -100,7 +100,7 @@ or set Features.FpFmtMask to support only FP32");
 
   fpnew_pkg::status_t [NUM_LANES-1:0]   lane_status;
   logic   [NUM_LANES-1:0]               lane_ext_bit; // only the first one is actually used
-  TagType [NUM_LANES-1:0]               lane_tags; // only the first one is actually used
+  TAG_TYPE [NUM_LANES-1:0]               lane_tags; // only the first one is actually used
   logic   [NUM_LANES-1:0]               lane_masks;
   logic   [NUM_LANES-1:0][AUX_BITS-1:0] lane_aux; // only the first one is actually used
   logic   [NUM_LANES-1:0]               lane_busy; // dito
@@ -119,10 +119,10 @@ or set Features.FpFmtMask to support only FP32");
   assign vectorial_op = vectorial_op_i & EnableVectors; // only do vectorial stuff if enabled
 
   // Cast-and-Pack ops are encoded in operation and modifier
-  assign dst_fmt_is_int = (OpGroup == fpnew_pkg::CONV) & (op_i == fpnew_pkg::F2I);
-  assign dst_is_cpk     = (OpGroup == fpnew_pkg::CONV) & (op_i == fpnew_pkg::CPKAB ||
-                                                          op_i == fpnew_pkg::CPKCD);
-  assign dst_vec_op     = (OpGroup == fpnew_pkg::CONV) & {(op_i == fpnew_pkg::CPKCD), op_mod_i};
+  assign dst_fmt_is_int = ((OpGroup == fpnew_pkg::CONV) & (op_i == fpnew_pkg::F2I));
+  assign dst_is_cpk     = ((OpGroup == fpnew_pkg::CONV) & ((op_i == fpnew_pkg::CPKAB) ||
+                                                          (op_i == fpnew_pkg::CPKCD)));
+  assign dst_vec_op     = ((OpGroup == fpnew_pkg::CONV) & {(op_i == fpnew_pkg::CPKCD), op_mod_i});
 
   assign is_up_cast   = (fpnew_pkg::fp_width(dst_fmt_i) > fpnew_pkg::fp_width(src_fmt_i));
   assign is_down_cast = (fpnew_pkg::fp_width(dst_fmt_i) < fpnew_pkg::fp_width(src_fmt_i));
@@ -159,16 +159,16 @@ or set Features.FpFmtMask to support only FP32");
     localparam int unsigned LANE = unsigned'(lane); // unsigned to please the linter
     // Get a mask of active formats for this lane
     localparam fpnew_pkg::fmt_logic_t ACTIVE_FORMATS =
-        fpnew_pkg::get_lane_formats(Width, FpFmtConfig, LANE);
+        fpnew_pkg::get_lane_formats(Width, FP_FMT_CONFIG, LANE);
     localparam fpnew_pkg::ifmt_logic_t ACTIVE_INT_FORMATS =
-        fpnew_pkg::get_lane_int_formats(Width, FpFmtConfig, IntFmtConfig, LANE);
+        fpnew_pkg::get_lane_int_formats(Width, FP_FMT_CONFIG, INT_FMT_CONFIG, LANE);
     localparam int unsigned MAX_WIDTH = fpnew_pkg::max_fp_width(ACTIVE_FORMATS);
 
     // Cast-specific parameters
     localparam fpnew_pkg::fmt_logic_t CONV_FORMATS =
-        fpnew_pkg::get_conv_lane_formats(Width, FpFmtConfig, LANE);
+        fpnew_pkg::get_conv_lane_formats(Width, FP_FMT_CONFIG, LANE);
     localparam fpnew_pkg::ifmt_logic_t CONV_INT_FORMATS =
-        fpnew_pkg::get_conv_lane_int_formats(Width, FpFmtConfig, IntFmtConfig, LANE);
+        fpnew_pkg::get_conv_lane_int_formats(Width, FP_FMT_CONFIG, INT_FMT_CONFIG, LANE);
     localparam int unsigned CONV_WIDTH = fpnew_pkg::max_fp_width(CONV_FORMATS);
 
     // Lane parameters from Opgroup
@@ -192,9 +192,9 @@ or set Features.FpFmtMask to support only FP32");
       always_comb begin : prepare_input
         for (int unsigned i = 0; i < NUM_OPERANDS; i++) begin
           if (i == 2) begin
-            local_operands[i] = operands_i[i] >> LANE*fpnew_pkg::fp_width(dst_fmt_i);
+            local_operands[i] = (operands_i[i] >> (LANE * fpnew_pkg::fp_width(dst_fmt_i)));
           end else begin
-            local_operands[i] = operands_i[i] >> LANE*fpnew_pkg::fp_width(src_fmt_i);
+            local_operands[i] = (operands_i[i] >> (LANE * fpnew_pkg::fp_width(src_fmt_i)));
           end
         end
 
@@ -221,11 +221,11 @@ or set Features.FpFmtMask to support only FP32");
       // Instantiate the operation from the selected opgroup
       if (OpGroup == fpnew_pkg::ADDMUL) begin : lane_instance
         fpnew_fma_multi #(
-          .FpFmtConfig ( LANE_FORMATS         ),
-          .NumPipeRegs ( NumPipeRegs          ),
-          .PipeConfig  ( PipeConfig           ),
-          .TagType     ( TagType              ),
-          .AuxType     ( logic [AUX_BITS-1:0] )
+          .FP_FMT_CONFIG ( LANE_FORMATS         ),
+          .NUM_PIPE_REGS ( NUM_PIPE_REGS          ),
+          .PIPE_CONFIG  ( PIPE_CONFIG           ),
+          .TAG_TYPE     ( TAG_TYPE              ),
+          .AUX_TYPE     ( logic [AUX_BITS-1:0] )
         ) i_fpnew_fma_multi (
           .clk_i,
           .rst_ni,
@@ -258,10 +258,10 @@ or set Features.FpFmtMask to support only FP32");
         if (!PulpDivsqrt && LANE_FORMATS[0] && (LANE_FORMATS[1:fpnew_pkg::NUM_FP_FORMATS-1] == '0)) begin
           // The T-head-based DivSqrt unit is supported only in FP32-only configurations
           fpnew_divsqrt_th_32 #(
-            .NumPipeRegs ( NumPipeRegs          ),
-            .PipeConfig  ( PipeConfig           ),
-            .TagType     ( TagType              ),
-            .AuxType     ( logic [AUX_BITS-1:0] )
+            .NUM_PIPE_REGS ( NUM_PIPE_REGS          ),
+            .PIPE_CONFIG  ( PIPE_CONFIG           ),
+            .TAG_TYPE     ( TAG_TYPE              ),
+            .AUX_TYPE     ( logic [AUX_BITS-1:0] )
           ) i_fpnew_divsqrt_multi_th (
             .clk_i,
             .rst_ni,
@@ -288,11 +288,11 @@ or set Features.FpFmtMask to support only FP32");
           );
         end else begin
           fpnew_divsqrt_multi #(
-            .FpFmtConfig ( LANE_FORMATS         ),
-            .NumPipeRegs ( NumPipeRegs          ),
-            .PipeConfig  ( PipeConfig           ),
-            .TagType     ( TagType              ),
-            .AuxType     ( logic [AUX_BITS-1:0] )
+            .FP_FMT_CONFIG ( LANE_FORMATS         ),
+            .NUM_PIPE_REGS ( NUM_PIPE_REGS          ),
+            .PIPE_CONFIG  ( PIPE_CONFIG           ),
+            .TAG_TYPE     ( TAG_TYPE              ),
+            .AUX_TYPE     ( logic [AUX_BITS-1:0] )
           ) i_fpnew_divsqrt_multi (
             .clk_i,
             .rst_ni,
@@ -328,12 +328,12 @@ or set Features.FpFmtMask to support only FP32");
 
       end else if (OpGroup == fpnew_pkg::CONV) begin : lane_instance
         fpnew_cast_multi #(
-          .FpFmtConfig  ( LANE_FORMATS         ),
-          .IntFmtConfig ( CONV_INT_FORMATS     ),
-          .NumPipeRegs  ( NumPipeRegs          ),
-          .PipeConfig   ( PipeConfig           ),
-          .TagType      ( TagType              ),
-          .AuxType      ( logic [AUX_BITS-1:0] )
+          .FP_FMT_CONFIG  ( LANE_FORMATS         ),
+          .INT_FMT_CONFIG ( CONV_INT_FORMATS     ),
+          .NUM_PIPE_REGS  ( NUM_PIPE_REGS          ),
+          .PIPE_CONFIG   ( PIPE_CONFIG           ),
+          .TAG_TYPE      ( TAG_TYPE              ),
+          .AUX_TYPE      ( logic [AUX_BITS-1:0] )
         ) i_fpnew_cast_multi (
           .clk_i,
           .rst_ni,
@@ -395,7 +395,7 @@ or set Features.FpFmtMask to support only FP32");
       if (ACTIVE_FORMATS[fmt]) begin
         assign fmt_slice_result[fmt][(LANE+1)*FP_WIDTH-1:LANE*FP_WIDTH] =
             local_result[FP_WIDTH-1:0];
-      end else if ((LANE+1)*FP_WIDTH <= Width) begin
+      end else if (((LANE + 1) * FP_WIDTH) <= Width) begin
         assign fmt_slice_result[fmt][(LANE+1)*FP_WIDTH-1:LANE*FP_WIDTH] =
             '{default: lane_ext_bit[LANE]};
       end else if (LANE*FP_WIDTH < Width) begin
@@ -412,7 +412,7 @@ or set Features.FpFmtMask to support only FP32");
         if (ACTIVE_INT_FORMATS[ifmt]) begin
           assign ifmt_slice_result[ifmt][(LANE+1)*INT_WIDTH-1:LANE*INT_WIDTH] =
             local_result[INT_WIDTH-1:0];
-        end else if ((LANE+1)*INT_WIDTH <= Width) begin
+        end else if (((LANE+1)*INT_WIDTH) <= Width) begin
           assign ifmt_slice_result[ifmt][(LANE+1)*INT_WIDTH-1:LANE*INT_WIDTH] = '0;
         end else if (LANE*INT_WIDTH < Width) begin
           assign ifmt_slice_result[ifmt][Width-1:LANE*INT_WIDTH] = '0;
@@ -438,7 +438,7 @@ or set Features.FpFmtMask to support only FP32");
     end else begin : extend_int_result
       // Set up some constants
       localparam int unsigned INT_WIDTH = fpnew_pkg::int_width(fpnew_pkg::int_format_e'(ifmt));
-      if (NUM_LANES*INT_WIDTH < Width)
+      if ((NUM_LANES*INT_WIDTH) < Width)
         assign ifmt_slice_result[ifmt][Width-1:NUM_LANES*INT_WIDTH] = '0;
     end
   end
@@ -447,11 +447,11 @@ or set Features.FpFmtMask to support only FP32");
   if (OpGroup == fpnew_pkg::CONV) begin : target_regs
     // Bypass pipeline signals, index i holds signal after i register stages
     // verilator lint_off BLKANDNBLK
-    logic [0:NumPipeRegs][Width-1:0] byp_pipe_target_q;
-    logic [0:NumPipeRegs][2:0]       byp_pipe_aux_q;
-    logic [0:NumPipeRegs]            byp_pipe_valid_q;
+    logic [NUM_PIPE_REGS:0][Width-1:0] byp_pipe_target_q;
+    logic [NUM_PIPE_REGS:0][2:0]       byp_pipe_aux_q;
+    logic [NUM_PIPE_REGS:0]            byp_pipe_valid_q;
     // Ready signal is combinatorial for all stages
-    logic [0:NumPipeRegs] byp_pipe_ready;
+    logic [NUM_PIPE_REGS:0] byp_pipe_ready;
 
     // Input stage: First element of pipeline is taken from inputs
     assign byp_pipe_target_q[0]  = conv_target_d;
@@ -460,7 +460,7 @@ or set Features.FpFmtMask to support only FP32");
     // verilator lint_on BLKANDNBLK
 
     // Generate the register stages
-    for (genvar i = 0; i < NumPipeRegs; i++) begin : gen_bypass_pipeline
+    for (genvar i = 0; i < NUM_PIPE_REGS; i++) begin : gen_bypass_pipeline
       // Internal register enable for this stage
       logic reg_ena;
       // Determine the ready signal of the current stage - advance the pipeline:
@@ -476,12 +476,12 @@ or set Features.FpFmtMask to support only FP32");
       `FFL(byp_pipe_aux_q[i+1],     byp_pipe_aux_q[i],     reg_ena, '0)
     end
     // Output stage: Ready travels backwards from output side, driven by downstream circuitry
-    assign byp_pipe_ready[NumPipeRegs] = out_ready_i & result_is_vector;
+    assign byp_pipe_ready[NUM_PIPE_REGS] = out_ready_i & result_is_vector;
     // Output stage: assign module outputs
-    assign conv_target_q = byp_pipe_target_q[NumPipeRegs];
+    assign conv_target_q = byp_pipe_target_q[NUM_PIPE_REGS];
 
     // decode the aux data
-    assign {result_vec_op, result_is_cpk} = byp_pipe_aux_q[NumPipeRegs];
+    assign {result_vec_op, result_is_cpk} = byp_pipe_aux_q[NUM_PIPE_REGS];
   end else begin : no_conv
     assign {result_vec_op, result_is_cpk} = '0;
     assign conv_target_q = '0;

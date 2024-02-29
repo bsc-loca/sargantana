@@ -54,7 +54,7 @@ always_comb begin
         SLTU: begin
             instruction_o.result = {63'b0, data_rs1 < data_rs2};
         end
-        XOR: begin
+        XOR_INST: begin
             instruction_o.result = data_rs1 ^ data_rs2;
         end
         SRL: begin
@@ -71,10 +71,10 @@ always_comb begin
             instruction_o.result[31:0] = $signed(data_rs1[31:0]) >>> data_rs2[4:0];
             instruction_o.result[63:32] = {32{instruction_o.result[31]}};
         end
-        OR: begin
+        OR_INST: begin
             instruction_o.result = data_rs1 | data_rs2;
         end
-        AND: begin
+        AND_INST: begin
             instruction_o.result = data_rs1 & data_rs2;
         end
         VSETIVLI: begin
@@ -93,7 +93,7 @@ end
 // METADATA TO WRITE_BACK
 //------------------------------------------------------------------------------
 
-assign instruction_o.valid           = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_ALU | instruction_i.instr.unit == UNIT_SYSTEM);
+assign instruction_o.valid           = instruction_i.instr.valid & ((instruction_i.instr.unit == UNIT_ALU) | (instruction_i.instr.unit == UNIT_SYSTEM));
 assign instruction_o.pc              = instruction_i.instr.pc;
 assign instruction_o.bpred           = instruction_i.instr.bpred;
 assign instruction_o.rs1             = instruction_i.instr.rs1;

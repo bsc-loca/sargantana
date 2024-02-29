@@ -23,8 +23,8 @@ module fpnew_opgroup_block #(
   parameter fpnew_pkg::ifmt_logic_t     IntFmtMask    = '1,
   parameter fpnew_pkg::fmt_unsigned_t   FmtPipeRegs   = '{default: 0},
   parameter fpnew_pkg::fmt_unit_types_t FmtUnitTypes  = '{default: fpnew_pkg::PARALLEL},
-  parameter fpnew_pkg::pipe_config_t    PipeConfig    = fpnew_pkg::BEFORE,
-  parameter type                        TagType       = logic,
+  parameter fpnew_pkg::pipe_config_t    PIPE_CONFIG    = fpnew_pkg::BEFORE_INPUTS,
+  parameter type                        TAG_TYPE       = logic,
   parameter int unsigned                TrueSIMDClass = 0,
   // Do not change
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS,
@@ -44,7 +44,7 @@ module fpnew_opgroup_block #(
   input fpnew_pkg::fp_format_e                    dst_fmt_i,
   input fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
-  input TagType                                   tag_i,
+  input TAG_TYPE                                   tag_i,
   input MaskType                                  simd_mask_i,
   // Input Handshake
   input  logic                                    in_valid_i,
@@ -54,7 +54,7 @@ module fpnew_opgroup_block #(
   output logic [Width-1:0]                        result_o,
   output fpnew_pkg::status_t                      status_o,
   output logic                                    extension_bit_o,
-  output TagType                                  tag_o,
+  output TAG_TYPE                                  tag_o,
   // Output handshake
   output logic                                    out_valid_o,
   input  logic                                    out_ready_i,
@@ -69,7 +69,7 @@ module fpnew_opgroup_block #(
     logic [Width-1:0]   result;
     fpnew_pkg::status_t status;
     logic               ext_bit;
-    TagType             tag;
+    TAG_TYPE             tag;
   } output_t;
 
   // Handshake signals for the slices
@@ -107,9 +107,9 @@ module fpnew_opgroup_block #(
         .FpFormat      ( fpnew_pkg::fp_format_e'(fmt) ),
         .Width         ( Width                        ),
         .EnableVectors ( EnableVectors                ),
-        .NumPipeRegs   ( FmtPipeRegs[fmt]             ),
-        .PipeConfig    ( PipeConfig                   ),
-        .TagType       ( TagType                      ),
+        .NUM_PIPE_REGS   ( FmtPipeRegs[fmt]             ),
+        .PIPE_CONFIG    ( PIPE_CONFIG                   ),
+        .TAG_TYPE       ( TAG_TYPE                      ),
         .TrueSIMDClass ( TrueSIMDClass                )
       ) i_fmt_slice (
         .clk_i,
@@ -147,7 +147,7 @@ module fpnew_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].tag     = TAG_TYPE'(fpnew_pkg::DONT_CARE);
 
     // Tie off disabled formats
     end else if (!FpFmtMask[fmt] || (FmtUnitTypes[fmt] == fpnew_pkg::DISABLED)) begin : disable_fmt
@@ -158,7 +158,7 @@ module fpnew_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].tag     = TAG_TYPE'(fpnew_pkg::DONT_CARE);
     end
   end
 
@@ -168,7 +168,7 @@ module fpnew_opgroup_block #(
   if (fpnew_pkg::any_enabled_multi(FmtUnitTypes, FpFmtMask)) begin : gen_merged_slice
 
     localparam FMT = fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
-    localparam REG = fpnew_pkg::get_num_regs_multi(FmtPipeRegs, FmtUnitTypes, FpFmtMask);
+    localparam NUM_REG = fpnew_pkg::get_num_regs_multi(FmtPipeRegs, FmtUnitTypes, FpFmtMask);
 
     logic in_valid;
 
@@ -177,13 +177,13 @@ module fpnew_opgroup_block #(
     fpnew_opgroup_multifmt_slice #(
       .OpGroup       ( OpGroup          ),
       .Width         ( Width            ),
-      .FpFmtConfig   ( FpFmtMask        ),
-      .IntFmtConfig  ( IntFmtMask       ),
+      .FP_FMT_CONFIG   ( FpFmtMask        ),
+      .INT_FMT_CONFIG  ( IntFmtMask       ),
       .EnableVectors ( EnableVectors    ),
       .PulpDivsqrt   ( PulpDivsqrt      ),
-      .NumPipeRegs   ( REG              ),
-      .PipeConfig    ( PipeConfig       ),
-      .TagType       ( TagType          )
+      .NUM_PIPE_REGS   ( NUM_REG              ),
+      .PIPE_CONFIG    ( PIPE_CONFIG       ),
+      .TAG_TYPE       ( TAG_TYPE          )
     ) i_multifmt_slice (
       .clk_i,
       .rst_ni,

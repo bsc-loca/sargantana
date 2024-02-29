@@ -69,10 +69,10 @@ package def_pkg;
 
     localparam bit NSX = XF16 | XF16ALT | XF8 | XFVEC; // Are non-standard extensions present?
 
-    localparam bit RVFVEC     = RVF     & XFVEC & FLEN>32; // FP32 vectors available if vectors and larger fmt enabled
-    localparam bit XF16VEC    = XF16    & XFVEC & FLEN>16; // FP16 vectors available if vectors and larger fmt enabled
-    localparam bit XF16ALTVEC = XF16ALT & XFVEC & FLEN>16; // FP16ALT vectors available if vectors and larger fmt enabled
-    localparam bit XF8VEC     = XF8     & XFVEC & FLEN>8;  // FP8 vectors available if vectors and larger fmt enabled
+    localparam bit RVFVEC     = RVF     & XFVEC & (FLEN>32); // FP32 vectors available if vectors and larger fmt enabled
+    localparam bit XF16VEC    = XF16    & XFVEC & (FLEN>16); // FP16 vectors available if vectors and larger fmt enabled
+    localparam bit XF16ALTVEC = XF16ALT & XFVEC & (FLEN>16); // FP16ALT vectors available if vectors and larger fmt enabled
+    localparam bit XF8VEC     = XF8     & XFVEC & (FLEN>8);  // FP8 vectors available if vectors and larger fmt enabled
 
     localparam logic [63:0] ISA_CODE = (RVA <<  0)  // A - Atomic Instructions extension
                                      | (0   <<  2)  // C - Compressed extension
@@ -83,6 +83,7 @@ package def_pkg;
                                      | (0   << 13)  // N - User level interrupts supported
                                      | (1   << 18)  // S - Supervisor mode implemented
                                      | (1   << 20)  // U - User mode implemented
+                                     | (RVV << 21)  // V - Vector Instructions extension
                                      | (NSX << 23)  // X - Non-standard extensions present
                                      | (1   << 63); // RV64
 
@@ -96,6 +97,7 @@ package def_pkg;
                                                    | riscv_pkg::SSTATUS_SPIE
                                                    | riscv_pkg::SSTATUS_SPP
                                                    | riscv_pkg::SSTATUS_FS
+                                                   | riscv_pkg::SSTATUS_VS
                                                    | riscv_pkg::SSTATUS_XS
                                                    | riscv_pkg::SSTATUS_SUM
                                                    | riscv_pkg::SSTATUS_MXR
@@ -108,6 +110,7 @@ package def_pkg;
                                                     | riscv_pkg::SSTATUS_SPIE
                                                     | riscv_pkg::SSTATUS_SPP
                                                     | riscv_pkg::SSTATUS_FS
+                                                    | riscv_pkg::SSTATUS_VS
                                                     | riscv_pkg::SSTATUS_SUM
                                                     | riscv_pkg::SSTATUS_MXR;
     // exception

@@ -53,6 +53,18 @@ module mem_unit
 
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
+
+function [63:0] trunc_sum_64bits(input [64:0] val_in);
+  trunc_sum_64bits = val_in[63:0];
+endfunction
+
+function [6:0] trunc_sum_7bits(input [7:0] val_in);
+  trunc_sum_7bits = val_in[6:0];
+endfunction
+
+function [4:0] trunc_shift_7_5(input [6:0] val_in);
+  trunc_shift_7_5 = val_in[4:0];
+endfunction
              
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s1_q;
@@ -112,21 +124,21 @@ bus_simd_t data_to_wb;
 bus_simd_t vdata_to_wb_d;
 bus_simd_t vdata_to_wb_q;
 
-bus_simd_t vload_packer_d [0:VECTOR_PACKER_NUM_ENTRIES-1];
-gl_index_t vload_packer_id_d [0:VECTOR_PACKER_NUM_ENTRIES-1];
-logic [VMAXELEM_LOG:0] vload_packer_nelem_d [0:VECTOR_PACKER_NUM_ENTRIES-1];
-bus_simd_t vload_packer_q [0:VECTOR_PACKER_NUM_ENTRIES-1];
-gl_index_t vload_packer_id_q [0:VECTOR_PACKER_NUM_ENTRIES-1];
-logic [VMAXELEM_LOG:0] vload_packer_nelem_q [0:VECTOR_PACKER_NUM_ENTRIES-1];
+bus_simd_t vload_packer_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
+gl_index_t vload_packer_id_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
+logic [VMAXELEM_LOG:0] vload_packer_nelem_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
+bus_simd_t vload_packer_q [VECTOR_PACKER_NUM_ENTRIES-1:0];
+gl_index_t vload_packer_id_q [VECTOR_PACKER_NUM_ENTRIES-1:0];
+logic [VMAXELEM_LOG:0] vload_packer_nelem_q [VECTOR_PACKER_NUM_ENTRIES-1:0];
 logic vload_packer_write_hit, vload_packer_read_hit;
 logic vload_packer_complete;
 logic [VECTOR_PACKER_NUM_LOG-1:0] vload_packer_write_idx;
 logic [VECTOR_PACKER_NUM_LOG:0] vload_packer_nfree_d, vload_packer_nfree_q;
 logic vload_packer_write, vload_packer_free;
-gl_index_t vstore_packer_id_d [0:VECTOR_PACKER_NUM_ENTRIES-1];
-logic [VMAXELEM_LOG:0] vstore_packer_nelem_d [0:VECTOR_PACKER_NUM_ENTRIES-1];
-gl_index_t vstore_packer_id_q [0:VECTOR_PACKER_NUM_ENTRIES-1];
-logic [VMAXELEM_LOG:0] vstore_packer_nelem_q [0:VECTOR_PACKER_NUM_ENTRIES-1];
+gl_index_t vstore_packer_id_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
+logic [VMAXELEM_LOG:0] vstore_packer_nelem_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
+gl_index_t vstore_packer_id_q [VECTOR_PACKER_NUM_ENTRIES-1:0];
+logic [VMAXELEM_LOG:0] vstore_packer_nelem_q [VECTOR_PACKER_NUM_ENTRIES-1:0];
 logic vstore_packer_write_hit, vstore_packer_read_hit;
 logic vstore_packer_complete;
 logic [VECTOR_PACKER_NUM_LOG:0] vstore_packer_nfree_d, vstore_packer_nfree_q;
@@ -157,8 +169,8 @@ parameter ResetState  = 3'b000,
 assign flush_to_lsq = kill_i | flush_i;
 
 // Input instruction to LSQ
-assign instruction_to_lsq.instr = (instruction_i.instr.unit == UNIT_MEM && instruction_i.instr.valid) ? instruction_i.instr : 'h0 ;
-assign instruction_to_lsq.data_rs1      = (instruction_i.instr.mem_type == AMO) ? instruction_i.data_rs1 : instruction_i.data_rs1 + instruction_i.instr.imm;
+assign instruction_to_lsq.instr         = ((instruction_i.instr.unit == UNIT_MEM) && instruction_i.instr.valid) ? instruction_i.instr : 'h0 ;
+assign instruction_to_lsq.data_rs1      = (instruction_i.instr.mem_type == AMO) ? instruction_i.data_rs1 : trunc_sum_64bits(instruction_i.data_rs1 + instruction_i.instr.imm);
 assign instruction_to_lsq.data_rs2      = instruction_i.data_rs2;
 assign instruction_to_lsq.data_old_vd   = instruction_i.data_old_vd;
 assign instruction_to_lsq.data_vm       = instruction_i.data_vm;
@@ -168,12 +180,11 @@ assign instruction_to_lsq.pvd           = instruction_i.pvd;
 assign instruction_to_lsq.fprd          = instruction_i.fprd;
 assign instruction_to_lsq.gl_index      = instruction_i.gl_index;
 
-assign instruction_to_lsq.is_amo_or_store  =  (instruction_i.instr.mem_type == STORE) || 
-                                              (instruction_i.instr.mem_type == AMO);
+assign instruction_to_lsq.is_amo_or_store  = instruction_i.is_amo_or_store;
 
-assign instruction_to_lsq.is_store  = instruction_i.instr.mem_type == STORE;
+assign instruction_to_lsq.is_store  = instruction_i.is_store;
                                       
-assign instruction_to_lsq.is_amo  = (instruction_to_lsq.is_amo_or_store & !instruction_to_lsq.is_store);
+assign instruction_to_lsq.is_amo  = instruction_i.is_amo;
 
 assign instruction_to_lsq.vmisalign_xcpt = instruction_i.vmisalign_xcpt;
 assign instruction_to_lsq.velem_id = instruction_i.velem_id;
@@ -262,7 +273,7 @@ always_comb begin
                     
                     //// Set request valid bit, stall_commit and next state signals 
                     if (!instruction_to_dcache.instr.valid | full_pmrq | 
-                       (instruction_to_dcache.velem_incr < (VMAXELEM >> instruction_to_dcache.sew) & // partial vector
+                       ((instruction_to_dcache.velem_incr < (VMAXELEM >> instruction_to_dcache.sew)) & // partial vector
                        ((vload_packer_full & ~req_cpu_dcache_o.is_store) | (vstore_packer_full & req_cpu_dcache_o.is_store)))) begin
                         // If not valid instruction or full Pending Request Memory Queue or full vpacker with partial vector instruction
                         // Wait until next state
@@ -273,7 +284,7 @@ always_comb begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid & ~stall_after_flush_lsq; // Don't send new request before sending the killed one
                         mem_commit_stall_s0    = 1'b0;
-                        instruction_s1_d = (resp_dcache_cpu_i.ready & ~stall_after_flush_lsq) | instruction_to_dcache.ex.valid ? instruction_to_dcache : 'h0;
+                        instruction_s1_d = ((resp_dcache_cpu_i.ready & ~stall_after_flush_lsq) | instruction_to_dcache.ex.valid) ? instruction_to_dcache : 'h0;
                     end else if (!((store_on_fly & req_cpu_dcache_o.is_amo) | amo_on_fly) |
                                  (mem_gl_index_o == instruction_to_dcache.gl_index)) begin // TODO: PReguntar al NArcis a veure si es pot treure
                         // If there is not a Store or AMO on fly or the current instruction
@@ -290,10 +301,10 @@ always_comb begin
                         // If cache is not ready wait for it
                         // Otherwise if store or amo is launched, continue reading, otherwise wait
                         // until arriving to commit
-                        instruction_s1_d = (resp_dcache_cpu_i.ready & ~stall_after_flush_lsq 
+                        instruction_s1_d = ((resp_dcache_cpu_i.ready & ~stall_after_flush_lsq 
                                             & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])) 
                                             | instruction_to_dcache.ex.valid | 
-                                            ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.load_mask[0]) ? instruction_to_dcache : 'h0;
+                                            ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.load_mask[0])) ? instruction_to_dcache : 'h0;
                     end else begin
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
@@ -322,7 +333,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         stall_after_flush_lsq <= 1'b0;
     end else begin
         if (req_cpu_dcache_o.valid & resp_dcache_cpu_i.ready) begin // Sent or killed request
-            tag_id <= tag_id + 5'h1;
+            tag_id <= trunc_sum_7bits(tag_id + 7'h1);
             killed_dcache_req_q <= 1'b0;
             stall_after_flush_lsq <= 1'b0;
         end else if (killed_dcache_req_d) begin
@@ -376,43 +387,20 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
-        
-        /*instruction_s2_q     <=  'h0;
-        is_STORE_or_AMO_s2_q <= 1'b0;
-        is_STORE_s2_q        <= 1'b0;
-        io_s2_q              <= 1'b0;
-        tag_id_s2_q          <=  'h0;*/
-        
     end else if (flush_to_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <=  'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
-        
-        /*instruction_s2_q     <=  'h0;
-        is_STORE_or_AMO_s2_q <= 1'b0;
-        is_STORE_s2_q        <= 1'b0;
-        io_s2_q              <= 1'b0;
-        tag_id_s2_q          <=  'h0;*/
-        
     end else begin          // Update the Pipeline    
         instruction_s1_q     <= instruction_s1_d;
         is_STORE_or_AMO_s1_q <= req_cpu_dcache_o.is_amo_or_store;
         is_STORE_s1_q        <= req_cpu_dcache_o.is_store;
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
-                
-        /*instruction_s2_q     <= instruction_s1_q;
-        is_STORE_or_AMO_s2_q <= is_STORE_or_AMO_s1_q;
-        is_STORE_s2_q        <= is_STORE_s1_q;
-        io_s2_q              <= io_s1_q;
-        tag_id_s2_q          <= tag_id_s1_q;*/
     end
 end
-
-//// Keep tracking an AMO or STORE if it is in the pipeline to stall the commit until access finished
-assign mem_commit_stall_s1 = instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q;
 
 //// Decide if the pipeline needs to be flushed.
 always_comb begin
@@ -420,7 +408,7 @@ always_comb begin
     flush_amo           = 1'b0;
     mv_back_tail_prmq   = 1'b0;
     instruction_to_pmrq =  'h0;
-    if (instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && resp_dcache_cpu_i.rd == tag_id_s1_q) begin
+    if (instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && (resp_dcache_cpu_i.rd == tag_id_s1_q)) begin
         flush_store         = is_STORE_s1_q;
         flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q; 
     end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
@@ -438,7 +426,7 @@ always_comb begin
     end
 end
 
-assign replay = resp_dcache_cpu_i.valid && (!instruction_s1_q.instr.valid || resp_dcache_cpu_i.rd != tag_id_s1_q);
+assign replay = resp_dcache_cpu_i.valid && (!instruction_s1_q.instr.valid || (resp_dcache_cpu_i.rd != tag_id_s1_q));
 
 // Pending Memory Request Table (PMRQ)
 pending_mem_req_queue pending_mem_req_queue_inst (
@@ -473,7 +461,7 @@ always_comb begin
     data_dcache            =  'h0;
     advance_head_prmq      = 1'b0;
     flush_amo_prmq         = 1'b0;
-    if(instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && !is_STORE_s1_q && resp_dcache_cpu_i.rd == tag_id_s1_q) begin
+    if(instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && !is_STORE_s1_q && (resp_dcache_cpu_i.rd == tag_id_s1_q)) begin
         instruction_to_wb      = instruction_s1_q;
         advance_head_prmq      = 1'b0;
         data_dcache            = resp_dcache_cpu_i.data;
@@ -493,7 +481,6 @@ always_comb begin
         instruction_to_wb.data_old_vd     = instruction_from_pmrq.data_old_vd;     
         instruction_to_wb.data_vm         = instruction_from_pmrq.data_vm;         
         instruction_to_wb.sew             = instruction_from_pmrq.sew;             
-        instruction_to_wb.imm             = instruction_from_pmrq.imm;             
         instruction_to_wb.prs1            = instruction_from_pmrq.prs1;            
         instruction_to_wb.rdy1            = instruction_from_pmrq.rdy1;            
         instruction_to_wb.prs2            = instruction_from_pmrq.prs2;            
@@ -527,8 +514,8 @@ end
 
 // Select bits from whole double word depending on offset
 
-assign data_8word= (DCACHE_MAXELEM == 32) ? data_dcache : data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1+(DCACHE_MAXELEM<=8)+(DCACHE_MAXELEM<=16)+(DCACHE_MAXELEM<=32):5],8'b0} +: DCACHE_BUS_WIDTH];
-assign data_qword= (DCACHE_MAXELEM == 16) ? data_dcache : data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1+(DCACHE_MAXELEM<=8)+(DCACHE_MAXELEM<=16):4],   7'b0} +: DCACHE_BUS_WIDTH];
+assign data_8word= (DCACHE_MAXELEM == 32) ? data_dcache : data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1+(DCACHE_MAXELEM<=8)+(DCACHE_MAXELEM<=16)+(DCACHE_MAXELEM<=32):5],8'b0} +: 256];
+assign data_qword= (DCACHE_MAXELEM == 16) ? data_dcache : data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1+(DCACHE_MAXELEM<=8)+(DCACHE_MAXELEM<=16):4],   7'b0} +: 128];
 assign data_dword= (DCACHE_MAXELEM == 8)  ? data_dcache : data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1+(DCACHE_MAXELEM<=8):3],   6'b0} +: 64];
 assign data_word = data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1:2], 5'b0} +: 32];
 assign data_half = data_dcache[{instruction_to_wb.data_rs1[DCACHE_MAXELEM_LOG-1:1], 4'b0} +: 16];
@@ -548,30 +535,30 @@ always_comb begin
         4'b0110: data_to_wb = data_word;
         4'b0111: data_to_wb = data_dword;
         4'b1000: data_to_wb = data_qword;
-        4'b1001: data_to_wb = data_8word;
-        default: data_to_wb = data_dcache;
+        4'b1001: data_to_wb = data_8word[VLEN-1:0];
+        default: data_to_wb = data_dcache[VLEN-1:0];
     endcase
 end
 
 bus_simd_t masked_data_to_wb;
 assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
-assign vlsm_inst_s1 = (instruction_s1_d.instr.instr_type == VLM || instruction_s1_d.instr.instr_type == VSM) ? 1'b1 : 1'b0;
+assign vlsm_inst_s1 = ((instruction_s1_d.instr.instr_type == VLM) || (instruction_s1_d.instr.instr_type == VSM)) ? 1'b1 : 1'b0;
 
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
     vdata_to_wb_d = 'h0;
-    for (int i = VECTOR_PACKER_NUM_ENTRIES-1; i>=0; --i) begin
-        if (vload_packer_id_q[i] == instruction_to_wb.gl_index && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
-            vload_packer_nelem_q[i] != '1) begin
+    for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
+        if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
+            (vload_packer_nelem_q[i] != '1)) begin
             vdata_to_wb_d = vload_packer_q[i];
         end
     end 
     case (instruction_to_wb.sew)
         SEW_8: begin
             if (~instruction_to_wb.neg_stride) begin
-                int j = 0;
-                for (int i = 0; i<VLEN/8; ++i) begin
+                automatic int j = 0;
+                for (int i = 0; i<(VLEN/8); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
                             vdata_to_wb_d[(8*(j+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
@@ -580,24 +567,24 @@ always_comb begin
                     end
                 end
             end else begin
-                int j = instruction_to_wb.velem_incr - 1'b1;
-                for (int i = 0; i<VLEN/8; ++i) begin
+                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                for (int i = 0; i<(VLEN/8); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(8*(j+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
                         j = j - 1;
                     end
                 end 
             end
-            for (int i = 0; i<VLEN/8; ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && i < instruction_to_wb.velem_incr)) begin
+            for (int i = 0; i<(VLEN/8); ++i) begin
+                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr))) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb_d[(8*i)+:8];
                 end
             end
         end
         SEW_16: begin
             if (~instruction_to_wb.neg_stride) begin
-                int j = 0;
-                for (int i = 0; i<VLEN/16; ++i) begin
+                automatic int j = 0;
+                for (int i = 0; i<(VLEN/16); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb_d[(16*(j+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
@@ -606,15 +593,15 @@ always_comb begin
                     end
                 end
             end else begin
-                int j = instruction_to_wb.velem_incr - 1'b1;
-                for (int i = 0; i<VLEN/16; ++i) begin
+                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                for (int i = 0; i<(VLEN/16); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(16*(j+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
                         j = j - 1;
                     end
                 end 
             end
-            for (int i = 0; i<VLEN/16; ++i) begin
+            for (int i = 0; i<(VLEN/16); ++i) begin
                 if (instruction_to_wb.data_vm[i]) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb_d[(16*i)+:16];
                 end
@@ -622,8 +609,8 @@ always_comb begin
         end
         SEW_32: begin
             if (~instruction_to_wb.neg_stride) begin
-                int j = 0;
-                for (int i = 0; i<VLEN/32; ++i) begin
+                automatic int j = 0;
+                for (int i = 0; i<(VLEN/32); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb_d[(32*(j+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
@@ -632,15 +619,15 @@ always_comb begin
                     end
                 end
             end else begin
-                int j = instruction_to_wb.velem_incr - 1'b1;
-                for (int i = 0; i<VLEN/32; ++i) begin
+                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                for (int i = 0; i<(VLEN/32); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(32*(j+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
                         j = j - 1;
                     end
                 end 
             end
-            for (int i = 0; i<VLEN/32; ++i) begin
+            for (int i = 0; i<(VLEN/32); ++i) begin
                 if (instruction_to_wb.data_vm[i]) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb_d[(32*i)+:32];
                 end
@@ -648,8 +635,8 @@ always_comb begin
         end
         SEW_64: begin
             if (~instruction_to_wb.neg_stride) begin
-                int j = 0;
-                for (int i = 0; i<VLEN/64; ++i) begin
+                automatic int j = 0;
+                for (int i = 0; i<(VLEN/64); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb_d[(64*(j+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
@@ -658,15 +645,15 @@ always_comb begin
                     end
                 end
             end else begin
-                int j = instruction_to_wb.velem_incr - 1'b1;
-                for (int i = 0; i<VLEN/64; ++i) begin
+                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                for (int i = 0; i<(VLEN/64); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(64*(j+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
                         j = j - 1;
                     end
                 end 
             end
-            for (int i = 0; i<VLEN/64; ++i) begin
+            for (int i = 0; i<(VLEN/64); ++i) begin
                 if (instruction_to_wb.data_vm[i]) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb_d[(64*i)+:64];
                 end
@@ -717,9 +704,9 @@ always_comb begin
     vstore_packer_write_idx = 'b0;
     vstore_packer_write = 1'b0;
     vstore_packer_free = 1'b0;
-    vload_vl_to_wb = VMAXELEM >> instruction_to_wb.sew;
-    vstore_vl_to_wb = VMAXELEM >> instruction_s1_q.sew;
-    vl_to_dcache = VMAXELEM >> instruction_s1_d.sew;
+    vload_vl_to_wb = trunc_shift_7_5(VMAXELEM >> instruction_to_wb.sew);
+    vstore_vl_to_wb = trunc_shift_7_5(VMAXELEM >> instruction_s1_q.sew);
+    vl_to_dcache = trunc_shift_7_5(VMAXELEM >> instruction_s1_d.sew);
     if (flush_to_lsq) begin
         for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
             vload_packer_id_d[i] = 'h0;
@@ -733,8 +720,8 @@ always_comb begin
         vstore_packer_complete = 1'b1;
     end else begin
         if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_to_dcache) && ~vlsm_inst_s1) begin
-            for (int i = VECTOR_PACKER_NUM_ENTRIES-1; i>=0; --i) begin
-                if (vload_packer_id_q[i] == instruction_s1_d.gl_index && !vload_packer_write_hit && vload_packer_nelem_q[i] != '1) begin
+            for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
+                if ((vload_packer_id_q[i] == instruction_s1_d.gl_index) && !vload_packer_write_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_write_hit = 1'b1;
                 end else if (vload_packer_nelem_q[i] == '1) begin
                     vload_packer_write_idx = i;
@@ -747,8 +734,8 @@ always_comb begin
                 vload_packer_write = 1'b1;
             end
         end else if (instruction_s1_d.instr.valid && !(instruction_s1_d.velem_incr >= vl_to_dcache) && ~vlsm_inst_s1) begin
-            for (int i = VECTOR_PACKER_NUM_ENTRIES-1; i>=0; --i) begin
-                if (vstore_packer_id_q[i] == instruction_s1_d.gl_index && !vstore_packer_write_hit && vstore_packer_nelem_q[i] != '1) begin
+            for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
+                if ((vstore_packer_id_q[i] == instruction_s1_d.gl_index) && !vstore_packer_write_hit && (vstore_packer_nelem_q[i] != '1)) begin
                     vstore_packer_write_hit = 1'b1;
                 end else if (vstore_packer_nelem_q[i] == '1) begin
                     vstore_packer_write_idx = i;
@@ -761,11 +748,11 @@ always_comb begin
             end
         end
         
-        if ((instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && instruction_to_wb.velem_incr >= vload_vl_to_wb) || vlm_inst_wb) begin
+        if ((instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && (instruction_to_wb.velem_incr >= vload_vl_to_wb)) || vlm_inst_wb) begin
             vload_packer_complete = 1'b1;
         end else if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we) begin
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
-                if (vload_packer_id_q[i] == instruction_to_wb.gl_index && !vload_packer_read_hit && vload_packer_nelem_q[i] != '1) begin
+                if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;
                     if ((vload_packer_nelem_q[i] + instruction_to_wb.velem_incr) >= vload_vl_to_wb) begin
                         vload_packer_nelem_d[i] = '1;
@@ -778,11 +765,11 @@ always_comb begin
                 end
             end
         end else if (flush_store) begin
-            if (instruction_s1_q.velem_incr >= vstore_vl_to_wb || instruction_s1_q.instr.instr_type == VSM) begin
+            if ((instruction_s1_q.velem_incr >= vstore_vl_to_wb) || (instruction_s1_q.instr.instr_type == VSM)) begin
                 vstore_packer_complete = 1'b1;
             end else begin
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
-                    if (vstore_packer_id_q[i] == instruction_s1_q.gl_index && !vstore_packer_read_hit && vstore_packer_nelem_q[i] != '1) begin
+                    if ((vstore_packer_id_q[i] == instruction_s1_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
                         if ((vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr) >= vstore_vl_to_wb) begin
                             vstore_packer_nelem_d[i] = '1;
@@ -823,7 +810,7 @@ assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
 assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
-assign instruction_scalar_o.result        = data_to_wb;
+assign instruction_scalar_o.result        = data_to_wb[63:0];
 assign instruction_scalar_o.ex            = instruction_to_wb.ex;
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
@@ -851,7 +838,7 @@ assign instruction_fp_o.chkp              = instruction_to_wb.chkp;
 assign instruction_fp_o.gl_index          = instruction_to_wb.gl_index;
 assign instruction_fp_o.branch_taken      = 1'b0;
 assign instruction_fp_o.result_pc         = 0;
-assign instruction_fp_o.result            = instruction_to_wb.instr.instr_type == FLW ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb;
+assign instruction_fp_o.result            = (instruction_to_wb.instr.instr_type == FLW) ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb[63:0];
 assign instruction_fp_o.ex                = instruction_to_wb.ex;
 assign instruction_fp_o.fp_status         = 'h0;
 

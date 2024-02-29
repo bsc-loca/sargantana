@@ -32,14 +32,14 @@ module return_address_stack
     localparam _ADDRESS_LENGTH_ = PHY_VIRT_MAX_ADDR_SIZE;
 
     // Registers representing the actual address stack.
-    addrPC_t address_stack [0:_NUM_RAS_ENTRIES_ -1];
+    addrPC_t address_stack [_NUM_RAS_ENTRIES_-1:0];
     // Head pointer
-    logic [_LENGTH_RAS_ - 1: 0] head_pointer;
-    logic [_LENGTH_RAS_ - 1: 0] output_pointer;
+    logic [_LENGTH_RAS_-1:0] head_pointer;
+    logic [_LENGTH_RAS_-1:0] output_pointer;
 
     assign output_pointer = head_pointer - 'h1;
 
-    always@(posedge clk_i)
+    always_ff @(posedge clk_i, negedge rstn_i)
     begin
         if(~rstn_i) begin
             head_pointer <= 0;

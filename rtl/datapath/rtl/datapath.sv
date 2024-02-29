@@ -26,16 +26,16 @@ module datapath
     input resp_icache_cpu_t resp_icache_cpu_i,
     input resp_dcache_cpu_t resp_dcache_cpu_i,
     input resp_csr_cpu_t    resp_csr_cpu_i,
-    input [2:0]             csr_frm_i, 
-    input [1:0]             csr_fs_i,  
-    input [1:0]             csr_vs_i,  
+    input logic [2:0]       csr_frm_i, 
+    input logic [1:0]       csr_fs_i,  
+    input logic [1:0]       csr_vs_i,  
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
     input debug_in_t        debug_i,
-    input [1:0]             csr_priv_lvl_i,
+    input logic [1:0]       csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
-    input [14:0]            vl_i,
+    input logic [VMAXELEM_LOG:0] vl_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
@@ -211,6 +211,7 @@ module datapath
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] wb_simd;
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] exe_to_wb_fp;
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] wb_fp;
+    logic wb_amo_int;
 
     bus64_t snoop_exe_data_rs1;
     bus64_t snoop_exe_data_rs2;
@@ -270,6 +271,7 @@ module datapath
     bus64_t commit_xcpt_cause;
     logic [1:0] commit_store_or_amo_int;
     logic mem_commit_store_or_amo_int;
+    logic mem_commit_stall_int;
     
     //gl_instruction_t instruction_gl_commit_old_q;
     gl_instruction_t [1:0] instruction_to_commit;
@@ -493,7 +495,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     );
 
     // Syncronus Mux to decide between actual decode or one cycle before
-    always @(posedge clk_i) begin
+    always_ff @(posedge clk_i) begin
         src_select_id_ir_q <= !control_int.stall_id;
     end
 
@@ -712,7 +714,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     );
 
     // Syncronus Mux to decide between actual Rename or one cycle before Rename
-    always @(posedge clk_i) begin
+    always_ff @(posedge clk_i) begin
         src_select_ir_rr_q <= !control_int.stall_ir;
     end
     always_comb begin
@@ -811,26 +813,26 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign interrupt_ex.cause = exception_cause_t'(resp_csr_cpu_i.csr_interrupt_cause);
     assign interrupt_ex.origin = 64'b0;
     assign instruction_decode_gl.ex_valid = stage_ir_rr_q.ex.valid | resp_csr_cpu_i.csr_interrupt;
-    assign ex_gl_in_int = !stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt ? interrupt_ex : stage_ir_rr_q.ex ;
+    assign ex_gl_in_int = (!stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt) ? interrupt_ex : stage_ir_rr_q.ex ;
 
-    assign is_csr_int =(stage_ir_rr_q.instr.instr_type == ECALL ||
-                        stage_ir_rr_q.instr.instr_type == SRET   ||
-                        stage_ir_rr_q.instr.instr_type == MRET   ||
-                        stage_ir_rr_q.instr.instr_type == URET   ||
-                        stage_ir_rr_q.instr.instr_type == WFI    ||
-                        stage_ir_rr_q.instr.instr_type == EBREAK ||
-                        stage_ir_rr_q.instr.instr_type == FENCE  || 
-                        stage_ir_rr_q.instr.instr_type == SFENCE_VMA || 
-                        stage_ir_rr_q.instr.instr_type == FENCE_I|| 
-                        stage_ir_rr_q.instr.instr_type == CSRRW  ||
-                        stage_ir_rr_q.instr.instr_type == CSRRS  ||
-                        stage_ir_rr_q.instr.instr_type == CSRRC  ||
-                        stage_ir_rr_q.instr.instr_type == CSRRWI ||
-                        stage_ir_rr_q.instr.instr_type == CSRRSI ||
-                        stage_ir_rr_q.instr.instr_type == CSRRCI ||
-                        stage_ir_rr_q.instr.instr_type == VSETVL ||
-                        stage_ir_rr_q.instr.instr_type == VSETVLI||
-                        stage_ir_rr_q.instr.instr_type == VSETIVLI);
+    assign is_csr_int =((stage_ir_rr_q.instr.instr_type == ECALL)      ||
+                        (stage_ir_rr_q.instr.instr_type == SRET)       ||
+                        (stage_ir_rr_q.instr.instr_type == MRET)       ||
+                        (stage_ir_rr_q.instr.instr_type == URET)       ||
+                        (stage_ir_rr_q.instr.instr_type == WFI)        ||
+                        (stage_ir_rr_q.instr.instr_type == EBREAK)     ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE)      ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRC)      ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRWI)     ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRSI)     ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRCI)     ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVL)     ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVLI)    ||
+                        (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     
 
@@ -1378,29 +1380,29 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign commit_cu_int.xcpt = commit_xcpt;
 
     // tell cu that ecall was taken
-    assign commit_cu_int.ecall_taken = (instruction_to_commit[0].instr_type == ECALL  ||
-                                        instruction_to_commit[0].instr_type == MRTS   ||
-                                        instruction_to_commit[0].instr_type == EBREAK );
+    assign commit_cu_int.ecall_taken = ((instruction_to_commit[0].instr_type == ECALL)  ||
+                                        (instruction_to_commit[0].instr_type == MRTS)   ||
+                                        (instruction_to_commit[0].instr_type == EBREAK) );
 
     // tell cu that there is a fence or fence_i
-    assign commit_cu_int.fence = (instruction_to_commit[0].instr_type == FENCE_I || 
-                                  instruction_to_commit[0].instr_type == FENCE || 
-                                  instruction_to_commit[0].instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
+                                  (instruction_to_commit[0].instr_type == FENCE)     || 
+                                  (instruction_to_commit[0].instr_type == SFENCE_VMA));
     // tell cu there is a fence i to flush the icache
-    assign commit_cu_int.fence_i = (instruction_to_commit[0].instr_type == FENCE_I || 
-                                    instruction_to_commit[0].instr_type == SFENCE_VMA);
+    assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
+                                    (instruction_to_commit[0].instr_type == SFENCE_VMA));
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
-                                        (instruction_to_commit[0].instr_type == CSRRW  ||
-                                         instruction_to_commit[0].instr_type == CSRRS  ||
-                                         instruction_to_commit[0].instr_type == CSRRC  ||
-                                         instruction_to_commit[0].instr_type == CSRRWI ||
-                                         instruction_to_commit[0].instr_type == CSRRSI ||
-                                         instruction_to_commit[0].instr_type == CSRRCI ||
-                                         instruction_to_commit[0].instr_type == VSETVL ||
-                                         instruction_to_commit[0].instr_type == VSETVLI||
-                                         instruction_to_commit[0].instr_type == VSETIVLI);
+                                        ((instruction_to_commit[0].instr_type == CSRRW)   ||
+                                         (instruction_to_commit[0].instr_type == CSRRS)   ||
+                                         (instruction_to_commit[0].instr_type == CSRRC)   ||
+                                         (instruction_to_commit[0].instr_type == CSRRWI)  ||
+                                         (instruction_to_commit[0].instr_type == CSRRSI)  ||
+                                         (instruction_to_commit[0].instr_type == CSRRCI)  ||
+                                         (instruction_to_commit[0].instr_type == VSETVL)  ||
+                                         (instruction_to_commit[0].instr_type == VSETVLI) ||
+                                         (instruction_to_commit[0].instr_type == VSETIVLI));
 
     assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid);
@@ -1621,11 +1623,11 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     // Debug Ring signals Output
     // PC
-    assign debug_o.pc_fetch = pc_if1[39:0];
-    assign debug_o.pc_dec   = pc_id[39:0];
-    assign debug_o.pc_rr    = pc_rr[39:0];
-    assign debug_o.pc_exe   = pc_exe[39:0];
-    assign debug_o.pc_wb    = pc_wb[39:0];
+    assign debug_o.pc_fetch = pc_if1[38:0];
+    assign debug_o.pc_dec   = pc_id[38:0];
+    assign debug_o.pc_rr    = pc_rr[38:0];
+    assign debug_o.pc_exe   = pc_exe[38:0];
+    assign debug_o.pc_wb    = pc_wb[38:0];
     // Write-back signals
     assign debug_o.wb_valid_1 = wb_scalar[0].valid;
     assign debug_o.wb_reg_addr_1 = wb_scalar[0].rd;
@@ -1642,7 +1644,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.instr.valid;
     assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
-    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || instruction_to_commit[0].mem_type == LOAD);
+    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || (instruction_to_commit[0].mem_type == LOAD));
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;

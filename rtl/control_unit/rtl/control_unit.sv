@@ -316,7 +316,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
-        end else if (commit_cu_i.valid && commit_cu_i.stall_csr_fence || (!miss_icache_i && !ready_icache_i)) begin
+        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i)) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;

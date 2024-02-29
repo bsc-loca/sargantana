@@ -19,16 +19,16 @@ module fpnew_opgroup_fmt_slice #(
   // FPU configuration
   parameter int unsigned             Width         = 32,
   parameter logic                    EnableVectors = 1'b1,
-  parameter int unsigned             NumPipeRegs   = 0,
-  parameter fpnew_pkg::pipe_config_t PipeConfig    = fpnew_pkg::BEFORE,
+  parameter int unsigned             NUM_PIPE_REGS   = 0,
+  parameter fpnew_pkg::pipe_config_t PIPE_CONFIG    = fpnew_pkg::BEFORE_INPUTS,
   parameter logic                    ExtRegEna     = 1'b0,
-  parameter type                     TagType       = logic,
+  parameter type                     TAG_TYPE       = logic,
   parameter int unsigned             TrueSIMDClass = 0,
   // Do not change
   localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
   localparam int unsigned NUM_LANES    = fpnew_pkg::num_lanes(Width, FpFormat, EnableVectors),
   localparam type         MaskType     = logic [NUM_LANES-1:0],
-  localparam int unsigned ExtRegEnaWidth = NumPipeRegs == 0 ? 1 : NumPipeRegs
+  localparam int unsigned EXT_REG_ENA_WIDTH = ((NUM_PIPE_REGS == 0) ? 1 : NUM_PIPE_REGS)
 ) (
   input logic                               clk_i,
   input logic                               rst_ni,
@@ -39,7 +39,7 @@ module fpnew_opgroup_fmt_slice #(
   input fpnew_pkg::operation_e              op_i,
   input logic                               op_mod_i,
   input logic                               vectorial_op_i,
-  input TagType                             tag_i,
+  input TAG_TYPE                             tag_i,
   input MaskType                            simd_mask_i,
   // Input Handshake
   input  logic                              in_valid_i,
@@ -49,14 +49,14 @@ module fpnew_opgroup_fmt_slice #(
   output logic [Width-1:0]                  result_o,
   output fpnew_pkg::status_t                status_o,
   output logic                              extension_bit_o,
-  output TagType                            tag_o,
+  output TAG_TYPE                            tag_o,
   // Output handshake
   output logic                              out_valid_o,
   input  logic                              out_ready_i,
   // Indication of valid data in flight
   output logic                              busy_o,
   // External register enable override
-  input  logic [ExtRegEnaWidth-1:0]         reg_ena_i
+  input  logic [EXT_REG_ENA_WIDTH-1:0]         reg_ena_i
 );
 
   localparam int unsigned FP_WIDTH  = fpnew_pkg::fp_width(FpFormat);
@@ -72,7 +72,7 @@ module fpnew_opgroup_fmt_slice #(
   fpnew_pkg::status_t    [NUM_LANES-1:0] lane_status;
   logic                  [NUM_LANES-1:0] lane_ext_bit; // only the first one is actually used
   fpnew_pkg::classmask_e [NUM_LANES-1:0] lane_class_mask;
-  TagType                [NUM_LANES-1:0] lane_tags; // only the first one is actually used
+  TAG_TYPE                [NUM_LANES-1:0] lane_tags; // only the first one is actually used
   logic                  [NUM_LANES-1:0] lane_masks;
   logic                  [NUM_LANES-1:0] lane_vectorial, lane_busy, lane_is_class; // dito
 
@@ -111,10 +111,10 @@ module fpnew_opgroup_fmt_slice #(
       if (OpGroup == fpnew_pkg::ADDMUL) begin : lane_instance
         fpnew_fma #(
           .FpFormat    ( FpFormat    ),
-          .NumPipeRegs ( NumPipeRegs ),
-          .PipeConfig  ( PipeConfig  ),
-          .TagType     ( TagType     ),
-          .AuxType     ( logic       )
+          .NUM_PIPE_REGS ( NUM_PIPE_REGS ),
+          .PIPE_CONFIG  ( PIPE_CONFIG  ),
+          .TAG_TYPE     ( TAG_TYPE     ),
+          .AUX_TYPE     ( logic       )
         ) i_fma (
           .clk_i,
           .rst_ni,
@@ -145,10 +145,10 @@ module fpnew_opgroup_fmt_slice #(
       end else if (OpGroup == fpnew_pkg::DIVSQRT) begin : lane_instance
         // fpnew_divsqrt #(
         //   .FpFormat   (FpFormat),
-        //   .NumPipeRegs(NumPipeRegs),
-        //   .PipeConfig (PipeConfig),
-        //   .TagType    (TagType),
-        //   .AuxType    (logic)
+        //   .NUM_PIPE_REGS(NUM_PIPE_REGS),
+        //   .PIPE_CONFIG (PIPE_CONFIG),
+        //   .TAG_TYPE    (TAG_TYPE),
+        //   .AUX_TYPE    (logic)
         // ) i_divsqrt (
         //   .clk_i,
         //   .rst_ni,
@@ -176,10 +176,10 @@ module fpnew_opgroup_fmt_slice #(
       end else if (OpGroup == fpnew_pkg::NONCOMP) begin : lane_instance
         fpnew_noncomp #(
           .FpFormat   (FpFormat),
-          .NumPipeRegs(NumPipeRegs),
-          .PipeConfig (PipeConfig),
-          .TagType    (TagType),
-          .AuxType    (logic)
+          .NUM_PIPE_REGS(NUM_PIPE_REGS),
+          .PIPE_CONFIG (PIPE_CONFIG),
+          .TAG_TYPE    (TAG_TYPE),
+          .AUX_TYPE    (logic)
         ) i_noncomp (
           .clk_i,
           .rst_ni,
@@ -231,28 +231,29 @@ module fpnew_opgroup_fmt_slice #(
     assign slice_result[(unsigned'(lane)+1)*FP_WIDTH-1:unsigned'(lane)*FP_WIDTH] = local_result;
 
     // Create Classification results
-    if (TrueSIMDClass && SIMD_WIDTH >= 10) begin : vectorial_true_class // true vectorial class blocks are 10bits in size
+    if (TrueSIMDClass & (SIMD_WIDTH >= 10)) begin : vectorial_true_class // true vectorial class blocks are 10bits in size
       assign slice_vec_class_result[lane*SIMD_WIDTH +: 10] = lane_class_mask[lane];
       assign slice_vec_class_result[(lane+1)*SIMD_WIDTH-1 -: SIMD_WIDTH-10] = '0;
-    end else if ((lane+1)*8 <= Width) begin : vectorial_class // vectorial class blocks are 8bits in size
-      assign local_sign = (lane_class_mask[lane] == fpnew_pkg::NEGINF ||
-                           lane_class_mask[lane] == fpnew_pkg::NEGNORM ||
-                           lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM ||
-                           lane_class_mask[lane] == fpnew_pkg::NEGZERO);
+    end else if (((lane+1)*8) <= Width) begin : vectorial_class // vectorial class blocks are 8bits in size
+      assign local_sign = (((((lane_class_mask[lane] == fpnew_pkg::NEGINF) ||
+                              (lane_class_mask[lane] == fpnew_pkg::NEGNORM)) ||
+                              (lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM)) ||
+                              (lane_class_mask[lane] == fpnew_pkg::NEGZERO)));
+
       // Write the current block segment
       assign slice_vec_class_result[(lane+1)*8-1:lane*8] = {
         local_sign,  // BIT 7
         ~local_sign, // BIT 6
-        lane_class_mask[lane] == fpnew_pkg::QNAN, // BIT 5
-        lane_class_mask[lane] == fpnew_pkg::SNAN, // BIT 4
-        lane_class_mask[lane] == fpnew_pkg::POSZERO
-            || lane_class_mask[lane] == fpnew_pkg::NEGZERO, // BIT 3
-        lane_class_mask[lane] == fpnew_pkg::POSSUBNORM
-            || lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM, // BIT 2
-        lane_class_mask[lane] == fpnew_pkg::POSNORM
-            || lane_class_mask[lane] == fpnew_pkg::NEGNORM, // BIT 1
-        lane_class_mask[lane] == fpnew_pkg::POSINF
-            || lane_class_mask[lane] == fpnew_pkg::NEGINF // BIT 0
+        (lane_class_mask[lane] == fpnew_pkg::QNAN), // BIT 5
+        (lane_class_mask[lane] == fpnew_pkg::SNAN), // BIT 4
+        ((lane_class_mask[lane] == fpnew_pkg::POSZERO)
+            || (lane_class_mask[lane] == fpnew_pkg::NEGZERO)), // BIT 3
+        ((lane_class_mask[lane] == fpnew_pkg::POSSUBNORM)
+            || (lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM)), // BIT 2
+        ((lane_class_mask[lane] == fpnew_pkg::POSNORM)
+            || (lane_class_mask[lane] == fpnew_pkg::NEGNORM)), // BIT 1
+        ((lane_class_mask[lane] == fpnew_pkg::POSINF)
+            || (lane_class_mask[lane] == fpnew_pkg::NEGINF)) // BIT 0
       };
     end
   end
@@ -265,10 +266,10 @@ module fpnew_opgroup_fmt_slice #(
 
   assign slice_regular_result = $signed({extension_bit_o, slice_result});
 
-  localparam int unsigned CLASS_VEC_BITS = (NUM_LANES*8 > Width) ? 8 * (Width / 8) : NUM_LANES*8;
+  localparam int unsigned CLASS_VEC_BITS = ((NUM_LANES*8) > Width) ? 8 * (Width / 8) : NUM_LANES*8;
 
   // Pad out unused vec_class bits if each classify result is on 8 bits
-  if (!(TrueSIMDClass && SIMD_WIDTH >= 10)) begin
+  if (!(TrueSIMDClass & (SIMD_WIDTH >= 10))) begin
     if (CLASS_VEC_BITS < Width) begin : pad_vectorial_class
       assign slice_vec_class_result[Width-1:CLASS_VEC_BITS] = '0;
     end

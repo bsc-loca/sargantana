@@ -11,7 +11,7 @@
  */
 //`default_nettype none
 
-module exe_stage 
+ module exe_stage 
     import drac_pkg::*;
     import riscv_pkg::*;
 #(
@@ -27,9 +27,9 @@ module exe_stage
     input rr_exe_instr_t                from_rr_i,
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input sew_t                         sew_i,                  // SEW from vl CSR
-    input [14:0]                        vl_i,
+    input logic [VMAXELEM_LOG:0]        vl_i,
 
-    input wire [1:0]                    commit_store_or_amo_i, // Signal to execute stores and atomics in commit
+    input logic [1:0]                   commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
     // OUTPUTS
@@ -104,18 +104,6 @@ logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
 
-logic ready_interface_mem;
-bus64_t data_interface_mem;
-logic lock_interface_mem;
-
-logic valid_mem_interface;
-bus64_t data_rs1_mem_interface;
-bus64_t data_rs2_mem_interface;
-instr_type_t instr_type_mem_interface;
-logic [2:0] mem_size_mem_interface;
-reg_t rd_mem_interface;
-bus64_t imm_mem_interface;
-
 logic ready;
 logic set_mul_32_inst;
 logic set_mul_64_inst;
@@ -154,7 +142,7 @@ logic [VMAXELEM_LOG:0] vagu_vl;
 
 // Select rs2 from imm to avoid bypasses
 assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
-assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : (from_rr_i.instr.instr_type == VSE) ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
 
 score_board_scalar score_board_scalar_inst(
     .clk_i            (clk_i),
@@ -189,32 +177,23 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
                                      & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
 
-assign is_vmul = (from_rr_i.instr.instr_type == VMUL   ||
-                  from_rr_i.instr.instr_type == VMULH  ||
-                  from_rr_i.instr.instr_type == VMULHU ||
-                  from_rr_i.instr.instr_type == VMULHSU) ? 1'b1 : 1'b0;
-
-assign is_vred = (from_rr_i.instr.instr_type == VREDSUM   ||
-                  from_rr_i.instr.instr_type == VREDAND   ||
-                  from_rr_i.instr.instr_type == VREDOR    ||
-                  from_rr_i.instr.instr_type == VREDXOR) ? 1'b1 : 1'b0;
-
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
-    arith_instr.data_rs2            = rs2_data_def;
+    arith_instr.data_rs2            = rs2_data_def[63:0];
     arith_instr.prs1                = from_rr_i.prs1;
     arith_instr.rdy1                = from_rr_i.rdy1;
     arith_instr.prs2                = from_rr_i.prs2;
     arith_instr.rdy2                = from_rr_i.rdy2;
     arith_instr.prd                 = from_rr_i.prd;
     arith_instr.old_prd             = from_rr_i.old_prd;
+    arith_instr.old_pvd             = from_rr_i.old_pvd;
     arith_instr.checkpoint_done     = from_rr_i.checkpoint_done;
     arith_instr.chkp                = from_rr_i.chkp;
     arith_instr.gl_index            = from_rr_i.gl_index;
     arith_instr.instr               = from_rr_i.instr;
 
     mem_instr.data_rs1            = from_rr_i.data_rs1;
-    mem_instr.data_rs2            = from_rr_i.instr.instr_type == VSE ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
+    mem_instr.data_rs2            = (from_rr_i.instr.instr_type == VSE) ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
     mem_instr.data_old_vd         = from_rr_i.data_old_vd;
     mem_instr.data_vm             = from_rr_i.data_vm;
     mem_instr.sew                 = sew_i;
@@ -235,10 +214,13 @@ always_comb begin
     mem_instr.ex                  = 0;
     mem_instr.instr               = from_rr_i.instr;
     mem_instr.instr.instr_type    = from_rr_i.instr.instr_type;
+    mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
+    mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
+    mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
 
-    fp_instr.data_rs1            = rs1_data_def;
-    fp_instr.data_rs2            = rs2_data_def;
-    fp_instr.data_rs3            = from_rr_i.data_rs3;
+    fp_instr.data_rs1             = rs1_data_def;
+    fp_instr.data_rs2             = rs2_data_def[63:0];
+    fp_instr.data_rs3             = from_rr_i.data_rs3;
     fp_instr.fprs1                = from_rr_i.fprs1;
     fp_instr.frdy1                = from_rr_i.frdy1;
     fp_instr.fprs2                = from_rr_i.fprs2;
@@ -262,6 +244,7 @@ always_comb begin
     simd_instr.vrdy1               = from_rr_i.vrdy1;
     simd_instr.pvs2                = from_rr_i.pvs2;
     simd_instr.vrdy2               = from_rr_i.vrdy2;
+    simd_instr.vrdy_old_vd         = from_rr_i.vrdy_old_vd;
     simd_instr.prd                 = from_rr_i.prd;
     simd_instr.pvd                 = from_rr_i.pvd;
     simd_instr.old_prd             = from_rr_i.old_prd;
@@ -271,6 +254,7 @@ always_comb begin
     simd_instr.gl_index            = from_rr_i.gl_index;
     simd_instr.instr               = from_rr_i.instr;
     simd_instr.exe_stages          = simd_exe_stages;
+
     if (stall_int || kill_i) begin
         arith_instr.instr.valid   = 1'b0;
         mem_instr.instr.valid     = 1'b0;
@@ -314,33 +298,25 @@ branch_unit branch_unit_inst (
     .instruction_o      (branch_to_scalar_wb)
 );
 
-`ifdef MULTICYCLE_SIMD
-simd_unit_mc simd_unit_mc_inst (
+simd_unit simd_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)
 );
-`else
-simd_unit simd_unit_inst (
-    .instruction_i  (simd_instr),
-    .instruction_scalar_o (simd_to_scalar_wb),
-    .instruction_simd_o  (simd_to_simd_wb)
-);
-`endif
 
-assign vagu_vl = (from_rr_i.instr.instr_type == VLM || from_rr_i.instr.instr_type == VSM)  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
-                 (from_rr_i.instr.instr_type == VLXE || from_rr_i.instr.instr_type == VSXE)?  vl_i[VMAXELEM_LOG:0]             :
+assign vagu_vl = ((from_rr_i.instr.instr_type == VLM) || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
+                 ((from_rr_i.instr.instr_type == VLXE) || (from_rr_i.instr.instr_type == VSXE))?  vl_i[VMAXELEM_LOG:0]             :
                  ((VLEN >> from_rr_i.instr.mem_size[1:0]) >> 3) ;
-assign vagu_mask_valid = (mem_instr.instr.use_mask | (mem_instr.instr.instr_type == VLXE || mem_instr.instr.instr_type == VSXE)) & !stall_vagu;
-assign vagu_mop = (mem_instr.instr.instr_type == VLSE || mem_instr.instr.instr_type == VSSE) ? 3'b010 : 
-                  (mem_instr.instr.instr_type == VLXE || mem_instr.instr.instr_type == VSXE) ? 3'b011 : 3'b000;
+assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
+assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
+                  ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE)) ? 3'b011 : 3'b000;
 assign vagu_store_data_valid = mem_instr.instr.valid && 
-                            (mem_instr.instr.instr_type == VSE
-                            || mem_instr.instr.instr_type == VSM
-                            || mem_instr.instr.instr_type == VSSE 
-                            || mem_instr.instr.instr_type == VSXE) 
+                            ((mem_instr.instr.instr_type == VSE)
+                            || (mem_instr.instr.instr_type == VSM)
+                            || (mem_instr.instr.instr_type == VSSE) 
+                            || (mem_instr.instr.instr_type == VSXE)) 
                             && !stall_vagu;
 
 always_comb begin
@@ -355,17 +331,17 @@ always_comb begin
             vagu_mask[VMAXELEM-1:0] = mem_instr.data_vm;
         end
         SEW_16: begin
-            for (int i = 0; i<VLEN/16; ++i) begin
+            for (int i = 0; i<(VLEN/16); ++i) begin
                 vagu_mask[i] = mem_instr.data_vm[i];  
             end
         end
         SEW_32: begin
-            for (int i = 0; i<VLEN/32; ++i) begin
+            for (int i = 0; i<(VLEN/32); ++i) begin
                 vagu_mask[i] = mem_instr.data_vm[i];  
             end
         end
         default: begin
-            for (int i = 0; i<VLEN/64; ++i) begin
+            for (int i = 0; i<(VLEN/64); ++i) begin
                 vagu_mask[i] = mem_instr.data_vm[i];  
             end
         end
@@ -374,6 +350,7 @@ end
 
 vagu #(
     .DCACHE_RESP_DATA_WIDTH(VLEN),
+    .DCACHE_RESP_MAXELEM(VMAXELEM),
     .MAX_VELEM(VMAXELEM)
 ) vagu_inst (
     .clk_i      (clk_i),
@@ -496,23 +473,23 @@ always_comb begin
     pmu_stall_mem_o = 1'b0; 
     stall_fpu_int   = 1'b0;
     if (from_rr_i.instr.valid && !kill_i) begin
-        if (from_rr_i.instr.unit == UNIT_DIV & from_rr_i.instr.op_32) begin
+        if ((from_rr_i.instr.unit == UNIT_DIV) & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_32_inst | ~ready_div_unit;
             set_div_32_inst = ready & ready_div_32_inst & ready_div_unit;
         end
-        else if (from_rr_i.instr.unit == UNIT_DIV & ~from_rr_i.instr.op_32) begin
+        else if ((from_rr_i.instr.unit == UNIT_DIV) & ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_div_unit;
             set_div_64_inst = ready & ready_div_unit;
         end
-        else if (from_rr_i.instr.unit == UNIT_MUL & from_rr_i.instr.op_32) begin
+        else if ((from_rr_i.instr.unit == UNIT_MUL) & from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_32_inst;
             set_mul_32_inst = ready & ready_mul_32_inst;
         end
-        else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
+        else if ((from_rr_i.instr.unit == UNIT_MUL )& ~from_rr_i.instr.op_32) begin
             stall_int = ~ready | ~ready_mul_64_inst;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
-        else if (from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM) begin
+        else if ((from_rr_i.instr.unit == UNIT_ALU) | (from_rr_i.instr.unit == UNIT_BRANCH) | (from_rr_i.instr.unit == UNIT_SYSTEM)) begin
             stall_int = ~ready;
         end
         else if (from_rr_i.instr.unit == UNIT_MEM) begin
@@ -568,16 +545,16 @@ always_comb begin
         if (from_rr_i.instr.instr_type == JAL)begin
             correct_branch_pred_o = 1'b1;
         end else   
-        if (from_rr_i.instr.instr_type != BLT && from_rr_i.instr.instr_type != BLTU &&
-            from_rr_i.instr.instr_type != BGE && from_rr_i.instr.instr_type != BGEU &&
-            from_rr_i.instr.instr_type != BEQ && from_rr_i.instr.instr_type != BNE  &&
-            from_rr_i.instr.instr_type != JALR) begin            
+        if (((from_rr_i.instr.instr_type != BLT) && (from_rr_i.instr.instr_type != BLTU)) &&
+            ((from_rr_i.instr.instr_type != BGE) && (from_rr_i.instr.instr_type != BGEU)) &&
+            ((from_rr_i.instr.instr_type != BEQ) && (from_rr_i.instr.instr_type != BNE))  &&
+            ((from_rr_i.instr.instr_type != JALR))) begin            
             correct_branch_pred_o = 1'b1; // Correct because Decode and Control Unit Already fixed the missprediciton
         end else begin
             if (from_rr_i.instr.bpred.is_branch) begin
                 correct_branch_pred_o = (from_rr_i.instr.bpred.decision == branch_to_scalar_wb.branch_taken) &&
-                                        (from_rr_i.instr.bpred.decision == PRED_NOT_TAKEN ||
-                                        from_rr_i.instr.bpred.pred_addr == branch_to_scalar_wb.result_pc);
+                                        ((from_rr_i.instr.bpred.decision == PRED_NOT_TAKEN) ||
+                                         (from_rr_i.instr.bpred.pred_addr == branch_to_scalar_wb.result_pc));
             end else begin
                 correct_branch_pred_o = ~branch_to_scalar_wb.branch_taken;
             end
@@ -598,14 +575,14 @@ assign exe_if_branch_pred_o.branch_addr_target_exe = branch_to_scalar_wb.result_
 // Taken or not taken branch result in Execution Stage
 assign exe_if_branch_pred_o.branch_taken_result_exe = branch_to_scalar_wb.branch_taken == PRED_TAKEN;   
 // The instruction in the Execution Stage is a branch
-assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  |
-                                             from_rr_i.instr.instr_type == BLTU |
-                                             from_rr_i.instr.instr_type == BGE  |
-                                             from_rr_i.instr.instr_type == BGEU |
-                                             from_rr_i.instr.instr_type == BEQ  |
-                                             from_rr_i.instr.instr_type == BNE  |
-                                             from_rr_i.instr.instr_type == JAL  |
-                                             from_rr_i.instr.instr_type == JALR) &
+assign exe_if_branch_pred_o.is_branch_exe = ((from_rr_i.instr.instr_type == BLT)  |
+                                             (from_rr_i.instr.instr_type == BLTU) |
+                                             (from_rr_i.instr.instr_type == BGE)  |
+                                             (from_rr_i.instr.instr_type == BGEU) |
+                                             (from_rr_i.instr.instr_type == BEQ)  |
+                                             (from_rr_i.instr.instr_type == BNE)  |
+                                             (from_rr_i.instr.instr_type == JAL)  |
+                                             (from_rr_i.instr.instr_type == JALR)) &
                                              arith_instr.instr.valid;
                                              
 

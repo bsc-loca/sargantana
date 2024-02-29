@@ -11,7 +11,7 @@ module graduation_list
     import drac_pkg::*;
     #(
         // How many different instructions can the GL keep. Must be multiple of 2.
-        parameter integer NUM_ENTRIES  = 32
+        parameter unsigned NUM_ENTRIES  = 32
     )
     (
     input wire                                 clk_i,                             // Clock Singal
@@ -62,14 +62,14 @@ module graduation_list
 );
 
 
-localparam num_bits_index = $clog2(NUM_ENTRIES);
+localparam NUM_BITS_INDEX = $clog2(NUM_ENTRIES);
 
 gl_index_t head;
 gl_index_t head_puls_one;
 gl_index_t tail;
 
 //Num must be 1 bit bigger than head and tail
-logic [num_bits_index:0] num;
+logic [NUM_BITS_INDEX:0] num;
 
 logic write_enable;
 logic [1:0] read_enable;
@@ -77,20 +77,20 @@ logic [1:0] read_enable;
 logic is_store_or_amo;
 
 // Register for valid bit
-reg valid_bit [0:NUM_ENTRIES-1];
+logic [NUM_ENTRIES-1:0] valid_bit_q, valid_bit_d;
 
 // Unic entries
 
-reg_csr_addr_t  csr_addr_q;               // CSR Address
-exception_t     exception_q;              // Exceptions
-gl_index_t      exception_index_q;
-bus64_t         result_q;                 // Result or immediate
-csr_addr_t      vsetvl_vtype_q;           // Vtype for VSETVL
+reg_csr_addr_t  csr_addr_q, csr_addr_d;               // CSR Address
+exception_t     exception_q, exception_d;             // Exceptions
+gl_index_t      exception_index_q, exception_index_d;
+bus64_t         result_q, result_d;                   // Result or immediate
+csr_addr_t      vsetvl_vtype_q, vsetvl_vtype_d;       // Vtype for VSETVL
 
 
 // User can write to the head of the buffer if the new data is valid and
 // there are any free entry
-assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES-1) & ~(flush_i) & (~flush_commit_i); 
+assign write_enable = instruction_i.valid & (num < (NUM_ENTRIES-1)) & ~(flush_i) & (~flush_commit_i); 
 
 // User can read the head of the buffer if there is data stored in the queue
 // or in this cycle a new entry is written
@@ -100,127 +100,149 @@ assign read_enable = {1'b0,read_head_i[1]} + {1'b0,read_head_i[0]}; // & (num > 
 assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || 
                          (instruction_i.instr_type == VSSE) || (instruction_i.instr_type == VSXE);
 
-gl_instruction_t entries [0:NUM_ENTRIES-1];
+gl_instruction_t [NUM_ENTRIES-1:0] entries_q;
+gl_instruction_t [NUM_ENTRIES-1:0] entries_d;
 
 always_comb begin
+    for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
+        valid_bit_d[i] = valid_bit_q[i];
+        entries_d[i] = entries_q[i];
+    end
+
+    if (write_enable) begin
+        valid_bit_d[tail] = is_store_or_amo | instruction_i.ex_valid;
+        entries_d[tail] = instruction_i;
+    end
+
+    for (int i = 0; i < NUM_SCALAR_WB; ++i) begin
+        if (instruction_writeback_enable_i[i]) begin
+            valid_bit_d[instruction_writeback_i[i]] = 1'b1;
+            entries_d[instruction_writeback_i[i]].fp_status = instruction_writeback_data_i[i].fp_status;
+            `ifdef SIM_COMMIT_LOG
+                entries_d[instruction_writeback_i[i]].csr_addr  = instruction_writeback_data_i[i].csr_addr;
+                entries_d[instruction_writeback_i[i]].exception = instruction_writeback_data_i[i].exception;
+                entries_d[instruction_writeback_i[i]].result    = instruction_writeback_data_i[i].result;
+                entries_d[instruction_writeback_i[i]].addr      = instruction_writeback_data_i[i].addr;
+            `endif
+            entries_d[instruction_writeback_i[i]].ex_valid  = instruction_writeback_data_i[i].exception.valid | entries_q[instruction_writeback_i[i]].ex_valid;
+        end
+    end
+
+    for (int i = 0; i < NUM_SIMD_WB; ++i) begin
+        if (instruction_simd_writeback_enable_i[i]) begin
+            valid_bit_d[instruction_simd_writeback_i[i]] = 1'b1;
+            `ifdef SIM_COMMIT_LOG
+                entries_d[instruction_simd_writeback_i[i]].csr_addr  = instruction_simd_writeback_data_i[i].csr_addr;
+                entries_d[instruction_simd_writeback_i[i]].exception = instruction_simd_writeback_data_i[i].exception;
+                entries_d[instruction_simd_writeback_i[i]].result    = instruction_simd_writeback_data_i[i].result;
+                entries_d[instruction_simd_writeback_i[i]].addr    = instruction_simd_writeback_data_i[i].addr;
+            `endif
+            entries_d[instruction_simd_writeback_i[i]].ex_valid  = instruction_simd_writeback_data_i[i].exception.valid | entries_q[instruction_simd_writeback_i[i]].ex_valid;
+        end
+    end
     
+    for (int i = 0; i < drac_pkg::NUM_FP_WB; ++i) begin
+        if (instruction_fp_writeback_enable_i[i]) begin
+            valid_bit_d[instruction_fp_writeback_i[i]] = 1'b1;
+            entries_d[instruction_fp_writeback_i[i]].fp_status = instruction_fp_writeback_data_i[i].fp_status;
+            `ifdef SIM_COMMIT_LOG
+                entries_d[instruction_fp_writeback_i[i]].csr_addr  = instruction_fp_writeback_data_i[i].csr_addr;
+                entries_d[instruction_fp_writeback_i[i]].exception = instruction_fp_writeback_data_i[i].exception;
+                entries_d[instruction_fp_writeback_i[i]].result    = instruction_fp_writeback_data_i[i].result;
+                entries_d[instruction_fp_writeback_i[i]].addr    = instruction_fp_writeback_data_i[i].addr;
+            `endif
+            entries_d[instruction_fp_writeback_i[i]].ex_valid  = instruction_fp_writeback_data_i[i].exception.valid | entries_q[instruction_fp_writeback_i[i]].ex_valid;
+        end
+    end
+
+    // Update the exception information
+
+    if (!flush_commit_i && ex_from_exe_i.valid && !exception_q.valid) begin
+        exception_d = ex_from_exe_i;
+        exception_index_d = ex_from_exe_index_i;   
+    end else if (!flush_commit_i && ex_from_exe_i.valid && exception_q.valid && (
+        ((ex_from_exe_index_i >= head) && (ex_from_exe_index_i < exception_index_q) && (head < exception_index_q)) ||
+        ((ex_from_exe_index_i >= head) && (ex_from_exe_index_i > exception_index_q) && (head > exception_index_q)) ||
+        ((ex_from_exe_index_i < head) && (ex_from_exe_index_i < exception_index_q) && (head > exception_index_q)))) begin
+        exception_d = ex_from_exe_i;
+        exception_index_d = ex_from_exe_index_i;   
+    end else if (flush_commit_i || (flush_i && exception_q.valid && (
+        ((flush_index_i >= head) && (flush_index_i < exception_index_q) && (head < exception_index_q)) ||
+        ((flush_index_i >= head) && (flush_index_i > exception_index_q) && (head > exception_index_q)) ||
+        ((flush_index_i < head) && (flush_index_i < exception_index_q) && (head > exception_index_q))))) begin
+        exception_d = '0;
+        exception_index_d = '0;
+    end else if (write_enable && instruction_i.ex_valid && !exception_q.valid && !ex_from_exe_i.valid) begin
+        exception_d = ex_i;
+        exception_index_d = tail;
+    end else begin
+        exception_d = exception_q;
+        exception_index_d = exception_index_q;
+    end 
+
+
+    if (instruction_writeback_enable_i[0]) begin
+        result_d = instruction_writeback_data_i[0].result[63:0];
+        vsetvl_vtype_d = instruction_writeback_data_i[0].csr_addr[CSR_ADDR_SIZE-1:0];
+    end else begin
+        result_d = result_q;
+        vsetvl_vtype_d = vsetvl_vtype_q;
+    end
+
+    if(write_enable && is_csr_i)begin
+        csr_addr_d = csr_addr_i;
+    end else begin
+        csr_addr_d = csr_addr_q;
+    end
 end
 
-always@(posedge clk_i, negedge rstn_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin 
     if (~rstn_i) begin
         for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
-            valid_bit[i] <= 1'b0;
-            entries[i] <= '0;
+            valid_bit_q[i] <= 1'b0;
+            entries_q[i] <= '0;
         end
         exception_index_q <= '0;
         exception_q <= '0;
         csr_addr_q <= '0;
         result_q <= '0;
+        vsetvl_vtype_q <= '0;
     end else begin
-
-        if (write_enable) begin
-            valid_bit[tail] <= is_store_or_amo | instruction_i.ex_valid;
-            entries[tail] <= instruction_i;
-
-            if (instruction_i.ex_valid && !exception_q.valid && !ex_from_exe_i.valid) begin
-                exception_q <= ex_i;
-                exception_index_q <= tail;
-            end
-
-            if(is_csr_i)begin
-                csr_addr_q <= csr_addr_i;
-            end
+        for(int i = 0; i < NUM_ENTRIES ; i = i + 1) begin
+            valid_bit_q[i] <= valid_bit_d[i];
+            entries_q[i] <= entries_d[i];
         end
-
-        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-            if (instruction_writeback_enable_i[i]) begin
-                valid_bit[instruction_writeback_i[i]] <= 1'b1;
-                entries[instruction_writeback_i[i]].fp_status <= instruction_writeback_data_i[i].fp_status;
-                `ifdef SIM_COMMIT_LOG
-                    entries[instruction_writeback_i[i]].csr_addr  <= instruction_writeback_data_i[i].csr_addr;
-                    entries[instruction_writeback_i[i]].exception <= instruction_writeback_data_i[i].exception;
-                    entries[instruction_writeback_i[i]].result    <= instruction_writeback_data_i[i].result;
-                    entries[instruction_writeback_i[i]].addr      <= instruction_writeback_data_i[i].addr;
-                `endif
-                entries[instruction_writeback_i[i]].ex_valid  <= instruction_writeback_data_i[i].exception.valid | entries[instruction_writeback_i[i]].ex_valid;
-            end
-        end
-
-        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
-            if (instruction_simd_writeback_enable_i[i]) begin
-                valid_bit[instruction_simd_writeback_i[i]] <= 1'b1;
-                `ifdef SIM_COMMIT_LOG
-                    entries[instruction_simd_writeback_i[i]].csr_addr  <= instruction_simd_writeback_data_i[i].csr_addr;
-                    entries[instruction_simd_writeback_i[i]].exception <= instruction_simd_writeback_data_i[i].exception;
-                    entries[instruction_simd_writeback_i[i]].result    <= instruction_simd_writeback_data_i[i].result;
-                    entries[instruction_simd_writeback_i[i]].addr    <= instruction_simd_writeback_data_i[i].addr;
-                `endif
-                entries[instruction_simd_writeback_i[i]].ex_valid  <= instruction_simd_writeback_data_i[i].exception.valid | entries[instruction_simd_writeback_i[i]].ex_valid;
-            end
-        end
-        
-        for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
-            if (instruction_fp_writeback_enable_i[i]) begin
-                valid_bit[instruction_fp_writeback_i[i]] <= 1'b1;
-                entries[instruction_fp_writeback_i[i]].fp_status <= instruction_fp_writeback_data_i[i].fp_status;
-                `ifdef SIM_COMMIT_LOG
-                entries[instruction_fp_writeback_i[i]].csr_addr  <= instruction_fp_writeback_data_i[i].csr_addr;
-                entries[instruction_fp_writeback_i[i]].exception <= instruction_fp_writeback_data_i[i].exception;
-                entries[instruction_fp_writeback_i[i]].result    <= instruction_fp_writeback_data_i[i].result;
-                entries[instruction_fp_writeback_i[i]].addr    <= instruction_fp_writeback_data_i[i].addr;
-                `endif
-                entries[instruction_fp_writeback_i[i]].ex_valid  <= instruction_fp_writeback_data_i[i].exception.valid | entries[instruction_fp_writeback_i[i]].ex_valid;
-            end
-        end
-
-        // Update the exception information
-        if (!flush_commit_i & ex_from_exe_i.valid && !exception_q.valid) begin
-            exception_q <= ex_from_exe_i;
-            exception_index_q <= ex_from_exe_index_i;   
-        end else if (!flush_commit_i & ex_from_exe_i.valid && exception_q.valid && (
-            (ex_from_exe_index_i >= head && ex_from_exe_index_i < exception_index_q && head < exception_index_q ) ||
-            (ex_from_exe_index_i >= head && ex_from_exe_index_i > exception_index_q && head > exception_index_q ) ||
-            (ex_from_exe_index_i < head && ex_from_exe_index_i < exception_index_q && head > exception_index_q ))) begin
-            exception_q <= ex_from_exe_i;
-            exception_index_q <= ex_from_exe_index_i;   
-        end else if (flush_commit_i || flush_i && exception_q.valid && (
-            (flush_index_i >= head && flush_index_i < exception_index_q && head < exception_index_q ) ||
-            (flush_index_i >= head && flush_index_i > exception_index_q && head > exception_index_q ) ||
-            (flush_index_i < head && flush_index_i < exception_index_q && head > exception_index_q ))) begin
-            exception_q <= '0;
-        end
-
-
-        if (instruction_writeback_enable_i[0]) begin
-            result_q <= instruction_writeback_data_i[0].result[63:0];
-            vsetvl_vtype_q <= instruction_writeback_data_i[0].csr_addr[CSR_ADDR_SIZE-1:0];
-        end
+        exception_index_q <= exception_index_d;
+        exception_q <= exception_d;
+        csr_addr_q <= csr_addr_d;
+        result_q <= result_d;
+        vsetvl_vtype_q <= vsetvl_vtype_d;
     end
 end
 
-always@(posedge clk_i, negedge rstn_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
-        head <= {num_bits_index{1'b0}};
-        tail <= {num_bits_index{1'b0}};
-        num  <= {num_bits_index+1{1'b0}};
+        head <= {NUM_BITS_INDEX{1'b0}};
+        tail <= {NUM_BITS_INDEX{1'b0}};
+        num  <= {(NUM_BITS_INDEX+1){1'b0}};
     end else if (flush_commit_i) begin
-        head <= {num_bits_index{1'b0}};
-        tail <= {num_bits_index{1'b0}};
-        num  <= {num_bits_index+1{1'b0}};
+        head <= {NUM_BITS_INDEX{1'b0}};
+        tail <= {NUM_BITS_INDEX{1'b0}};
+        num  <= {(NUM_BITS_INDEX+1){1'b0}};
     end else if (flush_i & (num > 0)) begin
-        tail <= flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}; 
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable};
-        if ((flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-2{1'b0}}, read_enable}) && (int'(num) != NUM_ENTRIES)) begin   // Recompute number of entries
-            num <= {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{num_bits_index-2{1'b0}}, read_enable} )};
+        tail <= flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1}; 
+        head <= head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
+        if (((flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1}) >= (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable})) && (num != (NUM_BITS_INDEX+1)'(NUM_ENTRIES))) begin   // Recompute number of entries
+            num <= {1'b0, (flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable} )};
         end else begin
-            num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-2{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
+            num <= NUM_ENTRIES[NUM_BITS_INDEX:0] - {1'b0, (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1})};
         end
     end else begin
-        tail <= tail + {{num_bits_index-1{1'b0}}, write_enable};
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable};
-        num  <= num + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-2{1'b0}}, read_enable};
+        tail <= tail + {{NUM_BITS_INDEX-1{1'b0}}, write_enable};
+        head <= head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
+        num  <= num + {{NUM_BITS_INDEX-1{1'b0}}, write_enable} - {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
     end
 end
 
@@ -231,18 +253,18 @@ always_comb begin
     head_puls_one = head + 1;
 
     if ((~flush_commit_i)) begin
-        if (((num == 1) & valid_bit[head]) || ((num > 1) & valid_bit[head] & !valid_bit[head_puls_one])) begin // Imposible case
-            instruction_o[0] = entries[head];
-        end else if ((num > 1) & valid_bit[head] & valid_bit[head_puls_one]) begin
-            instruction_o[0] = entries[head];
-            instruction_o[1] = entries[head_puls_one];
+        if (((num == 1) & valid_bit_q[head]) || ((num > 1) & valid_bit_q[head] & !valid_bit_q[head_puls_one])) begin // Imposible case
+            instruction_o[0] = entries_q[head];
+        end else if ((num > 1) & valid_bit_q[head] & valid_bit_q[head_puls_one]) begin
+            instruction_o[0] = entries_q[head];
+            instruction_o[1] = entries_q[head_puls_one];
         end
     end
 end
 
 assign assigned_gl_entry_o = tail;
 assign empty_o = (num == 0);
-assign full_o  = (int'(num) == NUM_ENTRIES-1);
+assign full_o  = (num == (NUM_BITS_INDEX+1)'(NUM_ENTRIES-1));
 assign result_o = result_q;
 assign exception_o = exception_q;
 assign csr_addr_o = csr_addr_q;

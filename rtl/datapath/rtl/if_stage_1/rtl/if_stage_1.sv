@@ -124,7 +124,7 @@ module if_stage_1
 
     // check addr fault fetch
     always_comb begin
-        if ((!((&pc[63:VIRT_ADDR_SIZE-1])==1'b1 | (|pc[63:VIRT_ADDR_SIZE-1])==1'b0) & en_translation_i) | 
+        if ((!(((&pc[63:VIRT_ADDR_SIZE-1])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-1])==1'b0)) & en_translation_i) | 
             (!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i)
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;

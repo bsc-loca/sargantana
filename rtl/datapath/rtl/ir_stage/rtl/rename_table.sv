@@ -93,13 +93,13 @@ end
 
 
 // Look up table. Not for r0
-logic  ready_table_d [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
-phreg_t  register_table_d [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
-phreg_t  commit_table_d   [0:NUM_ISA_REGISTERS-1];
+logic  ready_table_d [NUM_ISA_REGISTERS-1:0][NUM_CHECKPOINTS-1:0];
+phreg_t  register_table_d [NUM_ISA_REGISTERS-1:0][NUM_CHECKPOINTS-1:0];
+phreg_t  commit_table_d   [NUM_ISA_REGISTERS-1:0];
 
-logic ready_table_q [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
-phreg_t register_table_q [0:NUM_ISA_REGISTERS-1][0:NUM_CHECKPOINTS-1];
-phreg_t commit_table_q   [0:NUM_ISA_REGISTERS-1];
+logic ready_table_q [NUM_ISA_REGISTERS-1:0][NUM_CHECKPOINTS-1:0];
+phreg_t register_table_q [NUM_ISA_REGISTERS-1:0][NUM_CHECKPOINTS-1:0];
+phreg_t commit_table_q   [NUM_ISA_REGISTERS-1:0];
 
 always_comb begin
     register_table_d  = register_table_q;
@@ -163,9 +163,9 @@ always_comb begin
         // Update commit table
         if (commit_write_enable_0 & !commit_write_enable_1) begin
             commit_table_d[commit_old_dst_i[0]] = commit_new_dst_i[0];
-        end else if (commit_write_enable_0 & commit_write_enable_1 & commit_old_dst_i[0] == commit_old_dst_i[1]) begin
+        end else if (commit_write_enable_0 & commit_write_enable_1 & (commit_old_dst_i[0] == commit_old_dst_i[1])) begin
             commit_table_d[commit_old_dst_i[1]] = commit_new_dst_i[1];
-        end else if (commit_write_enable_0 & commit_write_enable_1 & commit_old_dst_i[0] != commit_old_dst_i[1]) begin
+        end else if (commit_write_enable_0 & commit_write_enable_1 & (commit_old_dst_i[0] != commit_old_dst_i[1])) begin
             commit_table_d[commit_old_dst_i[0]] = commit_new_dst_i[0];
             commit_table_d[commit_old_dst_i[1]] = commit_new_dst_i[1];
         end else if (!commit_write_enable_0 & commit_write_enable_1) begin

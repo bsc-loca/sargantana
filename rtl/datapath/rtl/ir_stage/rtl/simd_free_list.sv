@@ -39,7 +39,7 @@ localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_VREGISTERS - NUM_ISA_VREGISTERS;
 typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] vreg_free_list_entry;
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
-vreg_free_list_entry head [0:NUM_CHECKPOINTS-1];
+vreg_free_list_entry head [NUM_CHECKPOINTS-1:0];
 vreg_free_list_entry tail;
 vreg_free_list_entry tail_plus_one;
 
@@ -48,7 +48,7 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [0:NUM_CHECKPOINTS-1];
+logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [NUM_CHECKPOINTS-1:0];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -76,7 +76,7 @@ assign read_enable = read_head_i & ((num_registers[version_head] > 0)| write_ena
 
 
 // FIFO Memory structure
-phvreg_t register_table [0:NUM_ENTRIES_FREE_LIST-1];    // SRAM used to store the free registers. Read syncronous.
+phvreg_t register_table [NUM_ENTRIES_FREE_LIST-1:0];    // SRAM used to store the free registers. Read syncronous.
 
 assign tail_plus_one = tail + 5'b00001;
 

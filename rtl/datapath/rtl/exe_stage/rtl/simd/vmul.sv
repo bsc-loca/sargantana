@@ -48,20 +48,20 @@ bus64_t src2_data_0;
 
 // Get the magnitude of the sources depending on the signess of the operation.
 // This way we can perform a signed multiplication without extending the signs. 
-logic [7:0] src1_8bits [0:7];
-logic [7:0] src2_8bits [0:7];
+logic [7:0] src1_8bits [7:0];
+logic [7:0] src2_8bits [7:0];
 
-logic [15:0] src1_16bits [0:3];
-logic [15:0] src2_16bits [0:3];
+logic [15:0] src1_16bits [3:0];
+logic [15:0] src2_16bits [3:0];
 
-logic [31:0] src1_32bits [0:1];
-logic [31:0] src2_32bits [0:1];
+logic [31:0] src1_32bits [1:0];
+logic [31:0] src2_32bits [1:0];
 
 logic [63:0] src1_64bits;
 logic [63:0] src2_64bits;
 
-logic src1_negative [0:7];
-logic src2_negative [0:7];
+logic src1_negative [7:0];
+logic src2_negative [7:0];
 
 always_comb begin
     negative_results_0 = 8'b0;
@@ -165,7 +165,7 @@ end
 //                                  STAGE 1                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
-logic [15:0] products_8b_1[0:7][0:7];
+logic [15:0] products_8b_1[7:0][7:0];
 
 // 8b products (all x all).
 always_comb begin
@@ -176,12 +176,12 @@ always_comb begin
     end
 end
 
-logic [31:0] products_16b_1[0:3][0:3];
+logic [31:0] products_16b_1[3:0][3:0];
 
-logic [15:0] nloxmlo_16b [0:3] [0:3];
-logic [15:0] nloxmhi_16b [0:3] [0:3];
-logic [15:0] nhixmlo_16b [0:3] [0:3];
-logic [15:0] nhixmhi_16b [0:3] [0:3];
+logic [15:0] nloxmlo_16b [3:0] [3:0];
+logic [15:0] nloxmhi_16b [3:0] [3:0];
+logic [15:0] nhixmlo_16b [3:0] [3:0];
+logic [15:0] nhixmhi_16b [3:0] [3:0];
 
 // 16b products (all x all).
 always_comb begin
@@ -206,12 +206,12 @@ always_comb begin
     end
 end
 
-logic [63:0] products_32b_1[0:1][0:1];
+logic [63:0] products_32b_1[1:0][1:0];
 
-logic [31:0] nloxmlo_32b [0:1] [0:1];
-logic [31:0] nloxmhi_32b [0:1] [0:1];
-logic [31:0] nhixmlo_32b [0:1] [0:1];
-logic [31:0] nhixmhi_32b [0:1] [0:1];
+logic [31:0] nloxmlo_32b [1:0] [1:0];
+logic [31:0] nloxmhi_32b [1:0] [1:0];
+logic [31:0] nhixmlo_32b [1:0] [1:0];
+logic [31:0] nhixmhi_32b [1:0] [1:0];
 
 // 32b products (all x all).
 always_comb begin
@@ -247,21 +247,23 @@ logic is_mulh_2;
 
 logic [7:0] negative_results_2;
 
-logic [15:0] products_8b_2[0:7][0:7];
-logic [31:0] products_16b_2[0:3][0:3];
-logic [63:0] products_32b_2[0:1][0:1];
+//logic [15:0] products_8b_2[7:0][7:0];
+//logic [31:0] products_16b_2[3:0][3:0];
+logic [63:0] products_32b_2[1:0][1:0];
 
 always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
         negative_results_2       <= 8'b0;
+        /*
         for (int i=0; i < 8; i++) begin
             products_8b_2[i]     <= '{default:'0};
         end
         for (int i=0; i < 4; i++) begin
             products_16b_2[i]    <= '{default:'0};
         end
+        */
         for (int i=0; i < 2; i++) begin
             products_32b_2[i]    <= '{default:'0};
         end
@@ -270,8 +272,8 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_2                    <= sew_1;
         is_mulh_2                <= is_mulh_1;
         negative_results_2       <= negative_results_1;
-        products_8b_2            <= products_8b_1;
-        products_16b_2           <= products_16b_1;
+        //products_8b_2            <= products_8b_1;
+        //products_16b_2           <= products_16b_1;
         products_32b_2           <= products_32b_1;
     end
 end

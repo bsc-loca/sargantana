@@ -66,9 +66,9 @@ always_comb begin
     endcase
             
 
-    is_signed = (instr_type_i == VSRA || instr_type_i == VNSRA) ? 1'b1 : 1'b0;
+    is_signed = ((instr_type_i == VSRA) || (instr_type_i == VNSRA)) ? 1'b1 : 1'b0;
     is_left   = (instr_type_i == VSLL) ? 1'b1 : 1'b0;
-    is_narrow = (instr_type_i == VNSRL || instr_type_i == VNSRA) ? 1'b1 : 1'b0;
+    is_narrow = ((instr_type_i == VNSRL) || (instr_type_i == VNSRA)) ? 1'b1 : 1'b0;
 
     data_a = is_left ? data_vs2_flipped : data_vs2_i;
     data_b = is_left ? data_vs1_flipped : data_vs1_i;
@@ -78,21 +78,21 @@ always_comb begin
     if (is_narrow) begin
         case (sew_i)
             SEW_8: begin
-                bit [15:0] data_int;
+                logic [15:0] data_int;
                 for (int i = 0; i<4; ++i) begin
                     data_int = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*8)+:4];
                     data_vd[(i*8)+:8] = data_int[7:0];
                 end
             end
             SEW_16: begin
-                bit [31:0] data_int;
+                logic [31:0] data_int;
                 for (int i = 0; i<2; ++i) begin
                     data_int = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*16)+:5];
                     data_vd[(i*16)+:16] = data_int[15:0];
                 end
             end
             SEW_32: begin
-                bit [63:0] data_int;
+                logic [63:0] data_int;
                 data_int = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
                 data_vd[31:0] = data_int[31:0];
             end
