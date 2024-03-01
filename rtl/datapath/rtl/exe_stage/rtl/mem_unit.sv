@@ -45,7 +45,7 @@ module mem_unit
     output cache_tlb_comm_t      dtlb_comm_o,
 
     input logic [1:0] priv_lvl_i,
-    input logic [14:0] vl_i,
+    input logic [VMAXELEM_LOG:0] vl_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
