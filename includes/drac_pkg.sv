@@ -38,7 +38,16 @@ parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
 parameter logic [6:0] VMAXELEM = riscv_pkg::VLEN/8;
 parameter VMAXELEM_LOG = $clog2(VMAXELEM);
-parameter DCACHE_BUS_WIDTH = 10'd512; // must be equal to hpdcache_params_pkg::PARAM_REQ_WORDS * 64
+// TODO (Arnau): I don't think this is the best way of implementing this, but
+//               making it fully parametrizable would introduce a *lot* of changes...
+//               But at least it's better than having it hardcoded.
+`ifdef CONF_SARGANTANA_DCACHE_BUS_WIDTH
+parameter DCACHE_BUS_WIDTH = `CONF_SARGANTANA_DCACHE_BUS_WIDTH;
+`elsif CONF_HPDCACHE_REQ_WORDS
+parameter DCACHE_BUS_WIDTH = `CONF_HPDCACHE_REQ_WORDS * 64;
+`else
+parameter DCACHE_BUS_WIDTH = 10'd512;
+`endif
 parameter logic [6:0] DCACHE_MAXELEM = DCACHE_BUS_WIDTH/8;
 parameter DCACHE_MAXELEM_LOG = $clog2(DCACHE_MAXELEM);
 parameter REGFILE_WIDTH = 5;
