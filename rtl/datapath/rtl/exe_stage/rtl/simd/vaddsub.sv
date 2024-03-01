@@ -19,6 +19,7 @@ module vaddsub
     input sew_t                 sew_i,          // Element width
     input bus64_t               data_vs1_i,     // 64-bit source operand 1
     input bus64_t               data_vs2_i,     // 64-bit source operand 2
+    input bus_mask_t            data_vm,
     output bus64_t              data_vd_o       // 64-bit result
 );
 
@@ -37,6 +38,7 @@ logic [7:0][8:0] result;  // byte + carry_out partial results
 
 assign is_sub = ((instr_type_i == VSUB)) ? 1'b1 : 1'b0;
 assign is_rsub = ((instr_type_i == VRSUB)) ? 1'b1 : 1'b0;
+assign is_vadc = ((instr_type_i == VADC)) ? 1'b1 : 1'b0;
 
 always_comb begin
     //If a subtraction is performed, the operand is flipped and a 1'b1 is
@@ -52,7 +54,11 @@ always_comb begin
     end else begin
         data_vs1 = data_vs1_i;
         data_vs2 = data_vs2_i;
-        carry_in[0] = 1'b0;
+        if (is_vadc) begin
+            carry_in[0] = data_vm[0];
+        end else begin 
+            carry_in[0] = 1'b0;
+        end
     end
 
     //The source operands are split into byte arrays
@@ -96,19 +102,27 @@ assign data_vd_o[63:56] = result[7][7:0];
 // - In case the previous sum is computing the same element, the carry_out of
 //   the previous sum is selected
 // - Otherwise, if the operation is a sub, a 1'b1 is selected
+// - Otherwise, if the operation is vadc, then data_vm[x] is selected 
 // - Otherwise, 1'b0 is selected
 assign carry_in[1] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[0] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[0] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[1]: 1'b0;
 assign carry_in[2] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[1] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[1] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[2]: 1'b0;
 assign carry_in[3] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[2] : (is_sub|| is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[2] : (is_sub|| is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[3]: 1'b0;
 assign carry_in[4] = ((sew_i == SEW_64)) ? 
-                        carry_out[3] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[3] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[4]: 1'b0;
 assign carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ?
-                        carry_out[4] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[4] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[5]: 1'b0;
 assign carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[5] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[5] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[6]: 1'b0;
 assign carry_in[7] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
-                        carry_out[6] : (is_sub || is_rsub) ? 1'b1 : 1'b0;
+                        carry_out[6] : (is_sub || is_rsub) ? 1'b1 : (is_vadc) ?
+                        data_vm[7]: 1'b0;
 endmodule
