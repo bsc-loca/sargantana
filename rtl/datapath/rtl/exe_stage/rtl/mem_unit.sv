@@ -273,7 +273,7 @@ always_comb begin
                     
                     //// Set request valid bit, stall_commit and next state signals 
                     if (!instruction_to_dcache.instr.valid | full_pmrq | 
-                       ((instruction_to_dcache.velem_incr < (VMAXELEM >> instruction_to_dcache.sew)) & // partial vector
+                       ((instruction_to_dcache.velem_incr < vl_i[VMAXELEM_LOG:0]) & // partial vector
                        ((vload_packer_full & ~req_cpu_dcache_o.is_store) | (vstore_packer_full & req_cpu_dcache_o.is_store)))) begin
                         // If not valid instruction or full Pending Request Memory Queue or full vpacker with partial vector instruction
                         // Wait until next state
@@ -551,7 +551,8 @@ assign vlsm_inst_s1 = ((instruction_s1_d.instr.instr_type == VLM) || (instructio
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
-    vdata_to_wb_d = 'h0;
+    vdata_to_wb_d = instruction_to_wb.data_old_vd;
+    packed_velems = 'h0;
     for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
         if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
             (vload_packer_nelem_q[i] != '1)) begin
@@ -561,7 +562,6 @@ always_comb begin
     case (instruction_to_wb.sew)
         SEW_8: begin
             if (~instruction_to_wb.neg_stride) begin
-                automatic int j = 0;
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
@@ -571,7 +571,7 @@ always_comb begin
                     end
                 end
             end else begin
-                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(8*(packed_velems+instruction_to_wb.velem_id))+:8] = data_to_wb[(8*i)+:8];
@@ -587,7 +587,6 @@ always_comb begin
         end
         SEW_16: begin
             if (~instruction_to_wb.neg_stride) begin
-                automatic int j = 0;
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
@@ -597,7 +596,7 @@ always_comb begin
                     end
                 end
             end else begin
-                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(16*(packed_velems+instruction_to_wb.velem_id))+:16] = data_to_wb[(16*i)+:16];
@@ -613,7 +612,6 @@ always_comb begin
         end
         SEW_32: begin
             if (~instruction_to_wb.neg_stride) begin
-                automatic int j = 0;
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
@@ -623,7 +621,7 @@ always_comb begin
                     end
                 end
             end else begin
-                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(32*(packed_velems+instruction_to_wb.velem_id))+:32] = data_to_wb[(32*i)+:32];
@@ -639,7 +637,6 @@ always_comb begin
         end
         SEW_64: begin
             if (~instruction_to_wb.neg_stride) begin
-                automatic int j = 0;
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
@@ -649,7 +646,7 @@ always_comb begin
                     end
                 end
             end else begin
-                automatic int j = instruction_to_wb.velem_incr - 1'b1;
+                packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
                         vdata_to_wb_d[(64*(packed_velems+instruction_to_wb.velem_id))+:64] = data_to_wb[(64*i)+:64];
@@ -708,9 +705,6 @@ always_comb begin
     vstore_packer_write_idx = 'b0;
     vstore_packer_write = 1'b0;
     vstore_packer_free = 1'b0;
-    vload_vl_to_wb = trunc_shift_7_5(VMAXELEM >> instruction_to_wb.sew);
-    vstore_vl_to_wb = trunc_shift_7_5(VMAXELEM >> instruction_s1_q.sew);
-    vl_to_dcache = trunc_shift_7_5(VMAXELEM >> instruction_s1_d.sew);
     if (flush_to_lsq) begin
         for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
             vload_packer_id_d[i] = 'h0;
@@ -723,7 +717,7 @@ always_comb begin
         vload_packer_complete = 1'b1;
         vstore_packer_complete = 1'b1;
     end else begin
-        if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_to_dcache) && ~vlsm_inst_s1) begin
+        if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_i[VMAXELEM_LOG:0]) && ~vlsm_inst_s1) begin
             for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
                 if ((vload_packer_id_q[i] == instruction_s1_d.gl_index) && !vload_packer_write_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_write_hit = 1'b1;
@@ -737,7 +731,7 @@ always_comb begin
                 vload_packer_nelem_d[vload_packer_write_idx] = 'h0;
                 vload_packer_write = 1'b1;
             end
-        end else if (instruction_s1_d.instr.valid && !(instruction_s1_d.velem_incr >= vl_to_dcache) && ~vlsm_inst_s1) begin
+        end else if (instruction_s1_d.instr.valid && !(instruction_s1_d.velem_incr >= vl_i[VMAXELEM_LOG:0]) && ~vlsm_inst_s1) begin
             for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
                 if ((vstore_packer_id_q[i] == instruction_s1_d.gl_index) && !vstore_packer_write_hit && (vstore_packer_nelem_q[i] != '1)) begin
                     vstore_packer_write_hit = 1'b1;
@@ -752,7 +746,7 @@ always_comb begin
             end
         end
         
-        if ((instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && (instruction_to_wb.velem_incr >= vload_vl_to_wb)) || vlm_inst_wb) begin
+        if ((instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && (instruction_to_wb.velem_incr >= vl_i[VMAXELEM_LOG:0])) || vlm_inst_wb) begin
             vload_packer_complete = 1'b1;
         end else if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we) begin
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
@@ -769,7 +763,7 @@ always_comb begin
                 end
             end
         end else if (flush_store) begin
-            if ((instruction_s1_q.velem_incr >= vstore_vl_to_wb) || (instruction_s1_q.instr.instr_type == VSM)) begin
+            if ((instruction_s1_q.velem_incr >= vl_i[VMAXELEM_LOG:0]) || (instruction_s1_q.instr.instr_type == VSM)) begin
                 vstore_packer_complete = 1'b1;
             end else begin
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
