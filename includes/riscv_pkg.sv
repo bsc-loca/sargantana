@@ -375,13 +375,15 @@ typedef enum logic [1:0] {
 } mop_t;
 
 typedef enum logic [4:0] {
-    LUMOP_UNIT_STRIDE = 5'b00000,
-    LUMOP_MASK        = 5'b01011
+    LUMOP_UNIT_STRIDE       = 5'b00000,
+    LUMOP_UNIT_STRIDE_WREG  = 5'b01000,
+    LUMOP_MASK              = 5'b01011
 } lumop_t;
 
 typedef enum logic [4:0] {
-    SUMOP_UNIT_STRIDE = 5'b00000,
-    SUMOP_MASK        = 5'b01011
+    SUMOP_UNIT_STRIDE       = 5'b00000,
+    SUMOP_UNIT_STRIDE_WREG  = 5'b01000,
+    SUMOP_MASK              = 5'b01011
 } sumop_t;
 
 typedef enum logic [2:0] {
