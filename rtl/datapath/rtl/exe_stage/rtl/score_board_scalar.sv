@@ -94,7 +94,7 @@ module score_board_scalar
         end 
         else begin
             ocup_div_unit_q <= ocup_div_unit_d;
-            inst_q <= inst_q;
+            inst_q <= inst_d;
         end
     end
 
