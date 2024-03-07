@@ -210,7 +210,7 @@ always_comb begin
     mem_instr.translated          = 1'b0;
     mem_instr.ex                  = 0;
     mem_instr.instr               = from_rr_i.instr;
-    mem_instr.instr.instr_type    = from_rr_i.instr.instr_type;
+    mem_instr.instr.instr_type    = (from_rr_i.instr.instr_type == VL1R) ? VLE : (from_rr_i.instr.instr_type == VS1R) ? VSE : from_rr_i.instr.instr_type;
     mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
     mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
     mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
@@ -310,7 +310,9 @@ simd_unit simd_unit_inst (
     .instruction_simd_o  (simd_to_simd_wb)
 );
 
-assign vagu_vl = ((from_rr_i.instr.instr_type == VLM) || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : vl_i[VMAXELEM_LOG:0];
+assign vagu_vl = ((from_rr_i.instr.instr_type == VLM) || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
+                 ((from_rr_i.instr.instr_type == VL1R)|| (from_rr_i.instr.instr_type == VS1R)) ? (VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
+                                                                                                  vl_i[VMAXELEM_LOG:0];
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
 assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
                   ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE)) ? 3'b011 : 3'b000;

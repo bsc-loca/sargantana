@@ -634,9 +634,13 @@ module decoder
                                     case (decode_i.inst.vltype.mop)
                                         MOP_UNIT_STRIDE: begin
                                             case (decode_i.inst.vltype.lumop)
-                                                LUMOP_UNIT_STRIDE, LUMOP_UNIT_STRIDE_WREG: begin
+                                                LUMOP_UNIT_STRIDE: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
                                                     decode_instr_int.instr_type = VLE;
+                                                end
+                                                LUMOP_UNIT_STRIDE_WREG: begin
+                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.instr_type = VL1R;
                                                 end
                                                 LUMOP_MASK: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
@@ -705,9 +709,14 @@ module decoder
                                     case (decode_i.inst.vstype.mop)
                                         MOP_UNIT_STRIDE: begin
                                             case (decode_i.inst.vstype.sumop)
-                                                SUMOP_UNIT_STRIDE, SUMOP_UNIT_STRIDE_WREG: begin
+                                                SUMOP_UNIT_STRIDE: begin
                                                     decode_instr_int.use_vs2 = 1'b1;
                                                     decode_instr_int.instr_type = VSE;
+                                                    decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
+                                                end
+                                                SUMOP_UNIT_STRIDE_WREG: begin
+                                                    decode_instr_int.use_vs2 = 1'b1;
+                                                    decode_instr_int.instr_type = VS1R;
                                                     decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
                                                 end
                                                 SUMOP_MASK: begin
