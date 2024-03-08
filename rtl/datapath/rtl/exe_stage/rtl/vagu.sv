@@ -115,6 +115,7 @@ logic neg_stride_d, neg_stride_q;
 
 logic make_req;
 logic misalign_xcpt_int;
+logic vl1r_inst;
 
 always_comb begin
     vaddr_incr = 'h0;
@@ -134,6 +135,8 @@ always_comb begin
     vsew_d = vsew_q;
     make_req = 1'b0;
     misalign_xcpt_int = 1'b0;
+    vl1r_inst = ((memp_instr_i.instr.instr_type == VL1R8)  || (memp_instr_i.instr.instr_type == VL1R16) ||
+                 (memp_instr_i.instr.instr_type == VL1R32) || (memp_instr_i.instr.instr_type == VL1R64)) ? 1'b1 : 1'b0;
     log_stride_d = log_stride_q;
     acum_velem_incr_d = acum_velem_incr_q;
     vmem_ops_state_d = vmem_ops_state_q;
@@ -635,7 +638,7 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
+            vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || vl1r_inst)) ? VL_UNIT :
                                (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
                                ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
                                (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSSE)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0))) ? VS_STRIDED :

@@ -640,7 +640,12 @@ module decoder
                                                 end
                                                 LUMOP_UNIT_STRIDE_WREG: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
-                                                    decode_instr_int.instr_type = VL1R;
+                                                    case (decode_i.inst.vltype.width)
+                                                        3'b000: decode_instr_int.instr_type = VL1R8;
+                                                        3'b101: decode_instr_int.instr_type = VL1R16;
+                                                        3'b110: decode_instr_int.instr_type = VL1R32;
+                                                        default: decode_instr_int.instr_type = VL1R64;
+                                                    endcase
                                                 end
                                                 LUMOP_MASK: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
