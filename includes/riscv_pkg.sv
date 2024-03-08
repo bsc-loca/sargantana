@@ -913,6 +913,7 @@ typedef enum logic [11:0] {
 
     TO_HOST         = 12'h9F0,  // to host csr used for simulation
     FROM_HOST       = 12'h9F1,  // from host csr used for simulation
+    CLEAR_MIP       = 12'h9F2,  // clear mip csr used for clear MIP in simulation
 
     CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
     CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
