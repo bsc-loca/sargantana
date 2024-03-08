@@ -635,8 +635,8 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM)) && (mop_i      == 3'b000)) ? VL_UNIT :
-                               (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM)) && (mop_i      == 3'b000) && !masked_op_i)  ? VS_UNIT :
+            vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
+                               (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
                                ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
                                (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSSE)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0))) ? VS_STRIDED :
                                ((memp_instr_i.instr.instr_type == VLXE) && (mop_i      == 3'b011)                )   ? VL_INDEXED :
