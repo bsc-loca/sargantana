@@ -182,22 +182,13 @@ assign vload_packer_full = (vload_packer_nfree_q == 'h0);
 assign vstore_packer_full = (vstore_packer_nfree_q == 'h0);
 
 assign vl_to_dcache = ((instruction_to_dcache.instr.instr_type == VLM) || (instruction_to_dcache.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_dcache.instr.instr_type == VL1R8) || (instruction_to_dcache.instr.instr_type == VS1R)) ? VMAXELEM :
-                       (instruction_to_dcache.instr.instr_type == VL1R16) ? VMAXELEM >> 1 :
-                       (instruction_to_dcache.instr.instr_type == VL1R32) ? VMAXELEM >> 2 :
-                       (instruction_to_dcache.instr.instr_type == VL1R64) ? VMAXELEM >> 3 :
+                      ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_to_dcache.sew :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instruction_s1_q.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_s1_q.instr.instr_type == VL1R8) || (instruction_s1_q.instr.instr_type == VS1R)) ? VMAXELEM :
-                       (instruction_s1_q.instr.instr_type == VL1R16) ? VMAXELEM >> 1 :
-                       (instruction_s1_q.instr.instr_type == VL1R32) ? VMAXELEM >> 2 :
-                       (instruction_s1_q.instr.instr_type == VL1R64) ? VMAXELEM >> 3 :
+                      ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_s1_q.sew :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_wb.instr.instr_type == VL1R8) || (instruction_to_wb.instr.instr_type == VS1R)) ? VMAXELEM :
-                       (instruction_to_wb.instr.instr_type == VL1R16) ? VMAXELEM >> 1 :
-                       (instruction_to_wb.instr.instr_type == VL1R32) ? VMAXELEM >> 2 :
-                       (instruction_to_wb.instr.instr_type == VL1R64) ? VMAXELEM >> 3 :
+                      ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_to_wb.sew :
                         vl_i[VMAXELEM_LOG:0];
 
 // State machine variables
@@ -698,7 +689,7 @@ assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
-    vdata_to_wb = instruction_to_wb.data_old_vd;
+    vdata_to_wb_d = '1;
     packed_velems = 'h0;
     for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
         if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&

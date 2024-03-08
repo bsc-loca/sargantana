@@ -337,7 +337,7 @@ typedef enum logic [7:0] {
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
-   VLE, VLM, VL1R8, VL1R16, VL1R32, VL1R64, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE,
+   VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE,
    // Vectorial custom instructions
    VCNT
 } instr_type_t;
