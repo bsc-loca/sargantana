@@ -26,6 +26,14 @@ module instruction_queue
     output logic           empty_o           // IQ is empty TODO: check if empty signal is necessary
 );
 
+function [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES):0] trunc_iq_num_sum(input [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)+1:0] val_in);
+  trunc_iq_num_sum = val_in[$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES):0];
+endfunction
+
+function [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] trunc_iq_ptr_sum(input [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES):0] val_in);
+  trunc_iq_ptr_sum = val_in[$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0];
+endfunction
+
 typedef logic [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] instruction_queue_entry;
 typedef reg [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] reg_instruction_queue_entry;
 
@@ -70,9 +78,9 @@ begin
         num  <= 4'b0;
     end
     else begin
-        head <= head + {2'b00, read_enable};
-        tail <= tail + {2'b00, write_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, read_enable};
+        head <= trunc_iq_ptr_sum(head + {2'b00, read_enable});
+        tail <= trunc_iq_ptr_sum(tail + {2'b00, write_enable});
+        num  <= trunc_iq_num_sum(num  + {3'b0, write_enable} - {3'b0, read_enable});
     end
 end
 

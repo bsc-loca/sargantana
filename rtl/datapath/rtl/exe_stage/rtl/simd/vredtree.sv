@@ -36,6 +36,22 @@ function int get_sew_size(sew_t sew);
     endcase
 endfunction
 
+function [7:0] trunc_8bits(input [8:0] val_in);
+    trunc_8bits = val_in[7:0];
+endfunction
+
+function [15:0] trunc_16bits(input [16:0] val_in);
+    trunc_16bits = val_in[15:0];
+endfunction
+
+function [31:0] trunc_32bits(input [32:0] val_in);
+    trunc_32bits = val_in[31:0];
+endfunction
+
+function [63:0] trunc_64bits(input [64:0] val_in);
+    trunc_64bits = val_in[63:0];
+endfunction
+
 // Intermediate vector declaration with a generate block
 typedef struct packed {
     sew_t sew;
@@ -88,7 +104,7 @@ always_comb begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
                                     VREDSUM: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] + gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
+                                            trunc_8bits(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] + gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
                                             (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] & gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
                                     VREDOR:  gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
@@ -115,7 +131,7 @@ always_comb begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
                                     VREDSUM: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] & gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDOR:  gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
@@ -142,7 +158,7 @@ always_comb begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
                                     VREDSUM: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] & gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
                                     VREDOR:  gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
@@ -169,7 +185,7 @@ always_comb begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
                                     VREDSUM: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
+                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] & gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
                                     VREDOR:  gen_intermediate_d[i].intermediate[(j*64) +: 64] = 

@@ -22,6 +22,10 @@ module div_unit
     output exe_wb_scalar_instr_t instruction_o   // Output instruction
 );
 
+function [63:0] trunc_64_sum(input [64:0] val_in);
+    trunc_64_sum = val_in[63:0];
+endfunction
+
 // Declarations
 bus64_t data_src1, data_src2;
 exe_wb_scalar_instr_t instruction_d[1:0];
@@ -44,10 +48,6 @@ bus64_t divisor_q[1:0];
 bus64_t dividend_d;
 bus64_t divisor_d;
     
-bus64_t dividend_quotient_32;
-bus64_t dividend_quotient_64;
-bus64_t remanent_32;
-bus64_t remanent_64;
 
 bus64_t quo0;
 bus64_t rmd0;
@@ -103,10 +103,10 @@ assign data_src2 = instruction_i.data_rs2;
 
 
     assign dividend_d     = ((data_src1[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
-                             (data_src1[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src1 + 64'b1 : data_src1;
+                             (data_src1[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? trunc_64_sum(~data_src1 + 64'b1) : data_src1;
 
     assign divisor_d      = ((data_src2[63] & instruction_i.instr.signed_op & !instruction_i.instr.op_32) |
-                             (data_src2[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? ~data_src2 + 64'b1 : data_src2;
+                             (data_src2[31] & instruction_i.instr.signed_op &  instruction_i.instr.op_32)) ? trunc_64_sum(~data_src2 + 64'b1) : data_src2;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -209,18 +209,18 @@ assign data_src2 = instruction_i.data_rs2;
 //--------------------------------------------------------------------------------------------------
                     
         assign quo0 = (div_zero_q[0]) ? 64'hFFFFFFFFFFFFFFFF :
-                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : ~dividend_quotient_q[0] + 64'b1) : dividend_quotient_q[0]);
+                        (signed_op_q[0] ? (same_sign_q[0] ? dividend_quotient_q[0] : trunc_64_sum(~dividend_quotient_q[0] + 64'b1)) : dividend_quotient_q[0]);
                         
         assign quo1 = (div_zero_q[1]) ? 64'hFFFFFFFFFFFFFFFF :
-                        (signed_op_q[1] ? (same_sign_q[1] ? dividend_quotient_q[1] : ~dividend_quotient_q[1] + 64'b1) : dividend_quotient_q[1]);
+                        (signed_op_q[1] ? (same_sign_q[1] ? dividend_quotient_q[1] : trunc_64_sum(~dividend_quotient_q[1] + 64'b1)) : dividend_quotient_q[1]);
                     
         assign rmd0 = (div_zero_q[0]) ? instruction_q[0].result_pc : (signed_op_q[0] ?
                     (((instruction_q[0].result_pc[63] &  !op_32_q[0]) | (instruction_q[0].result_pc[31] & op_32_q[0])) ?
-                    ~remanent_q[0] + 64'b1 : remanent_q[0]) : remanent_q[0]);
+                    trunc_64_sum(~remanent_q[0] + 64'b1) : remanent_q[0]) : remanent_q[0]);
                 
         assign rmd1 = (div_zero_q[1]) ? instruction_q[1].result_pc : (signed_op_q[1] ?
                     (((instruction_q[1].result_pc[63] &  !op_32_q[1]) | (instruction_q[1].result_pc[31] & op_32_q[1])) ?
-                    ~remanent_q[1] + 64'b1 : remanent_q[1]) : remanent_q[1]);
+                    trunc_64_sum(~remanent_q[1] + 64'b1) : remanent_q[1]) : remanent_q[1]);
 
     always_comb begin
         instruction_o.valid           = 'h0;

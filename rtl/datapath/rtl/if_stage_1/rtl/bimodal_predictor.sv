@@ -37,8 +37,10 @@ localparam _LENGTH_BIMODAL_INDEX_  = 7;
 localparam _NUM_BIMODAL_ENTRIES_ = 2**_LENGTH_BIMODAL_INDEX_;
 // Number of bits used for encoding the state of predictor state machine
 localparam _BITS_BIMODAL_STATE_MACHINE_ = 2;
-// Initial state of the predictor state machine
-localparam _INITIAL_STATE_BIMODAL_ = 2'b10;
+
+function [_BITS_BIMODAL_STATE_MACHINE_-1:0] trunc_bp_sum(input [_BITS_BIMODAL_STATE_MACHINE_:0] val_in);
+    trunc_bp_sum = val_in[_BITS_BIMODAL_STATE_MACHINE_-1:0];
+endfunction
 
 logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] new_state_to_pht;
 logic [_BITS_BIMODAL_STATE_MACHINE_-1:0] readed_state_pht;
@@ -50,19 +52,6 @@ logic [1:0] past_state_pht;
     reg [_BITS_BIMODAL_STATE_MACHINE_ -1:0] pattern_history_table [_NUM_BIMODAL_ENTRIES_-1:0]; 
     // We need to store the PHY_VIRT_MAX_ADDR_SIZE + 1 bits in order to perform properly the sign extension 
     reg [PHY_VIRT_MAX_ADDR_SIZE:0] branch_target_buffer [_NUM_BIMODAL_ENTRIES_-1:0];
-
-    
- /*   `ifndef SYNTHESIS_BIMODAL_PREDICTOR
-        // Initialize all the entries of the pattern history table with the initial state
-        integer i;
-        initial 
-        begin for(i = 0; i < _NUM_BIMODAL_ENTRIES_ ; i = i + 1) begin
-                pattern_history_table[i] = _INITIAL_STATE_BIMODAL_;
-                branch_target_buffer[i] = 40'h0;
-              end
-        end
-    `endif*/
-
 
     // Read pattern history table at addres pc_fetch_i
     logic [PHY_VIRT_MAX_ADDR_SIZE:0] short_pred_addr;
@@ -80,9 +69,9 @@ logic [1:0] past_state_pht;
         else if ((past_state_pht == 2'b11) && (branch_taken_result_exec_i == 1'b1))
             new_state_to_pht = 2'b11;
         else if (branch_taken_result_exec_i == 1'b1)
-            new_state_to_pht = past_state_pht + 2'b01;
+            new_state_to_pht = trunc_bp_sum(past_state_pht + 2'b01);
         else
-            new_state_to_pht = past_state_pht - 2'b01;
+            new_state_to_pht = trunc_bp_sum(past_state_pht - 2'b01);
     end
 
 

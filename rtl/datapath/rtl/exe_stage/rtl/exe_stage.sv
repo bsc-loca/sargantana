@@ -94,7 +94,6 @@ exe_wb_scalar_instr_t fp_to_scalar_wb;
 exe_wb_fp_instr_t     mem_to_fp_wb;
 exe_wb_fp_instr_t     fp_to_wb;
 
-bus64_t result_mem;
 logic stall_mem;
 logic stall_vagu;
 logic stall_int;
@@ -110,7 +109,6 @@ logic set_mul_64_inst;
 logic set_div_32_inst;
 logic set_div_64_inst;
 logic ready_1cycle_inst;
-logic ready_2cycle_inst;
 logic ready_mul_32_inst; 
 logic ready_mul_64_inst;
 logic ready_div_32_inst;
@@ -123,7 +121,6 @@ logic [3:0] simd_exe_stages;
 exception_t mem_ex_int;
 gl_index_t mem_ex_index_int;
 
-logic is_input_inst_gl_head;
 logic vagu_mask_valid;
 logic [2:0] vagu_mop;
 logic [VLEN+VMAXELEM-1:0] vagu_mask;
@@ -217,6 +214,13 @@ always_comb begin
     mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
     mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
     mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
+    mem_instr.agu_req_tag = '0;
+    mem_instr.vmisalign_xcpt = 0;              
+    mem_instr.velem_id = '0;  
+    mem_instr.load_mask = '0;     
+    mem_instr.velem_off = '0;
+    mem_instr.velem_incr = '0;
+    mem_instr.neg_stride = 0;
 
     fp_instr.data_rs1             = rs1_data_def;
     fp_instr.data_rs2             = rs2_data_def[63:0];
@@ -367,11 +371,9 @@ vagu #(
     .vstore_data_i(from_rr_i.data_vs2),
     .stall_o(stall_vagu),
     .end_o(),
-    .vstore_data_ack_o(),
-    .velem_off_o(),
+    .misalign_xcpt_o(),
     .velem_incr_o(),
     .velem_id_o(),
-    .ovi_mask_idx_credit_o(),
     .load_mask_o(),
     .memp_instr_o(vagu_mem_instr)
 );

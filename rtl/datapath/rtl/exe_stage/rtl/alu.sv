@@ -23,29 +23,50 @@ bus64_t data_rs1, data_rs2;
 assign data_rs1 = instruction_i.data_rs1;
 assign data_rs2 = instruction_i.data_rs2;
 
+// Truncate Function
+function [31:0] trunc_33_32(input [32:0] val_in);
+  trunc_33_32 = val_in[31:0];
+endfunction
+
+function [31:0] trunc_63_32(input [62:0] val_in);
+  trunc_63_32 = val_in[31:0];
+endfunction
+
+function [63:0] trunc_65_64(input [64:0] val_in);
+  trunc_65_64 = val_in[63:0];
+endfunction
+
+function [31:0] trunc_65_32(input [64:0] val_in);
+  trunc_65_32 = val_in[31:0];
+endfunction
+
+function [63:0] trunc_127_64(input [126:0] val_in);
+  trunc_127_64 = val_in[63:0];
+endfunction
+
 // Operation
 
 always_comb begin
     case (instruction_i.instr.instr_type)
         ADD: begin
-            instruction_o.result = data_rs1 + data_rs2;
+            instruction_o.result = trunc_65_64(data_rs1 + data_rs2);
         end
         ADDW: begin
-            instruction_o.result[31:0] = data_rs1[31:0] + data_rs2[31:0];
+            instruction_o.result[31:0] = trunc_33_32(data_rs1[31:0] + data_rs2[31:0]);
             instruction_o.result[63:32] = {32{instruction_o.result[31]}};
         end
         SUB: begin
-            instruction_o.result = data_rs1 - data_rs2;
+            instruction_o.result = trunc_65_64(data_rs1 - data_rs2);
         end
         SUBW: begin
-            instruction_o.result[31:0] = data_rs1[31:0] - data_rs2[31:0];
+            instruction_o.result[31:0] = trunc_33_32(data_rs1[31:0] - data_rs2[31:0]);
             instruction_o.result[63:32] = {32{instruction_o.result[31]}};
         end
         SLL: begin
-            instruction_o.result = data_rs1 << data_rs2[5:0];
+            instruction_o.result = (data_rs1 << data_rs2[5:0]);
         end
         SLLW: begin
-            instruction_o.result[31:0] = data_rs1[31:0] << data_rs2[4:0];
+            instruction_o.result[31:0] = (data_rs1[31:0] << data_rs2[4:0]);
             instruction_o.result[63:32] = {32{instruction_o.result[31]}};
         end
         SLT: begin

@@ -30,6 +30,10 @@ module div_4bits
     bus64_t tmp_dividend_quotient[1:0];
     logic   quotient_bit[1:0];
 
+    function [63:0] trunc_65_64(input [64:0] val_in);
+    trunc_65_64 = val_in[63:0];
+    endfunction
+
     always_comb begin
         tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[63]};
         tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
@@ -42,7 +46,7 @@ module div_4bits
     always_comb begin
         for(int i = 1; i >= 0; i--) begin
             if (tmp_remanent[i] >= divisor_i) begin
-                tmp_remanent_sub[i] = tmp_remanent[i] - divisor_i;
+                tmp_remanent_sub[i] = trunc_65_64(tmp_remanent[i] - divisor_i);
                 quotient_bit[i] = 1'b1;
             end else begin
                 tmp_remanent_sub[i] = tmp_remanent[i];

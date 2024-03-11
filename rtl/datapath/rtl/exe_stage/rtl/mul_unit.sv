@@ -56,23 +56,31 @@ assign type_0_d = instruction_i.instr.mem_size[2:0];
 
 assign int_32_0_d = instruction_i.instr.op_32 & instruction_0_d.valid;
 
+function [63:0] trunc_65_64(input [64:0] val_in);
+trunc_65_64 = val_in[63:0];
+endfunction
+
+function [127:0] trunc_129_128(input [128:0] val_in);
+trunc_129_128 = val_in[127:0];
+endfunction
+
 // Source Operands, convert if source is negative and operation is signed
 always_comb begin
     case (type_0_d)
         3'b000: begin  // Multiply word, Low part, Signed - MUL , MULW
             src1_def_d   = ((data_src1[63] & !int_32_0_d) | (data_src1[31]  & int_32_0_d)) ?
-                             ~data_src1 + 64'b1 : data_src1;
+                             trunc_65_64(~data_src1 + 64'b1) : data_src1;
             src2_def_d   = ((data_src2[63] & !int_32_0_d) | (data_src2[31]  & int_32_0_d)) ?
-                             ~data_src2 + 64'b1 : data_src2;
+                             trunc_65_64(~data_src2 + 64'b1) : data_src2;
             neg_def_0_d  = !same_sign;
         end
         3'b001: begin  // Multiply word, High part, Signed - MULH
-            src1_def_d   = (data_src1[63]) ? ~data_src1 + 64'b1 : data_src1;
-            src2_def_d   = (data_src2[63]) ? ~data_src2 + 64'b1 : data_src2;
+            src1_def_d   = (data_src1[63]) ? trunc_65_64(~data_src1 + 64'b1) : data_src1;
+            src2_def_d   = (data_src2[63]) ? trunc_65_64(~data_src2 + 64'b1) : data_src2;
             neg_def_0_d  = !same_sign;
         end
         3'b010: begin  // Multiply word, High part, SignedxUnsigned - MULHSU
-            src1_def_d   = (data_src1[63]) ? ~data_src1 + 64'b1 : data_src1;
+            src1_def_d   = (data_src1[63]) ? trunc_65_64(~data_src1 + 64'b1) : data_src1;
             src2_def_d   = data_src2;
             neg_def_0_d  = data_src1[63];
         end
@@ -93,7 +101,7 @@ assign result_low_d  = src1_def_q * src2_def_q[31:0];
 assign result_high_d = src1_def_q * src2_def_q[63:32];
 
 // 32-bit multiplication MULW, operation finished
-assign result_32_aux = neg_def_0_q ? ~result_low_d[63:0] + 64'b1 : result_low_d[63:0];
+assign result_32_aux = neg_def_0_q ? trunc_65_64(~result_low_d[63:0] + 64'b1) : result_low_d[63:0];
 assign result_32 = {{32{result_32_aux[31]}},result_32_aux[31:0]};
 
 assign instruction_0_d.valid         = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_MUL);
@@ -203,9 +211,9 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
 end
 
 // 64-bit multiplication MUL
-assign result_128 = {32'b0,result_low_q} + {result_high_q[95:0],32'b0};
+assign result_128 = trunc_129_128({32'b0,result_low_q} + {result_high_q[95:0],32'b0});
 // Convert if the result is negative
-assign result_128_def = neg_def_1_q ? ~result_128 + 128'b1 : result_128;
+assign result_128_def = neg_def_1_q ? trunc_129_128(~result_128 + 128'b1) : result_128;
 
 // Select correct word
 always_comb begin

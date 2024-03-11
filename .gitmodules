@@ -1,9 +1,6 @@
 [submodule "rtl/csr"]
 	path = rtl/csr
 	url = ../../core-tile/csr/csr_bsc.git
-[submodule "rtl/hpm"]
-	path = rtl/hpm
-	url = ../../core-tile/pmu/hpm_bsc.git
 [submodule "rtl/common_cells"]
 	path = rtl/common_cells
 	url = https://github.com/pulp-platform/common_cells.git

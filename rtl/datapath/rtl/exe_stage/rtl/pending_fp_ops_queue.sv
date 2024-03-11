@@ -118,25 +118,38 @@ begin
     end
 end
 
+// Truncate Function
+function [$clog2(PFPQ_NUM_ENTRIES)-1:0] trunc_pfpq_entry_pointer(input [$clog2(PFPQ_NUM_ENTRIES):0] val_in);
+trunc_pfpq_entry_pointer = val_in[$clog2(PFPQ_NUM_ENTRIES)-1:0];
+endfunction
+
+function [REGFILE_WIDTH-1:0] trunc_reg(input [REGFILE_WIDTH:0] val_in);
+trunc_reg = val_in[REGFILE_WIDTH-1:0];
+endfunction
+
+function [$clog2(PFPQ_NUM_ENTRIES):0] trunc_num(input [$clog2(PFPQ_NUM_ENTRIES)+1:0] val_in);
+trunc_num = val_in[$clog2(PFPQ_NUM_ENTRIES):0];
+endfunction
+
 always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if(~rstn_i) begin
-        head    <= 3'h0;
-        tail    <= 3'b0;
-        num     <= 4'b0;
-        tag_int <= 5'b0;
+        head    <= 'h0;
+        tail    <= 'b0;
+        num     <= 'b0;
+        tag_int <= 'b0;
     end
     else if (flush_i) begin
-        head    <= 3'h0;
-        tail    <= 3'b0;
-        num     <= 4'b0;
-        tag_int <= 5'b0;
+        head    <= 'h0;
+        tail    <= 'b0;
+        num     <= 'b0;
+        tag_int <= 'b0;
     end
     else begin
-        head    <= head + {2'b00, advance_head_enable};
-        tail    <= tail + {2'b00, write_enable};
-        num     <= num  + {3'b0, write_enable} - {3'b0, advance_head_enable};
-        tag_int <= tag_int + {4'b0,write_enable};
+        head    <= trunc_pfpq_entry_pointer(head + advance_head_enable);
+        tail    <= trunc_pfpq_entry_pointer(tail + write_enable);
+        num     <= trunc_num(num  + write_enable - advance_head_enable);
+        tag_int <= trunc_reg(tag_int + write_enable);
     end
 end
 

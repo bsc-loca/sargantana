@@ -31,11 +31,8 @@ module decoder
 );
 
 	//Auxilar signals
-	wire [6:0] F7_NORMAL_AUX;
-	wire [6:0] F7_SRAI_SUB_SRA_AUX;
-	assign F7_NORMAL_AUX = F7_NORMAL;
-	assign F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA;
-
+	localparam [5:0] F7_NORMAL_AUX = F7_NORMAL >> 1;
+    localparam [5:0] F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA >> 1;
 
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
@@ -49,6 +46,11 @@ module decoder
     logic check_frm;
 
     instr_entry_t decode_instr_int;
+
+    // Truncate Function
+    function [63:0] trunc_65_64(input [64:0] val_in);
+        trunc_65_64 = val_in[63:0];
+    endfunction
 
     immediate immediate_inst(
         .instr_i(decode_i.inst),
@@ -118,7 +120,7 @@ module decoder
         decode_instr_int.signed_op = 1'b0;
 
         jal_id_if_o.valid = 1'b0;
-        jal_id_if_o.jump_addr = decode_i.pc_inst + 64'h04;
+        jal_id_if_o.jump_addr = trunc_65_64(decode_i.pc_inst + 64'h04);
 
         // Signal that tells whether it is a csr or fence
         decode_instr_int.stall_csr_fence = 1'b0;
@@ -155,7 +157,7 @@ module decoder
                     decode_instr_int.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
                     xcpt_addr_misaligned_int = |imm_value[1:0];
-                    jal_id_if_o.jump_addr = imm_value+decode_i.pc_inst; 
+                    jal_id_if_o.jump_addr = trunc_65_64(imm_value+decode_i.pc_inst); 
                     jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
                                         !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
                                         (decode_i.bpred.decision == PRED_TAKEN));
@@ -417,7 +419,7 @@ module decoder
                         F3_SLLI: begin
                             decode_instr_int.instr_type = SLL;
                             // check for illegal instruction
-                            if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL_AUX[6:1]) begin
+                            if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL_AUX) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
                                 xcpt_illegal_instruction_int = 1'b0;
@@ -425,10 +427,10 @@ module decoder
                         end
                         F3_SRLAI: begin
                             case (decode_i.inst.rtype.func7[31:26])
-                                F7_SRAI_SUB_SRA_AUX[6:1]: begin
+                                F7_SRAI_SUB_SRA_AUX: begin
                                     decode_instr_int.instr_type = SRA;
                                 end
-                                F7_NORMAL_AUX[6:1]: begin
+                                F7_NORMAL_AUX: begin
                                     decode_instr_int.instr_type = SRL;
                                 end
                                 default: begin // check illegal instruction
@@ -1440,7 +1442,7 @@ module decoder
                                     endcase
                                 end
                                 default: begin
-                                    //xcpt_illegal_instruction_int = 1'b0;
+                                    decode_instr_int.frm = op_frm_fp_t'(decode_i.inst.fprtype.rm);
                                 end
                             endcase
                         end
@@ -1622,7 +1624,7 @@ module decoder
                                     endcase
                                 end
                                 default: begin
-                                    //xcpt_illegal_instruction_int = 1'b0;
+                                    decode_instr_int.frm = op_frm_fp_t'(decode_i.inst.fprtype.rm);
                                 end
                             endcase
                         end

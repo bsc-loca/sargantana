@@ -37,8 +37,6 @@ module vregfile
     output  bus_mask_t                   read_mask_o
 ); 
 
-localparam MASK_BITS = VLEN/8;
-
 reg_simd_t registers [NUM_PHISICAL_VREGISTERS-1:0];
 bus_simd_t bypass_data1;
 bus_simd_t bypass_data2;

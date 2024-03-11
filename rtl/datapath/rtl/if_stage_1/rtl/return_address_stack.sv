@@ -28,8 +28,10 @@ module return_address_stack
     localparam _LENGTH_RAS_  = 4;
     // Number of entries of the RAS.
     localparam _NUM_RAS_ENTRIES_ = 2 ** _LENGTH_RAS_;
-    // Bits needed to store a single address location
-    localparam _ADDRESS_LENGTH_ = PHY_VIRT_MAX_ADDR_SIZE;
+
+    function [_LENGTH_RAS_-1:0] trunc_ras_sum(input [_LENGTH_RAS_:0] val_in);
+        trunc_ras_sum = val_in[_LENGTH_RAS_-1:0];
+    endfunction
 
     // Registers representing the actual address stack.
     addrPC_t address_stack [_NUM_RAS_ENTRIES_-1:0];
@@ -50,9 +52,9 @@ module return_address_stack
             address_stack[head_pointer] <= pc_execution_i;
         end else if(push_i) begin
             address_stack[head_pointer] <= pc_execution_i;
-            head_pointer <= head_pointer + 1;
+            head_pointer <= trunc_ras_sum(head_pointer + 1);
         end else if(pop_i) begin
-            head_pointer <= head_pointer - 1;
+            head_pointer <= trunc_ras_sum(head_pointer - 1);
         end
     end
 

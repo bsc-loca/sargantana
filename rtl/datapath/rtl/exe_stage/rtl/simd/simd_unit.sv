@@ -36,6 +36,10 @@ bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 rr_exe_simd_instr_t sel_fu_out;   // Which instruction output should return the FUs
 
+function [3:0] trunc_4bits(input [31:0] val_in);
+    trunc_4bits = val_in[3:0];
+endfunction
+
 logic [3:0] simd_exe_stages;
 
 function logic is_vred(input rr_exe_simd_instr_t instr);
@@ -104,10 +108,10 @@ always_comb begin
     end 
     else if (is_vred(instruction_i)) begin
         case (instruction_i.sew)
-            SEW_8, SEW_16 : simd_exe_stages = 4'($clog2(VLEN >> 3) + 1);
-            SEW_32 : simd_exe_stages = 4'($clog2(VLEN >> 3));
-            SEW_64 : simd_exe_stages = 4'($clog2(VLEN >> 3) - 1);
-            default : simd_exe_stages = 4'($clog2(VLEN >> 3));
+            SEW_8, SEW_16 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) + 1);
+            SEW_32 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3));
+            SEW_64 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) - 1);
+            default : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3));
         endcase
     end else begin
         simd_exe_stages = 4'd1;

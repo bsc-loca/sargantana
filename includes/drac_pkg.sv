@@ -29,8 +29,6 @@ parameter VIRT_ADDR_SIZE = 39;
 parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_SIZE : PHY_ADDR_SIZE;
 
 parameter PHISIC_MEM_LIMIT = (64'h01 << PHY_ADDR_SIZE) - 64'h01; 
-parameter UNMAPPED_ADDR_LOWER = 64'h0; 
-parameter UNMAPPED_ADDR_UPPER = 64'h0; 
 
 parameter ICACHE_IDX_BITS_SIZE = 12;
 parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
@@ -50,7 +48,7 @@ parameter CSR_CMD_SIZE = 4;
 parameter NUM_SCALAR_WB = 4;
 parameter NUM_FP_WB = 2;
 parameter NUM_SIMD_WB = 2;
-parameter HPM_NUM_EVENTS = 28;
+parameter HPM_NUM_EVENTS = 40;
 parameter HPM_NUM_COUNTERS = 29;
 
 // RISCV
@@ -805,8 +803,6 @@ typedef struct packed {
     logic simd_out_of_checkpoints;      // SIMD Rename out of checkpoints
     logic fp_out_of_checkpoints;        // FP Rename out of checkpoints
     logic empty_free_list;              // Free list out of registers
-    logic simd_empty_free_list;         // SIMD Free list out of registers
-    logic fp_empty_free_list;           // FP Free list out of registers
     logic is_branch;                    // Rename instruction is a branch
 } ir_cu_t;      // Rename to Control Unit
 
@@ -879,11 +875,9 @@ typedef struct packed {
     logic fence;                // Is fence
     logic fence_i;              // Is fence i
     logic write_enable;         // Write Enable to Register File
-    logic write_enable_v;       // Write Enable to VRegister File
     logic stall_commit;         // Stop commits
     logic [1:0] regfile_we;           // Commit update enable
     logic [1:0] vregfile_we;          // Commit update enable
-    logic [1:0] fwrite_enable;      // Write Enable to Register File
     logic [1:0] fregfile_we;        // Commit update enable
     gl_index_t gl_index;        // Graduation List entry
     logic [1:0] retire;
@@ -1152,7 +1146,6 @@ localparam fpnew_pkg::fpu_implementation_t EPI_INIT = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
-localparam int unsigned DIVSQRT_ITER = 3; //This parameter configure the number of iterations per cycle of the divsqrt unit.
 localparam int unsigned SEW_WIDTH = 3;
 typedef enum logic [SEW_WIDTH - 1 : 0] {
     BINARY32 = 'b010,
@@ -1227,6 +1220,17 @@ typedef struct packed {
     logic ptw_buffer_hit;
     logic ptw_buffer_miss;
     logic itlb_stall;
+    logic dcache_stall;
+    logic dcache_stall_refill;
+    logic dcache_rtab_rollback;
+    logic dcache_req_onhold;
+    logic dcache_prefetch_req;
+    logic dcache_read_req;
+    logic dcache_write_req;
+    logic dcache_cmo_req;
+    logic dcache_uncached_req;
+    logic dcache_miss_read_req;
+    logic dcache_miss_write_req;
 } pmu_interface_t;
 
 `ifdef SIM_COMMIT_LOG

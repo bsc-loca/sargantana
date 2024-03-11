@@ -14,7 +14,7 @@
 package riscv_pkg;
 
 parameter XLEN = 64; 
-parameter VLEN = 128;
+parameter logic [9:0] VLEN = 128;
 parameter MLEN = VLEN/8;
 parameter OPCODE_WIDTH = 6;
 parameter REG_WIDTH = 5;

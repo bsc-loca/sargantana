@@ -51,9 +51,11 @@ module if_stage_1
     output logic[63:0]          id_o
     `endif
 );
+    function [63:0] trunc_pc_sum(input [64:0] val_in);
+        trunc_pc_sum = val_in[63:0];
+    endfunction
     // next pc logic
     addrPC_t next_pc;
-//    regPC_t pc;
     reg[63:0] pc;
     `ifdef SIM_KONATA_DUMP
     logic[63:0] id, next_id;
@@ -82,7 +84,7 @@ module if_stage_1
                 if (branch_predict_is_branch && branch_predict_taken) 
                     next_pc = branch_predict_addr;
                 else
-                    next_pc = pc + 64'h04;
+                    next_pc = trunc_pc_sum(pc + 64'h04);
                 
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
@@ -99,7 +101,7 @@ module if_stage_1
                 `ifdef VERIFICATION
                     $error("next pc not defined error in if stage");
                 `endif
-                next_pc = pc + 64'h04;
+                next_pc = trunc_pc_sum(pc + 64'h04);
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif

@@ -27,6 +27,26 @@ module vmul (
   output bus64_t              data_vd_o       // 64-bit result
 );
 
+function [7:0] trunc_9_8(input [8:0] val_in);
+  trunc_9_8 = val_in[7:0];
+endfunction
+
+function [15:0] trunc_17_16(input [16:0] val_in);
+  trunc_17_16 = val_in[15:0];
+endfunction
+
+function [31:0] trunc_33_32(input [32:0] val_in);
+  trunc_33_32 = val_in[31:0];
+endfunction
+
+function [63:0] trunc_65_64(input [64:0] val_in);
+  trunc_65_64 = val_in[63:0];
+endfunction
+
+function [127:0] trunc_129_128(input [128:0] val_in);
+  trunc_129_128 = val_in[127:0];
+endfunction
+
 ////////////////////////////////////////////////////////////////////////////////
 //                                  STAGE 0                                   //
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,8 +96,8 @@ always_comb begin
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i];
 
-            src1_data_0[i*8+:8] = (src1_negative[i]) ? ~src1_8bits[i] + 8'b1 : src1_8bits[i];
-            src2_data_0[i*8+:8] = (src2_negative[i]) ? ~src2_8bits[i] + 8'b1 : src2_8bits[i];
+            src1_data_0[i*8+:8] = (src1_negative[i]) ? trunc_9_8(~src1_8bits[i] + 8'b1) : src1_8bits[i];
+            src2_data_0[i*8+:8] = (src2_negative[i]) ? trunc_9_8(~src2_8bits[i] + 8'b1) : src2_8bits[i];
         end
         
     end
@@ -91,8 +111,8 @@ always_comb begin
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i]; 
 
-            src1_data_0[i*16+:16] = (src1_negative[i]) ? ~src1_16bits[i][15:0] + 16'b1 : src1_16bits[i][15:0];
-            src2_data_0[i*16+:16] = (src2_negative[i]) ? ~src2_16bits[i][15:0] + 16'b1 : src2_16bits[i][15:0];
+            src1_data_0[i*16+:16] = (src1_negative[i]) ? trunc_17_16(~src1_16bits[i][15:0] + 16'b1) : src1_16bits[i][15:0];
+            src2_data_0[i*16+:16] = (src2_negative[i]) ? trunc_17_16(~src2_16bits[i][15:0] + 16'b1) : src2_16bits[i][15:0];
         end
         
     end
@@ -106,8 +126,8 @@ always_comb begin
 
             negative_results_0[i] = src1_negative[i] ^ src2_negative[i];
 
-            src1_data_0[i*32+:32] = (src1_negative[i]) ? ~src1_32bits[i][31:0] + 32'b1 : src1_32bits[i][31:0];
-            src2_data_0[i*32+:32] = (src2_negative[i]) ? ~src2_32bits[i][31:0] + 32'b1 : src2_32bits[i][31:0];
+            src1_data_0[i*32+:32] = (src1_negative[i]) ? trunc_33_32(~src1_32bits[i][31:0] + 32'b1) : src1_32bits[i][31:0];
+            src2_data_0[i*32+:32] = (src2_negative[i]) ? trunc_33_32(~src2_32bits[i][31:0] + 32'b1) : src2_32bits[i][31:0];
         end
 
     end
@@ -120,8 +140,8 @@ always_comb begin
 
         negative_results_0[0] = src1_negative[0] ^ src2_negative[0];
 
-        src1_data_0[63:0] = (src1_negative[0]) ? ~src1_64bits[63:0] + 64'b1 : src1_64bits[63:0];
-        src2_data_0[63:0] = (src2_negative[0]) ? ~src2_64bits[63:0] + 64'b1 : src2_64bits[63:0];
+        src1_data_0[63:0] = (src1_negative[0]) ? trunc_65_64(~src1_64bits[63:0] + 64'b1) : src1_64bits[63:0];
+        src2_data_0[63:0] = (src2_negative[0]) ? trunc_65_64(~src2_64bits[63:0] + 64'b1) : src2_64bits[63:0];
     end
     default : begin
         src1_data_0[63:0] = 64'd0;
@@ -201,7 +221,7 @@ always_comb begin
             nhixmlo_16b[i][j] = products_8b_1[i * 2 + 1][j * 2 + 0];
             nhixmhi_16b[i][j] = products_8b_1[i * 2 + 1][j * 2 + 1];
 
-            products_16b_1[i][j] = nloxmlo_16b[i][j] + ((nloxmhi_16b[i][j] + nhixmlo_16b[i][j]) << 8) + (nhixmhi_16b[i][j] << 16);
+            products_16b_1[i][j] = trunc_33_32(nloxmlo_16b[i][j] + ((nloxmhi_16b[i][j] + nhixmlo_16b[i][j]) << 8) + (nhixmhi_16b[i][j] << 16));
         end
     end
 end
@@ -231,7 +251,7 @@ always_comb begin
             nhixmlo_32b[i][j] = products_16b_1[i * 2 + 1][j * 2 + 0];
             nhixmhi_32b[i][j] = products_16b_1[i * 2 + 1][j * 2 + 1];
 
-            products_32b_1[i][j] = nloxmlo_32b[i][j] + ((nloxmhi_32b[i][j] + nhixmlo_32b[i][j]) << 16) + (nhixmhi_32b[i][j] << 32);
+            products_32b_1[i][j] = trunc_65_64(nloxmlo_32b[i][j] + ((nloxmhi_32b[i][j] + nhixmlo_32b[i][j]) << 16) + (nhixmhi_32b[i][j] << 32));
         end
     end
 end
@@ -305,7 +325,7 @@ always_comb begin
     nhixmlo_64b = products_32b_2[1][0];
     nhixmhi_64b = products_32b_2[1][1];
 
-    product_64b_2 = nloxmlo_64b + ((nloxmhi_64b + nhixmlo_64b) << 32) + (nhixmhi_64b << 64);
+    product_64b_2 = trunc_129_128(nloxmlo_64b + ((nloxmhi_64b + nhixmlo_64b) << 32) + (nhixmhi_64b << 64));
 end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -323,7 +343,7 @@ always_comb begin
         SEW_8 : begin
             for (int i = 0; i < 8; i++) begin
                 full_precision_result_64b[15:0] = (negative_results_1[i]) ? 
-                                                               ~products_8b_1[i][i] + 16'b1 : 
+                                                               trunc_17_16(~products_8b_1[i][i] + 16'b1) : 
                                                                products_8b_1[i][i];
 
                 data_vd_o1[i*8+:8] = (is_mulh_1) ?
@@ -334,7 +354,7 @@ always_comb begin
         SEW_16 : begin
             for (int i = 0; i < 4; i++) begin
                 full_precision_result_64b[31:0] = (negative_results_1[i]) ? 
-                                                               ~products_16b_1[i][i] + 32'b1 : 
+                                                               trunc_33_32(~products_16b_1[i][i] + 32'b1) : 
                                                                products_16b_1[i][i];
 
                 data_vd_o1[i*16+:16] = (is_mulh_1) ?
@@ -345,7 +365,7 @@ always_comb begin
         SEW_32 : begin
             for (int i = 0; i < 2; i++) begin
                 full_precision_result_64b[63:0] = (negative_results_1[i]) ? 
-                                                               ~products_32b_1[i][i] + 64'b1 : 
+                                                               trunc_65_64(~products_32b_1[i][i] + 64'b1) : 
                                                                products_32b_1[i][i];
 
                 data_vd_o1[i*32+:32] = (is_mulh_1) ?
@@ -365,7 +385,7 @@ always_comb begin
     unique case (sew_2)
         SEW_64 : begin
             full_precision_result_128b[127:0] = (negative_results_2[0]) ? 
-                                                            ~product_64b_2 + 128'b1 : 
+                                                            trunc_129_128(~product_64b_2 + 128'b1) : 
                                                             product_64b_2;
 
             data_vd_o2 = (is_mulh_2) ?

@@ -35,6 +35,22 @@ module fp_free_list
 
 localparam NUM_ENTRIES_FREE_LIST = NUM_PHYSICAL_FREGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
+function [$clog2(NUM_CHECKPOINTS)-1:0] trunc_checkpoint_ptr_sum(input [$clog2(NUM_CHECKPOINTS):0] val_in);
+  trunc_checkpoint_ptr_sum = val_in[$clog2(NUM_CHECKPOINTS)-1:0];
+endfunction
+
+function [$clog2(NUM_CHECKPOINTS):0] trunc_checkpoint_num_sum(input [$clog2(NUM_CHECKPOINTS)+1:0] val_in);
+  trunc_checkpoint_num_sum = val_in[$clog2(NUM_CHECKPOINTS):0];
+endfunction
+
+function [$clog2(NUM_ENTRIES_FREE_LIST):0] trunc_free_list_num_sum(input [$clog2(NUM_ENTRIES_FREE_LIST)+1:0] val_in);
+  trunc_free_list_num_sum = val_in[$clog2(NUM_ENTRIES_FREE_LIST):0];
+endfunction
+
+function [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] trunc_free_list_ptr_sum(input [$clog2(NUM_ENTRIES_FREE_LIST):0] val_in);
+  trunc_free_list_ptr_sum = val_in[$clog2(NUM_ENTRIES_FREE_LIST)-1:0];
+endfunction
+
 // Free list Pointer
 typedef reg [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] freg_free_list_entry;
 
@@ -46,6 +62,7 @@ freg_free_list_entry tail_plus_one;
 // Point to the actual version of free list
 checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
+checkpoint_ptr version_head_plus_one;
 
 //Num must be 1 bit bigger than head an tail
 logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [NUM_CHECKPOINTS-1:0];
@@ -74,7 +91,8 @@ assign write_enable_1 = (add_free_register_i[1]) & (~commit_roll_back_i);
 // in this cycle a new register is written
 assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable_0 | write_enable_1) & (~do_recover_i) & (~commit_roll_back_i);
 
-assign tail_plus_one = tail + 5'b00001;
+assign tail_plus_one = trunc_free_list_ptr_sum(tail + 5'b00001);
+assign version_head_plus_one = trunc_checkpoint_ptr_sum(version_head + 1'b1);
 
 // FIFO Memory structure
 phfreg_t register_table [NUM_ENTRIES_FREE_LIST-1:0];    // SRAM used to store the free registers. Read syncronous.
@@ -106,7 +124,7 @@ begin
     end
     else begin
         // When checkpoint is freed increment tail
-        version_tail <= version_tail + delete_checkpoint_i;
+        version_tail <= trunc_checkpoint_ptr_sum(version_tail + delete_checkpoint_i);
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////// WRITES FREED REGISTER                                                                        /////////
@@ -129,11 +147,11 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // When a register is freed increment tail
-        tail <= tail + write_enable_0 + write_enable_1;
+        tail <= trunc_free_list_ptr_sum(tail + write_enable_0 + write_enable_1);
         
         // Recompute number of free registers available.
         for(i = 0; i < NUM_CHECKPOINTS; i++) begin
-            num_registers[i]  <= num_registers[i]  + write_enable_0 + write_enable_1;
+            num_registers[i]  <= trunc_free_list_num_sum(num_registers[i]  + write_enable_0 + write_enable_1);
         end
         
         checkpoint_o <= version_head;
@@ -161,12 +179,12 @@ begin
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // Recompute number of checkpoints
-            num_checkpoints <= num_checkpoints + checkpoint_enable - delete_checkpoint_i;
+            num_checkpoints <= trunc_checkpoint_num_sum(num_checkpoints + checkpoint_enable - delete_checkpoint_i);
             // When a free register is selected increment head
-            head[version_head] <= head[version_head] + read_enable;
+            head[version_head] <= trunc_free_list_ptr_sum(head[version_head] + read_enable);
             // Recompute number of free registers available. Note that the register we are reading only counts for the 
             // checkpoint in which we are right now 
-            num_registers[version_head]  <= num_registers[version_head]  + write_enable_0 + write_enable_1 - read_enable;
+            num_registers[version_head]  <= trunc_free_list_num_sum(num_registers[version_head]  + write_enable_0 + write_enable_1 - read_enable);
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //////// DO CHECKPOINT                                                                                /////////
@@ -174,11 +192,11 @@ begin
 
             // For checkpoint copy old free list in new. And copy pointers
             if (checkpoint_enable) begin
-                version_head <= version_head + checkpoint_enable;
+                version_head <= trunc_checkpoint_ptr_sum(version_head + checkpoint_enable);
                 // Copy head position
-                head[version_head + 1'b1] <= head[version_head] + read_enable;
+                head[version_head_plus_one] <= trunc_free_list_ptr_sum(head[version_head] + read_enable);
                 // Copy number of free registers.
-                num_registers[version_head + 1'b1]  <= num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable;
+                num_registers[version_head_plus_one]  <= trunc_free_list_num_sum(num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable);
             end
         end
     end

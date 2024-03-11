@@ -30,6 +30,17 @@ Each of the 29 generic performance counters can be configured to count events fr
 26. PTW cache hit
 27. PTW cache miss
 28. Stalls by iTLB miss
+29. DCache stalls
+30. DCache refill stalls
+31. DCache rtab rollback
+32. DCache request on hold
+33. DCache prefetch request
+34. DCache read request
+35. DCache write request
+36. DCache CMO request
+37. DCache uncached request
+38. DCache read request miss
+39. DCache write request miss
 
 **This mapping is done in the file top_drac.sv**
 

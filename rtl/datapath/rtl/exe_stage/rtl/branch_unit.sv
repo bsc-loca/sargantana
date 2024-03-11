@@ -37,19 +37,24 @@ assign equal = (data_rs1 == data_rs2);
 assign less = $signed(data_rs1) < $signed(data_rs2);
 assign less_u = data_rs1 < data_rs2;
 
+// Truncate Function
+function [63:0] trunc_65_64(input [64:0] val_in);
+  trunc_65_64 = val_in[63:0];
+endfunction
+
 // Calculate target
 always_comb begin
     case (instruction_i.instr.instr_type)
         JAL: begin
             // Jal always puts a zero in the lower bit. PC plus immediate
-            target = (instruction_i.instr.pc + instruction_i.instr.imm) & 64'hFFFFFFFFFFFFFFFE; 
+            target = trunc_65_64(instruction_i.instr.pc + instruction_i.instr.imm) & 64'hFFFFFFFFFFFFFFFE; 
         end
         JALR: begin
             // Jalr always puts a zero in the lower bit
-            target = (data_rs1 + instruction_i.instr.imm) & 64'hFFFFFFFFFFFFFFFE;
+            target = trunc_65_64(data_rs1 + instruction_i.instr.imm) & 64'hFFFFFFFFFFFFFFFE;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin
-            target = instruction_i.instr.pc + instruction_i.instr.imm;
+            target = trunc_65_64(instruction_i.instr.pc + instruction_i.instr.imm);
         end
         default: begin
             target = 0;
@@ -117,8 +122,8 @@ assign instruction_o.fp_status     = 'h0;
 
 // Target 
 
-assign result = (branch_taken) ? target : instruction_i.instr.pc + 4;
-assign instruction_o.result     = instruction_i.instr.pc + 4;
+assign result = (branch_taken) ? target : trunc_65_64(instruction_i.instr.pc + 4);
+assign instruction_o.result     = trunc_65_64(instruction_i.instr.pc + 4);
 assign instruction_o.result_pc  = target;
         
 // Exceptions

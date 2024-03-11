@@ -38,7 +38,7 @@ logic ready_fpu;
 fpnew_pkg::status_t result_fp_status_int,finish_fp_status_int;
 reg_t tag_current_instr_int, result_tag_int;
 
-logic sign_extend_int, sign_extend_q;
+logic sign_extend_int;
 logic result_valid_int, stall_pending_fp_ops;
 bus64_t result_int;
 logic enable_fp_op_int;

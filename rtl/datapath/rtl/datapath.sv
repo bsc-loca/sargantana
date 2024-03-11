@@ -47,6 +47,14 @@ module datapath
     output to_PMU_t         pmu_flags_o
 );
 
+function [4:0] trunc_sum_5bits(input [5:0] val_in);
+  trunc_sum_5bits = val_in[4:0];
+endfunction
+
+function [63:0] trunc_sum_64bits(input [64:0] val_in);
+  trunc_sum_64bits = val_in[63:0];
+endfunction
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// SIGNAL DECLARATION                                                                           /////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,21 +105,6 @@ module datapath
     ir_rr_stage_t stage_stall_rr_q;
     ir_rr_stage_t stage_no_stall_rr_q;
 
-    logic ir_scalar_rdy_src1_int;
-    logic ir_scalar_rdy_src2_int;
-    logic ir_fp_rdy_src1_int;
-    logic ir_fp_rdy_src2_int;
-
-    phreg_t ir_scalar_preg_src1_int;
-    phreg_t ir_scalar_preg_src2_int;
-    phreg_t ir_scalar_old_dst_int;
-    phreg_t ir_fp_preg_src2_int;
-    phreg_t ir_fp_preg_src1_int;
-    phreg_t ir_fp_old_dst_int;
-
-    logic do_checkpoint;
-    logic do_recover;
-    logic delete_checkpoint;
     logic out_of_checkpoints_rename;
     logic out_of_checkpoints_free_list;
     logic simd_out_of_checkpoints_rename;
@@ -150,8 +143,6 @@ module datapath
     bus64_t rr_data_fp_src1;
     bus64_t rr_data_fp_src2;
 
-    logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs1;
-    logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs2;
     logic snoop_rr_rdy1;
     logic snoop_rr_rdy2;
     logic snoop_rr_vrdy1;
@@ -159,9 +150,6 @@ module datapath
     logic snoop_rr_vrdy_old_vd;
     logic snoop_rr_vrdym;
 
-    logic [drac_pkg::NUM_FP_WB-1:0] snoop_rr_frs1;
-    logic [drac_pkg::NUM_FP_WB-1:0] snoop_rr_frs2;
-    logic [drac_pkg::NUM_FP_WB-1:0] snoop_rr_frs3;
     logic snoop_rr_frdy1;
     logic snoop_rr_frdy2;
     logic snoop_rr_frdy3;
@@ -275,7 +263,6 @@ module datapath
     
     //gl_instruction_t instruction_gl_commit_old_q;
     gl_instruction_t [1:0] instruction_to_commit;
-    logic src_select_commit;
     exception_t exception_mem_commit_int;
     gl_index_t mem_gl_index_int;
     gl_index_t index_gl_commit;
@@ -315,10 +302,6 @@ module datapath
 
 
     // Debug signals
-    bus64_t    reg_wr_data;
-    phreg_t    reg_wr_addr;
-    bus_simd_t vreg_wr_data;
-    phvreg_t   vreg_wr_addr;
     phreg_t    reg_prd1_addr;
     // stall IF
     logic miss_icache;
@@ -1264,6 +1247,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             instruction_simd_writeback_gl[i].csr_addr  = wb_simd[i].csr_addr;
             instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
             instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
+            instruction_simd_writeback_gl[i].fp_status = '{default:'0};
             simd_data_wb_to_exe[i]  = wb_simd[i].vresult;
             simd_write_paddr_exe[i] = wb_simd[i].pvd;
             simd_write_vaddr[i]     = wb_simd[i].vd;
@@ -1335,7 +1319,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     assign instruction_to_commit = instruction_gl_commit;
-    assign commit_cu_int.gl_index = (commit_store_or_amo_int[0]) ? index_gl_commit : index_gl_commit + 1'b1;
+    assign commit_cu_int.gl_index = (commit_store_or_amo_int[0]) ? index_gl_commit : trunc_sum_5bits(index_gl_commit + 1'b1);
 
     csr_interface csr_interface_inst
     (
@@ -1361,7 +1345,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             pc_next_csr_q <= 'b0;
         end else begin 
             pc_evec_q <= resp_csr_cpu_i.csr_evec;
-            pc_next_csr_q <= instruction_to_commit[0].pc + 64'h4;
+            pc_next_csr_q <= trunc_sum_64bits(instruction_to_commit[0].pc + 64'h4);
         end
     end
 
@@ -1643,6 +1627,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;
     
     assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.instr.valid;
+    assign pmu_flags_o.stall_ir        = control_int.stall_ir;
     assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe.instr.valid;
     assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || (instruction_to_commit[0].mem_type == LOAD));
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
@@ -1661,3 +1646,4 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     end*/
 
 endmodule
+

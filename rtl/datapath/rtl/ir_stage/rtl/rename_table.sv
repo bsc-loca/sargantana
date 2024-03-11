@@ -53,6 +53,14 @@ module rename_table
     output wire                       out_of_checkpoints_o // No more checkpoints
 );
 
+function [$clog2(NUM_CHECKPOINTS):0] trunc_num_checkpoint_sum(input [$clog2(NUM_CHECKPOINTS)+1:0] val_in);
+  trunc_num_checkpoint_sum = val_in[$clog2(NUM_CHECKPOINTS):0];
+endfunction
+
+function [$clog2(NUM_CHECKPOINTS)-1:0] trunc_checkpoint_ptr_sum(input [$clog2(NUM_CHECKPOINTS):0] val_in);
+  trunc_checkpoint_ptr_sum = val_in[$clog2(NUM_CHECKPOINTS)-1:0];
+endfunction
+
 // Point to the actual version of free list
 checkpoint_ptr version_head_q, version_head_d;
 checkpoint_ptr version_head_nxt;
@@ -87,7 +95,7 @@ assign read_enable = (~do_recover_i) & (~recover_commit_i);
 // Multiple register can be marked as ready
 always_comb begin
     for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-        ready_enable[i] = ready_i[i] &  (~recover_commit_i);
+        ready_enable[i] = ready_i[i] & (~recover_commit_i);
     end
 end
 
@@ -107,7 +115,7 @@ always_comb begin
     commit_table_d    = commit_table_q;
     version_head_d    = version_head_q;       
     num_checkpoints_d = num_checkpoints_q;
-    version_head_nxt  = version_head_q + 2'b1;
+    version_head_nxt  = trunc_checkpoint_ptr_sum(version_head_q + 2'b1);
     if (recover_commit_i) begin // Recover commit table because exception
         for (integer j = 0; j < NUM_ISA_REGISTERS; j++) begin
             register_table_d[j][0] = commit_table_q[j];
@@ -121,7 +129,7 @@ always_comb begin
     else begin
 
         // When checkpoint is freed increment tail
-        version_tail_d = version_tail_q + {1'b0, delete_checkpoint_i};
+        version_tail_d = trunc_checkpoint_ptr_sum(version_tail_q + {1'b0, delete_checkpoint_i});
 
         // On recovery, head points to old checkpoint. Do not rename next instruction.
         if (do_recover_i) begin                    
@@ -134,7 +142,7 @@ always_comb begin
         else begin
 
             // Recompute number of checkpoints
-            num_checkpoints_d = num_checkpoints_q + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i};
+            num_checkpoints_d = trunc_num_checkpoint_sum(num_checkpoints_q + {2'b0, checkpoint_enable} - {2'b0, delete_checkpoint_i});
 
             // On checkpoint first do checkpoint and then rename if needed
             // For checkpoint advance pointers
@@ -143,7 +151,7 @@ always_comb begin
                     register_table_d[i][version_head_nxt] = register_table_q[i][version_head_q];
                     ready_table_d[i][version_head_nxt] = ready_table_q[i][version_head_q];
                 end
-                version_head_d = version_head_q + 2'b01;
+                version_head_d = version_head_nxt;
 
                 if (write_enable) begin
                     register_table_d[old_dst_i][version_head_nxt] = new_dst_i;
@@ -176,7 +184,7 @@ always_comb begin
         for (int i = 0; i < NUM_SCALAR_WB; ++i) begin
             if (ready_enable[i]) begin
                 for(int j = 0; j < NUM_CHECKPOINTS; j++) begin
-                    if (~checkpoint_enable | (checkpoint_ptr'(j) != (version_head_q + 2'b1))) begin
+                    if (~checkpoint_enable | (checkpoint_ptr'(j) != trunc_checkpoint_ptr_sum(version_head_q + 2'b1))) begin
                         if ((register_table_q[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (checkpoint_ptr'(j) == version_head_q) )) 
                             ready_table_d[vaddr_i[i]][j] = 1'b1;
                     end else if ((register_table_q[vaddr_i[i]][version_head_q] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin

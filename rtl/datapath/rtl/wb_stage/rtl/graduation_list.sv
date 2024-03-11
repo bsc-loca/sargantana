@@ -68,6 +68,14 @@ gl_index_t head;
 gl_index_t head_puls_one;
 gl_index_t tail;
 
+function [NUM_BITS_INDEX:0] trunc_gl_num_sum(input [NUM_BITS_INDEX+1:0] val_in);
+  trunc_gl_num_sum = val_in[NUM_BITS_INDEX:0];
+endfunction
+
+function [NUM_BITS_INDEX-1:0] trunc_gl_ptr_sum(input [NUM_BITS_INDEX:0] val_in);
+  trunc_gl_ptr_sum = val_in[NUM_BITS_INDEX-1:0];
+endfunction
+
 //Num must be 1 bit bigger than head and tail
 logic [NUM_BITS_INDEX:0] num;
 
@@ -232,17 +240,17 @@ begin
         tail <= {NUM_BITS_INDEX{1'b0}};
         num  <= {(NUM_BITS_INDEX+1){1'b0}};
     end else if (flush_i & (num > 0)) begin
-        tail <= flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1}; 
-        head <= head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
+        tail <= trunc_gl_ptr_sum(flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1}); 
+        head <= trunc_gl_ptr_sum(head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable});
         if (((flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1}) >= (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable})) && (num != (NUM_BITS_INDEX+1)'(NUM_ENTRIES))) begin   // Recompute number of entries
             num <= {1'b0, (flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable} )};
         end else begin
             num <= NUM_ENTRIES[NUM_BITS_INDEX:0] - {1'b0, (head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{NUM_BITS_INDEX-1{1'b0}}, 1'b1})};
         end
     end else begin
-        tail <= tail + {{NUM_BITS_INDEX-1{1'b0}}, write_enable};
-        head <= head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
-        num  <= num + {{NUM_BITS_INDEX-1{1'b0}}, write_enable} - {{NUM_BITS_INDEX-2{1'b0}}, read_enable};
+        tail <= trunc_gl_ptr_sum(tail + {{NUM_BITS_INDEX-1{1'b0}}, write_enable});
+        head <= trunc_gl_ptr_sum(head + {{NUM_BITS_INDEX-2{1'b0}}, read_enable});
+        num  <= trunc_gl_num_sum(num + {{NUM_BITS_INDEX-1{1'b0}}, write_enable} - {{NUM_BITS_INDEX-2{1'b0}}, read_enable});
     end
 end
 
@@ -250,7 +258,7 @@ always_comb begin
     instruction_o[0] = 'b0;
     instruction_o[1] = 'b0;
     commit_gl_entry_o = head;
-    head_puls_one = head + 1;
+    head_puls_one = trunc_gl_ptr_sum(head + 1);
 
     if ((~flush_commit_i)) begin
         if (((num == 1) & valid_bit_q[head]) || ((num > 1) & valid_bit_q[head] & !valid_bit_q[head_puls_one])) begin // Imposible case

@@ -66,10 +66,10 @@ always_comb begin
     end 
     else if (is_vred) begin
         case (sew_i)
-            SEW_8, SEW_16 : simd_exe_stages = 4'($clog2(VLEN >> 3) + 1);
-            SEW_32 : simd_exe_stages = 4'($clog2(VLEN >> 3));
-            SEW_64 : simd_exe_stages = 4'($clog2(VLEN >> 3) - 1);
-            default : simd_exe_stages = 4'($clog2(VLEN >> 3));
+            SEW_8, SEW_16 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) + 1);
+            SEW_32 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
+            SEW_64 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) - 1);
+            default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
         endcase
     end else begin
         simd_exe_stages = 4'd1;

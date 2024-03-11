@@ -38,6 +38,15 @@ module pending_mem_req_queue
 
 typedef logic [$clog2(PMRQ_NUM_ENTRIES)-1:0] pmrq_entry_pointer;
 
+
+function [$clog2(PMRQ_NUM_ENTRIES):0] trunc_pmrq_num_sum(input [$clog2(PMRQ_NUM_ENTRIES)+1:0] val_in);
+  trunc_pmrq_num_sum = val_in[$clog2(PMRQ_NUM_ENTRIES):0];
+endfunction
+
+function [$clog2(PMRQ_NUM_ENTRIES)-1:0] trunc_pmrq_ptr_sum(input [$clog2(PMRQ_NUM_ENTRIES):0] val_in);
+  trunc_pmrq_ptr_sum = val_in[$clog2(PMRQ_NUM_ENTRIES)-1:0];
+endfunction
+
 // Points to the next available entry
 pmrq_entry_pointer tail;
 
@@ -146,10 +155,10 @@ begin
         num  <= 4'b0;
     end
     else begin
-        head <= head + {2'b00, advance_head_enable};
-        tail <= tail + {2'b00, write_enable} - {2'b0, mv_back_head_enable};
-        num  <= num  + {3'b0, write_enable} - {3'b0, advance_head_enable} 
-                - {3'b0, mv_back_head_enable};
+        head <= trunc_pmrq_ptr_sum(head + {2'b00, advance_head_enable});
+        tail <= trunc_pmrq_ptr_sum(tail + {2'b00, write_enable} - {2'b0, mv_back_head_enable});
+        num  <= trunc_pmrq_num_sum(num  + {3'b0, write_enable} - {3'b0, advance_head_enable} 
+                - {3'b0, mv_back_head_enable});
     end
 end
 

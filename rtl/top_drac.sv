@@ -35,15 +35,15 @@ module top_drac
 //------------------------------------------------------------------------------------    
     input logic                 debug_halt_i,
 
-    input addr_t                IO_FETCH_PC_VALUE,
-    input logic                 IO_FETCH_PC_UPDATE,
+    input addr_t                debug_pc_addr_i,
+    input logic                 debug_pc_valid_i,
     
-    input logic                 IO_REG_READ,
-    input logic [4:0]           IO_REG_ADDR,
-    input logic                 IO_REG_WRITE,
-    input bus64_t               IO_REG_WRITE_DATA,
-    input logic [5:0] 	        IO_REG_PADDR,
-    input logic                 IO_REG_PREAD,
+    input logic                 debug_reg_read_valid_i,
+    input logic [4:0]           debug_reg_read_addr_i,
+    input logic                 debug_preg_write_valid_i,
+    input bus64_t               debug_preg_write_data_i,
+    input logic [5:0] 	        debug_preg_addr_i,
+    input logic                 debug_preg_read_valid_i,
 
 //------------------------------------------------------------------------------------
 // I-CACHE INTERFACE
@@ -75,20 +75,20 @@ module top_drac
 //-----------------------------------------------------------------------------------
 
 // PC
-    output addr_t               IO_FETCH_PC,
-    output addr_t               IO_DEC_PC,
-    output addr_t               IO_RR_PC,
-    output addr_t               IO_EXE_PC,
-    output addr_t               IO_WB_PC,
+    output addr_t               debug_fetch_pc_o,
+    output addr_t               debug_decode_pc_o,
+    output addr_t               debug_register_read_pc_o,
+    output addr_t               debug_execute_pc_o,
+    output addr_t               debug_writeback_pc_o,
 // WB
-    output logic                IO_WB_PC_VALID,
-    output logic  [4:0]         IO_WB_ADDR,
-    output logic                IO_WB_WE,
-    output bus64_t              IO_WB_BITS_ADDR,
+    output logic                debug_writeback_pc_valid_o,
+    output logic  [4:0]         debug_writeback_addr_o,
+    output logic                debug_writeback_we_o,
+    output bus64_t              debug_mem_addr_o,
 
-    output logic		        IO_REG_BACKEND_EMPTY,
-    output logic  [5:0]		    IO_REG_LIST_PADDR,
-    output bus64_t              IO_REG_READ_DATA,
+    output logic		        debug_backend_empty_o,
+    output logic  [5:0]		    debug_preg_addr_o,
+    output bus64_t              debug_preg_data_o,
 
 
 //-----------------------------------------------------------------------------
@@ -96,13 +96,7 @@ module top_drac
 //-----------------------------------------------------------------------------
     input  pmu_interface_t      pmu_interface_i,
 
-//-----------------------------------------------------------------------------
-// INTERRUPTS
-//-----------------------------------------------------------------------------
-    input  logic                 time_irq_i, // timer interrupt
-    input  logic                 irq_i,      // external interrupt in
-    input  logic [63:0]          time_i,     // time passed since the core is reset
-
+`ifdef CONF_SARGANTANA_ENABLE_PCR
 //-----------------------------------------------------------------------------
 // PCR
 //-----------------------------------------------------------------------------
@@ -120,6 +114,14 @@ module top_drac
     output logic  [63:0]        pcr_req_data_o,     // write data to performance counter module
     output logic  [2:0]         pcr_req_we_o,       // Cmd of the petition
     output logic  [63:0]        pcr_req_core_id_o   // core id of the tile
+`endif // CONF_SARGANTANA_ENABLE_PCR
+
+//-----------------------------------------------------------------------------
+// INTERRUPTS
+//-----------------------------------------------------------------------------
+    input  logic                 time_irq_i, // timer interrupt
+    input  logic                 irq_i,      // external interrupt in
+    input  logic [63:0]          time_i     // time passed since the core is reset
 
 );
 
@@ -150,26 +152,26 @@ logic                     we_csr_hpm;
 logic [31:0]              mcountinhibit_hpm;
 
 assign debug_in.halt_valid=debug_halt_i;
-assign debug_in.change_pc_addr={24'b0,IO_FETCH_PC_VALUE};
-assign debug_in.change_pc_valid=IO_FETCH_PC_UPDATE;
-assign debug_in.reg_read_valid=IO_REG_READ;
-assign debug_in.reg_read_write_addr=IO_REG_ADDR;
-assign debug_in.reg_write_valid=IO_REG_WRITE;
-assign debug_in.reg_write_data=IO_REG_WRITE_DATA;
-assign debug_in.reg_p_read_valid=IO_REG_PREAD;
-assign debug_in.reg_read_write_paddr=IO_REG_PADDR;
+assign debug_in.change_pc_addr={24'b0,debug_pc_addr_i};
+assign debug_in.change_pc_valid=debug_pc_valid_i;
+assign debug_in.reg_read_valid=debug_reg_read_valid_i;
+assign debug_in.reg_read_write_addr=debug_reg_read_addr_i;
+assign debug_in.reg_write_valid=debug_preg_write_valid_i;
+assign debug_in.reg_write_data=debug_preg_write_data_i;
+assign debug_in.reg_p_read_valid=debug_preg_read_valid_i;
+assign debug_in.reg_read_write_paddr=debug_preg_addr_i;
     
-assign IO_FETCH_PC=debug_out.pc_fetch;
-assign IO_DEC_PC=debug_out.pc_dec;
-assign IO_RR_PC=debug_out.pc_rr;
-assign IO_EXE_PC=debug_out.pc_exe;
-assign IO_WB_PC=debug_out.pc_wb;
-assign IO_WB_PC_VALID=debug_out.wb_valid_1;
-assign IO_WB_ADDR=debug_out.wb_reg_addr_1;
-assign IO_WB_WE=debug_out.wb_reg_we_1;
-assign IO_REG_READ_DATA=debug_out.reg_read_data;
-assign IO_REG_LIST_PADDR=debug_out.reg_list_paddr;
-assign IO_REG_BACKEND_EMPTY=debug_out.reg_backend_empty;
+assign debug_fetch_pc_o=debug_out.pc_fetch;
+assign debug_decode_pc_o=debug_out.pc_dec;
+assign debug_register_read_pc_o=debug_out.pc_rr;
+assign debug_execute_pc_o=debug_out.pc_exe;
+assign debug_writeback_pc_o=debug_out.pc_wb;
+assign debug_writeback_pc_valid_o=debug_out.wb_valid_1;
+assign debug_writeback_addr_o=debug_out.wb_reg_addr_1;
+assign debug_writeback_we_o=debug_out.wb_reg_we_1;
+assign debug_preg_data_o=debug_out.reg_read_data;
+assign debug_preg_addr_o=debug_out.reg_list_paddr;
+assign debug_backend_empty_o=debug_out.reg_backend_empty;
 
 // Register to save the last access to memory 
 always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -179,7 +181,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         dcache_addr <= req_cpu_dcache_o.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:0];
 end
 
-assign IO_WB_BITS_ADDR = {24'b0,dcache_addr};
+assign debug_mem_addr_o = {24'b0,dcache_addr};
  
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
@@ -220,6 +222,18 @@ assign hpm_events[25] = pmu_interface_i.dtlb_miss;
 assign hpm_events[26] = pmu_interface_i.ptw_buffer_hit;
 assign hpm_events[27] = pmu_interface_i.ptw_buffer_miss;
 assign hpm_events[28] = pmu_interface_i.itlb_stall;
+assign hpm_events[29] = pmu_interface_i.dcache_stall;
+assign hpm_events[30] = pmu_interface_i.dcache_stall_refill;
+assign hpm_events[31] = pmu_interface_i.dcache_rtab_rollback;
+assign hpm_events[32] = pmu_interface_i.dcache_req_onhold;
+assign hpm_events[33] = pmu_interface_i.dcache_prefetch_req;
+assign hpm_events[34] = pmu_interface_i.dcache_read_req;
+assign hpm_events[35] = pmu_interface_i.dcache_write_req;
+assign hpm_events[36] = pmu_interface_i.dcache_cmo_req;
+assign hpm_events[37] = pmu_interface_i.dcache_uncached_req;
+assign hpm_events[38] = pmu_interface_i.dcache_miss_read_req;
+assign hpm_events[39] = pmu_interface_i.dcache_miss_write_req;
+assign hpm_events[40] = pmu_flags.stall_ir;
                 
 hpm_counters #(
     .HPM_NUM_EVENTS(HPM_NUM_EVENTS),
@@ -314,6 +328,7 @@ csr_bsc #(
 
     .time_i(time_i),                    // time passed since the core is reset
 
+`ifdef CONF_SARGANTANA_ENABLE_PCR
     .pcr_req_ready_i(pcr_req_ready_i),            // ready bit of the pcr
     .pcr_resp_valid_i(pcr_resp_valid_i),           // ready bit of the pcr
     .pcr_resp_data_i(pcr_resp_data_i),            // read data from performance counter module
@@ -323,6 +338,7 @@ csr_bsc #(
     .pcr_req_data_o(pcr_req_data_o),             // write data to performance counter module
     .pcr_req_we_o(pcr_req_we_o),               // Cmd of the petition
     .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
+`endif // CONF_SARGANTANA_ENABLE_PCR
 
     .fcsr_flags_valid_i(|req_datapath_csr_interface.csr_retire),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
