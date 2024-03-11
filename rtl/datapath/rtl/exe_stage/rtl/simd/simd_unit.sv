@@ -266,7 +266,7 @@ always_comb begin
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
         if (is_vn(sel_fu_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
-        end else if (sel_fu_out.instr.instr_type == VMADC || sel_fu_out.instr.instr_type == VMSBC) begin
+        end else if ((sel_fu_out.instr.instr_type == VMADC) || (sel_fu_out.instr.instr_type == VMSBC)) begin
             case (sel_fu_out.sew)
                 SEW_8: begin
                     for (int j = 0; j<(DATA_SIZE/8); ++j) begin
