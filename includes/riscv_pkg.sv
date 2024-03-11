@@ -373,9 +373,10 @@ typedef enum logic [4:0] {
 } op_vs2_vector_t;
 
 typedef enum logic [1:0] {
-    MOP_UNIT_STRIDE = 2'b00,
-    MOP_STRIDED     = 2'b10,
-    MOP_INDEXED     = 2'b11
+    MOP_UNIT_STRIDE         = 2'b00,
+    MOP_INDEXED_UNORDERED   = 2'b01,
+    MOP_STRIDED             = 2'b10,
+    MOP_INDEXED_ORDERED     = 2'b11
 } mop_t;
 
 typedef enum logic [4:0] {

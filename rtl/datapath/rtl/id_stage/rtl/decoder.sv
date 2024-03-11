@@ -656,7 +656,7 @@ module decoder
                                             decode_instr_int.instr_type = VLSE;
                                             decode_instr_int.use_rs2 = 1'b1;
                                         end
-                                        MOP_INDEXED: begin
+                                        MOP_INDEXED_ORDERED, MOP_INDEXED_UNORDERED: begin
                                             decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.instr_type = VLXE;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -735,7 +735,7 @@ module decoder
                                             decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
                                             decode_instr_int.use_rs2 = 1'b1;
                                         end
-                                        MOP_INDEXED: begin
+                                        MOP_INDEXED_ORDERED, MOP_INDEXED_UNORDERED: begin
                                             decode_instr_int.use_vs2 = 1'b1;
                                             decode_instr_int.instr_type = VSXE;
                                             decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
