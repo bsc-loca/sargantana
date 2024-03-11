@@ -777,9 +777,19 @@ module decoder
                                     F6_VADC: begin
                                         decode_instr_int.instr_type = VADC;
                                         if (decode_instr_int.use_mask == 0) begin
-                                            $warning("Espec: Encodings corresponding to the unmasked versions (vm=1) are reserved.");
+                                            //$warning("Espec: Encodings corresponding to the unmasked versions (vm=1) are reserved.");
+                                            xcpt_illegal_instruction_int = 1'b1;
                                         end
-                                    end                                    
+                                    end
+                                    F6_VSBC: begin
+                                        decode_instr_int.instr_type = VSBC;
+                                    end
+                                    F6_VMADC: begin
+                                        decode_instr_int.instr_type = VMADC;
+                                    end
+                                    F6_VMSBC: begin
+                                        decode_instr_int.instr_type = VMSBC;
+                                    end                                                                                   
                                     F6_VMIN: begin
                                         decode_instr_int.instr_type = VMIN;
                                     end
@@ -856,7 +866,19 @@ module decoder
                                     end
                                     F6_VADC: begin
                                         decode_instr_int.instr_type = VADC;
-                                    end                                    
+                                        if (decode_instr_int.use_mask == 0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VSBC: begin
+                                        decode_instr_int.instr_type = VSBC;
+                                    end
+                                    F6_VMADC: begin
+                                        decode_instr_int.instr_type = VMADC;
+                                    end
+                                    F6_VMSBC: begin
+                                        decode_instr_int.instr_type = VMSBC;
+                                    end                                                                                                                
                                     F6_VMIN: begin
                                         decode_instr_int.instr_type = VMIN;
                                     end
@@ -931,7 +953,13 @@ module decoder
                                     end
                                     F6_VADC: begin
                                         decode_instr_int.instr_type = VADC;
-                                    end                                    
+                                        if (decode_instr_int.use_mask == 0) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VMADC: begin
+                                        decode_instr_int.instr_type = VMADC;
+                                    end                                        
                                     F6_VAND: begin
                                         decode_instr_int.instr_type = VAND;
                                     end

@@ -262,9 +262,33 @@ endgenerate
 //The result of the FUs are concatenated into the result data
 always_comb begin
     fu_data_vd = sel_fu_out.data_old_vd; // By Default
+    //fu_data_vd = {128{1'b1}}; // By Default
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
         if (is_vn(sel_fu_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
+        end else if (sel_fu_out.instr.instr_type == VMADC || sel_fu_out.instr.instr_type == VMSBC) begin
+            case (sel_fu_out.sew)
+                SEW_8: begin
+                    for (int j = 0; j<(DATA_SIZE/8); ++j) begin
+                        fu_data_vd[(i*(DATA_SIZE/8)+j)] = vd_elements[i][j];
+                    end
+                end
+                SEW_16: begin
+                    for (int j = 0; j<(DATA_SIZE/16); ++j) begin
+                        fu_data_vd[(i*(DATA_SIZE/16)+j)] = vd_elements[i][j];
+                    end
+                end
+                SEW_32: begin
+                    for (int j = 0; j<(DATA_SIZE/32); ++j) begin
+                        fu_data_vd[(i*(DATA_SIZE/32)+j)] = vd_elements[i][j];
+                    end
+                end
+                SEW_64: begin
+                    for (int j = 0; j<(DATA_SIZE/64); ++j) begin
+                         fu_data_vd[(i*(DATA_SIZE/64)+j)] = vd_elements[i][j];
+                    end
+                end
+            endcase    
         end else begin
             fu_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = vd_elements[i];
         end

@@ -35,9 +35,10 @@ bus64_t result_vmul;
 vaddsub vaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
-    .data_vm       (instruction_i.data_vm),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
+    .data_vm       (instruction_i.data_vm[7:0]),
+    .use_mask      (instruction_i.instr.use_mask),
     .data_vd_o     (result_vaddsub)
 );
 
@@ -77,7 +78,7 @@ vmul vmul_inst(
 
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
-        VADD, VSUB, VRSUB, VADC: begin
+        VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
             data_vd_o = result_vaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
