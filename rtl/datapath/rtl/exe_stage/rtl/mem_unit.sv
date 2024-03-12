@@ -689,7 +689,7 @@ assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
-    vdata_to_wb_d = '1;
+    vdata_to_wb = '1;
     packed_velems = 'h0;
     for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
         if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
