@@ -63,8 +63,8 @@ function [6:0] trunc_sum_7bits(input [7:0] val_in);
   trunc_sum_7bits = val_in[6:0];
 endfunction
 
-function [4:0] trunc_shift_7_5(input [6:0] val_in);
-  trunc_shift_7_5 = val_in[4:0];
+function [4:0] trunc_7_5(input [6:0] val_in);
+  trunc_7_5 = val_in[4:0];
 endfunction
 
 function [6:0] trunc_9_7(input [8:0] val_in);
@@ -182,13 +182,13 @@ assign vload_packer_full = (vload_packer_nfree_q == 'h0);
 assign vstore_packer_full = (vstore_packer_nfree_q == 'h0);
 
 assign vl_to_dcache = ((instruction_to_dcache.instr.instr_type == VLM) || (instruction_to_dcache.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_to_dcache.sew :
+                      ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_to_dcache.sew) :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instruction_s1_q.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_s1_q.sew :
+                      ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_s1_q.sew) :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? VMAXELEM >> instruction_to_wb.sew :
+                      ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_to_wb.sew) :
                         vl_i[VMAXELEM_LOG:0];
 
 // State machine variables

@@ -72,6 +72,10 @@
     output logic                        pmu_load_after_store_o
 );
 
+function [4:0] trunc_7_5(input [6:0] val_in);
+  trunc_7_5 = val_in[4:0];
+endfunction
+
 // Declarations
 bus64_t rs1_data_def;
 bus_simd_t rs2_data_def;
@@ -314,7 +318,7 @@ simd_unit simd_unit_inst (
 );
 
 assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
-                 ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? (VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
+                 ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
                  vl_i[VMAXELEM_LOG:0];
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
 assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
