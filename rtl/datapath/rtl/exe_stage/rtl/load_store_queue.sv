@@ -280,7 +280,7 @@ end
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;
 assign dtlb_comm_o.priv_lvl = priv_lvl_i;
 assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
-assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1:12];
+assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
