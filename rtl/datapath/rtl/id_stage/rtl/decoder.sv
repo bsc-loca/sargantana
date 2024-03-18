@@ -826,6 +826,18 @@ module decoder
                                     F6_VMSLE: begin
                                         decode_instr_int.instr_type = VMSLE;
                                     end
+                                    F6_VSADDU: begin
+                                        decode_instr_int.instr_type = VSADDU;
+                                    end
+                                    F6_VSADD: begin
+                                        decode_instr_int.instr_type = VSADD;
+                                    end
+                                    F6_VSSUBU: begin
+                                        decode_instr_int.instr_type = VSSUBU;
+                                    end
+                                    F6_VSSUB: begin
+                                        decode_instr_int.instr_type = VSSUB;
+                                    end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;
                                     end
@@ -915,6 +927,18 @@ module decoder
                                     F6_VMSLE: begin
                                         decode_instr_int.instr_type = VMSLE;
                                     end
+                                    F6_VSADDU: begin
+                                        decode_instr_int.instr_type = VSADDU;
+                                    end
+                                    F6_VSADD: begin
+                                        decode_instr_int.instr_type = VSADD;
+                                    end
+                                    F6_VSSUBU: begin
+                                        decode_instr_int.instr_type = VSSUBU;
+                                    end
+                                    F6_VSSUB: begin
+                                        decode_instr_int.instr_type = VSSUB;
+                                    end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;
                                     end
@@ -977,6 +1001,12 @@ module decoder
                                     end
                                     F6_VMSLE: begin
                                         decode_instr_int.instr_type = VMSLE;
+                                    end
+                                    F6_VSADDU: begin
+                                        decode_instr_int.instr_type = VSADDU;
+                                    end
+                                    F6_VSADD: begin
+                                        decode_instr_int.instr_type = VSADD;
                                     end
                                     F6_VSLL: begin
                                         decode_instr_int.instr_type = VSLL;

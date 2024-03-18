@@ -28,6 +28,7 @@ module functional_unit
 
 bus64_t result_vaddsub;
 bus64_t result_vwaddsub;
+bus64_t result_vsaddsub;
 bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
@@ -50,6 +51,13 @@ vwaddsub vwaddsub_inst(
     .data_vd_o     (result_vwaddsub)
 );
 
+vsaddsub vsaddsub_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs1_i    (data_vs1_i),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_vsaddsub)
+);
 vcomp vcomp_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
@@ -80,6 +88,9 @@ always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
             data_vd_o = result_vaddsub;
+        end
+        VSADDU, VSADD, VSSUBU, VSSUB: begin
+            data_vd_o = result_vsaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
             data_vd_o = result_vwaddsub;

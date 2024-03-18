@@ -14,7 +14,7 @@
 package riscv_pkg;
 
 parameter XLEN = 64; 
-parameter logic [9:0] VLEN = 128;
+parameter VLEN = 128;
 parameter MLEN = VLEN/8;
 parameter OPCODE_WIDTH = 6;
 parameter REG_WIDTH = 5;
@@ -322,6 +322,10 @@ typedef enum logic [5:0] {
     F6_VMSLT        = 6'b011011,
     F6_VMSLEU       = 6'b011100,
     F6_VMSLE        = 6'b011101,
+    F6_VSADDU       = 6'b100000,
+    F6_VSADD        = 6'b100001,
+    F6_VSSUBU       = 6'b100010,
+    F6_VSSUB        = 6'b100011,
     F6_VSLL         = 6'b100101,
     F6_VSRL         = 6'b101000,
     F6_VSRA         = 6'b101001,
