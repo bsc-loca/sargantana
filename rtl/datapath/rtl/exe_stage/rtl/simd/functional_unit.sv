@@ -98,7 +98,7 @@ always_comb begin
         VMUL, VMULH, VMULHU, VMULHSU: begin
             data_vd_o = result_vmul;
         end
-        VMIN, VMINU, VMAX, VMAXU, VMSEQ, VMSLTU, VMSLT, VMSLEU, VMSLE, VCNT: begin
+        VMIN, VMINU, VMAX, VMAXU, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VCNT: begin
             data_vd_o = result_vcomp;
         end
         VAND: begin
@@ -172,6 +172,9 @@ always_comb begin
         end
         VMERGE, VMV, VREDSUM, VREDAND, VREDOR, VREDXOR: begin
             data_vd_o = data_vs1_i;
+        end
+        VMV1R: begin
+            data_vd_o = data_vs2_i;
         end
         default: begin
             data_vd_o = 64'b0;

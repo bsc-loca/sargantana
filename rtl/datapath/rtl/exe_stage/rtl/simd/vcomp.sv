@@ -31,20 +31,25 @@ logic is_signed;
 logic is_max;
 //logic is_min;
 logic is_seq;
+logic is_sne;
 logic is_slt;
 logic is_sle;
+logic is_sgt;
 logic [7:0] is_greater;
 logic [7:0] is_equal;
 bus64_t data_a, data_b;
 
 //vcnt performs the same operations as vmseq. The equal counts is performed
 //outside the FUs.
-assign is_signed = ((instr_type_i == VMAX)   || (instr_type_i == VMIN )|| (instr_type_i == VMSLT) || (instr_type_i == VMSLE)) ? 1'b1 : 1'b0;
+assign is_signed = ((instr_type_i == VMAX)   || (instr_type_i == VMIN ) || 
+                    (instr_type_i == VMSLT)  || (instr_type_i == VMSLE) || (instr_type_i == VMSGT)) ? 1'b1 : 1'b0;
 assign is_max =    ((instr_type_i == VMAX)   || (instr_type_i == VMAXU))    ? 1'b1 : 1'b0;
 //assign is_min =    ((instr_type_i == VMIN)   || (instr_type_i == VMINU))    ? 1'b1 : 1'b0;
 assign is_seq =    ((instr_type_i == VMSEQ)  || (instr_type_i == VCNT))     ? 1'b1 : 1'b0;
+assign is_sne =    ((instr_type_i == VMSNE))                                ? 1'b1 : 1'b0;
 assign is_slt =    ((instr_type_i == VMSLTU) || (instr_type_i == VMSLT))    ? 1'b1 : 1'b0;
 assign is_sle =    ((instr_type_i == VMSLEU) || (instr_type_i == VMSLE))    ? 1'b1 : 1'b0;
+assign is_sgt =    ((instr_type_i == VMSGTU) || (instr_type_i == VMSGT))    ? 1'b1 : 1'b0;
 
 always_comb begin
     for (int i = 0; i<8; ++i) begin
@@ -88,12 +93,18 @@ always_comb begin
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = is_equal[i];
+                //VMSNE
+                end else if (is_sne) begin
+                    data_vd_o[i] = ~is_equal[i];
                 //VMSLT
                 end else if (is_slt) begin
                     data_vd_o[i] = is_greater[i];
                 //VMSLE
                 end else if (is_sle) begin
                     data_vd_o[i] = is_greater[i] | is_equal[i];
+                //VMSGT
+                end else if (is_sgt) begin
+                    data_vd_o[i] = ~(is_greater[i] | is_equal[i]);
 
                 //VMAX and VMIN
                 end else if (is_greater[i]) begin
@@ -102,7 +113,7 @@ always_comb begin
                     data_vd_o[(i*8)+:8] = data_b[(i*8)+:8];
                 end
             end
-            if (is_seq | is_slt | is_sle) begin
+            if (is_seq | is_sne | is_slt | is_sle | is_sgt) begin
                 data_vd_o[63:8] = '1;
             end
         end
@@ -115,13 +126,19 @@ always_comb begin
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = &(is_equal[(2*i)+:2]);
+                end else if (is_sne) begin
+                    data_vd_o[i] = ~(&(is_equal[(2*i)+:2]));
                 //VMSLT
                 end else if (is_slt) begin
                     data_vd_o[i] = is_greater[(2*i)+1] | (is_equal[(2*i)+1] & is_greater[2*i]);
                 //VMSLE
                 end else if (is_sle) begin
                     data_vd_o[i] = ((&is_equal[(2*i)+:2]) | (is_greater[(2*i)+1] |
-                                                        (is_equal[(2*i)+1] & is_greater[2*i])));
+                                    (is_equal[(2*i)+1] & is_greater[2*i])));
+                //VMSGT
+                end else if (is_sgt) begin
+                    data_vd_o[i] = ~((&is_equal[(2*i)+:2]) | (is_greater[(2*i)+1] |
+                                     (is_equal[(2*i)+1] & is_greater[2*i])));
 
                 //VMAX and VMIN
                 end else if (is_greater[(2*i)+1] |
@@ -131,7 +148,7 @@ always_comb begin
                     data_vd_o[(i*16)+:16] = data_b[(i*16)+:16];
                 end
             end
-            if (is_seq | is_slt | is_sle) begin
+            if (is_seq | is_sne | is_slt | is_sle | is_sgt) begin
                 data_vd_o[63:4] = '1;
             end
         end
@@ -146,6 +163,8 @@ always_comb begin
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = &(is_equal[(4*i)+:4]);
+                end else if (is_sne) begin
+                    data_vd_o[i] = ~(&(is_equal[(4*i)+:4]));
                 //VMSLT
                 end else if (is_slt) begin
                     data_vd_o[i] =  (is_greater[(4*i)+3] |
@@ -158,6 +177,12 @@ always_comb begin
                                     (is_equal[(4*i)+3] & (is_greater[(4*i)+2] |
                                     (is_equal[(4*i)+2] & (is_greater[(4*i)+1] |
                                     (is_equal[(4*i)+1] & (is_greater[4*i]))))))));
+                //VMSGT
+                end else if (is_sgt) begin
+                    data_vd_o[i] =  ~((&is_equal[(4*i)+:4]) | (is_greater[(4*i)+3] |
+                                     (is_equal[(4*i)+3] & (is_greater[(4*i)+2] |
+                                     (is_equal[(4*i)+2] & (is_greater[(4*i)+1] |
+                                     (is_equal[(4*i)+1] & (is_greater[4*i]))))))));
 
                 //VMAX and VMIN
                 end else if (is_greater[(4*i)+3] |
@@ -169,7 +194,7 @@ always_comb begin
                     data_vd_o[(i*32)+:32] = data_b[(i*32)+:32];
                 end
             end
-            if (is_seq | is_slt | is_sle) begin
+            if (is_seq | is_sne | is_slt | is_sle | is_sgt) begin
                 data_vd_o[63:2] = '1;
             end
         end
@@ -181,6 +206,8 @@ always_comb begin
             //VMSEQ
             if (is_seq) begin
                 data_vd_o = &(is_equal);
+            end else if (is_sne) begin
+                data_vd_o = ~(&(is_equal));
             //VMSLT
             end else if (is_slt) begin
                 data_vd_o =     (is_greater[7] |
@@ -201,6 +228,16 @@ always_comb begin
                             (is_equal[3] & (is_greater[2] |
                             (is_equal[2] & (is_greater[1] |
                             (is_equal[1] & (is_greater[0]))))))))))))))));
+            //VMSGT
+            end else if (is_sgt) begin
+                data_vd_o = ~((&is_equal) | (is_greater[7] |
+                             (is_equal[7] & (is_greater[6] |
+                             (is_equal[6] & (is_greater[5] |
+                             (is_equal[5] & (is_greater[4] |
+                             (is_equal[4] & (is_greater[3] |
+                             (is_equal[3] & (is_greater[2] |
+                             (is_equal[2] & (is_greater[1] |
+                             (is_equal[1] & (is_greater[0]))))))))))))))));
 
             //VMAX and VMIN
             end else if (is_greater[7] |
@@ -215,7 +252,7 @@ always_comb begin
             end else begin
                 data_vd_o = data_b;
             end
-            if (is_seq | is_slt | is_sle) begin
+            if (is_seq | is_sne | is_slt | is_sle | is_sgt) begin
                 data_vd_o[63:1] = '1;
             end
         end 

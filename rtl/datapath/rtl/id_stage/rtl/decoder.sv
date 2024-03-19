@@ -814,6 +814,9 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSNE: begin
+                                        decode_instr_int.instr_type = VMSNE;
+                                    end
                                     F6_VMSLTU: begin
                                         decode_instr_int.instr_type = VMSLTU;
                                     end
@@ -915,6 +918,9 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSNE: begin
+                                        decode_instr_int.instr_type = VMSNE;
+                                    end
                                     F6_VMSLTU: begin
                                         decode_instr_int.instr_type = VMSLTU;
                                     end
@@ -926,6 +932,12 @@ module decoder
                                     end
                                     F6_VMSLE: begin
                                         decode_instr_int.instr_type = VMSLE;
+                                    end
+                                    F6_VMSGTU: begin
+                                        decode_instr_int.instr_type = VMSGTU;
+                                    end
+                                    F6_VMSGT: begin
+                                        decode_instr_int.instr_type = VMSGT;
                                     end
                                     F6_VSADDU: begin
                                         decode_instr_int.instr_type = VSADDU;
@@ -996,11 +1008,20 @@ module decoder
                                     F6_VMSEQ: begin
                                         decode_instr_int.instr_type = VMSEQ;
                                     end
+                                    F6_VMSNE: begin
+                                        decode_instr_int.instr_type = VMSNE;
+                                    end
                                     F6_VMSLEU: begin
                                         decode_instr_int.instr_type = VMSLEU;
                                     end
                                     F6_VMSLE: begin
                                         decode_instr_int.instr_type = VMSLE;
+                                    end
+                                    F6_VMSGTU: begin
+                                        decode_instr_int.instr_type = VMSGTU;
+                                    end
+                                    F6_VMSGT: begin
+                                        decode_instr_int.instr_type = VMSGT;
                                     end
                                     F6_VSADDU: begin
                                         decode_instr_int.instr_type = VSADDU;
@@ -1027,6 +1048,15 @@ module decoder
                                         decode_instr_int.use_vs1 = 1'b0;
                                         decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
+                                    end
+                                    F6_VMV1R: begin
+                                        if (imm_value != 'b0) begin // Do not allow VMV<nr>R with nr>1
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_vs1 = 1'b0;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VMV1R;
+                                        end
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;

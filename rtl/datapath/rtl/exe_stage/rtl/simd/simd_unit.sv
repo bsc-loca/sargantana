@@ -80,11 +80,14 @@ function logic is_vww(input rr_exe_simd_instr_t instr);
 endfunction
 
 function logic is_vm(input rr_exe_simd_instr_t instr);
-    is_vm = ((instr.instr.instr_type == VMSEQ)  || 
+    is_vm = ((instr.instr.instr_type == VMSEQ)  ||
+             (instr.instr.instr_type == VMSNE)  || 
              (instr.instr.instr_type == VMSLTU) ||
              (instr.instr.instr_type == VMSLT)  || 
              (instr.instr.instr_type == VMSLEU) || 
-             (instr.instr.instr_type == VMSLE)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VMSLE)  ||
+             (instr.instr.instr_type == VMSGTU) ||
+             (instr.instr.instr_type == VMSGT)) ? 1'b1 : 1'b0;
 endfunction
 
 typedef struct packed {
@@ -459,9 +462,10 @@ always_comb begin
     end else if ((instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) || (instr_to_out.instr.instr_type == VMXOR)) begin
         result_data_vd = '1;
         result_data_vd[63:0] = fu_data_vd[63:0]; // Works with VLEN up to 512, higher than that requires concatenation of results from FU
-    end else if ((instr_to_out.instr.instr_type == VMSEQ) || (instr_to_out.instr.instr_type == VMSLTU) ||
-                 (instr_to_out.instr.instr_type == VMSLT) || (instr_to_out.instr.instr_type == VMSLEU) ||
-                 (instr_to_out.instr.instr_type == VMSLE)) begin
+    end else if ((instr_to_out.instr.instr_type == VMSEQ)  || (instr_to_out.instr.instr_type == VMSNE) ||
+                 (instr_to_out.instr.instr_type == VMSLTU) || (instr_to_out.instr.instr_type == VMSLT) || 
+                 (instr_to_out.instr.instr_type == VMSLEU) || (instr_to_out.instr.instr_type == VMSLE) ||
+                 (instr_to_out.instr.instr_type == VMSGTU) || (instr_to_out.instr.instr_type == VMSGT)) begin
         result_data_vd = '1;
         case (instr_to_out.sew)
             SEW_8: begin
