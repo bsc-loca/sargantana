@@ -62,25 +62,25 @@ always_comb begin
     // - Otherwise, if the operation is a sub a 1'b1 is selected
     // - Otherwise, 1'b0 is selected because the operation is a sum
     carry_in[0] = (is_sub) ? 1'b1 : 1'b0;
-    carry_in[1] = (sew_i == SEW_16 || sew_i == SEW_32 || sew_i == SEW_64) ? 
+    carry_in[1] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                     carry_out[0] : (is_sub) ?
                     1'b1 : 1'b0;
-    carry_in[2] = (sew_i == SEW_32 || sew_i == SEW_64) ?
+    carry_in[2] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ?
                     carry_out[1] : (is_sub) ?
                     1'b1 : 1'b0;
-    carry_in[3] = (sew_i == SEW_16 || sew_i == SEW_32 || sew_i == SEW_64) ? 
+    carry_in[3] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                     carry_out[2] : (is_sub) ?
                     1'b1 : 1'b0;
     carry_in[4] = (sew_i == SEW_64) ?
                     carry_out[3] : (is_sub) ?
                     1'b1 : 1'b0;
-    carry_in[5] = (sew_i == SEW_16 || sew_i == SEW_32 || sew_i == SEW_64) ? 
+    carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                     carry_out[4] : (is_sub) ?
                     1'b1 : 1'b0;
-    carry_in[6] = (sew_i == SEW_32 || sew_i == SEW_64) ?
+    carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ?
                     carry_out[5] : (is_sub) ?
                     1'b1 : 1'b0;
-    carry_in[7] = (sew_i == SEW_16 || sew_i == SEW_32 || sew_i == SEW_64) ? 
+    carry_in[7] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                     carry_out[6] : (is_sub) ?
                     1'b1 : 1'b0;
 end
@@ -144,7 +144,7 @@ always_comb begin
                         data_vd_o[16*i +: 16] = (overflow[2*(i + 1) - 1]) ? 16'hFFFF : results[2*i +: 2];
                     VSADD, VSSUB:
                         data_vd_o[16*i +: 16] = (overflow[2*(i + 1) - 1]) ?
-                                                    16'hFFFF + carry_out[2*(i + 1) - 1] : results[2*i +: 2];
+                                                    16'h7FFF + carry_out[2*(i + 1) - 1] : results[2*i +: 2];
                     VSSUBU:
                         data_vd_o[16*i +: 16] = (overflow[2*(i + 1) - 1]) ? 8'h00 : results[2*i +: 2];
                     default:
