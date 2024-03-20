@@ -192,12 +192,12 @@ endfunction
     rr_exe_instr_t selection_rr_exe_d;
 
     exe_cu_t exe_cu_int;
-    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
+    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-2:0] exe_to_wb_scalar; //Mem to scalar wb skips EXE-WB reg
     exe_wb_scalar_instr_t [1:0] exe_to_wb_scalar_simd_fp;
     exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] wb_scalar;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] exe_to_wb_simd;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] wb_simd;
-    exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] exe_to_wb_fp;
+    exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-2:0] exe_to_wb_fp; //Mem to fp wb skips EXE-WB reg
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] wb_fp;
     logic wb_amo_int;
 
@@ -1125,7 +1125,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     
         .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
         .mem_to_scalar_wb_o(wb_scalar[1]),
-        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[3]),
+        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[2]),
 
         .simd_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[0]),
         .fp_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[1]),
@@ -1156,9 +1156,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     always_comb begin 
         // We assign FP over SIMD by default if valid
         if (exe_to_wb_scalar_simd_fp[1].valid) begin
-            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[1];
+            exe_to_wb_scalar[1] = exe_to_wb_scalar_simd_fp[1];
         end else begin
-            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[0];
+            exe_to_wb_scalar[1] = exe_to_wb_scalar_simd_fp[0];
         end
     end
 
@@ -1169,7 +1169,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[2], exe_to_wb_scalar[3], exe_to_wb_simd[0], exe_to_wb_simd[1], exe_to_wb_fp[0]}),
+        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_scalar[2], exe_to_wb_simd[0], exe_to_wb_simd[1], exe_to_wb_fp[0]}),
         .output_o({wb_scalar[0], wb_scalar[2], wb_scalar[3], wb_simd[0], wb_simd[1], wb_fp[0]})
     );
 
