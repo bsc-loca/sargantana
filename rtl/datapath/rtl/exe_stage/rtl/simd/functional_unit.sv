@@ -129,6 +129,9 @@ vmul vmul_inst(
 
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
+        VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8: begin
+            data_vd_o = data_vs2_i;
+        end
         VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
             data_vd_o = result_vaddsub;
         end

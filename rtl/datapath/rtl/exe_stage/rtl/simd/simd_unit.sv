@@ -493,6 +493,78 @@ always_comb begin
                 end
             end
         endcase
+    end else if ((sel_fu_out.instr.instr_type == VZEXT_VF2) || (sel_fu_out.instr.instr_type == VZEXT_VF4) || (sel_fu_out.instr.instr_type == VZEXT_VF8) ||
+                (sel_fu_out.instr.instr_type == VSEXT_VF2) || (sel_fu_out.instr.instr_type == VSEXT_VF4) || (sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+        case (sel_fu_out.sew)
+            SEW_8: begin
+                for (int i = 0; i<(VLEN/8); ++i) begin
+                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                        result_data_vd[(i*8) +: 8] = {{{4{fu_data_vd[((8*(i+1))/2)-1]}}, fu_data_vd[(i*4)+:4]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                        result_data_vd[(i*8) +: 8] = {{{4{1'b0}}, fu_data_vd[(i*4)+:4]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                        result_data_vd[(i*8) +: 8] = {{{6{fu_data_vd[((8*(i+1))/4)-1]}}, fu_data_vd[(i*2)+:2]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                        result_data_vd[(i*8) +: 8] = {{{6{1'b0}}, fu_data_vd[(i*2)+:2]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                        result_data_vd[(i*8) +: 8] = {{{7{fu_data_vd[((16*(i+1))/8)-1]}}, fu_data_vd[(i*1)+:1]}};
+                    end else begin //(is_vzext8)
+                        result_data_vd[(i*8) +: 8] = {{{7{1'b0}}}, fu_data_vd[(i*1)+:1]};
+                    end
+                end
+            end
+            SEW_16: begin
+                for (int i = 0; i<(VLEN/16); ++i) begin
+                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                        result_data_vd[(i*16) +: 16] = {{{8{fu_data_vd[((16*(i+1))/2)-1]}}, fu_data_vd[(i*8)+:8]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                        result_data_vd[(i*16) +: 16] = {{{8{1'b0}}, fu_data_vd[(i*8)+:8]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                        result_data_vd[(i*16) +: 16] = {{{12{fu_data_vd[((16*(i+1))/4)-1]}}, fu_data_vd[(i*4)+:4]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                        result_data_vd[(i*16) +: 16] = {{{12{1'b0}}, fu_data_vd[(i*4)+:4]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                        result_data_vd[(i*16) +: 16] = {{{14{fu_data_vd[((16*(i+1))/8)-1]}}, fu_data_vd[(i*2)+:2]}};
+                    end else begin //(is_vzext8)
+                        result_data_vd[(i*16) +: 16] = {{{14{1'b0}}}, fu_data_vd[(i*2)+:2]};
+                    end
+                end
+            end
+            SEW_32: begin
+                for (int i = 0; i<(VLEN/32); ++i) begin
+                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{16{fu_data_vd[((32*(i+1))/2)-1]}}, fu_data_vd[(i*16)+:16]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{16{1'b0}}, fu_data_vd[(i*16)+:16]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{24{fu_data_vd[((32*(i+1))/4)-1]}}, fu_data_vd[(i*8)+:8]}};
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{24{1'b0}}, fu_data_vd[(i*8)+:8]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{28{fu_data_vd[((32*(i+1))/8)-1]}}, fu_data_vd[(i*4)+:4]}};
+                    end else begin //(is_vzext8)
+                        result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{28{1'b0}}}, fu_data_vd[(i*4)+:4]};
+                    end
+                end
+            end
+            SEW_64: begin
+                for (int i = 0; i<(VLEN/64); ++i) begin
+                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{fu_data_vd[((64*(i+1))/2)-1]}}, fu_data_vd[(i*32)+:32]}};                                     
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{1'b0}}, fu_data_vd[(i*32)+:32]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{fu_data_vd[((64*(i+1))/4)-1]}}, fu_data_vd[(i*16)+:16]}};                                 
+                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{1'b0}}, fu_data_vd[(i*16)+:16]}};
+                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{fu_data_vd[((64*(i+1))/8)-1]}}, fu_data_vd[(i*8)+:8]}};
+                    end else begin //(is_vzext8)
+                        result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{1'b0}}}, fu_data_vd[(i*8)+:8]};
+                    end
+                end
+            end                         
+        endcase
     end else begin
         result_data_vd = fu_data_vd;
     end
