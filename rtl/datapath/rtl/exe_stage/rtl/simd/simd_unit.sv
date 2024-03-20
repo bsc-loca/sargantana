@@ -433,6 +433,7 @@ vredtree vredtree_inst(
     .sew_i         (instruction_i.sew),
     .data_fu_i     (vd_elements[0]),
     .data_vs2_i    (instruction_i.data_vs2),
+    .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
     .sew_to_out_i  (instr_to_out.sew),
     .red_data_vd_o (red_data_vd)

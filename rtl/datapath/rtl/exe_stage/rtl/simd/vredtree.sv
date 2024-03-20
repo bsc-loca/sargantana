@@ -20,6 +20,7 @@ module vredtree (
     input  sew_t sew_i,                 // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
     input  bus64_t data_fu_i,          // Result of vs1[0] and vs2[0] in data_fu[0]
     input  bus_simd_t data_vs2_i,       // 128-bit source operand 
+    input  bus_simd_t data_old_vd,
     input  bus_mask_t data_vm_i,        // Vector mask of VLEN/8 size
     input  sew_t sew_to_out_i,          // SEW indication for output 
     output bus_simd_t red_data_vd_o     // 128-bit result (only cares last element)
@@ -211,42 +212,42 @@ always_comb begin
     case (sew_to_out_i)
         SEW_8: begin
             case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-                VREDSUM: red_data_vd_o =  {{(VLEN-8){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
+                VREDSUM: red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
                                                             + gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
                                                             + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                VREDAND: red_data_vd_o =  {{(VLEN-8){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
+                VREDAND: red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
                                                             & gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
                                                             & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                VREDOR:  red_data_vd_o =  {{(VLEN-8){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
+                VREDOR:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
                                                             | gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
                                                             | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                VREDXOR: red_data_vd_o =  {{(VLEN-8){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
+                VREDXOR: red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
                                                             ^ gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
                                                             ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
             endcase
         end
         SEW_16: begin
             case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-                VREDSUM: red_data_vd_o = {{(VLEN-16){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
-                VREDAND: red_data_vd_o = {{(VLEN-16){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
-                VREDOR:  red_data_vd_o = {{(VLEN-16){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
-                VREDXOR: red_data_vd_o = {{(VLEN-16){1'b1}}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
+                VREDSUM: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
+                VREDAND: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
+                VREDOR:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
+                VREDXOR: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 16] ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 16])};
             endcase
         end
         SEW_32: begin
             case (gen_intermediate_q[NUM_STAGES-2].instr_type)
-                VREDSUM: red_data_vd_o = {{(VLEN-32){1'b1}}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] + gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
-                VREDAND: red_data_vd_o = {{(VLEN-32){1'b1}}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] & gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
-                VREDOR:  red_data_vd_o = {{(VLEN-32){1'b1}}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] | gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
-                VREDXOR: red_data_vd_o = {{(VLEN-32){1'b1}}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] ^ gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
+                VREDSUM: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] + gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
+                VREDAND: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] & gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
+                VREDOR:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] | gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
+                VREDXOR: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 32] ^ gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 32])};
             endcase
         end
         SEW_64: begin
             case (gen_intermediate_q[NUM_STAGES-3].instr_type)
-                VREDSUM: red_data_vd_o = {{(VLEN-64){1'b1}}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
-                VREDAND: red_data_vd_o = {{(VLEN-64){1'b1}}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] & gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
-                VREDOR:  red_data_vd_o = {{(VLEN-64){1'b1}}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] | gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
-                VREDXOR: red_data_vd_o = {{(VLEN-64){1'b1}}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] ^ gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+                VREDSUM: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+                VREDAND: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] & gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+                VREDOR:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] | gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+                VREDXOR: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] ^ gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
             endcase
         end
     endcase
