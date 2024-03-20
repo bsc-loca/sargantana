@@ -1436,8 +1436,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                     if (commit_cu_int.write_enable) begin
                         commit_data[0].data = resp_csr_cpu_i.csr_rw_rdata;
                     end else if (commit_store_or_amo_int[0] & (commit_cu_int.gl_index == mem_gl_index_int)) begin
-                        commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : exe_to_wb_scalar[1].result;
-                        commit_data[0].mem_addr = instruction_to_commit[0].mem_type == STORE ? store_addr : exe_to_wb_scalar[1].addr;
+                        commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : wb_scalar[1].result;
+                        commit_data[0].mem_addr = instruction_to_commit[0].mem_type == STORE ? store_addr : wb_scalar[1].addr;
                     end else begin
                         commit_data[0].data = instruction_to_commit[0].result;
                     end
