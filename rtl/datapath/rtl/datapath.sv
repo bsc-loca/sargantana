@@ -1319,7 +1319,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     assign instruction_to_commit = instruction_gl_commit;
-    assign commit_cu_int.gl_index = index_gl_commit;
+    assign commit_cu_int.gl_index = (commit_store_or_amo_int[0]) ? index_gl_commit : trunc_sum_5bits(index_gl_commit + 1'b1);
 
     csr_interface csr_interface_inst
     (
