@@ -57,7 +57,7 @@ assign is_subtraction = (is_sub || is_rsub || is_vsbc || is_vmsbc);
 always_comb begin
     //If a subtraction is performed, the operand is flipped and a 1'b1 is
     //selected as carry_in (vs2 - vs1 = vs2 + (-vs1))
-    if (is_sub) begin
+    if (is_sub || (is_vsbc && use_mask)) begin
         data_vs1 = ~data_vs1_i;
         data_vs2 = data_vs2_i;
         carry_in[0] = 1'b1;
@@ -69,7 +69,7 @@ always_comb begin
         data_vs2 = ~data_vs2_i;
         data_vs1 = data_vs1_i;
         carry_in[0] = 1'b1;
-    end else if (is_vsbc || (is_vmsbc && use_mask)) begin //if VMSBC uses a mask then priusly to flip the bit I add carry
+    end else if ((is_vsbc && ~use_mask) || (is_vmsbc && use_mask)) begin //if VMSBC uses a mask then priusly to flip the bit I add carry
         if (sew_i == SEW_64) begin
             data_vs1 = ~(data_vs1_i + {{63{1'b0}}, data_vm[0]});
         end else if (sew_i == SEW_32) begin
@@ -99,7 +99,7 @@ always_comb begin
     end else begin
         data_vs1 = data_vs1_i;
         data_vs2 = data_vs2_i;
-        if (is_vadc || (is_vmadc && ~use_mask)) begin //if VMADC then we cake the carry of the mask
+        if ((is_vadc && ~use_mask) || (is_vmadc && ~use_mask)) begin //if VMADC then we cake the carry of the mask
             carry_in[0] = data_vm[0];
         end else begin 
             carry_in[0] = 1'b0;
