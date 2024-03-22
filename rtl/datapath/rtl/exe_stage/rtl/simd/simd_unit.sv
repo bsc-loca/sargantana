@@ -42,6 +42,10 @@ endfunction
 
 logic [3:0] simd_exe_stages;
 
+function logic not_masked_output(input rr_exe_simd_instr_t instr);
+    not_masked_output = ((instr.instr.instr_type == VADC) ||
+                         (instr.instr.instr_type == VSBC)) ? 1'b1 : 1'b0;
+endfunction
 function logic is_vred(input rr_exe_simd_instr_t instr);
     is_vred = ((instr.instr.instr_type == VREDSUM)   ||
                (instr.instr.instr_type == VREDAND)   ||
@@ -587,7 +591,7 @@ always_comb begin
         masked_sew = instr_to_out.sew;
     end
 
-    if (is_vred(instr_to_out) || ~instr_to_out.instr.use_mask) begin
+    if (is_vred(instr_to_out) || not_masked_output(instr_to_out)|| ~instr_to_out.instr.use_mask) begin
         masked_data_vd = result_data_vd;
     end else if (is_vm(instr_to_out)) begin
         masked_data_vd = '1;
