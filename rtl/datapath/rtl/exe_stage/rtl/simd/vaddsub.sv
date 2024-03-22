@@ -69,7 +69,7 @@ always_comb begin
         data_vs2 = ~data_vs2_i;
         data_vs1 = data_vs1_i;
         carry_in[0] = 1'b1;
-    end else if (is_vsbc (is_vmsbc && use_mask)) begin //if VMSBC uses a mask then priusly to flip the bit I add carry
+    end else if (is_vsbc || (is_vmsbc && use_mask)) begin //if VMSBC uses a mask then priusly to flip the bit I add carry
         if (sew_i == SEW_64) begin
             data_vs1 = ~(data_vs1_i + {{63{1'b0}}, data_vm[0]});
         end else if (sew_i == SEW_32) begin
@@ -99,7 +99,7 @@ always_comb begin
     end else begin
         data_vs1 = data_vs1_i;
         data_vs2 = data_vs2_i;
-        if (is_vadc (is_vmadc && ~use_mask)) begin //if VMADC then we cake the carry of the mask
+        if (is_vadc || (is_vmadc && ~use_mask)) begin //if VMADC then we cake the carry of the mask
             carry_in[0] = data_vm[0];
         end else begin 
             carry_in[0] = 1'b0;
