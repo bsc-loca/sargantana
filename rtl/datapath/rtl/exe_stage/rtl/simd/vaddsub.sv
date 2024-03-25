@@ -167,6 +167,39 @@ assign data_vd_o[63:56] = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[7][7:0];
 // - Otherwise, if the operation is a sub, a 1'b1 is selected
 // - Otherwise, if the operation is vadc, then data_vm[x] is selected 
 // - Otherwise, 1'b0 is selected
+
+assign carry_in[1] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[0] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? data_vm[1]:
+                      1'b0;
+assign carry_in[2] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[1] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? 
+                        (sew_i == SEW_16) ? data_vm[1] : data_vm[2]
+                     : 1'b0;
+assign carry_in[3] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[2] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? data_vm[3]:
+                     1'b0;
+assign carry_in[4] = ((sew_i == SEW_64)) ? carry_out[3] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? 
+                        (sew_i == SEW_32) ? data_vm[1] :
+                        (sew_i == SEW_16) ? data_vm[2] : data_vm[4]  
+                    : 1'b0;
+assign carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[4] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? data_vm[3]:
+                     1'b0;
+assign carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[5] :
+                     (is_subtraction) ? 1'b1 :
+                     (is_vadc || (is_vmadc && ~use_mask)) ? 
+                       (sew_i == SEW_16) ? data_vm[3] : data_vm[6]
+                    : 1'b0;
+assign carry_in[7] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
+                        carry_out[6] : (is_subtraction) ? 1'b1 : (is_vadc || (is_vmadc && ~use_mask)) ?
+                        data_vm[7]: 1'b0;
+/*
 assign carry_in[1] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                         carry_out[0] : (is_subtraction) ? 1'b1 : (is_vadc || (is_vmadc && ~use_mask)) ?
                         data_vm[1]: 1'b0;
@@ -181,11 +214,12 @@ assign carry_in[4] = ((sew_i == SEW_64)) ?
                         data_vm[4]: 1'b0;
 assign carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ?
                         carry_out[4] : (is_subtraction) ? 1'b1 : (is_vadc || (is_vmadc && ~use_mask)) ?
-                        data_vm[5]: 1'b0;
+                        data_vm[2]: 1'b0;
 assign carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                         carry_out[5] : (is_subtraction) ? 1'b1 : (is_vadc || (is_vmadc && ~use_mask)) ?
                         data_vm[6]: 1'b0;
 assign carry_in[7] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? 
                         carry_out[6] : (is_subtraction) ? 1'b1 : (is_vadc || (is_vmadc && ~use_mask)) ?
                         data_vm[7]: 1'b0;
+*/
 endmodule

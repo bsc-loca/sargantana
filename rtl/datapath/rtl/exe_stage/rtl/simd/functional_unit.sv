@@ -23,6 +23,7 @@ module functional_unit
     input rr_exe_simd_instr_t   sel_out_instr_i, // Instruction to select the output result
     input bus64_t               data_vs1_i,      // 64-bit source operand 1
     input bus64_t               data_vs2_i,      // 64-bit source operand 2
+    input bus64_t               data_vm,         // 64-bit mask operands
     output bus64_t              data_vd_o        // 64-bit result
 );
 

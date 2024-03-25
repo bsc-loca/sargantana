@@ -28,6 +28,7 @@ localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module 
 
 bus64_t [drac_pkg::VELEMENTS-1:0] vs1_elements;
 bus64_t [drac_pkg::VELEMENTS-1:0] vs2_elements;
+bus64_t [drac_pkg::VELEMENTS-1:0] data_vm;
 bus64_t [drac_pkg::VELEMENTS-1:0] vd_elements;
 bus_simd_t rs1_replicated;
 bus_simd_t fu_data_vd;
@@ -248,12 +249,33 @@ generate
                 vs2_elements[gv_fu] = (is_vww(instruction_i) || is_vn(instruction_i)) ? 
                                         instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE] :
                                         {{HALF_SIZE{1'b0}}, instruction_i.data_vs2[gv_fu*(HALF_SIZE) +: (HALF_SIZE)]};
+                 data_vm[gv_fu] = {64{1'b0}};                                        
             end else begin
                 //vs1 is either the data_vs1, or the replicated rs1/imm
                 vs1_elements[gv_fu] = (instruction_i.instr.is_opvx | instruction_i.instr.is_opvi) ? 
                                         rs1_replicated[(gv_fu*DATA_SIZE) +: DATA_SIZE] : 
                                         instruction_i.data_vs1[(gv_fu*DATA_SIZE) +: DATA_SIZE];
                 vs2_elements[gv_fu] = instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE];
+                case (instruction_i.sew)
+                    SEW_8: begin
+                        data_vm[gv_fu] = {{56{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/8)) +: 8]};
+                    end
+                    SEW_16: begin
+                        data_vm[gv_fu] = {{60{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/16)) +: 4]};
+                    end
+                    SEW_32: begin
+                         data_vm[gv_fu] = {{62{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/32)) +: 2]};
+                    end
+                    SEW_64: begin
+                        //data_vm[gv_fu] = instruction_i.data_vm[63:0];
+                        data_vm[gv_fu] =  {{48{1'b0}}, instruction_i.data_vm};
+                        //data_vm[gv_fu] = {64{1'b0}};
+                    end
+                    default: begin
+                        data_vm[gv_fu] = {64{1'b0}};
+                    end
+
+                endcase 
             end
         end
 
@@ -265,6 +287,7 @@ generate
             .sel_out_instr_i (sel_fu_out),
             .data_vs1_i      (vs1_elements[gv_fu]),
             .data_vs2_i      (vs2_elements[gv_fu]),
+            .data_vm         (data_vm[gv_fu]),
             .data_vd_o       (vd_elements[gv_fu])
         );
     end
