@@ -1255,6 +1255,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMADD;
                                     end
                                     F6_VNMSUB: begin
@@ -1262,6 +1263,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSUB;
                                     end
                                     F6_VMACC: begin
@@ -1269,6 +1271,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMACC;
                                     end
                                     F6_VNMSAC: begin
@@ -1276,6 +1279,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
                                     default: begin
@@ -1312,21 +1316,25 @@ module decoder
                                     F6_VMADD: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMADD;
                                     end
                                     F6_VNMSUB: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSUB;
                                     end
                                     F6_VMACC: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMACC;
                                     end
                                     F6_VNMSAC: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
                                     F6_VWADDU: begin
