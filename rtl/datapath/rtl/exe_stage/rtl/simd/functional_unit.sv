@@ -82,7 +82,7 @@ vaddsub vaddsub_inst(
     .sew_i         (sel_out_instr_i.sew),
     .data_vs1_i    (data1_vaddsub_i),
     .data_vs2_i    (data2_vaddsub_i),
-    .data_vm       (sel_out_instr_i.data_vm[7:0]),
+    .data_vm       (data_vm[7:0]),
     .use_mask      (sel_out_instr_i.instr.use_mask),
     .data_vd_o     (result_vaddsub)
 );
