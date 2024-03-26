@@ -50,7 +50,11 @@ function logic is_vred(input rr_exe_simd_instr_t instr);
 endfunction
 
 function logic is_vmul(input rr_exe_simd_instr_t instr);
-    is_vmul = ((instr.instr.instr_type == VMUL)   ||
+    is_vmul = ((instr.instr.instr_type == VMADD)  ||
+               (instr.instr.instr_type == VNMSUB) ||
+               (instr.instr.instr_type == VMACC)  ||
+               (instr.instr.instr_type == VNMSAC) ||
+               (instr.instr.instr_type == VMUL)   ||
                (instr.instr.instr_type == VMULH)  ||
                (instr.instr.instr_type == VMULHU) ||
                (instr.instr.instr_type == VMULHSU)) ? 1'b1 : 1'b0;

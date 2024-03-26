@@ -45,7 +45,7 @@ logic is_subtraction;
 logic is_vmadc;
 logic is_vmsbc;
 
-assign is_sub = ((instr_type_i == VSUB)) ? 1'b1 : 1'b0;
+assign is_sub = ((instr_type_i == VSUB) || (instr_type_i == VNMSUB) || (instr_type_i == VNMSAC)) ? 1'b1 : 1'b0;
 assign is_rsub = ((instr_type_i == VRSUB)) ? 1'b1 : 1'b0;
 assign is_vadc = ((instr_type_i == VADC)) ? 1'b1 : 1'b0;
 assign is_vsbc = ((instr_type_i == VSBC)) ? 1'b1 : 1'b0;

@@ -54,7 +54,8 @@ endfunction
 sew_t sew_0;
 assign sew_0 = sew_i;
 
-wire is_mulh_0 = (instr_type_i != VMUL);
+//wire is_mulh_0 = ((instr_type_i != VMUL) && (instr_type_i != VMADD) && (instr_type_i != VNMSUB) && (instr_type_i != VMACC) && (instr_type_i != VNMSAC));
+wire is_mulh_0 = ((instr_type_i == VMULH) || (instr_type_i == VMULHU) || (instr_type_i == VMULHSU));
 wire is_signed_0 = (instr_type_i != VMULHU);
 wire is_mixed_signed_0 = (instr_type_i == VMULHSU);
 

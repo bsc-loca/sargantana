@@ -50,7 +50,11 @@ function [3:0] trunc_stages(input [31:0] val_in);
     trunc_stages = val_in[3:0];
 endfunction
 
-assign is_vmul = ((instr_entry_i.instr_type == VMUL)   ||
+assign is_vmul = ((instr_entry_i.instr_type == VMADD)   ||
+                (instr_entry_i.instr_type == VNMSUB)   ||
+                (instr_entry_i.instr_type == VMACC)   ||
+                (instr_entry_i.instr_type == VNMSAC)   ||
+                (instr_entry_i.instr_type == VMUL)   ||
                 (instr_entry_i.instr_type == VMULH)  ||
                 (instr_entry_i.instr_type == VMULHU) ||
                 (instr_entry_i.instr_type == VMULHSU)) ? 1'b1 : 1'b0;

@@ -33,13 +33,56 @@ bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
 
+bus64_t data1_vaddsub_i;
+bus64_t data2_vaddsub_i;
+
+bus64_t data2_vmul_i;
+
+always_comb begin
+    case (sel_out_instr_i.instr.instr_type)
+        VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
+            data1_vaddsub_i = data_vs1_i;
+            data2_vaddsub_i = data_vs2_i;
+        end
+        VMADD, VNMSUB: begin
+            data1_vaddsub_i = result_vmul;
+            data2_vaddsub_i = sel_out_instr_i.data_vs2[64*fu_id_i +: 64];
+        end
+        VMACC, VNMSAC: begin
+            data1_vaddsub_i = result_vmul;
+            data2_vaddsub_i = sel_out_instr_i.data_old_vd[64*fu_id_i +: 64];
+        end
+        default: begin
+            data1_vaddsub_i = data_vs1_i;
+            data2_vaddsub_i = data_vs2_i;
+        end
+    endcase
+end
+
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        VMUL, VMULH, VMULHU, VMULHSU: begin
+            data2_vmul_i = data_vs2_i;
+        end
+        VMADD, VNMSUB: begin
+            data2_vmul_i = instruction_i.data_old_vd[64*fu_id_i +: 64];
+        end
+        VMACC, VNMSAC: begin
+            data2_vmul_i = data_vs2_i;
+        end
+        default: begin
+            data2_vmul_i = data_vs2_i;
+        end
+    endcase
+end
+
 vaddsub vaddsub_inst(
-    .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
-    .data_vs1_i    (data_vs1_i),
-    .data_vs2_i    (data_vs2_i),
-    .data_vm       (instruction_i.data_vm[7:0]),
-    .use_mask      (instruction_i.instr.use_mask),
+    .instr_type_i  (sel_out_instr_i.instr.instr_type),
+    .sew_i         (sel_out_instr_i.sew),
+    .data_vs1_i    (data1_vaddsub_i),
+    .data_vs2_i    (data2_vaddsub_i),
+    .data_vm       (sel_out_instr_i.data_vm[7:0]),
+    .use_mask      (sel_out_instr_i.instr.use_mask),
     .data_vd_o     (result_vaddsub)
 );
 
@@ -80,7 +123,7 @@ vmul vmul_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
     .data_vs1_i    (data_vs1_i),
-    .data_vs2_i    (data_vs2_i),
+    .data_vs2_i    (data2_vmul_i),
     .data_vd_o     (result_vmul)
 );
 
@@ -97,6 +140,9 @@ always_comb begin
         end
         VMUL, VMULH, VMULHU, VMULHSU: begin
             data_vd_o = result_vmul;
+        end
+        VMADD, VNMSUB, VMACC, VNMSAC: begin
+            data_vd_o = result_vaddsub;
         end
         VMIN, VMINU, VMAX, VMAXU, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VCNT: begin
             data_vd_o = result_vcomp;
