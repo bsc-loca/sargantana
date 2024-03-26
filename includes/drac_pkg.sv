@@ -445,6 +445,7 @@ typedef struct packed {
     logic vregfile_we;                  // Write to vregister file
     logic fregfile_we;                  // Write to fregister file
     logic use_mask;                     // Use vector mask
+    logic use_old_vd;                   // Use previous value of vector destination register
     //logic regfile_fp_we;               // Write to register file FPU
     instr_type_t instr_type;            // Type of instruction
     logic signed_op;                    // Signed Operation

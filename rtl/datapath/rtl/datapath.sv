@@ -120,6 +120,8 @@ endfunction
     phvreg_t simd_free_register_to_rename;
     phfreg_t fp_free_register_to_rename;
 
+    logic simd_use_old_vd;
+
     checkpoint_ptr checkpoint_free_list;
     checkpoint_ptr checkpoint_rename;
     checkpoint_ptr simd_checkpoint_free_list;
@@ -489,6 +491,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
+    assign simd_use_old_vd = (stage_iq_ir_q.instr.vregfile_we & stage_iq_ir_q.instr.use_mask) | stage_iq_ir_q.instr.use_old_vd;
+
     // Instruction Queue 
     instruction_queue instruction_queue_inst(
         .clk_i          (clk_i),
@@ -595,7 +599,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .use_vs1_i(stage_iq_ir_q.instr.use_vs1),
         .use_vs2_i(stage_iq_ir_q.instr.use_vs2),
         .use_mask_i(stage_iq_ir_q.instr.use_mask),
-        .use_old_vd_i(stage_iq_ir_q.instr.vregfile_we & stage_iq_ir_q.instr.use_mask),
+        .use_old_vd_i(simd_use_old_vd),
         .ready_i(cu_rr_int.vwrite_enable),
         .vaddr_i(simd_write_vaddr),
         .paddr_i(simd_write_paddr_rr),

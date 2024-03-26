@@ -78,6 +78,7 @@ module decoder
         decode_instr_int.use_vs1 = 1'b0;
         decode_instr_int.use_vs2 = 1'b0;
         decode_instr_int.use_mask = 1'b0;
+        decode_instr_int.use_old_vd = 1'b0;
         decode_instr_int.is_opvx = 1'b0;
         decode_instr_int.is_opvi = 1'b0;
         decode_instr_int.use_fs1 = 1'b0;
