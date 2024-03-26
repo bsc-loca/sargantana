@@ -39,6 +39,11 @@ bus64_t data2_vaddsub_i;
 
 bus64_t data2_vmul_i;
 
+/* Input selection for vaddsub module
+ * For the instructions that use the module directly send the input
+ * for multiplication + addition/subtract select the inputs from the
+ * vmul module and the other operand
+*/
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
@@ -60,6 +65,11 @@ always_comb begin
     endcase
 end
 
+/* Input selection for the second operand of the vmul module
+ * For only multiplication instructions send vs2
+ * For multiplication + addition/subtract select the input from the operand
+ * needed
+*/
 always_comb begin
     case (instruction_i.instr.instr_type)
         VMUL, VMULH, VMULHU, VMULHSU: begin
