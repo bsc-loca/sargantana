@@ -55,6 +55,11 @@ module mem_unit
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
+`ifdef SIM_COMMIT_LOG
+    bus_simd_t vector_store_data;
+    logic vector_store_first_req;
+`endif
+
 function [63:0] trunc_sum_64bits(input [64:0] val_in);
   trunc_sum_64bits = val_in[63:0];
 endfunction
@@ -1046,12 +1051,29 @@ assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 `ifdef SIM_COMMIT_LOG
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(~rstn_i) begin
+            vector_store_data <= 'h0;
+            vector_store_first_req <= 1'b0;
+        end else begin
+            if (flush_store && !vstore_packer_complete && !vector_store_first_req) begin
+                `ifdef REGISTER_HPDC_OUTPUT
+                vector_store_data <= instruction_s2_q.data_rs2;
+                `else 
+                vector_store_data <= instruction_s1_q.data_rs2;
+                `endif
+                vector_store_first_req <= 1'b1;
+            end else if (vstore_packer_complete) begin
+                vector_store_first_req <= 1'b0;
+            end
+        end
+    end
     `ifdef REGISTER_HPDC_OUTPUT
     assign store_addr_o = instruction_s2_q.vaddr;
-    assign store_data_o = instruction_s2_q.data_rs2;
-    `else 
+    assign store_data_o = (vector_store_first_req) ? vector_store_data : instruction_s2_q.data_rs2;
+    `else
     assign store_addr_o = instruction_s1_q.vaddr;
-    assign store_data_o = instruction_s1_q.data_rs2;
+    assign store_data_o = (vector_store_first_req) ? vector_store_data : instruction_s1_q.data_rs2;
     `endif
 `endif
 

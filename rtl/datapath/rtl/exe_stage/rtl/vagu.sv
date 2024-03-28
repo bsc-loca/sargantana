@@ -93,6 +93,10 @@ function [MAX_VELEM_LOG:0] trunc_max_velem_log_sum(input [MAX_VELEM_LOG+1:0] val
   trunc_max_velem_log_sum = val_in[MAX_VELEM_LOG:0];
 endfunction
 
+function [7:0] padd_7_8(input [6:0] val_in);
+  padd_7_8 = {1'b0, val_in};
+endfunction
+
 req_vmem_ops_t vmem_ops_state_d, vmem_ops_state_q;
 
 bus64_t vaddr_d, vaddr_q, vaddr_incr;
@@ -483,27 +487,27 @@ always_comb begin
                 4'b0000: begin
                     memp_instr_o.instr.instr_type = SB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[3:0] << 3);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[3:0] << 3);
                     memp_instr_o.sew = SEW_8;
                 end
                 4'b0101: begin
                     memp_instr_o.instr.instr_type = SH;
                     memp_instr_o.instr.mem_size = 4'b0001;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[2:0] << 4);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[2:0] << 4);
                     misalign_xcpt_int = vaddr_q[0];
                     memp_instr_o.sew = SEW_16;
                 end
                 4'b0110: begin
                     memp_instr_o.instr.instr_type = SW;
                     memp_instr_o.instr.mem_size = 4'b0010;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[1:0] << 5);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[1:0] << 5);
                     misalign_xcpt_int = |vaddr_q[1:0];
                     memp_instr_o.sew = SEW_32;
                 end
                 4'b0111: begin
                     memp_instr_o.instr.instr_type = SD;
                     memp_instr_o.instr.mem_size = 4'b0011;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[0] << 6);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[0] << 6);
                     misalign_xcpt_int = |vaddr_q[2:0];
                     memp_instr_o.sew = SEW_64;
                 end
@@ -580,13 +584,13 @@ always_comb begin
                 SEW_8: begin
                     memp_instr_o.instr.instr_type = SB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[3:0] << 3);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[3:0] << 3);
                     memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
                     memp_instr_o.instr.instr_type = SH;
                     memp_instr_o.instr.mem_size = 4'b0001;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[2:0] << 4);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[2:0] << 4);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else begin
@@ -596,7 +600,7 @@ always_comb begin
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = SW;
                     memp_instr_o.instr.mem_size = 4'b0010;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[1:0] << 5);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[1:0] << 5);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
@@ -608,7 +612,7 @@ always_comb begin
                 default: begin
                     memp_instr_o.instr.instr_type = SD;
                     memp_instr_o.instr.mem_size = 4'b0011;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[0] << 6);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[0] << 6);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
@@ -635,13 +639,17 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
-                               (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
-                               ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
-                               (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSSE)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0))) ? VS_STRIDED :
-                               ((memp_instr_i.instr.instr_type == VLXE) && (mop_i      == 3'b011)                )   ? VL_INDEXED :
-                               ((memp_instr_i.instr.instr_type == VSXE) && (mop_i[1:0] == 2'b11 )                )   ? VS_INDEXED :
-                                SCALAR; 
+            if (memp_instr_i.instr.valid) begin
+                vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
+                                   (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
+                                   ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
+                                   (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSSE)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0))) ? VS_STRIDED :
+                                   ((memp_instr_i.instr.instr_type == VLXE) && (mop_i      == 3'b011)                )   ? VL_INDEXED :
+                                   ((memp_instr_i.instr.instr_type == VSXE) && (mop_i[1:0] == 2'b11 )                )   ? VS_INDEXED :
+                                    SCALAR;
+            end else begin
+                vmem_ops_state_d = SCALAR;
+            end 
             vstore_buffer_d = vstore_data_i;
             masked_op_d = masked_op_i;
             stride_d = (stride_i[63]) ? stride_neg : stride_i;
