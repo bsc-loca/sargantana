@@ -131,6 +131,7 @@ logic [VLEN+VMAXELEM-1:0] vagu_mask;
 logic vagu_store_data_valid;
 logic [VMAXELEM_LOG:0] vagu_vl;
 logic vstore_unit_stride;
+bus64_t vagu_stride;
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -333,6 +334,7 @@ assign vagu_store_data_valid = mem_instr.instr.valid &&
 
 always_comb begin
     vagu_mask = 'h0;
+    vagu_stride = from_rr_i.data_rs2;
     if (mem_instr.instr.instr_type == VLXE) begin
         vagu_mask[VLEN+VMAXELEM-1:VMAXELEM] = from_rr_i.data_vs2;
     end else begin
@@ -358,6 +360,14 @@ always_comb begin
             end
         end
     endcase
+    if (vstore_unit_stride) begin
+        case (mem_instr.instr.mem_size)
+            4'b0000: vagu_stride = 'h1;
+            4'b0101: vagu_stride = 'h2;
+            4'b0110: vagu_stride = 'h4;
+            4'b0111: vagu_stride = 'h8;
+        endcase
+    end
 end
 
 vagu #(
@@ -375,7 +385,7 @@ vagu #(
     .vsew_i(mem_instr.sew),
     .mop_i(vagu_mop),
     .vl_i(vagu_vl),
-    .stride_i(from_rr_i.data_rs2),
+    .stride_i(vagu_stride),
     .masked_op_i(mem_instr.instr.use_mask),
     .vstore_data_valid_i(vagu_store_data_valid),
     .vstore_data_i(from_rr_i.data_vs2),
