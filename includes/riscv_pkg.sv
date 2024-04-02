@@ -365,7 +365,10 @@ typedef enum logic [5:0] {
     F6_VWADDUW   = 6'b110100,
     F6_VWADDW    = 6'b110101,
     F6_VWSUBUW   = 6'b110110,
-    F6_VWSUBW    = 6'b110111
+    F6_VWSUBW    = 6'b110111,
+    F6_VWMULU    = 6'b111000,
+    F6_VWMULSU   = 6'b111010,
+    F6_VWMUL     = 6'b111011
 } op_func6_vector_opm_t;
 
 typedef enum logic [5:0] {

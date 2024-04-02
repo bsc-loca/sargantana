@@ -1282,6 +1282,30 @@ module decoder
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
+                                    F6_VWMULU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMULU;
+                                    end
+                                    F6_VWMULSU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMULSU;
+                                    end
+                                    F6_VWMUL: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMUL;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1336,6 +1360,30 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
+                                    end
+                                    F6_VWMULU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMULU;
+                                    end
+                                    F6_VWMULSU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMULSU;
+                                    end
+                                    F6_VWMUL: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWMUL;
                                     end
                                     F6_VWADDU: begin
                                         decode_instr_int.vregfile_we = 1'b1;

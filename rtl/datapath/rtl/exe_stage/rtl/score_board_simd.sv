@@ -54,6 +54,9 @@ assign is_vmul = ((instr_entry_i.instr_type == VMADD)   ||
                 (instr_entry_i.instr_type == VNMSUB)   ||
                 (instr_entry_i.instr_type == VMACC)   ||
                 (instr_entry_i.instr_type == VNMSAC)   ||
+                (instr_entry_i.instr_type == VWMUL)   ||
+                (instr_entry_i.instr_type == VWMULU)   ||
+                (instr_entry_i.instr_type == VWMULSU)   ||
                 (instr_entry_i.instr_type == VMUL)   ||
                 (instr_entry_i.instr_type == VMULH)  ||
                 (instr_entry_i.instr_type == VMULHU) ||

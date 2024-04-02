@@ -56,8 +56,9 @@ assign sew_0 = sew_i;
 
 //wire is_mulh_0 = ((instr_type_i != VMUL) && (instr_type_i != VMADD) && (instr_type_i != VNMSUB) && (instr_type_i != VMACC) && (instr_type_i != VNMSAC));
 wire is_mulh_0 = ((instr_type_i == VMULH) || (instr_type_i == VMULHU) || (instr_type_i == VMULHSU));
-wire is_signed_0 = (instr_type_i != VMULHU);
-wire is_mixed_signed_0 = (instr_type_i == VMULHSU);
+wire is_signed_0 = ((instr_type_i != VMULHU) && (instr_type_i != VWMULU));
+wire is_mixed_signed_0 = ((instr_type_i == VMULHSU) || (instr_type_i == VWMULSU));
+wire is_widened_0 = ((instr_type_i == VWMUL) || (instr_type_i == VWMULU) || (instr_type_i == VWMULSU));
 
 wire src1_signed_0 = (is_signed_0 ^ is_mixed_signed_0);
 wire src2_signed_0 = (is_signed_0);
@@ -159,6 +160,7 @@ end
 sew_t sew_1;
 
 logic is_mulh_1;
+logic is_widened_1;
 
 logic [7:0] negative_results_1;
 
@@ -169,6 +171,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_1                    <= SEW_8;
         is_mulh_1                <= 1'b0;
+        is_widened_1             <= 1'b0;
         negative_results_1       <= 8'b0;
         src1_data_1              <= 64'd0;
         src2_data_1              <= 64'd0;
@@ -176,6 +179,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     else begin
         sew_1                    <= sew_0;
         is_mulh_1                <= is_mulh_0;
+        is_widened_1             <= is_widened_0;
         negative_results_1       <= negative_results_0;
         src1_data_1              <= src1_data_0;
         src2_data_1              <= src2_data_0;
@@ -265,6 +269,7 @@ end
 sew_t sew_2;
 
 logic is_mulh_2;
+logic is_widened_2;
 
 logic [7:0] negative_results_2;
 
@@ -276,6 +281,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
+        is_widened_2             <= 1'b0;
         negative_results_2       <= 8'b0;
         /*
         for (int i=0; i < 8; i++) begin
@@ -292,6 +298,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     else begin
         sew_2                    <= sew_1;
         is_mulh_2                <= is_mulh_1;
+        is_widened_2             <= is_widened_1;
         negative_results_2       <= negative_results_1;
         //products_8b_2            <= products_8b_1;
         //products_16b_2           <= products_16b_1;
@@ -342,36 +349,61 @@ always_comb begin
     full_precision_result_64b = 'b0;
     unique case (sew_1)
         SEW_8 : begin
-            for (int i = 0; i < 8; i++) begin
-                full_precision_result_64b[15:0] = (negative_results_1[i]) ? 
-                                                               trunc_17_16(~products_8b_1[i][i] + 16'b1) : 
-                                                               products_8b_1[i][i];
+            if (is_widened_1 == 1'b1) begin
+                for (int i = 0; i < 4; i++) begin
+                    data_vd_o1[i*16+:16] = (negative_results_1[i]) ?
+                                                    trunc_17_16(~products_8b_1[i][i] + 16'b1) :
+                                                    products_8b_1[i][i];
+                end
+            end
+            else begin
+                for (int i = 0; i < 8; i++) begin
+                    full_precision_result_64b[15:0] = (negative_results_1[i]) ? 
+                                                                trunc_17_16(~products_8b_1[i][i] + 16'b1) : 
+                                                                products_8b_1[i][i];
 
-                data_vd_o1[i*8+:8] = (is_mulh_1) ?
-                                     full_precision_result_64b[15:8] :
-                                     full_precision_result_64b[7:0];
+                    data_vd_o1[i*8+:8] = (is_mulh_1) ?
+                                        full_precision_result_64b[15:8] :
+                                        full_precision_result_64b[7:0];
+                end
             end
         end
         SEW_16 : begin
-            for (int i = 0; i < 4; i++) begin
-                full_precision_result_64b[31:0] = (negative_results_1[i]) ? 
-                                                               trunc_33_32(~products_16b_1[i][i] + 32'b1) : 
-                                                               products_16b_1[i][i];
+            if (is_widened_1) begin
+                for (int i = 0; i < 2; ++i) begin
+                    data_vd_o1[i*32+:32] = (negative_results_1[i]) ?
+                                                trunc_33_32(~products_16b_1[i][i] + 32'b1) :
+                                                products_16b_1[i][i];
+                end
+            end
+            else begin
+                for (int i = 0; i < 4; i++) begin
+                    full_precision_result_64b[31:0] = (negative_results_1[i]) ? 
+                                                                trunc_33_32(~products_16b_1[i][i] + 32'b1) : 
+                                                                products_16b_1[i][i];
 
-                data_vd_o1[i*16+:16] = (is_mulh_1) ?
-                                       full_precision_result_64b[31:16] :
-                                       full_precision_result_64b[15:0];
+                    data_vd_o1[i*16+:16] = (is_mulh_1) ?
+                                        full_precision_result_64b[31:16] :
+                                        full_precision_result_64b[15:0];
+                end
             end
         end
         SEW_32 : begin
-            for (int i = 0; i < 2; i++) begin
-                full_precision_result_64b[63:0] = (negative_results_1[i]) ? 
-                                                               trunc_65_64(~products_32b_1[i][i] + 64'b1) : 
-                                                               products_32b_1[i][i];
+            if (is_widened_1) begin
+                data_vd_o1 = (negative_results_1[0]) ?
+                                trunc_65_64(~products_32b_1[0][0] + 64'b1) :
+                                products_32b_1[0][0];
+            end
+            else begin
+                for (int i = 0; i < 2; i++) begin
+                    full_precision_result_64b[63:0] = (negative_results_1[i]) ? 
+                                                                trunc_65_64(~products_32b_1[i][i] + 64'b1) : 
+                                                                products_32b_1[i][i];
 
-                data_vd_o1[i*32+:32] = (is_mulh_1) ?
-                                       full_precision_result_64b[63:32] :
-                                       full_precision_result_64b[31:0];
+                    data_vd_o1[i*32+:32] = (is_mulh_1) ?
+                                        full_precision_result_64b[63:32] :
+                                        full_precision_result_64b[31:0];
+                end
             end
         end
         default : begin

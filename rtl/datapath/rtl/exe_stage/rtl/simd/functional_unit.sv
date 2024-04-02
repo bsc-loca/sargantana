@@ -72,7 +72,7 @@ end
 */
 always_comb begin
     case (instruction_i.instr.instr_type)
-        VMUL, VMULH, VMULHU, VMULHSU: begin
+        VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU: begin
             data2_vmul_i = data_vs2_i;
         end
         VMADD, VNMSUB: begin
@@ -152,7 +152,7 @@ always_comb begin
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
             data_vd_o = result_vwaddsub;
         end
-        VMUL, VMULH, VMULHU, VMULHSU: begin
+        VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU: begin
             data_vd_o = result_vmul;
         end
         VMADD, VNMSUB, VMACC, VNMSAC: begin

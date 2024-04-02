@@ -59,6 +59,9 @@ function logic is_vmul(input rr_exe_simd_instr_t instr);
                (instr.instr.instr_type == VNMSUB) ||
                (instr.instr.instr_type == VMACC)  ||
                (instr.instr.instr_type == VNMSAC) ||
+               (instr.instr.instr_type == VWMUL)  ||
+               (instr.instr.instr_type == VWMULU) ||
+               (instr.instr.instr_type == VWMULSU)||
                (instr.instr.instr_type == VMUL)   ||
                (instr.instr.instr_type == VMULH)  ||
                (instr.instr.instr_type == VMULHU) ||
