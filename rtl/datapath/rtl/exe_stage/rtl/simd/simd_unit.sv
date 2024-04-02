@@ -19,6 +19,7 @@
 (
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
+    input logic [VMAXELEM_LOG:0]  vl_i,                   // Current vector lenght in elements
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o      // Out instruction
@@ -684,6 +685,73 @@ always_comb begin
     end
 end
 
+bus_simd_t tail_data_vd;
+always_comb begin
+    tail_data_vd = '1;
+    case(masked_sew)
+        SEW_8: begin
+            for (int i = 0; i<(VLEN/8); ++i) begin
+                if (i < vl_i) begin
+                    if (is_vm(instr_to_out)) begin
+                        tail_data_vd[i] = masked_data_vd[i];
+                    end else if (is_vred(instr_to_out)) begin
+                        if (i == 0) begin
+                            tail_data_vd[(8*i)+:8] = masked_data_vd[(8*i)+:8];
+                        end
+                    end else begin
+                        tail_data_vd[(8*i)+:8] = masked_data_vd[(8*i)+:8];
+                    end
+                end
+            end
+        end
+        SEW_16: begin
+            for (int i = 0; i<(VLEN/16); ++i) begin
+                if (i < vl_i) begin
+                    if (is_vm(instr_to_out)) begin
+                        tail_data_vd[i] = masked_data_vd[i];
+                    end else if (is_vred(instr_to_out)) begin
+                        if (i == 0) begin
+                            tail_data_vd[(16*i)+:16] = masked_data_vd[(16*i)+:16];
+                        end
+                    end else begin
+                        tail_data_vd[(16*i)+:16] = masked_data_vd[(16*i)+:16];
+                    end
+                end
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i<(VLEN/32); ++i) begin
+                if (i < vl_i) begin
+                    if (is_vm(instr_to_out)) begin
+                        tail_data_vd[i] = masked_data_vd[i];
+                    end else if (is_vred(instr_to_out)) begin
+                        if (i == 0) begin
+                            tail_data_vd[(32*i)+:32] = masked_data_vd[(32*i)+:32];
+                        end
+                    end else begin
+                        tail_data_vd[(32*i)+:32] = masked_data_vd[(32*i)+:32];
+                    end
+                end
+            end
+        end
+        SEW_64: begin
+            for (int i = 0; i<(VLEN/64); ++i) begin
+                if (i < vl_i) begin
+                    if (is_vm(instr_to_out)) begin
+                        tail_data_vd[i] = masked_data_vd[i];
+                    end else if (is_vred(instr_to_out)) begin
+                        if (i == 0) begin
+                            tail_data_vd[(64*i)+:64] = masked_data_vd[(64*i)+:64];
+                        end
+                    end else begin
+                        tail_data_vd[(64*i)+:64] = masked_data_vd[(64*i)+:64];
+                    end
+                end
+            end
+        end
+    endcase
+end
+
 //Produce the scalar and vector wb structs
 assign instruction_scalar_o.valid = instr_to_out.instr.valid & 
                                     (instr_to_out.instr.unit == UNIT_SIMD) & 
@@ -717,7 +785,7 @@ assign instruction_simd_o.pc    = instr_to_out.instr.pc;
 assign instruction_simd_o.bpred = instr_to_out.instr.bpred;
 assign instruction_simd_o.rs1   = instr_to_out.instr.rs1;
 assign instruction_simd_o.vd    = instr_to_out.instr.vd;
-assign instruction_simd_o.vresult = masked_data_vd;
+assign instruction_simd_o.vresult = tail_data_vd;
 assign instruction_simd_o.change_pc_ena = instr_to_out.instr.change_pc_ena;
 assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we;
 assign instruction_simd_o.instr_type = instr_to_out.instr.instr_type;

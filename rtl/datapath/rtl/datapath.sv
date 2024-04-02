@@ -36,6 +36,7 @@ module datapath
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
     input logic [VMAXELEM_LOG:0] vl_i,
+    input logic             vnarrow_wide_en_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
@@ -447,6 +448,7 @@ endfunction
         .frm_i          (csr_frm_i),
         .csr_fs_i       (csr_fs_i), 
         .csr_vs_i       (csr_vs_i), 
+        .v_2sew_en_i    (vnarrow_wide_en_i),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)
     );
