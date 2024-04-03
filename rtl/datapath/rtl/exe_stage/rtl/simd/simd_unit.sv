@@ -46,7 +46,9 @@ logic [3:0] simd_exe_stages;
 
 function logic not_masked_output(input rr_exe_simd_instr_t instr);
     not_masked_output = ((instr.instr.instr_type == VADC) ||
-                         (instr.instr.instr_type == VSBC)) ? 1'b1 : 1'b0;
+                         (instr.instr.instr_type == VSBC) ||
+                         (instr.instr.instr_type == VMADC) ||
+                         (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
 endfunction
 function logic is_vred(input rr_exe_simd_instr_t instr);
     is_vred = ((instr.instr.instr_type == VREDSUM)   ||
@@ -305,8 +307,8 @@ endgenerate
 
 //The result of the FUs are concatenated into the result data
 always_comb begin
-    fu_data_vd = sel_fu_out.data_old_vd; // By Default
-    //fu_data_vd = {128{1'b1}}; // By Default
+    //fu_data_vd = sel_fu_out.data_old_vd; // By Default
+    fu_data_vd = {128{1'b1}}; // By Default
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
         if (is_vn(sel_fu_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
@@ -329,7 +331,7 @@ always_comb begin
                 end
                 SEW_64: begin
                     for (int j = 0; j<(DATA_SIZE/64); ++j) begin
-                         fu_data_vd[(i*(DATA_SIZE/64)+j)] = vd_elements[i][j];
+                        fu_data_vd[i*(DATA_SIZE/64)+j] = vd_elements[i][j];
                     end
                 end
             endcase    
