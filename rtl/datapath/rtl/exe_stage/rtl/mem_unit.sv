@@ -93,9 +93,7 @@ endfunction
              
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s1_q;
-logic is_STORE_or_AMO_s2_q;
 logic is_STORE_s1_q;
-logic is_STORE_s2_q;
 
 logic flush_store;
 logic flush_amo;
@@ -123,17 +121,13 @@ rr_exe_mem_instr_t instruction_to_dcache;
 rr_exe_mem_instr_t instruction_to_wb;
 rr_exe_mem_instr_t instruction_s1_d;
 rr_exe_mem_instr_t instruction_s1_q;
-rr_exe_mem_instr_t instruction_s2_q;
-resp_dcache_cpu_t resp_dcache_cpu_q;
 
 // Input/Output Pipeline
 logic io_s1_q;
-logic io_s2_q;
 
 // Tag Counter and Pipeline
 logic [6:0] tag_id;
 logic [6:0] tag_id_s1_q;
-logic [6:0] tag_id_s2_q;
 
 rr_exe_mem_instr_t instruction_to_pmrq;
 pmrq_instr_t instruction_from_pmrq;
@@ -170,6 +164,15 @@ logic [VECTOR_PACKER_NUM_LOG-1:0] vstore_packer_write_idx;
 logic vstore_packer_write, vstore_packer_free;
 logic vload_packer_full, vstore_packer_full;
 logic vlm_inst_wb, vlsm_inst_s1;
+
+`ifdef REGISTER_HPDC_OUTPUT
+logic is_STORE_or_AMO_s2_q;
+logic is_STORE_s2_q;
+rr_exe_mem_instr_t instruction_s2_q;
+resp_dcache_cpu_t resp_dcache_cpu_q;
+logic io_s2_q;
+logic [6:0] tag_id_s2_q;
+`endif
 
 assign vload_packer_full = (vload_packer_nfree_q == 'h0);
 assign vstore_packer_full = (vstore_packer_nfree_q == 'h0);
@@ -400,6 +403,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         mem_gl_index_o  <= 'h0;
     end 
     else begin
+        `ifdef REGISTER_HPDC_OUTPUT
         if (instruction_s1_q.instr.valid & is_STORE_or_AMO_s1_q & !flush_to_lsq) begin
             mem_gl_index_o  <= instruction_s1_q.gl_index;
         end
@@ -407,13 +411,20 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             store_on_fly    <= req_cpu_dcache_o.is_store; 
             amo_on_fly      <= req_cpu_dcache_o.is_amo; 
         end
+        `else
+        if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_or_store) begin
+            store_on_fly    <= req_cpu_dcache_o.is_store; 
+            amo_on_fly      <= req_cpu_dcache_o.is_amo;
+            mem_gl_index_o  <= instruction_s1_d.gl_index;
+        end
+        `endif   
         else if (flush_store && vstore_packer_complete) begin
             store_on_fly    <= 1'b0;
-            mem_gl_index_o  <= 1'b0;
+            mem_gl_index_o  <= 'h0;
         end
         else if (flush_amo | flush_amo_prmq) begin
             amo_on_fly      <= 1'b0; 
-            mem_gl_index_o  <= 1'b0;
+            mem_gl_index_o  <= 'h0;
         end
     end
 end
@@ -427,25 +438,29 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
         
+        `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
         is_STORE_s2_q        <= 1'b0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <=  'h0;
         resp_dcache_cpu_q    <=  'h0;
+        `endif
     end else if (flush_to_lsq) begin       // In case of miss flush the pipeline
         instruction_s1_q     <=  'h0;
         is_STORE_or_AMO_s1_q <= 1'b0;
         is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
-        
+
+        `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <=  'h0;
         is_STORE_or_AMO_s2_q <= 1'b0;
         is_STORE_s2_q        <= 1'b0;
         io_s2_q              <= 1'b0;
         tag_id_s2_q          <=  'h0;
         resp_dcache_cpu_q    <=  'h0;
+        `endif
     end else begin          // Update the Pipeline    
         instruction_s1_q     <= instruction_s1_d;
         is_STORE_or_AMO_s1_q <= req_cpu_dcache_o.is_amo_or_store;
@@ -453,12 +468,14 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
         
+        `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <= instruction_s1_q;
         is_STORE_or_AMO_s2_q <= is_STORE_or_AMO_s1_q;
         is_STORE_s2_q        <= is_STORE_s1_q;
         io_s2_q              <= io_s1_q;
         tag_id_s2_q          <= tag_id_s1_q;
         resp_dcache_cpu_q    <= resp_dcache_cpu_i;
+        `endif
     end
 end
 
@@ -468,6 +485,7 @@ always_comb begin
     flush_amo           = 1'b0;
     mv_back_tail_prmq   = 1'b0;
     instruction_to_pmrq =  'h0;
+    `ifdef REGISTER_HPDC_OUTPUT
     if (instruction_s2_q.instr.valid && resp_dcache_cpu_q.valid && (resp_dcache_cpu_q.rd == tag_id_s2_q)) begin
         flush_store         = is_STORE_s2_q;
         flush_amo           = is_STORE_or_AMO_s2_q & !is_STORE_s2_q; 
@@ -487,21 +505,50 @@ always_comb begin
         flush_store         = 1'b1;
         flush_amo           = 1'b1;
     end
+    `else
+    if (instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && (resp_dcache_cpu_i.rd == tag_id_s1_q)) begin
+        flush_store         = is_STORE_s1_q;
+        flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q; 
+    end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
+        instruction_to_pmrq =  'h0;
+        flush_store         = is_STORE_s1_q;
+        flush_amo           = is_STORE_or_AMO_s1_q & !is_STORE_s1_q;
+    end else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_or_AMO_s1_q) begin
+        instruction_to_pmrq =  'h0;
+        flush_store         = 1'b1;
+        flush_amo           = 1'b1;
+    end else if (instruction_s1_q.instr.valid & !is_STORE_s1_q) begin 
+        instruction_to_pmrq = instruction_s1_q; // TODO: Parlar amb en NArcis a veure si podem tenir més d'un store en vol
+    end else if (instruction_s1_q.instr.valid & is_STORE_s1_q) begin
+        flush_store         = 1'b1;
+    end
+    `endif
 end
 
+`ifdef REGISTER_HPDC_OUTPUT
 assign replay = resp_dcache_cpu_q.valid && (!instruction_s2_q.instr.valid || (resp_dcache_cpu_q.rd != tag_id_s2_q));
+`else 
+assign replay = resp_dcache_cpu_i.valid && (!instruction_s1_q.instr.valid || (resp_dcache_cpu_i.rd != tag_id_s1_q));
+`endif
 
 // Pending Memory Request Table (PMRQ)
 pending_mem_req_queue pending_mem_req_queue_inst (
     .clk_i                 (clk_i),
     .rstn_i                (rstn_i),
     .instruction_i         (instruction_to_pmrq),
-    .tag_i                 (tag_id_s2_q),
     .flush_i               (flush_to_lsq),
     .replay_valid_i        (replay),
+    `ifdef REGISTER_HPDC_OUTPUT
+    .tag_i                 (tag_id_s2_q),
     .tag_next_i            (resp_dcache_cpu_q.rd),
     .replay_data_i         (resp_dcache_cpu_q.data),
     .response_valid_i      (resp_dcache_cpu_q.valid),
+    `else
+    .tag_i                 (tag_id_s1_q),
+    .tag_next_i            (resp_dcache_cpu_i.rd),
+    .replay_data_i         (resp_dcache_cpu_i.data),
+    .response_valid_i      (resp_dcache_cpu_i.valid),
+    `endif
     .advance_head_i        (advance_head_prmq),
     .mv_back_tail_i        (mv_back_tail_prmq),
     .finish_instr_o        (instruction_from_pmrq),
@@ -524,6 +571,7 @@ always_comb begin
     data_dcache            =  'h0;
     advance_head_prmq      = 1'b0;
     flush_amo_prmq         = 1'b0;
+    `ifdef REGISTER_HPDC_OUTPUT
     if(instruction_s2_q.instr.valid && resp_dcache_cpu_q.valid && !is_STORE_s2_q && (resp_dcache_cpu_q.rd == tag_id_s2_q)) begin
         instruction_to_wb      = instruction_s2_q;
         advance_head_prmq      = 1'b0;
@@ -537,6 +585,21 @@ always_comb begin
         instruction_to_wb      = instruction_s2_q;
         advance_head_prmq      = 1'b0;
     end
+    `else
+    if(instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && !is_STORE_s1_q && (resp_dcache_cpu_i.rd == tag_id_s1_q)) begin
+        instruction_to_wb      = instruction_s1_q;
+        advance_head_prmq      = 1'b0;
+        data_dcache            = resp_dcache_cpu_i.data;
+    end
+    else if(instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin
+        instruction_to_wb      = instruction_s1_q;
+        advance_head_prmq      = 1'b0;
+    end
+    else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_or_AMO_s1_q) begin // TODO: Mirar com respon la cache als stores
+        instruction_to_wb      = instruction_s1_q;
+        advance_head_prmq      = 1'b0;
+    end
+    `endif
     else if(instruction_from_pmrq.instr.valid) begin
         instruction_to_wb.data_rs2        = data_dword; 
         instruction_to_wb.instr           = instruction_from_pmrq.instr;           
@@ -825,6 +888,7 @@ always_comb begin
                     end
                 end
             end
+        `ifdef REGISTER_HPDC_OUTPUT
         end
         if (flush_store) begin
             if ((instruction_s2_q.velem_incr >= vl_i[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
@@ -844,6 +908,26 @@ always_comb begin
                 end
             end
         end
+        `else
+        end else if (flush_store) begin
+            if ((instruction_s1_q.velem_incr >= vl_i[VMAXELEM_LOG:0]) || (instruction_s1_q.instr.instr_type == VSM)) begin
+                vstore_packer_complete = 1'b1;
+            end else begin
+                for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
+                    if ((vstore_packer_id_q[i] == instruction_s1_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
+                        vstore_packer_read_hit = 1'b1;
+                        if ((vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr) >= vl_i[VMAXELEM_LOG:0]) begin
+                            vstore_packer_nelem_d[i] = '1;
+                            vstore_packer_complete = 1'b1;
+                            vstore_packer_free = 1'b1;
+                        end else begin 
+                            vstore_packer_nelem_d[i] = trunc_6_5(vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr);
+                        end
+                    end
+                end
+            end
+        end
+        `endif
         vload_packer_nfree_d  = trunc_3_2(vload_packer_nfree_q  + vload_packer_free  - vload_packer_write);
         vstore_packer_nfree_d = trunc_3_2(vstore_packer_nfree_q + vstore_packer_free - vstore_packer_write);
     end
@@ -930,7 +1014,11 @@ assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
 assign instruction_simd_o.ex              = instruction_to_wb.ex;
 
+`ifdef REGISTER_HPDC_OUTPUT
 assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;
+`else
+assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s1_q) ? instruction_to_wb.ex : 'h0;
+`endif
 
 ///////////////////////////////////////////////////////////////////////////////
 ///// Outputs for the execution module or Dcache interface
@@ -946,8 +1034,13 @@ assign lock_o   = full_lsq;
 assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 `ifdef SIM_COMMIT_LOG
-assign store_addr_o = instruction_s2_q.vaddr;
-assign store_data_o = instruction_s2_q.data_rs2;
+    `ifdef REGISTER_HPDC_OUTPUT
+    assign store_addr_o = instruction_s2_q.vaddr;
+    assign store_data_o = instruction_s2_q.data_rs2;
+    `else 
+    assign store_addr_o = instruction_s1_q.vaddr;
+    assign store_data_o = instruction_s1_q.data_rs2;
+    `endif
 `endif
 
 endmodule

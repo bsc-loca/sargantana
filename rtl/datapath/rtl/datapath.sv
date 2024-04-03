@@ -192,12 +192,17 @@ endfunction
     rr_exe_instr_t selection_rr_exe_d;
 
     exe_cu_t exe_cu_int;
-    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-2:0] exe_to_wb_scalar; //Mem to scalar wb skips EXE-WB reg
     exe_wb_scalar_instr_t [1:0] exe_to_wb_scalar_simd_fp;
     exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] wb_scalar;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] exe_to_wb_simd;
     exe_wb_simd_instr_t [drac_pkg::NUM_SIMD_WB-1:0] wb_simd;
+    `ifdef REGISTER_HPDC_OUTPUT
+    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-2:0] exe_to_wb_scalar; //Mem to scalar wb skips EXE-WB reg
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-2:0] exe_to_wb_fp; //Mem to fp wb skips EXE-WB reg
+    `else
+    exe_wb_scalar_instr_t [drac_pkg::NUM_SCALAR_WB-1:0] exe_to_wb_scalar;
+    exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] exe_to_wb_fp;
+    `endif
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] wb_fp;
     logic wb_amo_int;
 
@@ -1124,15 +1129,21 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .correct_branch_pred_o(correct_branch_pred),
     
         .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
-        .mem_to_scalar_wb_o(wb_scalar[1]),
-        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[2]),
 
         .simd_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[0]),
         .fp_to_scalar_wb_o(exe_to_wb_scalar_simd_fp[1]),
         .simd_to_simd_wb_o(exe_to_wb_simd[0]),
         .mem_to_simd_wb_o(exe_to_wb_simd[1]),
 
+        `ifdef REGISTER_HPDC_OUTPUT
+        .mem_to_scalar_wb_o(wb_scalar[1]),
         .mem_to_fp_wb_o(wb_fp[1]),
+        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[2]),
+        `else
+        .mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        .mem_to_fp_wb_o(exe_to_wb_fp[1]),
+        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[3]),
+        `endif
         .fp_to_wb_o(exe_to_wb_fp[0]),
         .exe_cu_o(exe_cu_int),
 
@@ -1155,15 +1166,24 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     );
     always_comb begin 
         // We assign FP over SIMD by default if valid
+        `ifdef REGISTER_HPDC_OUTPUT
         if (exe_to_wb_scalar_simd_fp[1].valid) begin
             exe_to_wb_scalar[1] = exe_to_wb_scalar_simd_fp[1];
         end else begin
             exe_to_wb_scalar[1] = exe_to_wb_scalar_simd_fp[0];
         end
+        `else
+        if (exe_to_wb_scalar_simd_fp[1].valid) begin
+            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[1];
+        end else begin
+            exe_to_wb_scalar[2] = exe_to_wb_scalar_simd_fp[0];
+        end
+        `endif
     end
 
     always @(posedge clk_i)  assert (!(exe_to_wb_scalar_simd_fp[0].valid & exe_to_wb_scalar_simd_fp[1].valid));
 
+    `ifdef REGISTER_HPDC_OUTPUT
     register #( (NUM_SCALAR_WB-1) * $bits(exe_wb_scalar_instr_t) + (NUM_SIMD_WB) * $bits(exe_wb_simd_instr_t) + (NUM_FP_WB-1) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -1172,6 +1192,16 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_scalar[2], exe_to_wb_simd[0], exe_to_wb_simd[1], exe_to_wb_fp[0]}),
         .output_o({wb_scalar[0], wb_scalar[2], wb_scalar[3], wb_simd[0], wb_simd[1], wb_fp[0]})
     );
+    `else
+    register #( (NUM_SCALAR_WB) * $bits(exe_wb_scalar_instr_t) + (NUM_SIMD_WB) * $bits(exe_wb_simd_instr_t) + (NUM_FP_WB) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .flush_i(flush_int.flush_exe),
+        .load_i(!control_int.stall_exe),
+        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_scalar[2], exe_to_wb_scalar[3], exe_to_wb_simd[0], exe_to_wb_simd[1], exe_to_wb_fp[0], exe_to_wb_fp[1]}),
+        .output_o({wb_scalar[0], wb_scalar[1], wb_scalar[2], wb_scalar[3], wb_simd[0], wb_simd[1], wb_fp[0], wb_fp[1]})
+    );
+    `endif
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
@@ -1436,8 +1466,13 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                     if (commit_cu_int.write_enable) begin
                         commit_data[0].data = resp_csr_cpu_i.csr_rw_rdata;
                     end else if (commit_store_or_amo_int[0] & (commit_cu_int.gl_index == mem_gl_index_int)) begin
+                        `ifdef REGISTER_HPDC_OUTPUT
                         commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : wb_scalar[1].result;
                         commit_data[0].mem_addr = instruction_to_commit[0].mem_type == STORE ? store_addr : wb_scalar[1].addr;
+                        `else
+                        commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : exe_to_wb_scalar[1].result;
+                        commit_data[0].mem_addr = instruction_to_commit[0].mem_type == STORE ? store_addr : exe_to_wb_scalar[1].addr;
+                        `endif
                     end else begin
                         commit_data[0].data = instruction_to_commit[0].result;
                     end
