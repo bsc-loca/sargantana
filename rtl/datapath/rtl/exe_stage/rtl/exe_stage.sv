@@ -313,6 +313,7 @@ branch_unit branch_unit_inst (
 simd_unit simd_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
+    .vl_i           (vl_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)
