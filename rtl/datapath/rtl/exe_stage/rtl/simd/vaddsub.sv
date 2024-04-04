@@ -8,6 +8,7 @@
  * Revision History
  *  Revision   | Author    | Description
  *  0.1        | Gerard C. | 
+ *  0.2        | Juan Antonio Rodriguez | Adding Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
  * -----------------------------------------------
  */
 
@@ -45,6 +46,8 @@ logic is_subtraction;
 logic is_vmadc;
 logic is_vmsbc;
 
+logic [71:0] data_vs1_vmsbc_middle;
+
 assign is_sub = ((instr_type_i == VSUB) || (instr_type_i == VNMSUB) || (instr_type_i == VNMSAC)) ? 1'b1 : 1'b0;
 assign is_rsub = ((instr_type_i == VRSUB)) ? 1'b1 : 1'b0;
 assign is_vadc = ((instr_type_i == VADC)) ? 1'b1 : 1'b0;
@@ -57,6 +60,7 @@ assign is_subtraction = (is_sub || is_rsub || is_vsbc || is_vmsbc);
 always_comb begin
     //If a subtraction is performed, the operand is flipped and a 1'b1 is
     //selected as carry_in (vs2 - vs1 = vs2 + (-vs1))
+    data_vs1_vmsbc_middle = 72'b0;
     if (is_sub) begin
         data_vs1 = ~data_vs1_i;
         data_vs2 = data_vs2_i;
@@ -71,28 +75,34 @@ always_comb begin
         carry_in[0] = 1'b1;
     end else if((is_vmsbc && use_mask)) begin
         if (sew_i == SEW_64) begin
-            data_vs1 = (data_vs1_i + {{63{1'b0}}, data_vm[0]});
+            data_vs1_vmsbc_middle[64:0] = (data_vs1_i[63:0] + {{63{1'b0}}, data_vm[0]});
+            data_vs1 = data_vs1_vmsbc_middle[63:0];   
         end else if (sew_i == SEW_32) begin
-            data_vs1 = ({data_vs1_i[63:32] + {{31{1'b0}}, data_vm[1]},
-                          data_vs1_i[31:0] + {{31{1'b0}}, data_vm[0]}}
-                        );
-        end else if (sew_i == SEW_16) begin
-            data_vs1 = ({data_vs1_i[63:48] + {{15{1'b0}}, data_vm[3]},
-                          data_vs1_i[47:32] + {{15{1'b0}}, data_vm[2]},
-                          data_vs1_i[31:16] + {{15{1'b0}}, data_vm[1]},
-                          data_vs1_i[15:0] +  {{15{1'b0}}, data_vm[0]}}
-                          );
+            data_vs1_vmsbc_middle[65:33] = data_vs1_i[63:32] + {{31{1'b0}}, data_vm[1]};
+            data_vs1_vmsbc_middle[32:0] = data_vs1_i[31:0] + {{31{1'b0}}, data_vm[0]};
 
+            data_vs1 = {data_vs1_vmsbc_middle[64:33], data_vs1_vmsbc_middle[31:0]};
+        end else if (sew_i == SEW_16) begin
+            data_vs1_vmsbc_middle[67:51] = data_vs1_i[63:48] + {{15{1'b0}}, data_vm[3]};
+            data_vs1_vmsbc_middle[50:34] = data_vs1_i[47:32] + {{15{1'b0}}, data_vm[2]};
+            data_vs1_vmsbc_middle[33:17] = data_vs1_i[31:16] + {{15{1'b0}}, data_vm[1]};
+            data_vs1_vmsbc_middle[16:0] =  data_vs1_i[15:0] +  {{15{1'b0}}, data_vm[0]};        
+            data_vs1 = ({data_vs1_vmsbc_middle[66:51], data_vs1_vmsbc_middle[49:34],
+                          data_vs1_vmsbc_middle[32:17], data_vs1_vmsbc_middle[15:0]});
         end else begin //sew_8
-            data_vs1 = ({data_vs1_i[63:56] + {{7{1'b0}}, data_vm[7]},
-                          data_vs1_i[55:48] + {{7{1'b0}}, data_vm[6]},
-                          data_vs1_i[47:40] + {{7{1'b0}}, data_vm[5]},
-                          data_vs1_i[39:32] + {{7{1'b0}}, data_vm[4]},
-                          data_vs1_i[31:24] + {{7{1'b0}}, data_vm[3]},
-                          data_vs1_i[23:16] + {{7{1'b0}}, data_vm[2]},
-                          data_vs1_i[15:8] +  {{7{1'b0}}, data_vm[1]},
-                          data_vs1_i[7:0] +   {{7{1'b0}}, data_vm[0]}}
-                        );            
+            data_vs1_vmsbc_middle[71:63] = data_vs1_i[63:56] + {{7{1'b0}}, data_vm[7]};
+            data_vs1_vmsbc_middle[62:54] = data_vs1_i[55:48] + {{7{1'b0}}, data_vm[6]};
+            data_vs1_vmsbc_middle[53:45] = data_vs1_i[47:40] + {{7{1'b0}}, data_vm[5]};
+            data_vs1_vmsbc_middle[44:36] = data_vs1_i[39:32] + {{7{1'b0}}, data_vm[4]};
+            data_vs1_vmsbc_middle[35:27] = data_vs1_i[31:24] + {{7{1'b0}}, data_vm[3]};
+            data_vs1_vmsbc_middle[26:18] = data_vs1_i[23:16] + {{7{1'b0}}, data_vm[2]};
+            data_vs1_vmsbc_middle[17:9] = data_vs1_i[15:8] +  {{7{1'b0}}, data_vm[1]};
+            data_vs1_vmsbc_middle[8:0] = data_vs1_i[7:0] + {{7{1'b0}}, data_vm[0]};
+
+            data_vs1 = {data_vs1_vmsbc_middle[70:63], data_vs1_vmsbc_middle[61:54],
+                        data_vs1_vmsbc_middle[52:45], data_vs1_vmsbc_middle[43:36],
+                        data_vs1_vmsbc_middle[34:27], data_vs1_vmsbc_middle[25:18],
+                        data_vs1_vmsbc_middle[16:9], data_vs1_vmsbc_middle[7:0]};                                               
         end
         data_vs2 = data_vs2_i;
         carry_in[0] = 1'b1;
@@ -169,13 +179,21 @@ assign data_vd_o[7:0]   = (is_vmadc)  ? (sew_i == SEW_64) ? {{7{1'b1}}, result[7
                                                     {result[7][8], result[6][8], result[5][8], result[4][8], result[3][8], result[2][8],
                                                      result[1][8], result[0][8]} //sew_8
                         :  (is_vmsbc) ? 
-                                                    (sew_i == SEW_64) ? {{7{1'b1}}, (data_vs1 > data_vs2)} :
-                                                    (sew_i == SEW_32) ? {{6{1'b1}}, (data_vs1[63:32] > data_vs2[63:32]), (data_vs1[31:0] > data_vs2[31:0])} :
-                                                    (sew_i == SEW_16) ? {{4{1'b1}}, (data_vs1[63:48] > data_vs2[63:48]), (data_vs1[47:32] > data_vs2[47:32]),
-                                                                                            (data_vs1[31:16] > data_vs2[31:16]), (data_vs1[15:0] > data_vs2[15:0])} :
-                                                    {(data_vs1[63:56] > data_vs2[63:56]), (data_vs1[55:48] > data_vs2[55:48]), (data_vs1[47:40] > data_vs2[47:40]),
-                                                    (data_vs1[39:32] > data_vs2[39:32]), (data_vs1[31:24] > data_vs2[31:24]), (data_vs1[23:16] > data_vs2[23:16]),
-                                                    (data_vs1[15:8] > data_vs2[15:8]), (data_vs1[7:0] > data_vs2[7:0])} //sew_8
+                                                    (sew_i == SEW_64) ? {{7{1'b1}}, ((data_vs1 > data_vs2) || (data_vs1_vmsbc_middle[64]))} :
+                                                    (sew_i == SEW_32) ? {{6{1'b1}}, ((data_vs1[63:32] > data_vs2[63:32]) || (data_vs1_vmsbc_middle[65])),
+                                                                                    ((data_vs1[31:0] > data_vs2[31:0]) || (data_vs1_vmsbc_middle[32]))} :
+                                                    (sew_i == SEW_16) ? {{4{1'b1}}, ((data_vs1[63:48] > data_vs2[63:48]) || (data_vs1_vmsbc_middle[67])),
+                                                                                    ((data_vs1[47:32] > data_vs2[47:32]) || (data_vs1_vmsbc_middle[50])),
+                                                                                    ((data_vs1[31:16] > data_vs2[31:16]) || (data_vs1_vmsbc_middle[33])),
+                                                                                    ((data_vs1[15:0] > data_vs2[15:0])   || (data_vs1_vmsbc_middle[16]))} :
+                                                    {((data_vs1[63:56] > data_vs2[63:56]) || (data_vs1_vmsbc_middle[71])),
+                                                     ((data_vs1[55:48] > data_vs2[55:48]) || (data_vs1_vmsbc_middle[62])),
+                                                     ((data_vs1[47:40] > data_vs2[47:40]) || (data_vs1_vmsbc_middle[53])),
+                                                     ((data_vs1[39:32] > data_vs2[39:32]) || (data_vs1_vmsbc_middle[44])),
+                                                     ((data_vs1[31:24] > data_vs2[31:24]) || (data_vs1_vmsbc_middle[35])),
+                                                     ((data_vs1[23:16] > data_vs2[23:16]) || (data_vs1_vmsbc_middle[26])),
+                                                     ((data_vs1[15:8] > data_vs2[15:8]) || (data_vs1_vmsbc_middle[17])),
+                                                     ((data_vs1[7:0] > data_vs2[7:0]) || (data_vs1_vmsbc_middle[8]))} //sew_8
                                                     : result[0][7:0];
 assign data_vd_o[15:8]  = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[1][7:0];
 assign data_vd_o[23:16] = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[2][7:0];
