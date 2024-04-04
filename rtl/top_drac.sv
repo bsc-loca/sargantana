@@ -28,7 +28,9 @@ module top_drac
     `ifdef PITON_CINCORANCH
     input logic [1:0]           boot_main_id_i,
     `endif  // Custom for CincoRanch
-
+    `ifdef EXTERNAL_HPM_EVENT_NUM
+     input logic [`EXTERNAL_HPM_EVENT_NUM-1: 0] external_hpm_i,
+     `endif
 //------------------------------------------------------------------------------------
 // DEBUG RING SIGNALS INPUT
 // debug_halt_i is istall_test 
@@ -189,10 +191,16 @@ req_cpu_csr_t req_datapath_csr_interface;
 logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
 assign csr_ptw_comm_o.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 
+`ifdef EXTERNAL_HPM_EVENT_NUM
+localparam HPM_EXT_NUM_EVENT = `EXTERNAL_HPM_EVENT_NUM;
+`else 
+localparam HPM_EXT_NUM_EVENT = 0;
+`endif
+
 //-- HPM conection
 logic count_ovf_int_req;
-logic [HPM_NUM_COUNTERS+3-1:3] mhpm_ovf_bits;
-logic [HPM_NUM_EVENTS:1] hpm_events;
+logic [HPM_NUM_COUNTERS+HPM_EXT_NUM_EVENT+3-1:3] mhpm_ovf_bits;
+logic [HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT:1] hpm_events;
 
 assign hpm_events[1]  = pmu_flags.branch_miss;
 assign hpm_events[2]  = pmu_flags.is_branch;
@@ -234,9 +242,15 @@ assign hpm_events[37] = pmu_interface_i.dcache_uncached_req;
 assign hpm_events[38] = pmu_interface_i.dcache_miss_read_req;
 assign hpm_events[39] = pmu_interface_i.dcache_miss_write_req;
 assign hpm_events[40] = pmu_flags.stall_ir;
-                
+   
+`ifdef EXTERNAL_HPM_EVENT_NUM
+assign hpm_events[41] =  external_hpm_i [0]; // hpm_l2_miss
+assign hpm_events[42] =  external_hpm_i [1]; // hpm_l2_access
+`endif
+
+             
 hpm_counters #(
-    .HPM_NUM_EVENTS(HPM_NUM_EVENTS),
+    .HPM_NUM_EVENTS(HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT),
     .HPM_NUM_COUNTERS(HPM_NUM_COUNTERS)
 ) hpm_counters_inst (
     .clk_i(clk_i),
