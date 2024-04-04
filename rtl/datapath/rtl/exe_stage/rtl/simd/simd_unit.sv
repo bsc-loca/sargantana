@@ -55,17 +55,20 @@ function logic is_vred(input rr_exe_simd_instr_t instr);
 endfunction
 
 function logic is_vmul(input rr_exe_simd_instr_t instr);
-    is_vmul = ((instr.instr.instr_type == VMADD)  ||
-               (instr.instr.instr_type == VNMSUB) ||
-               (instr.instr.instr_type == VMACC)  ||
-               (instr.instr.instr_type == VNMSAC) ||
-               (instr.instr.instr_type == VWMUL)  ||
+    is_vmul = ((instr.instr.instr_type == VWMUL)  ||
                (instr.instr.instr_type == VWMULU) ||
                (instr.instr.instr_type == VWMULSU)||
                (instr.instr.instr_type == VMUL)   ||
                (instr.instr.instr_type == VMULH)  ||
                (instr.instr.instr_type == VMULHU) ||
                (instr.instr.instr_type == VMULHSU)) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vmadd(input rr_exe_simd_instr_t instr);
+    is_vmadd = ((instr.instr.instr_type == VMADD)  ||
+               (instr.instr.instr_type == VNMSUB) ||
+               (instr.instr.instr_type == VMACC)  ||
+               (instr.instr.instr_type == VNMSAC)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vw(input rr_exe_simd_instr_t instr);
@@ -120,7 +123,10 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 always_comb begin
     if (is_vmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.sew == SEW_64) ? 4'd3 : 4'd2;
-    end 
+    end
+    else if (is_vmadd(instruction_i)) begin
+        simd_exe_stages = (instruction_i.sew == SEW_64) ? 4'd4 : 4'd3;
+    end
     else if (is_vred(instruction_i)) begin
         case (instruction_i.sew)
             SEW_8, SEW_16 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) + 1);

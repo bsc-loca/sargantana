@@ -42,6 +42,7 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-1:0];
 logic [3:0] simd_exe_stages;
 logic is_vmul;
 logic is_vred;
+logic is_vmadd;
 
 logic stall_simd_d, stall_simd_q;
 
@@ -50,11 +51,12 @@ function [3:0] trunc_stages(input [31:0] val_in);
     trunc_stages = val_in[3:0];
 endfunction
 
-assign is_vmul = ((instr_entry_i.instr_type == VMADD)   ||
-                (instr_entry_i.instr_type == VNMSUB)   ||
-                (instr_entry_i.instr_type == VMACC)   ||
-                (instr_entry_i.instr_type == VNMSAC)   ||
-                (instr_entry_i.instr_type == VWMUL)   ||
+assign is_vmadd = ((instr_entry_i.instr_type == VMADD)  ||
+                   (instr_entry_i.instr_type == VNMSUB) ||
+                   (instr_entry_i.instr_type == VMACC)  ||
+                   (instr_entry_i.instr_type == VNMSAC)) ? 1'b1 : 1'b0;
+
+assign is_vmul = ((instr_entry_i.instr_type == VWMUL)   ||
                 (instr_entry_i.instr_type == VWMULU)   ||
                 (instr_entry_i.instr_type == VWMULSU)   ||
                 (instr_entry_i.instr_type == VMUL)   ||
@@ -70,6 +72,9 @@ assign is_vred = ((instr_entry_i.instr_type == VREDSUM)   ||
 always_comb begin
     if (is_vmul) begin
         simd_exe_stages = (sew_i == SEW_64) ? 4'd3 : 4'd2;
+    end 
+    else if (is_vmadd) begin
+        simd_exe_stages = (sew_i == SEW_64) ? 4'd4 : 4'd3;
     end 
     else if (is_vred) begin
         case (sew_i)

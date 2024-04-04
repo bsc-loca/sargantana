@@ -59,6 +59,7 @@ wire is_mulh_0 = ((instr_type_i == VMULH) || (instr_type_i == VMULHU) || (instr_
 wire is_signed_0 = ((instr_type_i != VMULHU) && (instr_type_i != VWMULU));
 wire is_mixed_signed_0 = ((instr_type_i == VMULHSU) || (instr_type_i == VWMULSU));
 wire is_widened_0 = ((instr_type_i == VWMUL) || (instr_type_i == VWMULU) || (instr_type_i == VWMULSU));
+wire is_vmadd_0 = ((instr_type_i == VMADD) || (instr_type_i == VNMSUB) || (instr_type_i == VMACC) || (instr_type_i == VNMSAC));
 
 wire src1_signed_0 = (is_signed_0 ^ is_mixed_signed_0);
 wire src2_signed_0 = (is_signed_0);
@@ -161,6 +162,7 @@ sew_t sew_1;
 
 logic is_mulh_1;
 logic is_widened_1;
+logic is_vmadd_1;
 
 logic [7:0] negative_results_1;
 
@@ -172,6 +174,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_1                    <= SEW_8;
         is_mulh_1                <= 1'b0;
         is_widened_1             <= 1'b0;
+        is_vmadd_1               <= 1'b0;
         negative_results_1       <= 8'b0;
         src1_data_1              <= 64'd0;
         src2_data_1              <= 64'd0;
@@ -180,6 +183,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_1                    <= sew_0;
         is_mulh_1                <= is_mulh_0;
         is_widened_1             <= is_widened_0;
+        is_vmadd_1               <= is_vmadd_0;
         negative_results_1       <= negative_results_0;
         src1_data_1              <= src1_data_0;
         src2_data_1              <= src2_data_0;
@@ -270,6 +274,7 @@ sew_t sew_2;
 
 logic is_mulh_2;
 logic is_widened_2;
+logic is_vmadd_2;
 
 logic [7:0] negative_results_2;
 
@@ -282,6 +287,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
         is_widened_2             <= 1'b0;
+        is_vmadd_2               <= 1'b0;
         negative_results_2       <= 8'b0;
         /*
         for (int i=0; i < 8; i++) begin
@@ -299,6 +305,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
         sew_2                    <= sew_1;
         is_mulh_2                <= is_mulh_1;
         is_widened_2             <= is_widened_1;
+        is_vmadd_2               <= is_vmadd_1;
         negative_results_2       <= negative_results_1;
         //products_8b_2            <= products_8b_1;
         //products_16b_2           <= products_16b_1;
@@ -342,6 +349,8 @@ end
 
 bus64_t data_vd_o1;
 bus64_t data_vd_o2;
+bus64_t data_vd_o3;
+bus64_t data_vd_o4;
 logic [63:0] full_precision_result_64b;
 
 // Output the results (8, 16, 32 bits)
@@ -431,6 +440,22 @@ always_comb begin
     endcase
 end
 
-assign data_vd_o = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
+// Needed for multiplication + add/subtract
+assign data_vd_o3 = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
+
+logic is_vmadd_3;
+
+always_ff@(posedge clk_i, negedge rstn_i) begin
+    if (~rstn_i) begin
+        data_vd_o4 <= 64'b0;
+        is_vmadd_3 <= 1'b0;
+    end    
+    else begin
+        data_vd_o4 <= data_vd_o3;
+        is_vmadd_3 <= is_vmadd_2;
+    end
+end
+assign data_vd_o = (is_vmadd_3 || is_vmadd_2) ? data_vd_o4 : data_vd_o3;
+
 
 endmodule
