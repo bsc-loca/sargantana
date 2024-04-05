@@ -485,16 +485,20 @@ always_comb begin
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.sew)
             SEW_8: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+                result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
             end
             SEW_16: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                result_data_vd = {{(VLEN-16){1'b1}}, instruction_i.data_rs1[15:0]};
             end
             SEW_32: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                result_data_vd = {{(VLEN-32){1'b1}}, instruction_i.data_rs1[31:0]};
             end
             SEW_64: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
             end
         endcase  
     `ifdef VBPM_ENABLE
