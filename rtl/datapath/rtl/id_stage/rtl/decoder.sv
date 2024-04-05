@@ -1307,7 +1307,7 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMULH;
                                     end
-                                    F6_VMADD: begin
+/*                                    F6_VMADD: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
@@ -1324,6 +1324,7 @@ module decoder
                                         decode_instr_int.instr_type = VNMSUB;
                                     end
                                     F6_VMACC: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
@@ -1339,6 +1340,7 @@ module decoder
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
+*/                                    
                                     F6_VWMULU: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
@@ -1394,7 +1396,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULH;
                                     end
-                                    F6_VMADD: begin
+/*                                    F6_VMADD: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
@@ -1407,17 +1409,19 @@ module decoder
                                         decode_instr_int.instr_type = VNMSUB;
                                     end
                                     F6_VMACC: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VMACC;
-                                    end
+                                        decode_instr_int.instr_type = VMACC;                                        
+                                    end                                    
                                     F6_VNMSAC: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
+*/                                    
                                     F6_VWMULU: begin
                                         decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
