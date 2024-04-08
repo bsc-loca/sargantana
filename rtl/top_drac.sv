@@ -243,9 +243,36 @@ assign hpm_events[38] = pmu_interface_i.dcache_miss_read_req;
 assign hpm_events[39] = pmu_interface_i.dcache_miss_write_req;
 assign hpm_events[40] = pmu_flags.stall_ir;
    
-`ifdef EXTERNAL_HPM_EVENT_NUM
-assign hpm_events[41] =  external_hpm_i [0]; // hpm_l2_miss
-assign hpm_events[42] =  external_hpm_i [1]; // hpm_l2_access
+
+
+
+
+`ifdef EXTERNAL_HPM_EVENT_NUM //can be 2,4,8
+
+wire hpm_l2_access, hpm_l2_miss;
+assign {hpm_l2_access, hpm_l2_miss}= external_hpm_i[1:0];
+
+assign hpm_events[HPM_NUM_EVENTS+1] =  hpm_l2_miss;            //41
+assign hpm_events[HPM_NUM_EVENTS+2] =  hpm_l2_access;          //42
+
+generate 
+if(HPM_EXT_NUM_EVENT == 8) begin 
+    wire [2:0]hpm_noc_stall, hpm_noc_flit_val;
+    assign {hpm_noc_stall, hpm_noc_flit_val}= external_hpm_i[7:2];
+    assign hpm_events[HPM_NUM_EVENTS+3] =  hpm_noc_flit_val[0]; //43
+    assign hpm_events[HPM_NUM_EVENTS+4] =  hpm_noc_flit_val[1]; //44 
+    assign hpm_events[HPM_NUM_EVENTS+5] =  hpm_noc_flit_val[2]; //45
+    assign hpm_events[HPM_NUM_EVENTS+6] =  hpm_noc_stall[0];    //46
+    assign hpm_events[HPM_NUM_EVENTS+7] =  hpm_noc_stall[1];    //47
+    assign hpm_events[HPM_NUM_EVENTS+8] =  hpm_noc_stall[2];    //48
+end else if (HPM_EXT_NUM_EVENT == 4 )begin 
+    wire hpm_noc_stall, hpm_noc_flit_val;
+    assign {hpm_nocs_stall, hpm_nocs_flit_val}= external_hpm_i[3:2];
+    assign hpm_events[HPM_NUM_EVENTS+3] = hpm_nocs_flit_val;    //43
+    assign hpm_events[HPM_NUM_EVENTS+4] = hpm_nocs_stall;       //44
+end
+endgenerate
+
 `endif
 
              
