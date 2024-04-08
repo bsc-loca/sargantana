@@ -470,6 +470,7 @@ vredtree vredtree_inst(
     .rstn_i        (rstn_i),
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
+    .vl_i          (vl_i),
     .data_fu_i     (vd_elements[0]),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),

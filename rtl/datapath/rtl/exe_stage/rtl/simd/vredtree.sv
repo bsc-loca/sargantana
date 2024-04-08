@@ -14,16 +14,17 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module vredtree (
-    input  logic clk_i,                   // Clock signal
-    input  logic rstn_i,                // Reset signal
-    input  instr_type_t instr_type_i,   // Instruction type
-    input  sew_t sew_i,                 // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
-    input  bus64_t data_fu_i,          // Result of vs1[0] and vs2[0] in data_fu[0]
-    input  bus_simd_t data_vs2_i,       // 128-bit source operand 
+    input  logic clk_i,                     // Clock signal
+    input  logic rstn_i,                    // Reset signal
+    input  instr_type_t instr_type_i,       // Instruction type
+    input  sew_t sew_i,                     // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
+    input  logic [VMAXELEM_LOG:0] vl_i,     // Current vector lenght in elements
+    input  bus64_t data_fu_i,               // Result of vs1[0] and vs2[0] in data_fu[0]
+    input  bus_simd_t data_vs2_i,           // 128-bit source operand 
     input  bus_simd_t data_old_vd,
-    input  bus_mask_t data_vm_i,        // Vector mask of VLEN/8 size
-    input  sew_t sew_to_out_i,          // SEW indication for output 
-    output bus_simd_t red_data_vd_o     // 128-bit result (only cares last element)
+    input  bus_mask_t data_vm_i,            // Vector mask of VLEN/8 size
+    input  sew_t sew_to_out_i,              // SEW indication for output 
+    output bus_simd_t red_data_vd_o         // 128-bit result (only cares last element)
 );
 
 localparam int NUM_STAGES = $clog2(VLEN / 8);      // Number of stages based on the minimum SEW
@@ -77,11 +78,23 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end
 end
 
+// Vector Mask Managment for LMUL<1 cases
+bus_mask_t data_vm;
+always_comb begin
+    for (int i = 0; i < $size(data_vm); i++) begin
+        if (i < vl_i) begin
+            data_vm[i] = data_vm_i[i];
+        end else begin
+            data_vm[i] = 1'b0;
+        end
+    end
+end
+
 always_comb begin
     for (int i = 0; i < NUM_STAGES; i++) begin 
         if (i == 0) begin
             gen_intermediate_d[0].sew = sew_i;
-            gen_intermediate_d[0].mask = data_vm_i;
+            gen_intermediate_d[0].mask = data_vm;
             gen_intermediate_d[0].instr_type = instr_type_i;
             gen_intermediate_d[0].intermediate = data_vs2_i;
             gen_intermediate_d[0].data_vs1 = data_fu_i;
