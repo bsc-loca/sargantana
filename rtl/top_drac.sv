@@ -389,6 +389,7 @@ csr_bsc #(
     .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
 `endif // CONF_SARGANTANA_ENABLE_PCR
 
+    .freg_modified_i(req_datapath_csr_interface.freg_modified),
     .fcsr_flags_valid_i(|req_datapath_csr_interface.csr_retire),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
     .fcsr_rm_o(fcsr_rm),

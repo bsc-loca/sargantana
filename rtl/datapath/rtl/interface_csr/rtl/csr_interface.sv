@@ -186,5 +186,7 @@ assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.c
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;
+// Notify the CSR if the retiring instructions modify the FP regfile
+assign req_cpu_csr_o.freg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].fregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].fregfile_we));
 
 endmodule

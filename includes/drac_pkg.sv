@@ -976,7 +976,8 @@ typedef struct packed {
     bus64_t     csr_xcpt_cause;
     // xcpt pc 
     bus64_t     csr_pc;
-    logic [4:0] fp_status;       // FP status of the executed instruction 
+    logic [4:0] fp_status;       // FP status of the executed instruction
+    logic       freg_modified;   // An FP instruction has written the FP regfile 
     logic       csr_vxsat;       // Vector saturating instruction overflow
 } req_cpu_csr_t;
 
