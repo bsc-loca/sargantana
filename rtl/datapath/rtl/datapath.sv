@@ -801,6 +801,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     `endif
     assign instruction_decode_gl.fp_status              = '0;
     assign instruction_decode_gl.mem_type               = stage_ir_rr_q.instr.mem_type;
+    assign instruction_decode_gl.vs_ovf                 = 1'b0;
 
     // selecting the exception source, interrupt or exception from the front-end
     assign interrupt_ex.valid = resp_csr_cpu_i.csr_interrupt;
@@ -1240,6 +1241,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                instruction_writeback_gl[i].vs_ovf = 1'b0;
                 `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 `endif
@@ -1250,6 +1252,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                instruction_writeback_gl[i].vs_ovf = 1'b0;
                 `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
                 `endif
@@ -1284,6 +1287,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
             instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
             instruction_simd_writeback_gl[i].fp_status = '{default:'0};
+            instruction_simd_writeback_gl[i].vs_ovf = wb_simd[i].vs_ovf;
             simd_data_wb_to_exe[i]  = wb_simd[i].vresult;
             simd_write_paddr_exe[i] = wb_simd[i].pvd;
             simd_write_vaddr[i]     = wb_simd[i].vd;
@@ -1303,6 +1307,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             instruction_fp_writeback_gl[i].exception = wb_fp[i].ex;
             instruction_fp_writeback_gl[i].result    = wb_fp[i].result;
             instruction_fp_writeback_gl[i].fp_status = wb_fp[i].fp_status;
+            instruction_fp_writeback_gl[i].vs_ovf    = 1'b0;
             fp_data_wb_to_exe[i]  = wb_fp[i].result;
             fp_write_paddr_exe[i] = wb_fp[i].fprd;
             fp_write_vaddr[i]     = wb_fp[i].rd;

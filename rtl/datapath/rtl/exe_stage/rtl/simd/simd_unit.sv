@@ -804,6 +804,7 @@ assign instruction_simd_o.chkp = instr_to_out.chkp;
 assign instruction_simd_o.gl_index = instr_to_out.gl_index;
 assign instruction_simd_o.branch_taken = 1'b0;
 assign instruction_simd_o.result_pc = 0;
+assign instruction_simd_o.vs_ovf = 1'b0;
 `ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id = instr_to_out.instr.id;
 `endif

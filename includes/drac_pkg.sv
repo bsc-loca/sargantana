@@ -754,6 +754,7 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
+    logic vs_ovf;
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
 
 
@@ -976,6 +977,7 @@ typedef struct packed {
     // xcpt pc 
     bus64_t     csr_pc;
     logic [4:0] fp_status;       // FP status of the executed instruction 
+    logic       csr_vxsat;       // Vector saturating instruction overflow
 } req_cpu_csr_t;
 
 // CSR input
@@ -1079,6 +1081,7 @@ typedef struct packed {
     `endif
     fpnew_pkg::status_t fp_status;          // FP status of the executed instruction
     mem_type_t mem_type;                // Mem instruction type
+    logic           vs_ovf;
 } gl_instruction_t;
 
 
@@ -1090,6 +1093,7 @@ typedef struct packed {
     addr_t addr;                            // Virtual address of memory op.
     `endif
     fpnew_pkg::status_t fp_status;          // FP status of the executed instruction
+    logic vs_ovf;
 } gl_wb_data_t;
 
 

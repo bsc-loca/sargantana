@@ -179,6 +179,8 @@ always_comb begin
         retire_inst_o = 2'b11;
     end; 
 end
+// Vector saturating instructions that overflow set the VXSAT CSR
+assign req_cpu_csr_o.csr_vxsat = ((retire_inst_o[0] & instruction_to_commit_i[0].vs_ovf) | (retire_inst_o[1] & instruction_to_commit_i[1].vs_ovf));  
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i[0].pc;

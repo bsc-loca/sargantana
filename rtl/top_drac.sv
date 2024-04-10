@@ -389,6 +389,7 @@ csr_bsc #(
     .fcsr_rm_o(fcsr_rm),
     .fcsr_fs_o(fcsr_fs),
     .vcsr_vs_o(vcsr_vs),
+    .vxsat_i(req_datapath_csr_interface.csr_vxsat),
 
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
     .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled

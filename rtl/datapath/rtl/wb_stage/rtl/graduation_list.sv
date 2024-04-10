@@ -139,6 +139,7 @@ always_comb begin
     for (int i = 0; i < NUM_SIMD_WB; ++i) begin
         if (instruction_simd_writeback_enable_i[i]) begin
             valid_bit_d[instruction_simd_writeback_i[i]] = 1'b1;
+            entries_d[instruction_simd_writeback_i[i]].vs_ovf  = instruction_simd_writeback_data_i[i].vs_ovf;
             `ifdef SIM_COMMIT_LOG
                 entries_d[instruction_simd_writeback_i[i]].csr_addr  = instruction_simd_writeback_data_i[i].csr_addr;
                 entries_d[instruction_simd_writeback_i[i]].exception = instruction_simd_writeback_data_i[i].exception;
