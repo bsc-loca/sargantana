@@ -199,7 +199,7 @@ localparam HPM_EXT_NUM_EVENT = 0;
 
 //-- HPM conection
 logic count_ovf_int_req;
-logic [HPM_NUM_COUNTERS+HPM_EXT_NUM_EVENT+3-1:3] mhpm_ovf_bits;
+logic [HPM_NUM_COUNTERS+3-1:3] mhpm_ovf_bits;
 logic [HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT:1] hpm_events;
 
 assign hpm_events[1]  = pmu_flags.branch_miss;
@@ -257,7 +257,7 @@ assign hpm_events[HPM_NUM_EVENTS+2] =  hpm_l2_access;          //42
 
 generate 
 if(HPM_EXT_NUM_EVENT == 8) begin 
-    wire [2:0]hpm_noc_stall, hpm_noc_flit_val;
+    logic [2:0]hpm_noc_stall, hpm_noc_flit_val;
     assign {hpm_noc_stall, hpm_noc_flit_val}= external_hpm_i[7:2];
     assign hpm_events[HPM_NUM_EVENTS+3] =  hpm_noc_flit_val[0]; //43
     assign hpm_events[HPM_NUM_EVENTS+4] =  hpm_noc_flit_val[1]; //44 
@@ -266,7 +266,7 @@ if(HPM_EXT_NUM_EVENT == 8) begin
     assign hpm_events[HPM_NUM_EVENTS+7] =  hpm_noc_stall[1];    //47
     assign hpm_events[HPM_NUM_EVENTS+8] =  hpm_noc_stall[2];    //48
 end else if (HPM_EXT_NUM_EVENT == 4 )begin 
-    wire hpm_noc_stall, hpm_noc_flit_val;
+    logic hpm_nocs_stall, hpm_nocs_flit_val;
     assign {hpm_nocs_stall, hpm_nocs_flit_val}= external_hpm_i[3:2];
     assign hpm_events[HPM_NUM_EVENTS+3] = hpm_nocs_flit_val;    //43
     assign hpm_events[HPM_NUM_EVENTS+4] = hpm_nocs_stall;       //44
