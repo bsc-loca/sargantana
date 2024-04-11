@@ -349,8 +349,6 @@ end
 
 bus64_t data_vd_o1;
 bus64_t data_vd_o2;
-bus64_t data_vd_o3;
-bus64_t data_vd_o4;
 logic [63:0] full_precision_result_64b;
 
 // Output the results (8, 16, 32 bits)
@@ -441,21 +439,6 @@ always_comb begin
 end
 
 // Needed for multiplication + add/subtract
-assign data_vd_o3 = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
-
-logic is_vmadd_3;
-
-always_ff@(posedge clk_i, negedge rstn_i) begin
-    if (~rstn_i) begin
-        data_vd_o4 <= 64'b0;
-        is_vmadd_3 <= 1'b0;
-    end    
-    else begin
-        data_vd_o4 <= data_vd_o3;
-        is_vmadd_3 <= is_vmadd_2;
-    end
-end
-assign data_vd_o = (is_vmadd_3 || is_vmadd_2) ? data_vd_o4 : data_vd_o3;
-
+assign data_vd_o = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
 
 endmodule

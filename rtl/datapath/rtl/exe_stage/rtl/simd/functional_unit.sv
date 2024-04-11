@@ -34,17 +34,33 @@ bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
 
-//bus64_t data1_vaddsub_i;
-//bus64_t data2_vaddsub_i;
+bus64_t data1_vaddsub_i;
+bus64_t data2_vaddsub_i;
 
-//bus64_t data2_vmul_i;
+bus64_t data2_vmul_i;
+
+bus64_t result_vmul_2;
+
+/* Register fo multiplication + addition/subtract
+ * Due to timing problems when doing the addition on the same cycle than the
+ * output of the multiplication we need to add a register on the exit of the
+ * multiplication module only when multiplication + addition/subtract
+*/
+always_ff@ (posedge clk_i, negedge rstn_i) begin
+    if (~rstn_i) begin
+        result_vmul_2 <= 64'b0;
+    end
+    else begin
+        result_vmul_2 <= result_vmul;
+    end
+end
+
 
 /* Input selection for vaddsub module
  * For the instructions that use the module directly send the input
  * for multiplication + addition/subtract select the inputs from the
  * vmul module and the other operand
 */
-/*
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VADD, VSUB, VRSUB, VADC, VSBC, VMADC, VMSBC: begin
@@ -52,11 +68,11 @@ always_comb begin
             data2_vaddsub_i = data_vs2_i;
         end
         VMADD, VNMSUB: begin
-            data1_vaddsub_i = result_vmul;
+            data1_vaddsub_i = result_vmul_2;
             data2_vaddsub_i = sel_out_instr_i.data_vs2[64*fu_id_i +: 64];
         end
         VMACC, VNMSAC: begin
-            data1_vaddsub_i = result_vmul;
+            data1_vaddsub_i = result_vmul_2;
             data2_vaddsub_i = sel_out_instr_i.data_old_vd[64*fu_id_i +: 64];
         end
         default: begin
@@ -65,12 +81,11 @@ always_comb begin
         end
     endcase
 end
-*/
 /* Input selection for the second operand of the vmul module
  * For only multiplication instructions send vs2
  * For multiplication + addition/subtract select the input from the operand
  * needed
-*//*
+*/
 always_comb begin
     case (instruction_i.instr.instr_type)
         VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU: begin
@@ -97,16 +112,7 @@ vaddsub vaddsub_inst(
     .use_mask      (sel_out_instr_i.instr.use_mask),
     .data_vd_o     (result_vaddsub)
 );
-*/
-vaddsub vaddsub_inst(
-    .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
-    .data_vs1_i    (data_vs1_i),
-    .data_vs2_i    (data_vs2_i),
-    .data_vm       (data_vm[7:0]),
-    .use_mask      (instruction_i.instr.use_mask),
-    .data_vd_o     (result_vaddsub)
-);
+;
 
 vwaddsub vwaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
@@ -145,8 +151,7 @@ vmul vmul_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
     .data_vs1_i    (data_vs1_i),
-//    .data_vs2_i    (data2_vmul_i),
-    .data_vs2_i    (data_vs2_i),
+    .data_vs2_i    (data2_vmul_i),
     .data_vd_o     (result_vmul)
 );
 
