@@ -723,7 +723,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr))) begin
+                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (trunc_6_5(instruction_to_wb.velem_incr+instruction_to_wb.velem_id) <= i)) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end
@@ -748,7 +748,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if (instruction_to_wb.data_vm[i]) begin
+                if (instruction_to_wb.data_vm[i] || (trunc_6_5(instruction_to_wb.velem_incr+instruction_to_wb.velem_id) <= i)) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
                 end
             end
@@ -773,7 +773,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (instruction_to_wb.data_vm[i]) begin
+                if (instruction_to_wb.data_vm[i] || (trunc_6_5(instruction_to_wb.velem_incr+instruction_to_wb.velem_id) <= i)) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
                 end
             end
@@ -798,7 +798,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (instruction_to_wb.data_vm[i]) begin
+                if (instruction_to_wb.data_vm[i] || (trunc_6_5(instruction_to_wb.velem_incr+instruction_to_wb.velem_id) <= i)) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
                 end
             end
@@ -870,7 +870,7 @@ always_comb begin
             end
             if (!vload_packer_write_hit) begin
                 vload_packer_id_d[vload_packer_write_idx] = instruction_s1_d.gl_index;
-                vload_packer_d[vload_packer_write_idx] = 'h0;
+                vload_packer_d[vload_packer_write_idx] = '1;
                 vload_packer_nelem_d[vload_packer_write_idx] = 'h0;
                 vload_packer_write = 1'b1;
             end
