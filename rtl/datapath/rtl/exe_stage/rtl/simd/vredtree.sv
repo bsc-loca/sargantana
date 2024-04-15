@@ -107,7 +107,7 @@ always_comb begin
                         if ((j*8) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*8) +: 8] = '0;
+                                gen_intermediate_d[i].intermediate[(j*8) +: 8] = (gen_intermediate_q[i-1].instr_type == VREDAND) ? 8'b1 : '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 gen_intermediate_d[i].intermediate[(j*8) +: 8] = gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
@@ -134,7 +134,7 @@ always_comb begin
                         if ((j*16) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
+                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = (gen_intermediate_q[i-1].instr_type == VREDAND) ? 16'b1 : '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
@@ -161,7 +161,7 @@ always_comb begin
                         if ((j*32) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
+                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = (gen_intermediate_q[i-1].instr_type == VREDAND) ? 32'b1 : '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
@@ -188,7 +188,7 @@ always_comb begin
                         if ((j*64) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
+                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = (gen_intermediate_q[i-1].instr_type == VREDAND) ? 64'b1 : '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
