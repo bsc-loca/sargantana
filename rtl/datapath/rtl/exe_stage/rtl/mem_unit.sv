@@ -1030,6 +1030,7 @@ assign instruction_simd_o.branch_taken    = 1'b0;
 assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
 assign instruction_simd_o.ex              = instruction_to_wb.ex;
+assign instruction_simd_o.vs_ovf          = 1'b0;
 
 `ifdef REGISTER_HPDC_OUTPUT
 assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;
