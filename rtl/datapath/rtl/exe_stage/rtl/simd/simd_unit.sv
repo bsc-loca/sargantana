@@ -82,7 +82,10 @@ function logic is_vw(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VWADDW)   ||
              (instr.instr.instr_type == VWADDUW)  ||
              (instr.instr.instr_type == VWSUBW)   ||
-             (instr.instr.instr_type == VWSUBUW)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VWSUBUW)  ||
+             (instr.instr.instr_type == VWMUL)    ||
+             (instr.instr.instr_type == VWMULU)   ||
+             (instr.instr.instr_type == VWMULSU)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vn(input rr_exe_simd_instr_t instr);
