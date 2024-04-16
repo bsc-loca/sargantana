@@ -24,7 +24,8 @@ module functional_unit
     input bus64_t               data_vs1_i,      // 64-bit source operand 1
     input bus64_t               data_vs2_i,      // 64-bit source operand 2
     input bus64_t               data_vm,         // 64-bit mask operands
-    output bus64_t              data_vd_o        // 64-bit result
+    output bus64_t              data_vd_o,       // 64-bit result
+    output logic                sat_ovf_o        // Saturation done on overflow
 );
 
 bus64_t result_vaddsub;
@@ -127,7 +128,8 @@ vsaddsub vsaddsub_inst(
     .sew_i         (instruction_i.sew),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
-    .data_vd_o     (result_vsaddsub)
+    .data_vd_o     (result_vsaddsub),
+    .sat_ovf_o     (sat_ovf_o)
 );
 vcomp vcomp_inst(
     .instr_type_i  (instruction_i.instr.instr_type),

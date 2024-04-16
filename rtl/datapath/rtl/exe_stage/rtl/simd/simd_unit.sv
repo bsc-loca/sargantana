@@ -249,6 +249,9 @@ always_comb begin
     end
 end
 
+// For setting vxsat when overflow on vector saturation
+logic [ drac_pkg::VELEMENTS-1:0 ] v_sat_ovf;
+
 localparam int unsigned HALF_SIZE = DATA_SIZE >> 1;
 genvar gv_fu;
 generate
@@ -300,7 +303,8 @@ generate
             .data_vs1_i      (vs1_elements[gv_fu]),
             .data_vs2_i      (vs2_elements[gv_fu]),
             .data_vm         (data_vm[gv_fu]),
-            .data_vd_o       (vd_elements[gv_fu])
+            .data_vd_o       (vd_elements[gv_fu]),
+            .sat_ovf_o       (v_sat_ovf[gv_fu])
         );
     end
 endgenerate
@@ -804,7 +808,7 @@ assign instruction_simd_o.chkp = instr_to_out.chkp;
 assign instruction_simd_o.gl_index = instr_to_out.gl_index;
 assign instruction_simd_o.branch_taken = 1'b0;
 assign instruction_simd_o.result_pc = 0;
-assign instruction_simd_o.vs_ovf = 1'b0;
+assign instruction_simd_o.vs_ovf = v_sat_ovf != 0;
 `ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id = instr_to_out.instr.id;
 `endif

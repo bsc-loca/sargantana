@@ -19,7 +19,8 @@ module vsaddsub
     input sew_t                 sew_i,          // Element width
     input bus64_t               data_vs1_i,     // 64-bit source operand 1
     input bus64_t               data_vs2_i,     // 64-bit source operand 2
-    output bus64_t              data_vd_o       // 64-bit result
+    output bus64_t              data_vd_o,      // 64-bit result
+    output logic                sat_ovf_o       // Saturation done on overflow
 );
 
 logic [7:0] carry_in;
@@ -180,6 +181,28 @@ always_comb begin
         default:
             data_vd_o = 64'h0000000000000000;
     endcase
+end
+
+// Send overflow detected
+always_comb begin
+    case (sew_i)
+        SEW_8: begin
+            sat_ovf_o = overflow != 8'b0;
+        end
+        SEW_16: begin
+            sat_ovf_o = overflow[1] | overflow [3] | overflow[5] | overflow[7];
+        end
+        SEW_32: begin
+            sat_ovf_o = overflow[3] | overflow [7];
+        end
+        SEW_64: begin
+            sat_ovf_o = overflow[7];
+        end
+        default: begin
+            sat_ovf_o = overflow[7];
+        end
+    endcase
+
 end
 
 endmodule
