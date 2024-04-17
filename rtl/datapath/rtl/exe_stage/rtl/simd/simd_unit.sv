@@ -698,7 +698,7 @@ always_comb begin
     case(masked_sew)
         SEW_8: begin
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (i < vl_i) begin
+                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -713,7 +713,7 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if (i < vl_i) begin
+                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -728,7 +728,7 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (i < vl_i) begin
+                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -743,7 +743,7 @@ always_comb begin
         end
         SEW_64: begin
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (i < vl_i) begin
+                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -794,7 +794,7 @@ assign instruction_simd_o.rs1   = instr_to_out.instr.rs1;
 assign instruction_simd_o.vd    = instr_to_out.instr.vd;
 assign instruction_simd_o.vresult = tail_data_vd;
 assign instruction_simd_o.change_pc_ena = instr_to_out.instr.change_pc_ena;
-assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we;
+assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we && (vl_i != 'h0);
 assign instruction_simd_o.instr_type = instr_to_out.instr.instr_type;
 assign instruction_simd_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
 assign instruction_simd_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
