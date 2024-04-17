@@ -123,6 +123,7 @@ module top_drac
 //-----------------------------------------------------------------------------
     input  logic                 time_irq_i, // timer interrupt
     input  logic                 irq_i,      // external interrupt in
+    input  logic                 soft_irq_i, // software interrupt
     input  logic [63:0]          time_i     // time passed since the core is reset
 
 );
@@ -367,6 +368,7 @@ csr_bsc #(
     .retire_i(req_datapath_csr_interface.csr_retire),                   // shows if a instruction is retired from the core.
     .time_irq_i(time_irq_i),                 // timer interrupt
     .irq_i(irq_i),                      // external interrupt in
+    .m_soft_irq_i(soft_irq_i),
     .interrupt_o(resp_csr_interface_datapath.csr_interrupt),                // Inerruption wire to the core
     .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),          // Interruption cause
 
@@ -410,9 +412,6 @@ csr_bsc #(
 
     .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
-
-    // Unused interfaces
-    .m_soft_irq_i(1'b0),
 
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module
