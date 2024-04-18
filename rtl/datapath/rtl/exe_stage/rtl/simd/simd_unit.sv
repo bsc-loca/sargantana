@@ -698,7 +698,7 @@ always_comb begin
     case(masked_sew)
         SEW_8: begin
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
+                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -713,7 +713,7 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
+                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -728,7 +728,7 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
+                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -743,7 +743,7 @@ always_comb begin
         end
         SEW_64: begin
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (i < vl_i || instr_to_out.instr.instr_type == VMV1R) begin
+                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
