@@ -154,7 +154,7 @@ typedef struct packed {
 
 function automatic logic range_check(addr_t start_region, addr_t end_region, bus64_t address);
     // if len is a power of two, and base is properly aligned, this check could be simplified
-    return ({{{64-PHY_ADDR_SIZE}{1'b0}}, address} >= start_region) && ({{{64-PHY_ADDR_SIZE}{1'b0}}, address} < end_region);
+    return (address >= {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, start_region}) && (address < {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, end_region});
 endfunction : range_check
 
 function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, bus64_t address);
