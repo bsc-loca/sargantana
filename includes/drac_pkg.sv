@@ -338,7 +338,7 @@ typedef enum logic [7:0] {
    // Vector Mask Instructions
    VMAND, VMNAND, VMANDN, VMOR, VMNOR, VMORN, VMXNOR, VMXOR, VID, VPOPC,
    // Vectorial Reduction Instructions
-   VREDSUM, VREDAND, VREDOR, VREDXOR,
+   VREDSUM, VREDAND, VREDOR, VREDXOR, VREDMAX, VREDMAXU, VREDMIN, VREDMINU,
    //Vectorial Permutation Instructions
    //Forood: to add the pre implemented instructions too
    VSLIDEUP, VSLIDEDOWN,VSLIDE1UP,VSLIDE1DOWN,VRGATHER,VRGATHERI16,VCOMPRESS,

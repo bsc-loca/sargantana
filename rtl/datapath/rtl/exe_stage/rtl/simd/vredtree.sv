@@ -125,6 +125,18 @@ always_comb begin
                                             (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] | gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
                                     VREDXOR: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
                                             (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] ^ gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
+                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
+                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
+                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8];
+                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8];
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
@@ -145,13 +157,25 @@ always_comb begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
                                     VREDSUM: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                             trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] & gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] & gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDOR:  gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] | gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] | gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDXOR: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] ^ gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] ^ gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
+                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
+                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
+                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
@@ -179,6 +203,18 @@ always_comb begin
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] | gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
                                     VREDXOR: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] ^ gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
+                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
+                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
+                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
@@ -206,6 +242,18 @@ always_comb begin
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] | gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
                                     VREDXOR: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] ^ gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
+                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
+                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
+                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
+                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
+                                            gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
