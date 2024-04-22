@@ -549,7 +549,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
 
     // Free List
-    free_list free_list_inst(
+    free_list #(
+        .NUM_ENTRIES(NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS),
+        .ZERO_IS_FREEABLE(0),
+        .reg_type(phreg_t)
+    ) free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (stage_iq_ir_q.instr.rd != 'h0) & (~control_int.stall_ir) & (~control_int.stall_iq)),
@@ -567,7 +571,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
 
     `ifndef DISABLE_SIMD
-    simd_free_list simd_free_list_inst(
+    free_list #(
+        .NUM_ENTRIES(NUM_PHISICAL_VREGISTERS - NUM_ISA_VREGISTERS),
+        .ZERO_IS_FREEABLE(1),
+        .reg_type(phvreg_t)
+    ) simd_free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_iq_ir_q.instr.vregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
@@ -587,7 +595,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign simd_free_register_to_rename = 'h0;
     `endif
 
-    fp_free_list fp_free_list_inst(
+    free_list #(
+        .NUM_ENTRIES(NUM_PHYSICAL_FREGISTERS - NUM_ISA_REGISTERS),
+        .ZERO_IS_FREEABLE(1),
+        .reg_type(phfreg_t)
+    ) fp_free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
         .read_head_i            (stage_iq_ir_q.instr.fregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
@@ -605,16 +617,18 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
 
     // Rename Table
-    rename_table rename_table_inst(
+    rename_table #(
+        .NUM_RENAME_PORTS(2),
+        .NUM_WRITEBACK_PORTS(drac_pkg::NUM_SCALAR_WB),
+        .HARDWIRED_ZERO(1)
+    ) rename_table_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i( free_list_read_src1_int ),
-        .read_src2_i(stage_iq_ir_q.instr.rs2),
+        .read_src_i( {stage_iq_ir_q.instr.rs2, free_list_read_src1_int} ),
         .old_dst_i(stage_iq_ir_q.instr.rd),
         .write_dst_i(stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(free_register_to_rename),
-        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_reg_i.rnm_read_en  && debug_contr_o.parked)),
-        .use_rs2_i(stage_iq_ir_q.instr.use_rs2),
+        .use_rs_i( {stage_iq_ir_q.instr.use_rs2, stage_iq_ir_q.instr.use_rs1 | (debug_reg_i.rnm_read_en  && debug_contr_o.parked) } ),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
         .paddr_i(write_paddr_rr),
@@ -626,28 +640,29 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .commit_old_dst_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),    
         .commit_write_dst_i(cu_ir_int.enable_commit_update),  
         .commit_new_dst_i({instruction_to_commit[1].prd, instruction_to_commit[0].prd}),
-        .src1_o(stage_no_stall_rr_q.prs1),
-        .rdy1_o(stage_no_stall_rr_q.rdy1),
-        .src2_o(stage_no_stall_rr_q.prs2),
-        .rdy2_o(stage_no_stall_rr_q.rdy2),
+        .src_o( {stage_no_stall_rr_q.prs2, stage_no_stall_rr_q.prs1} ),
+        .rdy_o( {stage_no_stall_rr_q.rdy2, stage_no_stall_rr_q.rdy1} ),
         .old_dst_o(stage_no_stall_rr_q.old_prd),
+        .rdy_old_dst_o(), // Unused
         .checkpoint_o(checkpoint_rename),
         .out_of_checkpoints_o(out_of_checkpoints_rename)
     );
 
     `ifndef DISABLE_SIMD
-    simd_rename_table simd_rename_table_inst(
+    logic simd_rdy_old_dst;
+
+    rename_table #(
+        .NUM_RENAME_PORTS(3),
+        .NUM_WRITEBACK_PORTS(drac_pkg::NUM_SIMD_WB),
+        .HARDWIRED_ZERO(0)
+    ) simd_rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i(stage_iq_ir_q.instr.vs1),
-        .read_src2_i(stage_iq_ir_q.instr.vs2),
+        .read_src_i( {5'b0, stage_iq_ir_q.instr.vs2, stage_iq_ir_q.instr.vs1} ), // reg 0 is used as mask
         .old_dst_i(stage_iq_ir_q.instr.vd),
         .write_dst_i(stage_iq_ir_q.instr.vregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(simd_free_register_to_rename),
-        .use_vs1_i(stage_iq_ir_q.instr.use_vs1),
-        .use_vs2_i(stage_iq_ir_q.instr.use_vs2),
-        .use_mask_i(stage_iq_ir_q.instr.use_mask),
-        .use_old_vd_i(simd_use_old_vd),
+        .use_rs_i( {stage_iq_ir_q.instr.use_mask, stage_iq_ir_q.instr.use_vs2, stage_iq_ir_q.instr.use_vs1} ),
         .ready_i(cu_rr_int.vwrite_enable),
         .vaddr_i(simd_write_vaddr),
         .paddr_i(simd_write_paddr_rr),
@@ -659,17 +674,15 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .commit_old_dst_i({instruction_to_commit[1].vd, instruction_to_commit[0].vd}),    
         .commit_write_dst_i(cu_ir_int.simd_enable_commit_update),  
         .commit_new_dst_i({instruction_to_commit[1].pvd, instruction_to_commit[0].pvd}),
-        .src1_o(stage_no_stall_rr_q.pvs1),
-        .rdy1_o(stage_no_stall_rr_q.vrdy1),
-        .src2_o(stage_no_stall_rr_q.pvs2),
-        .rdy2_o(stage_no_stall_rr_q.vrdy2),
-        .srcm_o(stage_no_stall_rr_q.pvm),
-        .rdym_o(stage_no_stall_rr_q.vrdym),
+        .src_o( {stage_no_stall_rr_q.pvm, stage_no_stall_rr_q.pvs2, stage_no_stall_rr_q.pvs1} ),
+        .rdy_o( {stage_no_stall_rr_q.vrdym, stage_no_stall_rr_q.vrdy2, stage_no_stall_rr_q.vrdy1} ),
         .old_dst_o(stage_no_stall_rr_q.old_pvd),
-        .rdy_old_dst_o(stage_no_stall_rr_q.vrdy_old_vd),
+        .rdy_old_dst_o(simd_rdy_old_dst),
         .checkpoint_o(simd_checkpoint_rename),
         .out_of_checkpoints_o(simd_out_of_checkpoints_rename)
     );
+    
+    assign stage_no_stall_rr_q.vrdy_old_vd = simd_rdy_old_dst | ~simd_use_old_vd;
     `else 
     assign stage_no_stall_rr_q.pvs1 = 'h0;
     assign stage_no_stall_rr_q.vrdy1 = 1'b1;
@@ -684,18 +697,18 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     `endif // `ifndef DISABLE_SIMD
 
     // FP Rename Table 
-    fp_rename_table fp_rename_table_inst(
+    rename_table #(
+        .NUM_RENAME_PORTS(3),
+        .NUM_WRITEBACK_PORTS(drac_pkg::NUM_FP_WB),
+        .HARDWIRED_ZERO(0)
+    ) fp_rename_table_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i(stage_iq_ir_q.instr.rs1),
-        .read_src2_i(stage_iq_ir_q.instr.rs2),
-        .read_src3_i(stage_iq_ir_q.instr.rs3),
+        .read_src_i( {stage_iq_ir_q.instr.rs3, stage_iq_ir_q.instr.rs2, stage_iq_ir_q.instr.rs1} ),
         .old_dst_i(stage_iq_ir_q.instr.rd),
         .write_dst_i(stage_iq_ir_q.instr.fregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(fp_free_register_to_rename),
-        .use_fs1_i(stage_iq_ir_q.instr.use_fs1),
-        .use_fs2_i(stage_iq_ir_q.instr.use_fs2),
-        .use_fs3_i(stage_iq_ir_q.instr.use_fs3),
+        .use_rs_i( {stage_iq_ir_q.instr.use_fs3, stage_iq_ir_q.instr.use_fs2, stage_iq_ir_q.instr.use_fs1} ),
         .ready_i(cu_rr_int.fwrite_enable),
         .vaddr_i(fp_write_vaddr), // WB
         .paddr_i(fp_write_paddr_rr), // WB
@@ -707,13 +720,10 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .commit_old_dst_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),
         .commit_write_dst_i(cu_ir_int.fp_enable_commit_update),
         .commit_new_dst_i({instruction_to_commit[1].fprd, instruction_to_commit[0].fprd}),
-        .src1_o(stage_no_stall_rr_q.fprs1),
-        .rdy1_o(stage_no_stall_rr_q.frdy1),
-        .src2_o(stage_no_stall_rr_q.fprs2),
-        .rdy2_o(stage_no_stall_rr_q.frdy2),
-        .src3_o(stage_no_stall_rr_q.fprs3),
-        .rdy3_o(stage_no_stall_rr_q.frdy3),
+        .src_o( {stage_no_stall_rr_q.fprs3, stage_no_stall_rr_q.fprs2, stage_no_stall_rr_q.fprs1} ),
+        .rdy_o( {stage_no_stall_rr_q.frdy3, stage_no_stall_rr_q.frdy2, stage_no_stall_rr_q.frdy1} ),
         .old_dst_o(stage_no_stall_rr_q.old_fprd),
+        .rdy_old_dst_o(), // Unused
         .checkpoint_o(fp_checkpoint_rename),
         .out_of_checkpoints_o(fp_out_of_checkpoints_rename)
     );
@@ -970,7 +980,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign reg_prd1_addr  = (debug_reg_i.rf_en  && debug_contr_o.parked)  ? debug_reg_i.rf_preg : stage_ir_rr_q.prs1;
     
     // RR Stage
-    regfile regfile_inst(
+    regfile #(
+        .NUM_READ_PORTS(2),
+        .NUM_WRITEBACK_PORTS(NUM_SCALAR_WB),
+        .NUM_REGISTERS(NUM_PHISICAL_REGISTERS),
+        .HARDWIRED_ZERO(1),
+        .reg_type(phreg_t),
+        .data_type(bus64_t)
+    ) regfile_inst (
         .clk_i (clk_i),
         .rstn_i(rstn_i),
 
@@ -978,14 +995,19 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .write_addr_i(write_paddr_rr),
         .write_data_i(data_wb_to_rr),
         
-        .read_addr1_i(reg_prd1_addr),
-        .read_addr2_i(stage_ir_rr_q.prs2),
-        .read_data1_o(rr_data_scalar_src1),
-        .read_data2_o(rr_data_scalar_src2)
+        .read_addr_i({stage_ir_rr_q.prs2, reg_prd1_addr}),
+        .read_data_o({rr_data_scalar_src2, rr_data_scalar_src1})
     );
 
     // RR Stage
-    regfile_fp regfile_fp_inst(
+    regfile #(
+        .NUM_READ_PORTS(3),
+        .NUM_WRITEBACK_PORTS(NUM_FP_WB),
+        .NUM_REGISTERS(NUM_PHYSICAL_FREGISTERS),
+        .HARDWIRED_ZERO(0),
+        .reg_type(phfreg_t),
+        .data_type(bus64_t)
+    ) regfile_fp_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
 
@@ -993,31 +1015,33 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .write_addr_i(fp_write_paddr_rr),
         .write_data_i(fp_data_wb_to_rr),
         
-        .read_addr1_i(stage_ir_rr_q.fprs1),
-        .read_addr2_i(stage_ir_rr_q.fprs2),
-        .read_addr3_i(stage_ir_rr_q.fprs3),
-        .read_data1_o(rr_data_fp_src1),
-        .read_data2_o(rr_data_fp_src2),
-        .read_data3_o(stage_rr_exe_d.data_rs3)
+        .read_addr_i({stage_ir_rr_q.fprs3,stage_ir_rr_q.fprs2,stage_ir_rr_q.fprs1}),
+        .read_data_o({stage_rr_exe_d.data_rs3,rr_data_fp_src2,rr_data_fp_src1})
     );
 
     `ifndef DISABLE_SIMD
-    vregfile vregfile(
+    bus_simd_t rr_vmask_reg;
+
+    regfile #(
+        .NUM_READ_PORTS(4),
+        .NUM_WRITEBACK_PORTS(NUM_SIMD_WB),
+        .NUM_REGISTERS(NUM_PHISICAL_VREGISTERS),
+        .HARDWIRED_ZERO(0),
+        .reg_type(phvreg_t),
+        .data_type(bus_simd_t)
+    ) vregfile(
         .clk_i (clk_i),
         .rstn_i(rstn_i),
         .write_enable_i(cu_rr_int.vwrite_enable),
         .write_addr_i(simd_write_paddr_rr),
         .write_data_i(simd_data_wb_to_rr),
-        .read_addr1_i(stage_ir_rr_q.pvs1),
-        .read_addr2_i(stage_ir_rr_q.pvs2),
-        .read_addr_old_vd_i(stage_ir_rr_q.old_pvd),
-        .read_addrm_i(stage_ir_rr_q.pvm),
-        .use_mask_i(stage_ir_rr_q.instr.use_mask),
-        .read_data1_o(stage_rr_exe_d.data_vs1),
-        .read_data2_o(stage_rr_exe_d.data_vs2),
-        .read_data_old_vd_o(stage_rr_exe_d.data_old_vd),
-        .read_mask_o(stage_rr_exe_d.data_vm)
+
+        .read_addr_i({stage_ir_rr_q.pvm, stage_ir_rr_q.old_pvd, stage_ir_rr_q.pvs2, stage_ir_rr_q.pvs1}),
+        .read_data_o({rr_vmask_reg, stage_rr_exe_d.data_old_vd, stage_rr_exe_d.data_vs2, stage_rr_exe_d.data_vs1})
     );
+
+    assign stage_rr_exe_d.data_vm = stage_ir_rr_q.instr.use_mask ? rr_vmask_reg[VMAXELEM-1:0] : '1;
+
     `endif
 
     // Decide from which Regfile to Read FP

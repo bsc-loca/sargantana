@@ -23,75 +23,72 @@
 module regfile 
     import drac_pkg::*;
     import riscv_pkg::*;
+#(
+    parameter int NUM_READ_PORTS = 2,
+    parameter int NUM_WRITEBACK_PORTS = 1,
+    parameter int NUM_REGISTERS = 32,
+    parameter int HARDWIRED_ZERO = 1,
+    parameter type reg_type = logic,
+    parameter type data_type = logic
+)
 (
     input   logic                                 clk_i,
     input   logic                                 rstn_i,
     // write port input
-    input   logic   [NUM_SCALAR_WB-1:0] write_enable_i,
-    input   phreg_t [NUM_SCALAR_WB-1:0] write_addr_i,
-    input   bus64_t [NUM_SCALAR_WB-1:0] write_data_i,
+    input   logic     [NUM_WRITEBACK_PORTS-1:0]   write_enable_i,
+    input   reg_type  [NUM_WRITEBACK_PORTS-1:0]   write_addr_i,
+    input   data_type [NUM_WRITEBACK_PORTS-1:0]   write_data_i,
 
     // read ports input
-    input   phreg_t                               read_addr1_i,
-    input   phreg_t                               read_addr2_i,
+    input   reg_type [NUM_READ_PORTS-1:0]         read_addr_i,
     // read port output
-    output  bus64_t                               read_data1_o,
-    output  bus64_t                               read_data2_o
+    output  data_type [NUM_READ_PORTS-1:0]        read_data_o
+);
 
-); 
 // reg 0 should be 0 why waste 1 register for this...
-reg64_t registers [NUM_PHISICAL_REGISTERS-1:1];
-bus64_t bypass_data1;
-bus64_t bypass_data2;
-logic   bypass1;
-logic   bypass2;
+localparam LOWEST_REGISTER = HARDWIRED_ZERO ? 1 : 0;
 
-// these assigns select data of register at position x 
-// if x = 0 then return 0
+data_type registers [NUM_REGISTERS-1:LOWEST_REGISTER];
 
+data_type [NUM_READ_PORTS-1:0] bypass_data;
+logic [NUM_READ_PORTS-1:0] [NUM_WRITEBACK_PORTS-1:0] bypass_enable;
+
+// Bypass logic
 always_comb begin
-    bypass_data1 = 64'b0;
-    bypass_data2 = 64'b0;
-    bypass1 = 1'b0;
-    bypass2 = 1'b0;
-
-    for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-        if ((write_addr_i[i] == read_addr1_i) && write_enable_i[i]) begin
-            bypass_data1 |= write_data_i[i];
-            bypass1      |= 1'b1;
+    bypass_data = '0;
+    bypass_enable = '0;
+    for (int i = 0; i < NUM_WRITEBACK_PORTS; i++) begin
+        for (int j = 0; j < NUM_READ_PORTS; j++) begin
+            if ((write_addr_i[i] == read_addr_i[j]) && write_enable_i[i]) begin
+                bypass_data[j] = write_data_i[i];
+                bypass_enable[j][i] = 1'b1;
+            end
         end
-
-        if ((write_addr_i[i] == read_addr2_i) && write_enable_i[i]) begin
-            bypass_data2 |= write_data_i[i];
-            bypass2      |= 1'b1;
-        end
-    end
-
-    if (read_addr1_i == 0) begin
-        read_data1_o = 64'b0;
-    end else if (bypass1) begin
-        read_data1_o = bypass_data1;
-    end else begin
-        read_data1_o = registers[read_addr1_i];
-    end
-
-    if (read_addr2_i == 0) begin
-        read_data2_o = 64'b0;
-    end else if (bypass2) begin
-        read_data2_o = bypass_data2;
-    end else begin
-        read_data2_o = registers[read_addr2_i];
     end
 end
 
+// Read port logic
+always_comb begin
+    for (int i = 0; i < NUM_READ_PORTS; i++) begin
+        if (HARDWIRED_ZERO & (read_addr_i[i] == 0)) begin
+            read_data_o[i] = '0;
+        end else if (|bypass_enable[i]) begin
+            read_data_o[i] = bypass_data[i];
+        end else begin
+            read_data_o[i] = registers[read_addr_i[i]];
+        end
+    end
+end
+
+// Write port logic
 always_ff @(posedge clk_i)  begin
     if (~rstn_i) begin
-        for (int i = 1; i<NUM_PHISICAL_REGISTERS; ++i) begin
+        for (int i = LOWEST_REGISTER; i < NUM_REGISTERS; ++i) begin
             registers[i] <= '0;
         end
     end else begin
-        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-            if (write_enable_i[i] && (write_addr_i[i] > 0)) begin
+        for (int i = 0; i < NUM_WRITEBACK_PORTS; i++) begin
+            if (write_enable_i[i] && (!HARDWIRED_ZERO || (write_addr_i[i] > 0))) begin
                 registers[write_addr_i[i]] <= write_data_i[i];
             end
         end

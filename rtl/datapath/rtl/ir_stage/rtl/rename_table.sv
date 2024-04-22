@@ -23,41 +23,43 @@
 module rename_table
     import drac_pkg::*;
     import riscv_pkg::*;
+#(
+    parameter NUM_RENAME_PORTS = 2,    // Number of registers to rename per cycle
+    parameter NUM_WRITEBACK_PORTS = 2, // Number of freed registers per cycle
+    parameter HARDWIRED_ZERO = 1       // Hardwire register 0 to constant 0
+)
 (
-    input wire                        clk_i,               // Clock Singal
-    input wire                        rstn_i,              // Negated Reset Signal
+    input logic                         clk_i,               // Clock Singal
+    input logic                         rstn_i,              // Negated Reset Signal
 
-    input reg_t                       read_src1_i,         // Read source register 1 mapping
-    input reg_t                       read_src2_i,         // Read source register 2 mapping
-    input reg_t                       old_dst_i,           // Read and write to old destination register
-    input logic                       write_dst_i,         // Needs to write to old destination register
-    input phreg_t                     new_dst_i,           // Wich register write to old destination register
+    input reg_t [NUM_RENAME_PORTS-1:0]    read_src_i,          // Read source register mapping
+    input reg_t                         old_dst_i,           // Read and write to old destination register
+    input logic                         write_dst_i,         // Needs to write to old destination register
+    input phreg_t                       new_dst_i,           // Wich register write to old destination register
 
-    input logic                       use_rs1_i,           // Instruction uses source register 1
-    input logic                       use_rs2_i,           // Instruction uses source register 2
+    input logic [NUM_RENAME_PORTS-1:0]    use_rs_i,           // Instruction uses source register
 
-    input logic   [NUM_SCALAR_WB-1:0] ready_i,             // New register is ready
-    input reg_t   [NUM_SCALAR_WB-1:0] vaddr_i,             // New register is ready
-    input phreg_t [NUM_SCALAR_WB-1:0] paddr_i,             // New register is ready
+    input logic   [NUM_WRITEBACK_PORTS-1:0] ready_i,             // New register is ready
+    input reg_t   [NUM_WRITEBACK_PORTS-1:0] vaddr_i,             // New register is ready
+    input phreg_t [NUM_WRITEBACK_PORTS-1:0] paddr_i,             // New register is ready
 
-    input logic                       recover_commit_i,    // Copy commit table on register table
-    input reg_t [1:0]                 commit_old_dst_i,    // Read and write to old destination register at commit table
-    input logic [1:0]                 commit_write_dst_i,  // Needs to write to old destination register at commit table
-    input phreg_t [1:0]               commit_new_dst_i,    // Wich register write to old destination register at commit table
+    input logic                         recover_commit_i,    // Copy commit table on register table
+    input reg_t [1:0]                   commit_old_dst_i,    // Read and write to old destination register at commit table
+    input logic [1:0]                   commit_write_dst_i,  // Needs to write to old destination register at commit table
+    input phreg_t [1:0]                 commit_new_dst_i,    // Wich register write to old destination register at commit table
 
-    input wire                        do_checkpoint_i,     // After renaming do a checkpoint
-    input wire                        do_recover_i,        // Recover a checkpoint
-    input wire                        delete_checkpoint_i, // Delete tail checkpoint
-    input checkpoint_ptr              recover_checkpoint_i,// Label of the checkpoint to recover  
+    input logic                         do_checkpoint_i,     // After renaming do a checkpoint
+    input logic                         do_recover_i,        // Recover a checkpoint
+    input logic                         delete_checkpoint_i, // Delete tail checkpoint
+    input checkpoint_ptr                recover_checkpoint_i,// Label of the checkpoint to recover  
 
-    output phreg_t                    src1_o,              // Read source register 1 mapping
-    output logic                      rdy1_o,              // Ready source register 1
-    output phreg_t                    src2_o,              // Read source register 2 mapping
-    output logic                      rdy2_o,              // Ready source register 2
-    output phreg_t                    old_dst_o,           // Read destination register mapping
+    output phreg_t [NUM_RENAME_PORTS-1:0] src_o,               // Read source register mapping
+    output logic [NUM_RENAME_PORTS-1:0]   rdy_o,               // Ready source register
+    output phreg_t                      old_dst_o,           // Read destination register mapping
+    output logic                        rdy_old_dst_o,       // Ready destination register
 
-    output checkpoint_ptr             checkpoint_o,        // Label of checkpoint
-    output wire                       out_of_checkpoints_o // No more checkpoints
+    output checkpoint_ptr               checkpoint_o,        // Label of checkpoint
+    output logic                        out_of_checkpoints_o // No more checkpoints
 );
 
 function [$clog2(NUM_CHECKPOINTS):0] trunc_num_checkpoint_sum(input [$clog2(NUM_CHECKPOINTS)+1:0] val_in);
@@ -81,19 +83,30 @@ logic read_enable;
 logic checkpoint_enable;
 logic commit_write_enable_0;
 logic commit_write_enable_1;
-logic [NUM_SCALAR_WB-1:0] ready_enable;
-logic [NUM_SCALAR_WB-1:0] rdy1;
-logic [NUM_SCALAR_WB-1:0] rdy2;
+logic [NUM_WRITEBACK_PORTS-1:0] ready_enable;
+logic [NUM_RENAME_PORTS-1:0][NUM_WRITEBACK_PORTS-1:0] rdy;
+logic [NUM_WRITEBACK_PORTS-1:0] rdy_old_dst;
 
 // User can do checkpoints when there is at least one free copy of the free list
 assign checkpoint_enable = do_checkpoint_i & (num_checkpoints_q < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
 
-// User can write to table to add new destination register
-assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
+generate
+    if (HARDWIRED_ZERO) begin
+        // User can write to table to add new destination register
+        assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
 
-// User can wirte to commit table to add new destination register
-assign commit_write_enable_0 = commit_write_dst_i[0] & (commit_old_dst_i[0] != 5'h0) & (~recover_commit_i);
-assign commit_write_enable_1 = commit_write_dst_i[1] & (commit_old_dst_i[1] != 5'h0) & (~recover_commit_i);
+        // User can wirte to commit table to add new destination register
+        assign commit_write_enable_0 = commit_write_dst_i[0] & (commit_old_dst_i[0] != 5'h0) & (~recover_commit_i);
+        assign commit_write_enable_1 = commit_write_dst_i[1] & (commit_old_dst_i[1] != 5'h0) & (~recover_commit_i);
+    end else begin
+        // User can write to table to add new destination register
+        assign write_enable = write_dst_i & (~do_recover_i) & (~recover_commit_i);
+
+        // User can wirte to commit table to add new destination register
+        assign commit_write_enable_0 = commit_write_dst_i[0] & (~recover_commit_i);
+        assign commit_write_enable_1 = commit_write_dst_i[1] & (~recover_commit_i);
+    end
+endgenerate
 
 // User can read the table if no recover action is being done
 assign read_enable = (~do_recover_i) & (~recover_commit_i);
@@ -101,7 +114,7 @@ assign read_enable = (~do_recover_i) & (~recover_commit_i);
 // User can mark registers as ready if no recover action is being done
 // Multiple register can be marked as ready
 always_comb begin
-    for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
+    for (int i = 0; i<NUM_WRITEBACK_PORTS; ++i) begin
         ready_enable[i] = ready_i[i] & (~recover_commit_i);
     end
 end
@@ -188,10 +201,10 @@ always_comb begin
         end
 
         // Write new ready register
-        for (int i = 0; i < NUM_SCALAR_WB; ++i) begin
+        for (int i = 0; i < NUM_WRITEBACK_PORTS; ++i) begin
             if (ready_enable[i]) begin
                 for(int j = 0; j < NUM_CHECKPOINTS; j++) begin
-                    if (~checkpoint_enable | (checkpoint_ptr'(j) != trunc_checkpoint_ptr_sum(version_head_q + 2'b1))) begin
+                    if (~checkpoint_enable | (checkpoint_ptr'(j) != (version_head_nxt))) begin
                         if ((register_table_q[vaddr_i[i]][j] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i) & (checkpoint_ptr'(j) == version_head_q) )) 
                             ready_table_d[vaddr_i[i]][j] = 1'b1;
                     end else if ((register_table_q[vaddr_i[i]][version_head_q] == paddr_i[i]) & ~(write_enable & (vaddr_i[i] == old_dst_i))) begin
@@ -206,26 +219,25 @@ end
 always_ff @(posedge clk_i, negedge rstn_i) 
 begin
     if(~rstn_i) begin
-        src1_o <= '0;
-        src2_o <= '0;
-        rdy1_o <= 1'b0;
-        rdy2_o <= 1'b0;
+        src_o <= '0;
+        rdy_o <= 1'b0;
         old_dst_o <= '0;  
+        rdy_old_dst_o <= '0;
         checkpoint_o <= '0;
     end else if (recover_commit_i) begin // Recover commit table because exception
-        src1_o <= '0;
-        src2_o <= '0;
-        rdy1_o <= 1'b0;
-        rdy2_o <= 1'b0;
-        old_dst_o <= '0;  
+        src_o <= '0;
+        rdy_o <= 1'b0;
+        old_dst_o <= '0;
+        rdy_old_dst_o <= '0;
         checkpoint_o <= '0;
     end else begin
         if (read_enable && !do_recover_i) begin
-            src1_o <= register_table_q[read_src1_i][version_head_q];
-            rdy1_o <= ready_table_q[read_src1_i][version_head_q] | (|rdy1) | (~use_rs1_i);
-            src2_o <= register_table_q[read_src2_i][version_head_q];
-            rdy2_o <= ready_table_q[read_src2_i][version_head_q] | (|rdy2) | (~use_rs2_i);
+            for (int i = 0; i < NUM_RENAME_PORTS; i++) begin
+                src_o[i] <= register_table_q[read_src_i[i]][version_head_q];
+                rdy_o[i] <= ready_table_q[read_src_i[i]][version_head_q] | (|rdy[i]) | (~use_rs_i[i]);
+            end
             old_dst_o <= register_table_q[old_dst_i][version_head_q];
+            rdy_old_dst_o <= ready_table_q[old_dst_i][version_head_q] | (|rdy_old_dst);
         end
         checkpoint_o <= version_head_q;
     end
@@ -258,13 +270,15 @@ end
 
 always_comb begin
     if (read_enable) begin
-        for (int i = 0; i < NUM_SCALAR_WB; ++i) begin
-            rdy1[i] = ready_i[i] && (read_src1_i == vaddr_i[i]) && (register_table_q[read_src1_i][version_head_q] == paddr_i[i]);
-            rdy2[i] = ready_i[i] && (read_src2_i == vaddr_i[i]) && (register_table_q[read_src2_i][version_head_q] == paddr_i[i]);
+        for (int j = 0; j < NUM_WRITEBACK_PORTS; ++j) begin
+            for (int i = 0; i < NUM_RENAME_PORTS; ++i) begin
+                rdy[i][j] = ready_i[j] && (read_src_i[i] == vaddr_i[j]) && (register_table_q[read_src_i[i]][version_head_q] == paddr_i[j]);
+            end
+            rdy_old_dst[j] = ready_i[j] & (old_dst_i == vaddr_i[j]) & (register_table_q[old_dst_i][version_head_q] == paddr_i[j]);
         end
     end else begin
-        rdy1 = '0;
-        rdy2 = '0;
+        rdy = '0;
+        rdy_old_dst = '0;
     end 
 end
 

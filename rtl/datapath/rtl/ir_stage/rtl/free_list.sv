@@ -21,26 +21,29 @@
 module free_list
     import drac_pkg::*;
     import riscv_pkg::*;
+#(
+    parameter NUM_ENTRIES = 32, // Number of available entries in the free list
+    parameter ZERO_IS_FREEABLE = 1, // Register 0 can be freed
+    parameter type reg_type = logic
+)
 (
-    input wire             clk_i,               // Clock Singal
-    input wire             rstn_i,              // Negated Reset Signal
-    input wire             read_head_i,         // Read head of the circular buffer
-    input wire [1:0]       add_free_register_i, // Add new free register
-    input phreg_t [1:0]    free_register_i,     // Register to be freed
+    input logic            clk_i,               // Clock Singal
+    input logic            rstn_i,              // Negated Reset Signal
+    input logic            read_head_i,         // Read head of the circular buffer
+    input logic [1:0]      add_free_register_i, // Add new free register
+    input reg_type [1:0]   free_register_i,     // Register to be freed
 
-    input wire             do_checkpoint_i,     // After renaming do a checkpoint
-    input wire             do_recover_i,        // Recover a checkpoint
-    input wire             delete_checkpoint_i, // Delete tail checkpoint
+    input logic            do_checkpoint_i,     // After renaming do a checkpoint
+    input logic            do_recover_i,        // Recover a checkpoint
+    input logic            delete_checkpoint_i, // Delete tail checkpoint
     input checkpoint_ptr   recover_checkpoint_i,// Label of the checkpoint to recover or the checkpoint of the freed register
-    input wire             commit_roll_back_i,  // Free on fly register because of exception
+    input logic            commit_roll_back_i,  // Free on fly register because of exception
 
-    output phreg_t         new_register_o,      // First free register
+    output reg_type         new_register_o,      // First free register
     output checkpoint_ptr  checkpoint_o,        // Label of the checkpoint done. Use in case of recovery.
     output logic           out_of_checkpoints_o,// Indicates if user is able to do more checkpoints.
     output logic           empty_o              // Free list is empty
 );
-
-localparam NUM_ENTRIES_FREE_LIST = NUM_PHISICAL_REGISTERS - NUM_ISA_REGISTERS; // Number of entries in circular buffer
 
 function [$clog2(NUM_CHECKPOINTS)-1:0] trunc_checkpoint_ptr_sum(input [$clog2(NUM_CHECKPOINTS):0] val_in);
   trunc_checkpoint_ptr_sum = val_in[$clog2(NUM_CHECKPOINTS)-1:0];
@@ -50,16 +53,16 @@ function [$clog2(NUM_CHECKPOINTS):0] trunc_checkpoint_num_sum(input [$clog2(NUM_
   trunc_checkpoint_num_sum = val_in[$clog2(NUM_CHECKPOINTS):0];
 endfunction
 
-function [$clog2(NUM_ENTRIES_FREE_LIST):0] trunc_free_list_num_sum(input [$clog2(NUM_ENTRIES_FREE_LIST)+1:0] val_in);
-  trunc_free_list_num_sum = val_in[$clog2(NUM_ENTRIES_FREE_LIST):0];
+function [$clog2(NUM_ENTRIES):0] trunc_free_list_num_sum(input [$clog2(NUM_ENTRIES)+1:0] val_in);
+  trunc_free_list_num_sum = val_in[$clog2(NUM_ENTRIES):0];
 endfunction
 
-function [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] trunc_free_list_ptr_sum(input [$clog2(NUM_ENTRIES_FREE_LIST):0] val_in);
-  trunc_free_list_ptr_sum = val_in[$clog2(NUM_ENTRIES_FREE_LIST)-1:0];
+function [$clog2(NUM_ENTRIES)-1:0] trunc_free_list_ptr_sum(input [$clog2(NUM_ENTRIES):0] val_in);
+  trunc_free_list_ptr_sum = val_in[$clog2(NUM_ENTRIES)-1:0];
 endfunction
 
 // Free list Pointer
-typedef logic [$clog2(NUM_ENTRIES_FREE_LIST)-1:0] reg_free_list_entry;
+typedef logic [$clog2(NUM_ENTRIES)-1:0] reg_free_list_entry;
 
 
 // Point to the head and tail of the fifo. One pointer for each checkpoint
@@ -71,7 +74,7 @@ checkpoint_ptr version_head;
 checkpoint_ptr version_tail;
 
 //Num must be 1 bit bigger than head an tail
-logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [NUM_CHECKPOINTS-1:0];
+logic [$clog2(NUM_ENTRIES):0] num_registers [NUM_CHECKPOINTS-1:0];
 
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
@@ -93,9 +96,16 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // User can write to the free list a new free register
 // Freed register should be written to all checkpoints
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
-// It cannot free register 0
-assign write_enable_0 = (add_free_register_i[0]) & (free_register_i[0] != 5'h0) & (~commit_roll_back_i);
-assign write_enable_1 = (add_free_register_i[1]) & (free_register_i[1] != 5'h0) & (~commit_roll_back_i);
+generate
+    if (ZERO_IS_FREEABLE) begin
+        assign write_enable_0 = (add_free_register_i[0]) & (~commit_roll_back_i);
+        assign write_enable_1 = (add_free_register_i[1]) & (~commit_roll_back_i);
+    end else begin
+        // It cannot free register 0
+        assign write_enable_0 = (add_free_register_i[0]) & (free_register_i[0] != 5'h0) & (~commit_roll_back_i);
+        assign write_enable_1 = (add_free_register_i[1]) & (free_register_i[1] != 5'h0) & (~commit_roll_back_i);
+    end
+endgenerate
 
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
@@ -104,7 +114,7 @@ assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_en
 assign tail_plus_one = trunc_free_list_ptr_sum(tail + 1'b1);
 
 // FIFO Memory structure
-phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table;    // SRAM used to store the free registers. Read syncronous.
+reg_type [NUM_ENTRIES-1:0] register_table;    // SRAM used to store the free registers. Read syncronous.
 // For Checkpoint copy old free list
 assign version_head_plus_one = trunc_checkpoint_ptr_sum(version_head + 1'b1);
 
@@ -121,7 +131,7 @@ begin
             head[j] <= 'b0;                 // Current head in position
             num_registers[j]  <= 6'b100000; // Number of free registers 32
         end 
-        for(i = 0; i < NUM_ENTRIES_FREE_LIST ; i = i + 1) begin
+        for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
             register_table[i] <= 6'b100000 + i;
         end
     end
@@ -219,7 +229,7 @@ assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0 & ~write_e
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
 `ifdef CHECK_RENAME
-    (* keep="TRUE" *) (* mark_debug="TRUE" *) phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table_reg;    // SRAM used to store the free registers. Read syncronous.
+    (* keep="TRUE" *) (* mark_debug="TRUE" *) reg_type [NUM_ENTRIES-1:0] register_table_reg;    // SRAM used to store the free registers. Read syncronous.
     `ifdef VERILATOR
         rename_checking_behav check_rename_inst
         (
