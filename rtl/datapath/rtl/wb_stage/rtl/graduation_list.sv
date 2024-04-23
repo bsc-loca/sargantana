@@ -20,6 +20,7 @@ module graduation_list
     // Input Signals of instruction from Read R
     input gl_instruction_t                     instruction_i,
     input logic                                is_csr_i,
+    input logic                                is_vector_vl_0_i,
     input reg_csr_addr_t                       csr_addr_i,
     input exception_t                          ex_i,
 
@@ -118,7 +119,7 @@ always_comb begin
     end
 
     if (write_enable) begin
-        valid_bit_d[tail] = is_store_or_amo | instruction_i.ex_valid;
+        valid_bit_d[tail] = is_store_or_amo | instruction_i.ex_valid | is_vector_vl_0_i;
         entries_d[tail] = instruction_i;
     end
 

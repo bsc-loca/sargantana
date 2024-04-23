@@ -28,6 +28,7 @@ module decoder
     input   logic [1:0]      csr_vs_i, 
     input   logic            v_2sew_en_i, 
     input   logic            vill_i,
+    input   logic            vl_0_i,
     output  id_ir_stage_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
 );
@@ -768,7 +769,7 @@ module decoder
                     endcase
                 end
                 OP_V: begin
-                    decode_instr_int.vregfile_we = 1'b1;
+                    decode_instr_int.vregfile_we = ~vl_0_i;
                     decode_instr_int.unit = UNIT_SIMD;
                     decode_instr_int.use_mask = ~decode_i.inst.vtype.vm;
                     if ((csr_vs_i == 2'b00) || ((vill_i == 1'b1) && ((decode_i.inst.vtype.func3 != F3_OPIVI) || (decode_i.inst.vtype.func6 != F6_VMV1R))
@@ -1102,28 +1103,24 @@ module decoder
                             F3_OPMVV: begin
                                 case (decode_i.inst.vtype.func6)
                                     F6_VREDSUM: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDSUM;
                                     end
                                     F6_VREDAND: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDAND;
                                     end
                                     F6_VREDOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDOR;
                                     end
                                     F6_VREDXOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1137,21 +1134,18 @@ module decoder
                                         decode_instr_int.instr_type = VEXT;
                                     end
                                     F6_VMAND: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMAND;
                                     end
                                     F6_VMOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMOR;
                                     end
                                     F6_VMXOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1161,7 +1155,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1172,7 +1165,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1183,7 +1175,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1194,7 +1185,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1205,7 +1195,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1216,7 +1205,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1227,7 +1215,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1238,7 +1225,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -1270,7 +1256,6 @@ module decoder
                                         end
                                     end
                                     F6_VXUNARY0: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         if (decode_i.inst.vtype.vs1 == VS1_ZEXT_VF8) begin
@@ -1290,35 +1275,30 @@ module decoder
                                         end
                                     end                                    
                                     F6_VMULHU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMULHU;
                                     end
                                     F6_VMUL: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMUL;
                                     end
                                     F6_VMULHSU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMULHSU;
                                     end
                                     F6_VMULH: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMULH;
                                     end
 /*                                    F6_VMADD: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1326,7 +1306,6 @@ module decoder
                                         decode_instr_int.instr_type = VMADD;
                                     end
                                     F6_VNMSUB: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1335,7 +1314,6 @@ module decoder
                                     end
                                     F6_VMACC: begin
                                         xcpt_illegal_instruction_int = 1'b1;
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1343,7 +1321,6 @@ module decoder
                                         decode_instr_int.instr_type = VMACC;
                                     end
                                     F6_VNMSAC: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1352,7 +1329,6 @@ module decoder
                                     end
 */                                    
                                     F6_VWMULU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1360,7 +1336,6 @@ module decoder
                                         decode_instr_int.instr_type = VWMULU;
                                     end
                                     F6_VWMULSU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1368,7 +1343,6 @@ module decoder
                                         decode_instr_int.instr_type = VWMULSU;
                                     end
                                     F6_VWMUL: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1387,53 +1361,44 @@ module decoder
                                 decode_instr_int.use_rs1 = 1'b1;
                                 case (decode_i.inst.vtype.func6)
                                     F6_VMULHU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULHU;
                                     end
                                     F6_VMUL: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMUL;
                                     end
                                     F6_VMULHSU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULHSU;
                                     end
                                     F6_VMULH: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULH;
                                     end
 /*                                    F6_VMADD: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMADD;
                                     end
                                     F6_VNMSUB: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSUB;
                                     end
                                     F6_VMACC: begin
                                         xcpt_illegal_instruction_int = 1'b1;
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VMACC;                                        
                                     end                                    
                                     F6_VNMSAC: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
 */                                    
                                     F6_VWMULU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1441,7 +1406,6 @@ module decoder
                                         decode_instr_int.instr_type = VWMULU;
                                     end
                                     F6_VWMULSU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1449,7 +1413,6 @@ module decoder
                                         decode_instr_int.instr_type = VWMULSU;
                                     end
                                     F6_VWMUL: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1460,7 +1423,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWADDU;
                                         end
@@ -1469,7 +1431,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWADD;
                                         end
@@ -1478,7 +1439,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWSUBU;
                                         end
@@ -1487,7 +1447,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWSUB;
                                         end
@@ -1496,7 +1455,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWADDUW;
                                         end
@@ -1505,7 +1463,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWADDW;
                                         end
@@ -1514,7 +1471,6 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWSUBUW;
                                         end
@@ -1523,13 +1479,11 @@ module decoder
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.instr_type = VWSUBW;
                                         end
                                     end
                                     F6_VRWXUNARY0: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMV_S_X;

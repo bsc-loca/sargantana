@@ -99,6 +99,8 @@ endfunction
     jal_id_if_t jal_id_if_int;
     
     logic src_select_id_ir_q;
+
+    logic vl_0_int;
     
     // Rename and free list
     id_ir_stage_t stage_iq_ir_q;
@@ -177,6 +179,8 @@ endfunction
     // Graduation List
 
     gl_instruction_t instruction_decode_gl;
+
+    logic            gl_is_vector_vl_0;
     
     gl_wb_data_t [drac_pkg::NUM_SCALAR_WB-1:0] instruction_writeback_gl;
     gl_index_t       [drac_pkg::NUM_SCALAR_WB-1:0] gl_index;
@@ -439,6 +443,8 @@ endfunction
     //////// DECODER                           STAGE                                                      /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    assign vl_0_int = (vl_i == 'h0) ? 1'b1 : 1'b0;
+
     // ID Stage
     decoder id_decode_inst(
         .clk_i          (clk_i),
@@ -451,6 +457,7 @@ endfunction
         .csr_vs_i       (csr_vs_i), 
         .v_2sew_en_i    (vnarrow_wide_en_i),
         .vill_i         (vill_i),
+        .vl_0_i         (vl_0_int),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)
     );
@@ -831,12 +838,15 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == VSETVLI)    ||
                         (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
+    assign gl_is_vector_vl_0 = ((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
+                                (stage_ir_rr_q.instr.regfile_we == 1'b0) && (vl_i == 'h0));
     
 
     graduation_list graduation_list_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .instruction_i(instruction_decode_gl),
+        .is_vector_vl_0_i(gl_is_vector_vl_0),
         .is_csr_i(is_csr_int),
         .csr_addr_i(csr_addr_int),
         .ex_i(ex_gl_in_int),
@@ -1434,7 +1444,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid);
     assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
-                                        (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid);
+                                        (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid && !instruction_to_commit[0].ex_valid);
         
     assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int[0] & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
     assign commit_cu_int.retire = retire_inst_gl;

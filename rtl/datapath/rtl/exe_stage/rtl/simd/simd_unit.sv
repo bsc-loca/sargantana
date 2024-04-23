@@ -198,7 +198,7 @@ always_comb begin
 end
 
 always_comb begin
-    if (valid_found) begin
+    if (valid_found && (vl_i != 'h0)) begin
         instr_to_out = instr_score_board;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
@@ -794,7 +794,7 @@ assign instruction_simd_o.rs1   = instr_to_out.instr.rs1;
 assign instruction_simd_o.vd    = instr_to_out.instr.vd;
 assign instruction_simd_o.vresult = tail_data_vd;
 assign instruction_simd_o.change_pc_ena = instr_to_out.instr.change_pc_ena;
-assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we && (vl_i != 'h0);
+assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we;
 assign instruction_simd_o.instr_type = instr_to_out.instr.instr_type;
 assign instruction_simd_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
 assign instruction_simd_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
