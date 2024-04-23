@@ -268,7 +268,7 @@ always_comb begin
                 end
             endcase
         end
-        VMERGE, VMV, VREDSUM, VREDAND, VREDOR, VREDXOR: begin
+        VMERGE, VMV, VREDSUM, VREDAND, VREDOR, VREDXOR, VREDMAX, VREDMAXU, VREDMIN, VREDMINU: begin
             data_vd_o = data_vs1_i;
         end
         VMV1R: begin

@@ -67,7 +67,11 @@ assign is_vmul = ((instr_entry_i.instr_type == VWMUL)   ||
 assign is_vred = ((instr_entry_i.instr_type == VREDSUM)   ||
                 (instr_entry_i.instr_type == VREDAND)   ||
                 (instr_entry_i.instr_type == VREDOR)    ||
-                (instr_entry_i.instr_type == VREDXOR)) ? 1'b1 : 1'b0;
+                (instr_entry_i.instr_type == VREDXOR)    ||
+                (instr_entry_i.instr_type == VREDMAXU)    ||
+                (instr_entry_i.instr_type == VREDMAX)    ||
+                (instr_entry_i.instr_type == VREDMINU)    ||
+                (instr_entry_i.instr_type == VREDMIN)) ? 1'b1 : 1'b0;
 
 always_comb begin
     if (is_vmul) begin
