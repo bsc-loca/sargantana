@@ -95,6 +95,14 @@ endfunction
 function [1:0] trunc_3_2(input [2:0] val_in);
   trunc_3_2 = val_in[1:0];
 endfunction
+
+function [VMAXELEM_LOG:0] trunc_sum_vmaxelem_log(input [VMAXELEM_LOG+1:0] val_in);
+  trunc_sum_vmaxelem_log = val_in[VMAXELEM_LOG:0];
+endfunction
+
+function [VMAXELEM_LOG:0] trunc_7_vmaxelem_log(input [6:0] val_in);
+  trunc_7_vmaxelem_log = val_in[VMAXELEM_LOG:0];
+endfunction
              
 // Track Store and AMO in the pipeline and related Stall
 logic is_STORE_or_AMO_s1_q;
@@ -187,13 +195,13 @@ assign vload_packer_full = (vload_packer_nfree_q == 'h0);
 assign vstore_packer_full = (vstore_packer_nfree_q == 'h0);
 
 assign vl_to_dcache = ((instruction_to_dcache.instr.instr_type == VLM) || (instruction_to_dcache.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_to_dcache.sew) :
+                      ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_dcache.sew) :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instruction_s1_q.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_s1_q.sew) :
+                      ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_s1_q.sew) :
                         vl_i[VMAXELEM_LOG:0];
 assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
-                      ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_5(VMAXELEM >> instruction_to_wb.sew) :
+                      ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_wb.sew) :
                         vl_i[VMAXELEM_LOG:0];
 
 // State machine variables
@@ -709,7 +717,7 @@ always_comb begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
                             vdata_to_wb[(trunc_9_7(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
-                            packed_velems = trunc_6_5(packed_velems + 1'b1);
+                            packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
                 end
@@ -734,7 +742,7 @@ always_comb begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb[(trunc_10_7(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
-                            packed_velems = trunc_6_5(packed_velems + 1'b1);
+                            packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
                 end
@@ -759,7 +767,7 @@ always_comb begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb[(trunc_11_7(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
-                            packed_velems = trunc_6_5(packed_velems + 1'b1);
+                            packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
                 end
@@ -784,7 +792,7 @@ always_comb begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
                             vdata_to_wb[(trunc_12_7(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
-                            packed_velems = trunc_6_5(packed_velems + 1'b1);
+                            packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
                 end
@@ -901,7 +909,7 @@ always_comb begin
                         vload_packer_free = 1'b1;
                     end else begin 
                         vload_packer_d[i] = masked_data_to_wb;
-                        vload_packer_nelem_d[i] = trunc_6_5(vload_packer_nelem_q[i] + instruction_to_wb.velem_incr);
+                        vload_packer_nelem_d[i] = trunc_sum_vmaxelem_log(vload_packer_nelem_q[i] + instruction_to_wb.velem_incr);
                     end
                 end
             end
@@ -919,7 +927,7 @@ always_comb begin
                             vstore_packer_complete = 1'b1;
                             vstore_packer_free = 1'b1;
                         end else begin 
-                            vstore_packer_nelem_d[i] = trunc_6_5(vstore_packer_nelem_q[i] + instruction_s2_q.velem_incr);
+                            vstore_packer_nelem_d[i] = trunc_sum_vmaxelem_log(vstore_packer_nelem_q[i] + instruction_s2_q.velem_incr);
                         end
                     end
                 end
@@ -938,7 +946,7 @@ always_comb begin
                             vstore_packer_complete = 1'b1;
                             vstore_packer_free = 1'b1;
                         end else begin 
-                            vstore_packer_nelem_d[i] = trunc_6_5(vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr);
+                            vstore_packer_nelem_d[i] = trunc_sum_vmaxelem_log(vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr);
                         end
                     end
                 end
