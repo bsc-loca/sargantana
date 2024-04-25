@@ -151,7 +151,6 @@ always_comb begin
 end
 
 // Management to stall the instruction if necessary (we cannot write back more than 1 simd instruction)
-logic valid_found;
 always_comb begin
     stall_simd = 1'b0;
     for (int i = 2; (i <= MAX_STAGES) && (!stall_simd); i++) begin
