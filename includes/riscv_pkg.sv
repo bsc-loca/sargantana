@@ -349,8 +349,13 @@ typedef enum logic [5:0] {
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
     F6_VMAND     = 6'b011001,
+    F6_VMNAND    = 6'b011101,
+    F6_VMANDNOT  = 6'b011000,
     F6_VMOR      = 6'b011010,
+    F6_VMNOR     = 6'b011110,
+    F6_VMORNOT   = 6'b011100,
     F6_VMXOR     = 6'b011011,
+    F6_VMXNOR    = 6'b011111,
     F6_VMUNARY0  = 6'b010100,  //This encoding changes on v1.0 of specs. For now we keep it like this
     F6_VXUNARY0  = 6'b010010,
     F6_VMULHU    = 6'b100100,
@@ -395,7 +400,8 @@ typedef enum logic [4:0] {
 } op_vxunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
-    VS1_VMV_X_S = 5'b00000
+    VS1_VMV_X_S = 5'b00000,
+    VS1_VPOPC   = 5'b10000
 } op_vwxunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {

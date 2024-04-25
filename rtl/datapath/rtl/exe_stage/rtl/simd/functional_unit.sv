@@ -156,7 +156,6 @@ vmul vmul_inst(
     .data_vs2_i    (data2_vmul_i),
     .data_vd_o     (result_vmul)
 );
-
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8: begin
@@ -189,35 +188,55 @@ always_comb begin
         VXOR: begin
             data_vd_o = data_vs1_i ^ data_vs2_i;
         end
-        VMAND, VMOR, VMXOR: begin
+        VMAND, VMNAND, VMANDN, VMOR, VMNOR, VMORN, VMXNOR,VMXOR: begin
             data_vd_o = '1;
             case (sel_out_instr_i.sew)
                 SEW_8: begin
                     for (int i = 0; i<(VLEN/8); ++i) begin
-                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
-                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
-                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND)  ? (data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNAND) ? !(data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMANDN) ? (!data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNOR)  ? !(data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMORN)  ? (!data_vs1_i[i] | data_vs2_i[i]) :                                          
+                                       (sel_out_instr_i.instr.instr_type == VMOR)   ? (data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMXNOR) ? !(data_vs1_i[i] ^ data_vs2_i[i]) :                                       
+                                                                                      (data_vs1_i[i] ^ data_vs2_i[i]);
                     end
                 end
                 SEW_16: begin
                     for (int i = 0; i<(VLEN/16); ++i) begin
-                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
-                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
-                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? (data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNAND) ? !(data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMANDN) ? (!data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNOR)  ? !(data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMORN)  ? (!data_vs1_i[i] | data_vs2_i[i]) :                                          
+                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? (data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMXNOR)  ? !(data_vs1_i[i] ^ data_vs2_i[i]) :
+                                                                                     (data_vs1_i[i] ^ data_vs2_i[i]);
                     end
                 end
                 SEW_32: begin
                     for (int i = 0; i<(VLEN/32); ++i) begin
-                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
-                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
-                                                                                     data_vs1_i[i] ^ data_vs2_i[i];
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? (data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNAND) ? !(data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMANDN) ? (!data_vs1_i[i] & data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMNOR)  ? !(data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMORN)  ? (!data_vs1_i[i] | data_vs2_i[i]) :                                          
+                                       (sel_out_instr_i.instr.instr_type == VMOR)  ? (data_vs1_i[i] | data_vs2_i[i]) :
+                                       (sel_out_instr_i.instr.instr_type == VMXNOR)  ? !(data_vs1_i[i] ^ data_vs2_i[i]) :
+                                                                                     (data_vs1_i[i] ^ data_vs2_i[i]);
                     end
                 end
                 SEW_64: begin
                     for (int i = 0; i<(VLEN/64); ++i) begin
-                        data_vd_o = (sel_out_instr_i.instr.instr_type == VMAND) ? data_vs1_i[i] & data_vs2_i[i] :
-                                    (sel_out_instr_i.instr.instr_type == VMOR)  ? data_vs1_i[i] | data_vs2_i[i] :
-                                                                                  data_vs1_i[i] ^ data_vs2_i[i];
+                        data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND) ? (data_vs1_i[i] & data_vs2_i[i]) :
+                                    (sel_out_instr_i.instr.instr_type == VMNAND) ? !(data_vs1_i[i] & data_vs2_i[i]) :
+                                    (sel_out_instr_i.instr.instr_type == VMANDN) ? (!data_vs1_i[i] & data_vs2_i[i]) :
+                                    (sel_out_instr_i.instr.instr_type == VMNOR)  ? !(data_vs1_i[i] | data_vs2_i[i]) :
+                                    (sel_out_instr_i.instr.instr_type == VMORN)  ? (!data_vs1_i[i] | data_vs2_i[i]) :                                     
+                                    (sel_out_instr_i.instr.instr_type == VMOR)  ? (data_vs1_i[i] | data_vs2_i[i]) :
+                                    (sel_out_instr_i.instr.instr_type == VMXNOR)  ? !(data_vs1_i[i] ^ data_vs2_i[i]) :
+                                                                                  (data_vs1_i[i] ^ data_vs2_i[i]);
                     end
                 end
             endcase

@@ -1169,6 +1169,34 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMAND;
                                     end
+                                    F6_VMNAND: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMNAND;
+                                    end
+                                    F6_VMANDNOT: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMANDN;
+                                    end
+                                    F6_VMNOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMNOR;
+                                    end                                                                            
+                                    F6_VMORNOT: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMORN;
+                                    end  
                                     F6_VMOR: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
@@ -1180,6 +1208,13 @@ module decoder
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMXOR;
+                                    end
+                                    F6_VMXNOR: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VMXNOR;
                                     end
                                     F6_VWADDU: begin
                                         if (!v_2sew_en_i) begin
@@ -1281,6 +1316,11 @@ module decoder
                                             decode_instr_int.regfile_we = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
                                             decode_instr_int.instr_type = VMV_X_S;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VPOPC) begin
+                                            decode_instr_int.vregfile_we = 1'b0;
+                                            decode_instr_int.regfile_we = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VPOPC;
                                         end else begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end

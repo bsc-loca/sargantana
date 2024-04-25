@@ -42,6 +42,7 @@ function [3:0] trunc_4bits(input [31:0] val_in);
     trunc_4bits = val_in[3:0];
 endfunction
 
+
 logic [3:0] simd_exe_stages;
 
 function logic not_masked_output(input rr_exe_simd_instr_t instr);
@@ -353,8 +354,18 @@ always_comb begin
     end
 end
 
+// vpopc module
+bus64_t data_vpopc_rd;
+vpopc vpopc_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs2_i    (instruction_i.data_vs2),
+    .data_vm_i     (instruction_i.data_vm),
+    .use_mask_i    (instruction_i.instr.use_mask),
+    .data_vd_o     (data_vpopc_rd)
+);
+
 bus64_t ext_element;
-// bus_simd_t result_data_vd;
 //Compute the result of operations that don't operate on vector element
 //granularity, and produce a scalar result
 always_comb begin
@@ -464,6 +475,8 @@ always_comb begin
                 end
             end
         endcase
+    end else if (instr_to_out.instr.instr_type == VPOPC) begin
+        data_rd = data_vpopc_rd;
     end else begin
         data_rd = 64'b0;
     end
@@ -496,6 +509,8 @@ vredtree vredtree_inst(
     .red_data_vd_o (red_data_vd)
 );
 
+
+
 bus_simd_t result_data_vd;
 bus64_t shift_amount_in_vslide;
 bus64_t gather_index;
@@ -527,7 +542,10 @@ always_comb begin
     end else if (instr_to_out.instr.instr_type == VPIG) begin
         result_data_vd = {instr_to_out.data_vs2[(VLEN-1) -: 2], instr_to_out.data_vs1[(VLEN-3):0]};
     `endif
-    end else if ((instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) || (instr_to_out.instr.instr_type == VMXOR)) begin
+    end else if ((instr_to_out.instr.instr_type == VMORN) || (instr_to_out.instr.instr_type == VMNOR) ||
+                 (instr_to_out.instr.instr_type == VMANDN) || (instr_to_out.instr.instr_type == VMNAND) ||
+                 (instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) ||
+                 (instr_to_out.instr.instr_type == VMXOR) || (instr_to_out.instr.instr_type == VMXNOR)) begin
         result_data_vd = '1;
         result_data_vd[63:0] = fu_data_vd[63:0]; // Works with VLEN up to 512, higher than that requires concatenation of results from FU
     end else if ((instr_to_out.instr.instr_type == VMSEQ)  || (instr_to_out.instr.instr_type == VMSNE) ||
