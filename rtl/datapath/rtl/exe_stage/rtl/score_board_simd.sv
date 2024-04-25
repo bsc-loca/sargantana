@@ -36,15 +36,15 @@ typedef struct packed {
     `endif
 } instr_pipe_t;
 
-instr_pipe_t simd_pipe_d [MAX_STAGES:2][MAX_STAGES-1:0];
-instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-1:0];
+instr_pipe_t simd_pipe_d [MAX_STAGES:2][MAX_STAGES-2:0];
+instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-2:0];
 
 logic [3:0] simd_exe_stages;
 logic is_vmul;
 logic is_vred;
 logic is_vmadd;
 
-logic stall_simd_d, stall_simd_q;
+logic stall_simd;
 
 // Truncate function
 function [3:0] trunc_stages(input [31:0] val_in);
@@ -103,13 +103,13 @@ end
 always_ff @(posedge clk_i, negedge rstn_i) begin
 if (~rstn_i) begin
     for (int i=2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < MAX_STAGES; j++) begin
+        for (int j = 0; j < (MAX_STAGES-1); j++) begin
             simd_pipe_q[i][j] <= '0;
         end
     end
 end else begin
     for (int i=2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < MAX_STAGES; j++) begin
+        for (int j = 0; j < (MAX_STAGES-1); j++) begin
             simd_pipe_q[i][j] <= simd_pipe_d[i][j];
         end
     end
@@ -120,10 +120,10 @@ end
 // Each cycle, each instruction go forward 1 slot
 always_comb begin
     for (int i = 2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < MAX_STAGES; j++) begin
+        for (int j = 0; j < (MAX_STAGES-1); j++) begin
             if (j==0) begin
                 if (simd_exe_stages == (trunc_stages(i))) begin
-                    simd_pipe_d[i][0].valid = ~stall_simd_q & ready_i & (instr_entry_i.unit == UNIT_SIMD);
+                    simd_pipe_d[i][0].valid = ~stall_simd & ready_i & (instr_entry_i.unit == UNIT_SIMD);
                     `ifdef VERILATOR
                     simd_pipe_d[i][0].simd_instr_type = instr_entry_i.instr_type;
                     `endif
@@ -151,29 +151,19 @@ always_comb begin
 end
 
 // Management to stall the instruction if necessary (we cannot write back more than 1 simd instruction)
-logic [MAX_STAGES:0] or_reduction;
+logic valid_found;
 always_comb begin
-    or_reduction = '0;
-    for (int gv_ored = 2; gv_ored <= MAX_STAGES; gv_ored++) begin
-        or_reduction[gv_ored] = ($unsigned(trunc_stages(gv_ored)) > $unsigned(simd_exe_stages)) ? 
-                                simd_pipe_q[gv_ored][trunc_stages(gv_ored)-simd_exe_stages].valid 
-                                : 1'b0;
-    end
-end
-
-assign stall_simd_d = |or_reduction;
-
-always_ff @(posedge clk_i, negedge rstn_i) begin
-    if (~rstn_i) begin
-        stall_simd_q <= 1'b0;
-    end else begin
-        stall_simd_q <= stall_simd_d;
+    stall_simd = 1'b0;
+    for (int i = 2; (i <= MAX_STAGES) && (!stall_simd); i++) begin
+        if ( ($unsigned(trunc_stages(i)) > $unsigned(simd_exe_stages)) && (simd_pipe_q[i][trunc_stages(i)-simd_exe_stages-1].valid) ) begin
+            stall_simd = 1'b1;
+        end
     end
 end
 
 // Output assignment
 assign simd_exe_stages_o = simd_exe_stages;
-assign stall_simd_o = stall_simd_q;
+assign stall_simd_o = stall_simd;
  
  
 endmodule
