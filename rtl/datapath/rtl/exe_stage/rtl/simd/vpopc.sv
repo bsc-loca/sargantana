@@ -18,7 +18,7 @@ module vpopc
 (
     input instr_type_t          instr_type_i,   // Instruction type
     input sew_t                 sew_i,          // Element width
-    input bus64_t               data_vs2_i,     // 64-bit source operand 2
+    input bus_simd_t               data_vs2_i,     // bus_simd_t source operand 2
     input bus_mask_t            data_vm_i,        // 64-bit mask
     input logic                 use_mask_i,        //
     output bus64_t              data_vd_o       // 64-bit result
