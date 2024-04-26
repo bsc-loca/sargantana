@@ -336,7 +336,10 @@ typedef enum logic [7:0] {
    //Vector Integer Extension
    VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8, 
    // Vectorial Reduction Instructions
-   VREDSUM, VREDAND, VREDOR, VREDXOR, 
+   VREDSUM, VREDAND, VREDOR, VREDXOR,
+   //Vectorial Permutation Instructions
+   //Forood: to add the pre implemented instructions too
+   VSLIDEUP, VSLIDEDOWN,VSLIDE1UP,VSLIDE1DOWN,VRGATHER,VRGATHERI16,VCOMPRESS,
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations

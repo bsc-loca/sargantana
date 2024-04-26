@@ -334,7 +334,10 @@ typedef enum logic [5:0] {
     F6_VSRL         = 6'b101000,
     F6_VSRA         = 6'b101001,
     F6_VNSRL        = 6'b101100,
-    F6_VNSRA        = 6'b101101
+    F6_VNSRA        = 6'b101101,
+    F6_VSLIDEUP     = 6'b001110,
+    F6_VSLIDEDOWN   = 6'b001111,
+    F6_VRGATHER     = 6'b001100
 } op_func6_vector_opi_t;
 
 typedef enum logic [5:0] {
@@ -342,7 +345,7 @@ typedef enum logic [5:0] {
     F6_VREDAND   = 6'b000001,
     F6_VREDOR    = 6'b000010,
     F6_VREDXOR   = 6'b000011,
-    F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
+    // F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
     F6_VMAND     = 6'b011001,
@@ -368,7 +371,10 @@ typedef enum logic [5:0] {
     F6_VWSUBW    = 6'b110111,
     F6_VWMULU    = 6'b111000,
     F6_VWMULSU   = 6'b111010,
-    F6_VWMUL     = 6'b111011
+    F6_VWMUL     = 6'b111011,
+    F6_VSLIDE1UP = 6'b001110,
+    F6_VSLIDE1DOWN = 6'b001111,
+    F6_VCOMPRESS = 6'b010111
 } op_func6_vector_opm_t;
 
 typedef enum logic [5:0] {

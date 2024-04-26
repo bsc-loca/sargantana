@@ -881,6 +881,12 @@ module decoder
                                         decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
+                                    F6_VRGATHER: begin
+                                        decode_instr_int.instr_type = VRGATHER;
+                                    end
+                                    F6_VSLIDEUP: begin
+                                        decode_instr_int.instr_type = VRGATHERI16;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1000,6 +1006,20 @@ module decoder
                                         decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
+                                    F6_VSLIDEUP: begin
+                                        // decode_instr_int.vregfile_we = 1'b1;
+                                        // decode_instr_int.regfile_we = 1'b0;
+                                        // decode_instr_int.use_vs1 = 1'b1;
+                                        // decode_instr_int.use_vs2 = 1'b0;
+                                        // decode_instr_int.use_rs1 = 1'b1;
+                                        decode_instr_int.instr_type = VSLIDEUP;
+                                    end
+                                    F6_VSLIDEDOWN: begin
+                                        decode_instr_int.instr_type = VSLIDEDOWN;
+                                    end
+                                    F6_VRGATHER: begin
+                                        decode_instr_int.instr_type = VRGATHER;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1095,6 +1115,16 @@ module decoder
                                             decode_instr_int.instr_type = VMV1R;
                                         end
                                     end
+                                    F6_VSLIDEUP: begin
+                                        decode_instr_int.use_vs1 = 1'b0;
+                                        decode_instr_int.instr_type = VSLIDEUP;
+                                    end
+                                    F6_VSLIDEDOWN: begin
+                                        decode_instr_int.instr_type = VSLIDEDOWN;
+                                    end
+                                    F6_VRGATHER: begin
+                                        decode_instr_int.instr_type = VRGATHER;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1126,13 +1156,13 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDXOR;
                                     end
-                                    F6_VEXT: begin
-                                        decode_instr_int.vregfile_we = 1'b0;
-                                        decode_instr_int.regfile_we = 1'b1;
-                                        decode_instr_int.use_rs1 = 1'b1;
-                                        decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VEXT;
-                                    end
+                                    // F6_VEXT: begin
+                                    //     decode_instr_int.vregfile_we = 1'b0;
+                                    //     decode_instr_int.regfile_we = 1'b1;
+                                    //     decode_instr_int.use_rs1 = 1'b1;
+                                    //     decode_instr_int.use_vs2 = 1'b1;
+                                    //     decode_instr_int.instr_type = VEXT;
+                                    // end
                                     F6_VMAND: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
@@ -1356,6 +1386,13 @@ module decoder
                                             decode_instr_int.instr_type = VWMUL;
                                         end
                                     end
+                                    F6_VCOMPRESS: begin
+                                        // decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCOMPRESS;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1495,6 +1532,18 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMV_S_X;
+                                    end
+                                    F6_VSLIDE1UP: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        // decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VSLIDE1UP;
+                                    end
+                                    F6_VSLIDE1DOWN: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        // decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VSLIDE1DOWN;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;

@@ -111,11 +111,15 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSGT)) ? 1'b1 : 1'b0;
 endfunction
 
+function bus64_t min_unsigned (input bus64_t a, b);
+    min_unsigned = (a < b) ? a : b ;
+endfunction
+
+
 typedef struct packed {
     logic valid;
     rr_exe_simd_instr_t simd_instr;
 } instr_pipe_t;
-
 instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 
@@ -126,6 +130,7 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
  * 4 cycle -> |0|1|2|3|
  ...
 */
+
 always_comb begin
     if (is_vmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.sew == SEW_64) ? 4'd3 : 4'd2;
@@ -349,7 +354,7 @@ always_comb begin
 end
 
 bus64_t ext_element;
-
+// bus_simd_t result_data_vd;
 //Compute the result of operations that don't operate on vector element
 //granularity, and produce a scalar result
 always_comb begin
@@ -371,59 +376,64 @@ always_comb begin
                 data_rd = vs2_elements[0];
             end
         endcase
-    end else if (instr_to_out.instr.instr_type == VEXT) begin
-        //Extract element specified by rs1
-        case (instr_to_out.sew)
-            SEW_8: begin
-                if (instr_to_out.data_rs1 >= (VELEMENTS*8)) begin
-                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
-                end else begin
-                    ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]/8)];
-                end
-                case(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]%8)
-                    3'b000: data_rd = {56'h0,ext_element[7:0]};
-                    3'b001: data_rd = {56'h0,ext_element[15:8]};
-                    3'b010: data_rd = {56'h0,ext_element[23:16]};
-                    3'b011: data_rd = {56'h0,ext_element[31:24]};
-                    3'b100: data_rd = {56'h0,ext_element[39:32]};
-                    3'b101: data_rd = {56'h0,ext_element[47:40]};
-                    3'b110: data_rd = {56'h0,ext_element[55:48]};
-                    3'b111: data_rd = {56'h0,ext_element[63:56]};
-                endcase
-            end
-            SEW_16: begin
-                if (instr_to_out.data_rs1 >= (VELEMENTS*4)) begin
-                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
-                end else begin
-                    ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*4)-1:0]/4)];
-                end
-                case(instr_to_out.data_rs1[$clog2(VELEMENTS*4)-1:0]%4)
-                    2'b00: data_rd = {48'h0,ext_element[15:0]};
-                    2'b01: data_rd = {48'h0,ext_element[31:16]};
-                    2'b10: data_rd = {48'h0,ext_element[47:32]};
-                    2'b11: data_rd = {48'h0,ext_element[63:48]};
-                endcase
-            end
-            SEW_32: begin
-                if (instr_to_out.data_rs1 >= (VELEMENTS*2)) begin
-                    ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
-                end else begin
-                    ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*2)-1:0]/2)];
-                end
-                case(instr_to_out.data_rs1[$clog2(VELEMENTS*2)-1:0]%2)
-                    1'b0: data_rd = {32'h0,ext_element[31:0]};
-                    1'b1: data_rd = {32'h0,ext_element[63:32]};
-                endcase
-            end
-            SEW_64: begin
-                if (instr_to_out.data_rs1 >= VELEMENTS) begin
-                    data_rd = 'h0; //If the element to extract is bigger than the number of elements, extract 0
-                end else begin
-                    data_rd = vs2_elements[instr_to_out.data_rs1[$clog2(VELEMENTS)-1:0]];
-                end
-            end
-        endcase
-    end else if (instr_to_out.instr.instr_type == VCNT) begin
+    end 
+
+    //Forood: should I disable this instruction or not?
+    
+    // else if (instr_to_out.instr.instr_type == VEXT) begin
+    //     //Extract element specified by rs1
+    //     case (instr_to_out.sew)
+    //         SEW_8: begin
+    //             if (instr_to_out.data_rs1 >= (VELEMENTS*8)) begin
+    //                 ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+    //             end else begin
+    //                 ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]/8)];
+    //             end
+    //             case(instr_to_out.data_rs1[$clog2(VELEMENTS*8)-1:0]%8)
+    //                 3'b000: data_rd = {56'h0,ext_element[7:0]};
+    //                 3'b001: data_rd = {56'h0,ext_element[15:8]};
+    //                 3'b010: data_rd = {56'h0,ext_element[23:16]};
+    //                 3'b011: data_rd = {56'h0,ext_element[31:24]};
+    //                 3'b100: data_rd = {56'h0,ext_element[39:32]};
+    //                 3'b101: data_rd = {56'h0,ext_element[47:40]};
+    //                 3'b110: data_rd = {56'h0,ext_element[55:48]};
+    //                 3'b111: data_rd = {56'h0,ext_element[63:56]};
+    //             endcase
+    //         end
+    //         SEW_16: begin
+    //             if (instr_to_out.data_rs1 >= (VELEMENTS*4)) begin
+    //                 ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+    //             end else begin
+    //                 ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*4)-1:0]/4)];
+    //             end
+    //             case(instr_to_out.data_rs1[$clog2(VELEMENTS*4)-1:0]%4)
+    //                 2'b00: data_rd = {48'h0,ext_element[15:0]};
+    //                 2'b01: data_rd = {48'h0,ext_element[31:16]};
+    //                 2'b10: data_rd = {48'h0,ext_element[47:32]};
+    //                 2'b11: data_rd = {48'h0,ext_element[63:48]};
+    //             endcase
+    //         end
+    //         SEW_32: begin
+    //             if (instr_to_out.data_rs1 >= (VELEMENTS*2)) begin
+    //                 ext_element = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+    //             end else begin
+    //                 ext_element = vs2_elements[(instr_to_out.data_rs1[$clog2(VELEMENTS*2)-1:0]/2)];
+    //             end
+    //             case(instr_to_out.data_rs1[$clog2(VELEMENTS*2)-1:0]%2)
+    //                 1'b0: data_rd = {32'h0,ext_element[31:0]};
+    //                 1'b1: data_rd = {32'h0,ext_element[63:32]};
+    //             endcase
+    //         end
+    //         SEW_64: begin
+    //             if (instr_to_out.data_rs1 >= VELEMENTS) begin
+    //                 data_rd = 'h0; //If the element to extract is bigger than the number of elements, extract 0
+    //             end else begin
+    //                 data_rd = vs2_elements[instr_to_out.data_rs1[$clog2(VELEMENTS)-1:0]];
+    //             end
+    //         end
+    //     endcase
+    // end 
+    else if (instr_to_out.instr.instr_type == VCNT) begin
         //Vector count equals
         //Uses the result of the FUs, which performed a vseq, and counts
         //consecutive '1's
@@ -487,6 +497,8 @@ vredtree vredtree_inst(
 );
 
 bus_simd_t result_data_vd;
+bus64_t shift_amount_in_vslide;
+bus64_t gather_index;
 always_comb begin
     if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
@@ -617,7 +629,409 @@ always_comb begin
                 end
             end                         
         endcase
-    end else begin
+    end 
+    else if (instr_to_out.instr.instr_type == VSLIDEUP) begin
+        result_data_vd = instr_to_out.data_old_vd;
+        // Forood: I dont know which one must be used to store the 
+        // Code at the momment temporary result so I'm just following Narcis's Implememntation
+        shift_amount_in_vslide = 0;
+        if(instr_to_out.instr.is_opvi) begin
+            shift_amount_in_vslide = instruction_i.instr.imm;
+        end
+        if(instr_to_out.instr.is_opvx) begin
+            shift_amount_in_vslide = instruction_i.data_rs1;
+        end
+        case (instr_to_out.sew)
+            SEW_8: begin
+                if(shift_amount_in_vslide < (VLEN/8)) begin
+                    for (int i = 0; i < (VLEN/8); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = 0; ((j < (VLEN/8)) && ((j + i) < (VLEN/8))); ++j )  begin
+                                result_data_vd[(j + i) * 8 +: 8] = instruction_i.data_vs2[j * 8 +: 8];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_16: begin
+                if(shift_amount_in_vslide < (VLEN/16)) begin
+                    for (int i = 0; i < (VLEN/16); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = 0; ((j < (VLEN/16)) && ((j + i) < (VLEN/16))); ++j )  begin
+                                result_data_vd[(j + i) * 16 +: 16] = instruction_i.data_vs2[j * 16 +: 16];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_32: begin
+                if(shift_amount_in_vslide < (VLEN/32)) begin
+                    for (int i = 0; i < (VLEN/32); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = 0; ((j < (VLEN/32)) && ((j + i) < (VLEN/32))); ++j )  begin
+                                result_data_vd[(j + i) * 32 +: 32] = instruction_i.data_vs2[j * 32 +: 32];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_64: begin
+                if(shift_amount_in_vslide < (VLEN/64)) begin
+                    for (int i = 0; i < (VLEN/64); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = 0; ((j < (VLEN/64)) && ((j + i) < (VLEN/64))); ++j )  begin
+                                result_data_vd[(j + i) * 64 +: 64] = instruction_i.data_vs2[j * 64 +: 64];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+        endcase
+    end else if (instr_to_out.instr.instr_type == VSLIDEDOWN) begin
+        result_data_vd = 0;
+        // Forood: I dont know which one must be used to store the 
+        // Code at the momment temporary result so I'm just following Narcis's Implememntation
+        // Forood: we can possibly fuse the slideup and slidedown, I implemented seperatly so that the logic would be 
+        // more undestandable and also the debug is easier in case of any problems
+        shift_amount_in_vslide = 0;
+        if(instr_to_out.instr.is_opvi) begin
+            shift_amount_in_vslide = instruction_i.instr.imm;
+        end
+        if(instr_to_out.instr.is_opvx) begin
+            shift_amount_in_vslide = instruction_i.data_rs1;
+        end
+        case (instr_to_out.sew)
+            SEW_8: begin
+                if(shift_amount_in_vslide < (VLEN/8)) begin
+                    for (int i = 0; i < (VLEN/8); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = ((VLEN/8) - 1); ((j >= 0) && ((j - i) >= 0)); --j )  begin
+                                result_data_vd[(j - i) * 8 +: 8] = instruction_i.data_vs2[j * 8 +: 8];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_16: begin
+                if(shift_amount_in_vslide < (VLEN/16)) begin
+                    for (int i = 0; i < (VLEN/16); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = ((VLEN/16) - 1); ((j >= 0) && ((j - i) >= 0)); --j )  begin
+                                result_data_vd[(j - i) * 16 +: 16] = instruction_i.data_vs2[j * 16 +: 16];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_32: begin
+                if(shift_amount_in_vslide < (VLEN/32)) begin
+                    for (int i = 0; i < (VLEN/32); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = ((VLEN/32) - 1); ((j >= 0) && ((j - i) >= 0)); --j )  begin
+                                result_data_vd[(j - i) * 32 +: 32] = instruction_i.data_vs2[j * 32 +: 32];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+            SEW_64: begin
+                if(shift_amount_in_vslide < (VLEN/64)) begin
+                    for (int i = 0; i < (VLEN/64); ++i) begin
+                        if(i == shift_amount_in_vslide) begin
+                            for (int j = ((VLEN/64) - 1); ((j >= 0) && ((j - i) >= 0)); --j )  begin
+                                result_data_vd[(j - i) * 64 +: 64] = instruction_i.data_vs2[j * 64 +: 64];
+                            end
+                            break;
+                        end
+                    end
+                end
+            end
+        endcase
+    end 
+    else if (instr_to_out.instr.instr_type == VSLIDE1UP) begin
+        //Forood: This instruction can easily be fused with VLSIDE1DOWN
+        // I coded them seperatly in order to keep things clean and understandable in case
+        // future debugging is needed.
+        result_data_vd = 0;
+        
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < ((VLEN/8) - 1) ; ++i) begin
+                    result_data_vd[(i + 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
+                end
+                result_data_vd[0 +: 8] = instruction_i.data_rs1[7:0];
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < ((VLEN/16) - 1) ; ++i) begin
+                    result_data_vd[(i + 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
+                end
+                result_data_vd[0 +: 16] = instruction_i.data_rs1[15:0];
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < ((VLEN/32) - 1) ; ++i) begin
+                    result_data_vd[(i + 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
+                end
+                result_data_vd[0 +: 32] = instruction_i.data_rs1[31:0];
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
+                    result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                end
+                result_data_vd[0 +: 64] = instruction_i.data_rs1[63:0];
+            end
+        endcase
+    end 
+    else if (instr_to_out.instr.instr_type == VSLIDE1DOWN) begin
+        //Forood: This instruction can easily be fused with VLSIDE1DUP
+        // I coded them seperatly in order to keep things clean and understandable in case
+        // future debugging is needed.
+        result_data_vd = 0;
+        
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 1 ; i < (VLEN/8)  ; ++i) begin
+                    result_data_vd[(i - 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
+                end
+                result_data_vd[(VLEN - 1) -: 8] = instruction_i.data_rs1[7:0];
+            end
+            SEW_16: begin
+                for (int i = 1 ; i < (VLEN/16)  ; ++i) begin
+                    result_data_vd[(i - 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
+
+                end
+                result_data_vd[(VLEN - 1) -: 16] = instruction_i.data_rs1[15:0];
+            end
+            SEW_32: begin
+                for (int i = 1 ; i < (VLEN/32)  ; ++i) begin
+                    result_data_vd[(i - 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
+                end
+                result_data_vd[(VLEN - 1) -: 32] = instruction_i.data_rs1[31:0];
+            end
+            SEW_64: begin
+                for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
+                    result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                end
+                result_data_vd[(VLEN - 1) -: 64] = instruction_i.data_rs1[63:0];
+            end
+        endcase
+    end 
+    else if ((instr_to_out.instr.instr_type == VRGATHER) && (~instr_to_out.instr.is_opvx) && (~instr_to_out.instr.is_opvi)) begin
+        result_data_vd = 0;
+        
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 8) +: 8]) < (VLEN/8)) begin
+                        //Forood : this line and lines like this that can be seen in the VRGATHER and VRGATHER16 has a problem that needs to be sloved
+                        // because the $clog2(VLEN/8) can become greater than 8 bits if the VLEN goes beyond 2048 and a min function must be used
+                        result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 8) +: min_unsigned($clog2(VLEN/8), 8)]) * 8 +: 8];
+                    end
+                    else begin
+                        result_data_vd[(i * 8) +: 8] = 0;
+                    end
+                end
+                
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/16)) begin
+                        result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/16), 16)]) * 16 +: 16];
+                    end
+                    else begin
+                        result_data_vd[(i * 16) +: 16] = 0;
+                    end
+                end
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 32) +: 32]) < (VLEN/32)) begin
+                        result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 32) +: min_unsigned($clog2(VLEN/32), 32)]) * 32 +: 32];
+                    end
+                    else begin
+                        result_data_vd[(i * 32) +: 32] = 0;
+                    end
+                end
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 64) +: 64]) < (VLEN/64)) begin
+                        result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 64) +: min_unsigned($clog2(VLEN/64), 64)]) * 64 +: 64];
+                    end
+                    else begin
+                        result_data_vd[(i * 64) +: 64] = 0;
+                    end
+                end
+            end
+        endcase
+    end 
+    else if (instr_to_out.instr.instr_type == VRGATHERI16) begin
+        result_data_vd = 0;
+        //Forood: don't know what to do when the SEW < 16 because there are more elements than indexes, at the moment they are left
+        // untouched but they may be forced to set to 0
+        // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked 
+        //this is not tested at all
+
+
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/8)) begin
+                        result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/8), 16)]) * 8 +: 8];
+                    end
+                    else begin
+                        result_data_vd[(i * 8) +: 8] = 0;
+                    end
+                end
+                
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/16)) begin
+                        result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/16), 16)]) * 16 +: 16];
+                    end
+                    else begin
+                        result_data_vd[(i * 16) +: 16] = 0;
+                    end
+                end
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/32)) begin
+                        result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/32), 16)]) * 32 +: 32];
+                    end
+                    else begin
+                        result_data_vd[(i * 32) +: 32] = 0;
+                    end
+                end
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/64)) begin
+                        result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/64), 16)]) * 64 +: 64];
+                    end
+                    else begin
+                        result_data_vd[(i * 64) +: 64] = 0;
+                    end
+                end
+            end
+        endcase
+    end
+
+    else if ((instr_to_out.instr.instr_type == VRGATHER) && ((instr_to_out.instr.is_opvx) || (instr_to_out.instr.is_opvi))) begin
+        result_data_vd = instr_to_out.data_old_vd;
+
+        gather_index = 0;
+        if(instr_to_out.instr.is_opvi) begin
+            gather_index = instruction_i.instr.imm;
+        end
+        if(instr_to_out.instr.is_opvx) begin
+            gather_index = instruction_i.data_rs1;
+        end
+
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
+                    if((gather_index) < (VLEN/8)) begin
+                        result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(gather_index) * 8 +: 8];
+                    end
+                    else begin
+                        result_data_vd[(i * 8) +: 8] = 0;
+                    end
+                end     
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
+                    if((gather_index) < (VLEN/16)) begin
+                        result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(gather_index) * 16 +: 16];
+                    end
+                    else begin
+                        result_data_vd[(i * 16) +: 16] = 0;
+                    end
+                end    
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
+                    if((gather_index) < (VLEN/32)) begin
+                        result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(gather_index) * 32 +: 32];
+                    end
+                    else begin
+                        result_data_vd[(i * 32) +: 32] = 0;
+                    end
+                end    
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
+                    if((gather_index) < (VLEN/64)) begin
+                        result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(gather_index) * 64 +: 64];
+                    end
+                    else begin
+                        result_data_vd[(i * 64) +: 64] = 0;
+                    end
+                end    
+            end
+        endcase
+    end
+    else if ((instr_to_out.instr.instr_type == VCOMPRESS)) begin
+        result_data_vd = instr_to_out.data_old_vd;
+
+        // in each element of the mask, should I check it to be exactly 1 or a non zero value is enough?
+        // at the momment non zero is checked.
+
+        //this variable is used to track the last occupied element of vd
+        gather_index = 0;
+
+        case (instr_to_out.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
+                    if(instruction_i.data_vs1[i] == 1'b1) begin
+                        result_data_vd[(gather_index * 8) +: 8] = instruction_i.data_vs2[(i) * 8 +: 8];
+                        // I'm not sure if this line cause problems with the combinational logic,
+                        // I just hope it's fine at the momment.
+                        gather_index = gather_index[62:0] + 1'b1;
+                    end
+                end     
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
+                    if(instruction_i.data_vs1[i] == 1'b1) begin
+                        result_data_vd[(gather_index * 16) +: 16] = instruction_i.data_vs2[(i) * 16 +: 16];
+                        // I'm not sure if this line cause problems with the combinational logic,
+                        // I just hope it's fine at the momment.
+                        gather_index = gather_index[62:0] + 1'b1;
+                    end
+                end    
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
+                    if(instruction_i.data_vs1[i] == 1'b1) begin
+                        result_data_vd[(gather_index * 32) +: 32] = instruction_i.data_vs2[(i) * 32 +: 32];
+                        // I'm not sure if this line cause problems with the combinational logic,
+                        // I just hope it's fine at the momment.
+                        gather_index = gather_index[62:0] + 1'b1;
+                    end
+                end    
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
+                    if(instruction_i.data_vs1[i] == 1'b1) begin
+                        result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
+                        // I'm not sure if this line cause problems with the combinational logic,
+                        // I just hope it's fine at the momment.
+                        gather_index = gather_index[62:0] + 1'b1;
+                    end
+                end   
+            end
+        endcase
+    end
+
+    else begin
         result_data_vd = fu_data_vd;
     end
 end
