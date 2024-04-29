@@ -18,7 +18,7 @@ module vpopc
 (
     input instr_type_t          instr_type_i,   // Instruction type
     input sew_t                 sew_i,          // Element width
-    input bus_simd_t               data_vs2_i,     // bus_simd_t source operand 2
+    input bus_simd_t            data_vs2_i,     // bus_simd_t source operand 2
     input bus_mask_t            data_vm_i,        // 64-bit mask
     input logic                 use_mask_i,        //
     output bus64_t              data_vd_o       // 64-bit result
@@ -35,18 +35,18 @@ always_comb begin
             SEW_8 : begin
                 for (int i = 0; i < (VLEN/8); i++) begin
                     if (use_mask_i) begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
                     end else begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, data_vs2_i[i]});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, data_vs2_i[i]});
                     end                       
                 end                
             end
             SEW_16 : begin
                 for (int i = 0; i < (VLEN/16); i++) begin
                     if (use_mask_i) begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
                     end else begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, data_vs2_i[i]}); 
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, data_vs2_i[i]}); 
                     end
 
                 end
@@ -54,9 +54,9 @@ always_comb begin
             SEW_32 : begin
                 for (int i = 0; i < (VLEN/32); i++) begin
                     if (use_mask_i) begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
                     end else begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/32)){1'b0}}, data_vs2_i[i]});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, data_vs2_i[i]});
                     end
                 end
             end
@@ -64,9 +64,9 @@ always_comb begin
             SEW_64 : begin
                 for (int i = 0; i < (VLEN/64); i++) begin
                     if (use_mask_i) begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/64)){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, (data_vs2_i[i] & data_vm_i[i])});
                     end else begin
-                        count = trunc_64bits(count + {{(XLEN-(VLEN/64)){1'b0}}, data_vs2_i[i]});
+                        count = trunc_64bits(count + {{(XLEN-1){1'b0}}, data_vs2_i[i]});
                     end
                 end
             end
