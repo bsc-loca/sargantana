@@ -1043,6 +1043,27 @@ typedef struct packed {
     logic           reg_p_read_valid;
 } debug_in_t;
 
+typedef struct packed {
+    // Triggers a halt on the pipeline 
+    logic           halt_req;
+    // Triggers a restart on the pipeline
+    logic           resume_req;
+} debug_intel_in_t;
+
+typedef struct packed {
+    // ACKs the halt of the pipeline 
+    logic           halt_ack;
+    // ACKs the restart of the pipeline
+    logic           resume_ack;
+} debug_intel_out_t;
+
+typedef enum logic[1:0] {
+    DEBUG_RESET,
+    DEBUG_RUNNING, 
+    DEBUG_CLEAR, 
+    DEBUG_HALT
+} debug_intel_state_t;
+
 // LSQ in/out of instruction signals
 typedef struct packed {
     logic            valid;          // Valid bit

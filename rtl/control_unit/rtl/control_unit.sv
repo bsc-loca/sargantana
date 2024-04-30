@@ -35,6 +35,9 @@ module control_unit
     input logic             debug_change_pc_i,
     input logic             debug_wr_valid_i,
 
+    input logic             gl_empty_i,
+
+    input debug_intel_in_t debug_intel_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output pipeline_flush_t pipeline_flush_o,
@@ -46,12 +49,52 @@ module control_unit
     output cu_rr_t          cu_rr_o,
     output cu_wb_t          cu_wb_o,
     output cu_commit_t      cu_commit_o,
-    
+
+    output debug_intel_out_t debug_intel_o,
+
     output logic            pmu_jump_misspred_o
 
 );
     reg csr_fence_in_pipeline;
     logic flush_csr_fence;
+
+    debug_intel_state_t state_debug_q, state_debug_d;
+    logic halt_debug_intel;
+
+    always_comb begin
+        debug_intel_o.resume_ack = 1'b0;
+        debug_intel_o.halt_ack = 1'b0;
+        state_debug_d = state_debug_q;
+        halt_debug_intel = 1'b0;
+
+        case (state_debug_q)
+            DEBUG_RESET: begin
+                state_debug_d = DEBUG_RUNNING;
+                debug_intel_o.resume_ack = 1'b1;
+                halt_debug_intel = 1'b0;
+            end
+            DEBUG_RUNNING: begin
+                if (debug_intel_i.halt_req) begin
+                    state_debug_d = DEBUG_CLEAR;
+                end 
+                halt_debug_intel = 1'b0;
+            end
+            DEBUG_CLEAR: begin
+                if (gl_empty_i) begin
+                    state_debug_d = DEBUG_HALT;
+                    debug_intel_o.halt_ack = 1'b1;
+                end 
+                halt_debug_intel = 1'b1;
+            end
+            DEBUG_HALT: begin
+                if (debug_intel_i.resume_req) begin
+                    state_debug_d = DEBUG_RUNNING;
+                    debug_intel_o.resume_ack = 1'b1;
+                end 
+                halt_debug_intel = 1'b1;
+            end
+        endcase
+    end
 
     always_ff@(posedge clk_i, negedge rstn_i)
     begin
@@ -171,6 +214,7 @@ module control_unit
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
                      csr_fence_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
+                     halt_debug_intel                           ||
                      debug_halt_i                               )  begin
                      
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
@@ -316,7 +360,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
-        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i)) begin
+        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i) || halt_debug_intel) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
@@ -394,6 +438,15 @@ module control_unit
         end else begin 
             exception_enable_q <= exception_enable_d;
             csr_enable_q <= csr_enable_d;
+        end
+    end
+
+    // Delay exceptions one cycle
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if(!rstn_i) begin
+            state_debug_q <= DEBUG_RESET;
+        end else begin 
+            state_debug_q <= state_debug_d;
         end
     end
     

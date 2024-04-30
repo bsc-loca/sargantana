@@ -36,6 +36,8 @@ module top_drac
 // debug_halt_i is istall_test 
 //------------------------------------------------------------------------------------    
     input logic                 debug_halt_i,
+    input debug_intel_in_t      debug_intel_i,
+
 
     input addr_t                debug_pc_addr_i,
     input logic                 debug_pc_valid_i,
@@ -91,6 +93,8 @@ module top_drac
     output logic		        debug_backend_empty_o,
     output logic  [5:0]		    debug_preg_addr_o,
     output bus64_t              debug_preg_data_o,
+    output debug_intel_out_t    debug_intel_o,
+
 
 // VISA
     output visa_signals_t       visa_o,
@@ -342,6 +346,8 @@ datapath #(
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .dtlb_comm_o(dtlb_comm_o),
+    .debug_intel_i(debug_intel_i),
+    .debug_intel_o(debug_intel_o),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );

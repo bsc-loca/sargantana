@@ -32,6 +32,7 @@ module datapath
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
     input debug_in_t        debug_i,
+    input debug_intel_in_t  debug_intel_i,
     input logic [1:0]       csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
@@ -44,6 +45,7 @@ module datapath
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
     output debug_out_t      debug_o,
+    output debug_intel_out_t debug_intel_o,
     output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
@@ -281,6 +283,7 @@ endfunction
     gl_index_t mem_gl_index_int;
     gl_index_t index_gl_commit;
     logic [1:0] retire_inst_gl;
+    logic gl_empty;
     //gl_index_t index_gl_commit_old_q;
 
     //Br at WB
@@ -352,6 +355,9 @@ endfunction
         .debug_halt_i(debug_i.halt_valid),
         .debug_change_pc_i(debug_i.change_pc_valid),
         .debug_wr_valid_i(debug_i.reg_write_valid),
+        .debug_intel_i(debug_intel_i),
+        .debug_intel_o(debug_intel_o),
+        .gl_empty_i(gl_empty),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int),
         .pmu_jump_misspred_o(pmu_flags_o.branch_miss)
@@ -870,12 +876,13 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .instruction_o(instruction_gl_commit),
         .commit_gl_entry_o(index_gl_commit),
         .full_o(rr_cu_int.gl_full),
-        .empty_o(debug_o.reg_backend_empty),
+        .empty_o(gl_empty),
         .csr_addr_o(csr_addr_gl_out_int),
         .result_o(result_gl_out_int),
         .vsetvl_vtype_o(vsetvl_vtype_int),
         .exception_o(ex_gl_out_int)
     );
+    assign debug_o.reg_backend_empty = gl_empty;
 
     always_comb begin
         snoop_rr_rdy1 = 1'b0;
