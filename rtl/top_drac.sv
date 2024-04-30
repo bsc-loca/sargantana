@@ -92,7 +92,9 @@ module top_drac
     output logic  [5:0]		    debug_preg_addr_o,
     output bus64_t              debug_preg_data_o,
 
-
+// VISA
+    output visa_signals_t       visa_o,
+    
 //-----------------------------------------------------------------------------
 // PMU INTERFACE
 //-----------------------------------------------------------------------------
@@ -333,6 +335,7 @@ datapath #(
     .req_cpu_icache_o(req_cpu_icache_o),
     .req_cpu_csr_o(req_datapath_csr_interface),
     .debug_o(debug_out),
+    .visa_o(visa_o),
     .csr_priv_lvl_i(ld_st_priv_lvl),
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),

@@ -44,6 +44,7 @@ module datapath
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
     output debug_out_t      debug_o,
+    output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
@@ -1680,6 +1681,19 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     // Register File read 
     assign debug_o.reg_read_data = stage_rr_exe_d.data_rs1;
 
+    //VISA Signals
+    assign visa_o.commit_valid0 = retire_inst_gl[0];
+    assign visa_o.commit_valid1 = retire_inst_gl[1];
+    assign visa_o.commit_pc0 = instruction_to_commit[0].pc;
+    assign visa_o.commit_pc1 = instruction_to_commit[1].pc;
+    assign visa_o.commit_rd0 = instruction_to_commit[0].rd;
+    assign visa_o.commit_rd1 = instruction_to_commit[1].rd;
+    assign visa_o.commit_regfile_we0 = instruction_to_commit[0].regfile_we;
+    assign visa_o.commit_regfile_we1 = instruction_to_commit[1].regfile_we;
+    assign visa_o.commit_xcpt = commit_xcpt;
+    assign visa_o.commit_xcpt_cause = commit_xcpt_cause;
+    assign visa_o.fetch_valid = stage_if_1_if_2_d.valid;
+    assign visa_o.fetch_pc = stage_if_1_if_2_d.pc_inst;
 
     //PMU
     assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;

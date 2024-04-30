@@ -1256,6 +1256,21 @@ typedef struct packed {
     logic dcache_miss_write_req;
 } pmu_interface_t;
 
+typedef struct packed {
+    logic commit_valid0;
+    logic commit_valid1;
+    addrPC_t commit_pc0;
+    addrPC_t commit_pc1;
+    reg_t commit_rd0;
+    reg_t commit_rd1;
+    logic commit_regfile_we0;
+    logic commit_regfile_we1;
+    logic commit_xcpt;
+    bus64_t commit_xcpt_cause;
+    addrPC_t fetch_pc;
+    logic fetch_valid;
+} visa_signals_t;
+
 `ifdef SIM_COMMIT_LOG
 typedef struct packed {
     longint unsigned pc;
