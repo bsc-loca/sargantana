@@ -112,8 +112,10 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSLT)  || 
              (instr.instr.instr_type == VMSLEU) || 
              (instr.instr.instr_type == VMSLE)  ||
-             (instr.instr.instr_type == VMSGTU) ||
-             (instr.instr.instr_type == VMSGT)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VMSGTU) ||             
+             (instr.instr.instr_type == VMSGT)  ||
+             (instr.instr.instr_type == VMADC)  ||
+             (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
 endfunction
 
 function bus64_t min_unsigned (input bus64_t a, b);
