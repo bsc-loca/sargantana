@@ -19,7 +19,7 @@ module vredtree (
     input  instr_type_t instr_type_i,       // Instruction type
     input  sew_t sew_i,                     // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
     input  logic [VMAXELEM_LOG:0] vl_i,     // Current vector lenght in elements
-    input  bus64_t data_fu_i,               // Result of vs1[0] and vs2[0] in data_fu[0]
+    input  bus64_t data_1st_i,              // 64-bit LSB from vs1
     input  bus_simd_t data_vs2_i,           // 128-bit source operand 
     input  bus_simd_t data_old_vd,
     input  bus_mask_t data_vm_i,            // Vector mask of VLEN/8 size
@@ -97,7 +97,7 @@ always_comb begin
             gen_intermediate_d[0].mask = data_vm;
             gen_intermediate_d[0].instr_type = instr_type_i;
             gen_intermediate_d[0].intermediate = data_vs2_i;
-            gen_intermediate_d[0].data_vs1 = data_fu_i;
+            gen_intermediate_d[0].data_vs1 = data_1st_i;
         end else begin
             gen_intermediate_d[i].mask = '0;
             gen_intermediate_d[i].intermediate = '0;

@@ -36,7 +36,6 @@ bus_simd_t fu_data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
-rr_exe_simd_instr_t sel_fu_out;   // Which instruction output should return the FUs
 
 function [3:0] trunc_4bits(input [31:0] val_in);
     trunc_4bits = val_in[3:0];
@@ -252,8 +251,6 @@ always_comb begin
     endcase
 end
 
-assign sel_fu_out = (is_vred(instruction_i)) ? instruction_i : instr_to_out;
-
 //The source operands are separated into an array of 64-bit wide elements, each of which
 //go into the Functional Units
 
@@ -314,7 +311,7 @@ generate
             .rstn_i          (rstn_i),
             .fu_id_i         (fu_id[gv_fu]),
             .instruction_i   (instruction_i),
-            .sel_out_instr_i (sel_fu_out),
+            .sel_out_instr_i (instr_to_out),
             .data_vs1_i      (vs1_elements[gv_fu]),
             .data_vs2_i      (vs2_elements[gv_fu]),
             .data_vm         (data_vm[gv_fu]),
@@ -326,13 +323,13 @@ endgenerate
 
 //The result of the FUs are concatenated into the result data
 always_comb begin
-    //fu_data_vd = sel_fu_out.data_old_vd; // By Default
+    //fu_data_vd = instr_to_out.data_old_vd; // By Default
     fu_data_vd = {128{1'b1}}; // By Default
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
-        if (is_vn(sel_fu_out)) begin
+        if (is_vn(instr_to_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
-        end else if ((sel_fu_out.instr.instr_type == VMADC) || (sel_fu_out.instr.instr_type == VMSBC)) begin
-            case (sel_fu_out.sew)
+        end else if ((instr_to_out.instr.instr_type == VMADC) || (instr_to_out.instr.instr_type == VMSBC)) begin
+            case (instr_to_out.sew)
                 SEW_8: begin
                     for (int j = 0; j<(DATA_SIZE/8); ++j) begin
                         fu_data_vd[(i*(DATA_SIZE/8)+j)] = vd_elements[i][j];
@@ -507,7 +504,7 @@ vredtree vredtree_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
     .vl_i          (vl_i),
-    .data_fu_i     (vd_elements[0]),
+    .data_1st_i    (instruction_i.data_vs1[63:0]),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
@@ -581,20 +578,20 @@ always_comb begin
                 end
             end
         endcase
-    end else if ((sel_fu_out.instr.instr_type == VZEXT_VF2) || (sel_fu_out.instr.instr_type == VZEXT_VF4) || (sel_fu_out.instr.instr_type == VZEXT_VF8) ||
-                (sel_fu_out.instr.instr_type == VSEXT_VF2) || (sel_fu_out.instr.instr_type == VSEXT_VF4) || (sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
-        case (sel_fu_out.sew)
+    end else if ((instr_to_out.instr.instr_type == VZEXT_VF2) || (instr_to_out.instr.instr_type == VZEXT_VF4) || (instr_to_out.instr.instr_type == VZEXT_VF8) ||
+                (instr_to_out.instr.instr_type == VSEXT_VF2) || (instr_to_out.instr.instr_type == VSEXT_VF4) || (instr_to_out.instr.instr_type == VSEXT_VF8)) begin
+        case (instr_to_out.sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
-                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                    if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
                         result_data_vd[(i*8) +: 8] = {{{4{fu_data_vd[((8*(i+1))/2)-1]}}, fu_data_vd[(i*4)+:4]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF2)) begin
                         result_data_vd[(i*8) +: 8] = {{{4{1'b0}}, fu_data_vd[(i*4)+:4]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF4)) begin
                         result_data_vd[(i*8) +: 8] = {{{6{fu_data_vd[((8*(i+1))/4)-1]}}, fu_data_vd[(i*2)+:2]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF4)) begin
                         result_data_vd[(i*8) +: 8] = {{{6{1'b0}}, fu_data_vd[(i*2)+:2]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF8)) begin
                         result_data_vd[(i*8) +: 8] = {{{7{fu_data_vd[((16*(i+1))/8)-1]}}, fu_data_vd[(i*1)+:1]}};
                     end else begin //(is_vzext8)
                         result_data_vd[(i*8) +: 8] = {{{7{1'b0}}}, fu_data_vd[(i*1)+:1]};
@@ -603,15 +600,15 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0; i<(VLEN/16); ++i) begin
-                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                    if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
                         result_data_vd[(i*16) +: 16] = {{{8{fu_data_vd[((16*(i+1))/2)-1]}}, fu_data_vd[(i*8)+:8]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF2)) begin
                         result_data_vd[(i*16) +: 16] = {{{8{1'b0}}, fu_data_vd[(i*8)+:8]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF4)) begin
                         result_data_vd[(i*16) +: 16] = {{{12{fu_data_vd[((16*(i+1))/4)-1]}}, fu_data_vd[(i*4)+:4]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF4)) begin
                         result_data_vd[(i*16) +: 16] = {{{12{1'b0}}, fu_data_vd[(i*4)+:4]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF8)) begin
                         result_data_vd[(i*16) +: 16] = {{{14{fu_data_vd[((16*(i+1))/8)-1]}}, fu_data_vd[(i*2)+:2]}};
                     end else begin //(is_vzext8)
                         result_data_vd[(i*16) +: 16] = {{{14{1'b0}}}, fu_data_vd[(i*2)+:2]};
@@ -620,15 +617,15 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0; i<(VLEN/32); ++i) begin
-                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                    if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{16{fu_data_vd[((32*(i+1))/2)-1]}}, fu_data_vd[(i*16)+:16]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF2)) begin
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{16{1'b0}}, fu_data_vd[(i*16)+:16]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF4)) begin
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{24{fu_data_vd[((32*(i+1))/4)-1]}}, fu_data_vd[(i*8)+:8]}};
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF4)) begin
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{24{1'b0}}, fu_data_vd[(i*8)+:8]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF8)) begin
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{28{fu_data_vd[((32*(i+1))/8)-1]}}, fu_data_vd[(i*4)+:4]}};
                     end else begin //(is_vzext8)
                         result_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = {{{28{1'b0}}}, fu_data_vd[(i*4)+:4]};
@@ -637,15 +634,15 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0; i<(VLEN/64); ++i) begin
-                    if ((sel_fu_out.instr.instr_type == VSEXT_VF2)) begin
+                    if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{fu_data_vd[((64*(i+1))/2)-1]}}, fu_data_vd[(i*32)+:32]}};                                     
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF2)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF2)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{32{1'b0}}, fu_data_vd[(i*32)+:32]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF4)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF4)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{fu_data_vd[((64*(i+1))/4)-1]}}, fu_data_vd[(i*16)+:16]}};                                 
-                    end else if((sel_fu_out.instr.instr_type == VZEXT_VF4)) begin
+                    end else if((instr_to_out.instr.instr_type == VZEXT_VF4)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{48{1'b0}}, fu_data_vd[(i*16)+:16]}};
-                    end else if ((sel_fu_out.instr.instr_type == VSEXT_VF8)) begin
+                    end else if ((instr_to_out.instr.instr_type == VSEXT_VF8)) begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{fu_data_vd[((64*(i+1))/8)-1]}}, fu_data_vd[(i*8)+:8]}};
                     end else begin //(is_vzext8)
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{1'b0}}}, fu_data_vd[(i*8)+:8]};
