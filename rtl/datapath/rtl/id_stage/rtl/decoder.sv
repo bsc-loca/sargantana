@@ -772,8 +772,7 @@ module decoder
                     decode_instr_int.vregfile_we = ~vl_0_i;
                     decode_instr_int.unit = UNIT_SIMD;
                     decode_instr_int.use_mask = ~decode_i.inst.vtype.vm;
-                    if ((csr_vs_i == 2'b00) || ((vill_i == 1'b1) && ((decode_i.inst.vtype.func3 != F3_OPIVI) || (decode_i.inst.vtype.func6 != F6_VMV1R))
-                                                && (decode_i.inst.vtype.func3 != F3_OPCFG))) begin
+                    if ((csr_vs_i == 2'b00) || ((vill_i == 1'b1) && (decode_i.inst.vtype.func3 != F3_OPCFG))) begin
                         xcpt_illegal_instruction_int = 1'b1;
                     end else begin
                         case (decode_i.inst.vtype.func3)
