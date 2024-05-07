@@ -349,7 +349,7 @@ typedef enum logic [5:0] {
     F6_VREDMIN   = 6'b000101,
     F6_VREDMAXU  = 6'b000110,
     F6_VREDMAX   = 6'b000111,
-    F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why??
+    F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why?? //Todo: check to delete
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
     F6_VMAND     = 6'b011001,
@@ -409,7 +409,8 @@ typedef enum logic [4:0] {
 } op_vwxunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
-    VS1_VID     = 5'b10001
+    VS1_VID     = 5'b10001,
+    VS1_VIOTA   = 5'b10000
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {

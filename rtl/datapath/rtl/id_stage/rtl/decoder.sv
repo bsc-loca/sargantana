@@ -1322,6 +1322,11 @@ module decoder
                                     F6_VMUNARY0: begin
                                         if (decode_i.inst.vtype.vs1 == VS1_VID) begin
                                             decode_instr_int.instr_type = VID;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VIOTA) begin
+                                            decode_instr_int.vregfile_we = 1'b1;
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_vs2 = 1'b1; 
+                                            decode_instr_int.instr_type = VIOTA;
                                         end else begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end

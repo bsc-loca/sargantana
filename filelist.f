@@ -46,6 +46,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vpopc.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/viota.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv

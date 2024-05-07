@@ -533,6 +533,16 @@ vredtree vredtree_inst(
     .red_data_vd_o (red_data_vd)
 );
 
+bus_simd_t data_viota_vd;
+viota viota_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs2_i    (instruction_i.data_vs2),
+    .data_old_vd   (instruction_i.data_old_vd),
+    .data_vm_i     (instruction_i.data_vm),
+    .use_mask_i    (instruction_i.instr.use_mask),
+    .data_vd_o     (data_viota_vd)
+);
 
 
 bus_simd_t result_data_vd;
@@ -541,6 +551,8 @@ bus64_t gather_index;
 always_comb begin
     if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
+    end else if (instr_to_out.instr.instr_type == VIOTA) begin
+        result_data_vd = data_viota_vd;        
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.sew)
             SEW_8: begin
