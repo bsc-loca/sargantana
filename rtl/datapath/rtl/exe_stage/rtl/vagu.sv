@@ -119,6 +119,12 @@ logic neg_stride_d, neg_stride_q;
 
 logic make_req;
 logic misalign_xcpt_int;
+logic is_vector;
+
+assign is_vector = ((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R) ||
+                    (memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R) ||
+                    (memp_instr_i.instr.instr_type == VLSE)|| (memp_instr_i.instr.instr_type == VSSE)||
+                    (memp_instr_i.instr.instr_type == VLXE)|| (memp_instr_i.instr.instr_type == VSXE)) ? 1'b1 : 1'b0;
 
 always_comb begin
     vaddr_incr = 'h0;
@@ -634,7 +640,7 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            if (memp_instr_i.instr.valid) begin
+            if ((memp_instr_i.instr.valid) && (vl_i != 'h0)) begin
                 vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
                                    (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
                                    ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
@@ -642,9 +648,13 @@ always_comb begin
                                    ((memp_instr_i.instr.instr_type == VLXE) && (mop_i      == 3'b011)                )   ? VL_INDEXED :
                                    ((memp_instr_i.instr.instr_type == VSXE) && (mop_i[1:0] == 2'b11 )                )   ? VS_INDEXED :
                                     SCALAR;
+            end else if (memp_instr_i.instr.valid && is_vector) begin 
+                load_mask = 'h0;
+                memp_instr_o.data_vm = 'h0;
+                vmem_ops_state_d = SCALAR;
             end else begin
                 vmem_ops_state_d = SCALAR;
-            end 
+            end
             vstore_buffer_d = vstore_data_i;
             masked_op_d = masked_op_i;
             stride_d = (stride_i[63]) ? stride_neg : stride_i;
