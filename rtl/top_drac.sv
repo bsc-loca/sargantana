@@ -254,29 +254,32 @@ assign hpm_events[40] = pmu_flags.stall_ir;
 
 
 
-`ifdef EXTERNAL_HPM_EVENT_NUM //can be 2,4,8
+`ifdef EXTERNAL_HPM_EVENT_NUM //can be 4,6,10
 
 wire hpm_l2_access, hpm_l2_miss;
-assign {hpm_l2_access, hpm_l2_miss}= external_hpm_i[1:0];
+wire hpm_l15_access, hpm_l15_miss;
+assign {hpm_l2_access, hpm_l2_miss, hpm_l15_access, hpm_l15_miss}= external_hpm_i[3:0];
 
 assign hpm_events[HPM_NUM_EVENTS+1] =  hpm_l2_miss;            //41
 assign hpm_events[HPM_NUM_EVENTS+2] =  hpm_l2_access;          //42
+assign hpm_events[HPM_NUM_EVENTS+3] =  hpm_l15_miss;           //43
+assign hpm_events[HPM_NUM_EVENTS+4] =  hpm_l15_access;         //44
 
 generate 
-if(HPM_EXT_NUM_EVENT == 8) begin 
+if(HPM_EXT_NUM_EVENT == 10) begin 
     logic [2:0]hpm_noc_stall, hpm_noc_flit_val;
-    assign {hpm_noc_stall, hpm_noc_flit_val}= external_hpm_i[7:2];
-    assign hpm_events[HPM_NUM_EVENTS+3] =  hpm_noc_flit_val[0]; //43
-    assign hpm_events[HPM_NUM_EVENTS+4] =  hpm_noc_flit_val[1]; //44 
-    assign hpm_events[HPM_NUM_EVENTS+5] =  hpm_noc_flit_val[2]; //45
-    assign hpm_events[HPM_NUM_EVENTS+6] =  hpm_noc_stall[0];    //46
-    assign hpm_events[HPM_NUM_EVENTS+7] =  hpm_noc_stall[1];    //47
-    assign hpm_events[HPM_NUM_EVENTS+8] =  hpm_noc_stall[2];    //48
-end else if (HPM_EXT_NUM_EVENT == 4 )begin 
+    assign {hpm_noc_stall, hpm_noc_flit_val}= external_hpm_i[9:4];
+    assign hpm_events[HPM_NUM_EVENTS+5] =  hpm_noc_flit_val[0]; //45
+    assign hpm_events[HPM_NUM_EVENTS+6] =  hpm_noc_flit_val[1]; //46 
+    assign hpm_events[HPM_NUM_EVENTS+7] =  hpm_noc_flit_val[2]; //47
+    assign hpm_events[HPM_NUM_EVENTS+8] =  hpm_noc_stall[0];    //48
+    assign hpm_events[HPM_NUM_EVENTS+9] =  hpm_noc_stall[1];    //49
+    assign hpm_events[HPM_NUM_EVENTS+10] =  hpm_noc_stall[2];    //50
+end else if (HPM_EXT_NUM_EVENT == 6 )begin 
     logic hpm_nocs_stall, hpm_nocs_flit_val;
-    assign {hpm_nocs_stall, hpm_nocs_flit_val}= external_hpm_i[3:2];
-    assign hpm_events[HPM_NUM_EVENTS+3] = hpm_nocs_flit_val;    //43
-    assign hpm_events[HPM_NUM_EVENTS+4] = hpm_nocs_stall;       //44
+    assign {hpm_nocs_stall, hpm_nocs_flit_val}= external_hpm_i[5:4];
+    assign hpm_events[HPM_NUM_EVENTS+5] = hpm_nocs_flit_val;    //45
+    assign hpm_events[HPM_NUM_EVENTS+6] = hpm_nocs_stall;       //46
 end
 endgenerate
 
