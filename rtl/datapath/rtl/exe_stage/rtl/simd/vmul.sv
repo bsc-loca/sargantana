@@ -56,13 +56,15 @@ assign sew_0 = sew_i;
 
 //wire is_mulh_0 = ((instr_type_i != VMUL) && (instr_type_i != VMADD) && (instr_type_i != VNMSUB) && (instr_type_i != VMACC) && (instr_type_i != VNMSAC));
 wire is_mulh_0 = ((instr_type_i == VMULH) || (instr_type_i == VMULHU) || (instr_type_i == VMULHSU));
-wire is_signed_0 = ((instr_type_i != VMULHU) && (instr_type_i != VWMULU));
-wire is_mixed_signed_0 = ((instr_type_i == VMULHSU) || (instr_type_i == VWMULSU));
-wire is_widened_0 = ((instr_type_i == VWMUL) || (instr_type_i == VWMULU) || (instr_type_i == VWMULSU));
+wire is_signed_0 = ((instr_type_i != VMULHU) && (instr_type_i != VWMULU) && (instr_type_i != VWMACCU));
+wire is_signed_unsigned_0 = ((instr_type_i == VMULHSU) || (instr_type_i == VWMULSU) || (instr_type_i == VWMACCUS));
+wire is_unsigned_signed_0 = ((instr_type_i == VWMACCSU));
+wire is_widened_0 = ((instr_type_i == VWMUL) || (instr_type_i == VWMULU) || (instr_type_i == VWMULSU) ||
+                     (instr_type_i == VWMACC) || (instr_type_i == VWMACCU) || (instr_type_i == VWMACCSU) || (instr_type_i == VWMACCUS));
 wire is_vmadd_0 = ((instr_type_i == VMADD) || (instr_type_i == VNMSUB) || (instr_type_i == VMACC) || (instr_type_i == VNMSAC));
 
-wire src1_signed_0 = (is_signed_0 ^ is_mixed_signed_0);
-wire src2_signed_0 = (is_signed_0);
+wire src1_signed_0 = (is_signed_0 ^ is_signed_unsigned_0);
+wire src2_signed_0 = (is_signed_0 ^ is_unsigned_signed_0);
 
 logic [7:0] negative_results_0;
 

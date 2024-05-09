@@ -1417,6 +1417,39 @@ module decoder
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
                                     end
+                                    F6_VWMACC: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_vs1 = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACC;                                        
+                                        end                                    
+                                    end
+                                    F6_VWMACCU: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_vs1 = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                           decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACCU;                                        
+                                        end                                    
+                                    end
+                                    F6_VWMACCSU: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_vs1 = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACCSU;                                        
+                                        end
+                                    end                                    
                                     F6_VWMULU: begin
                                         if (!v_2sew_en_i) begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -1500,6 +1533,42 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VNMSAC;
+                                    end
+                                    F6_VWMACC: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACC;                                        
+                                        end                                    
+                                    end
+                                    F6_VWMACCU: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACCU;                                        
+                                        end                                    
+                                    end
+                                    F6_VWMACCSU: begin
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACCSU;                                        
+                                        end
+                                    end                                    
+                                    F6_VWMACCUS: begin
+                                         if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.regfile_we = 1'b0;
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWMACCUS;                                        
+                                        end                                    
                                     end
                                     F6_VWMULU: begin
                                         if (!v_2sew_en_i) begin

@@ -54,7 +54,11 @@ endfunction
 assign is_vmadd = ((instr_entry_i.instr_type == VMADD)  ||
                    (instr_entry_i.instr_type == VNMSUB) ||
                    (instr_entry_i.instr_type == VMACC)  ||
-                   (instr_entry_i.instr_type == VNMSAC)) ? 1'b1 : 1'b0;
+                   (instr_entry_i.instr_type == VNMSAC) ||
+                   (instr_entry_i.instr_type == VWMACC)  ||
+                   (instr_entry_i.instr_type == VWMACCU)  ||
+                   (instr_entry_i.instr_type == VWMACCUS)  ||
+                   (instr_entry_i.instr_type == VWMACCSU)) ? 1'b1 : 1'b0;
 
 assign is_vmul = ((instr_entry_i.instr_type == VWMUL)   ||
                 (instr_entry_i.instr_type == VWMULU)   ||

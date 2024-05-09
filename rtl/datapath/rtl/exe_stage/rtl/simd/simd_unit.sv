@@ -96,7 +96,11 @@ function logic is_vmadd(input rr_exe_simd_instr_t instr);
     is_vmadd = ((instr.instr.instr_type == VMADD)  ||
                (instr.instr.instr_type == VNMSUB) ||
                (instr.instr.instr_type == VMACC)  ||
-               (instr.instr.instr_type == VNMSAC)) ? 1'b1 : 1'b0;
+               (instr.instr.instr_type == VNMSAC) ||
+               (instr.instr.instr_type == VWMACC) ||
+               (instr.instr.instr_type == VWMACCU) ||
+               (instr.instr.instr_type == VWMACCUS) ||
+               (instr.instr.instr_type == VWMACCSU)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vw(input rr_exe_simd_instr_t instr);
@@ -110,7 +114,11 @@ function logic is_vw(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VWSUBUW)  ||
              (instr.instr.instr_type == VWMUL)    ||
              (instr.instr.instr_type == VWMULU)   ||
-             (instr.instr.instr_type == VWMULSU)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VWMULSU)  ||
+             (instr.instr.instr_type == VWMACC)   ||
+             (instr.instr.instr_type == VWMACCU)  ||
+             (instr.instr.instr_type == VWMACCSU) ||
+             (instr.instr.instr_type == VWMACCUS)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vn(input rr_exe_simd_instr_t instr);

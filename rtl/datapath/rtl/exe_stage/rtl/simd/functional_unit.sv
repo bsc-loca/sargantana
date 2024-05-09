@@ -38,6 +38,8 @@ bus64_t result_vmul;
 bus64_t data1_vaddsub_i;
 bus64_t data2_vaddsub_i;
 
+sew_t vaddsub_sew_i;
+
 bus64_t data2_vmul_i;
 
 bus64_t result_vmul_2;
@@ -57,6 +59,33 @@ always_ff@ (posedge clk_i, negedge rstn_i) begin
 end
 
 
+/* Change of SEW on vaddsub module for Vector Widening Multiply-Add
+*/
+always_comb begin
+    case (sel_out_instr_i.instr.instr_type)
+        VWMACC, VWMACCU, VWMACCUS, VWMACCSU: begin
+            case (sel_out_instr_i.sew)
+                SEW_8: begin
+                    vaddsub_sew_i = SEW_16;
+                end
+                SEW_16: begin
+                    vaddsub_sew_i = SEW_32;
+                end
+                SEW_32: begin
+                    vaddsub_sew_i = SEW_64;
+                end
+                default: begin
+                    vaddsub_sew_i = SEW_64;
+                end
+            endcase
+        end
+        default: begin
+            vaddsub_sew_i = sel_out_instr_i.sew;
+        end
+    endcase
+
+end
+
 /* Input selection for vaddsub module
  * For the instructions that use the module directly send the input
  * for multiplication + addition/subtract select the inputs from the
@@ -72,7 +101,7 @@ always_comb begin
             data1_vaddsub_i = result_vmul_2;
             data2_vaddsub_i = sel_out_instr_i.data_vs2[64*fu_id_i +: 64];
         end
-        VMACC, VNMSAC: begin
+        VMACC, VNMSAC, VWMACC, VWMACCU, VWMACCUS, VWMACCSU: begin
             data1_vaddsub_i = result_vmul_2;
             data2_vaddsub_i = sel_out_instr_i.data_old_vd[64*fu_id_i +: 64];
         end
@@ -95,7 +124,7 @@ always_comb begin
         VMADD, VNMSUB: begin
             data2_vmul_i = instruction_i.data_old_vd[64*fu_id_i +: 64];
         end
-        VMACC, VNMSAC: begin
+        VMACC, VNMSAC, VWMACC, VWMACCU, VWMACCUS, VWMACCSU: begin
             data2_vmul_i = data_vs2_i;
         end
         default: begin
@@ -106,7 +135,7 @@ end
 
 vaddsub vaddsub_inst(
     .instr_type_i  (sel_out_instr_i.instr.instr_type),
-    .sew_i         (sel_out_instr_i.sew),
+    .sew_i         (vaddsub_sew_i),
     .data_vs1_i    (data1_vaddsub_i),
     .data_vs2_i    (data2_vaddsub_i),
     .data_vm       (data_vm[7:0]),
@@ -174,6 +203,9 @@ always_comb begin
             data_vd_o = result_vmul;
         end
         VMADD, VNMSUB, VMACC, VNMSAC: begin
+            data_vd_o = result_vaddsub;
+        end
+        VWMACC, VWMACCU, VWMACCUS, VWMACCSU: begin
             data_vd_o = result_vaddsub;
         end
         VMIN, VMINU, VMAX, VMAXU, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VCNT: begin

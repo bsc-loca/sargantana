@@ -383,7 +383,11 @@ typedef enum logic [5:0] {
     F6_VWMUL     = 6'b111011,
     F6_VSLIDE1UP = 6'b001110,
     F6_VSLIDE1DOWN = 6'b001111,
-    F6_VCOMPRESS = 6'b010111
+    F6_VCOMPRESS = 6'b010111,
+    F6_VWMACCU   = 6'b111100,
+    F6_VWMACC    = 6'b111101,
+    F6_VWMACCUS  = 6'b111110,
+    F6_VWMACCSU  = 6'b111111
 } op_func6_vector_opm_t;
 
 typedef enum logic [5:0] {
