@@ -234,7 +234,7 @@ assign carry_in[4] = ((sew_i == SEW_64)) ? carry_out[3] :
                     : 1'b0;
 assign carry_in[5] = ((sew_i == SEW_16) || (sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[4] :
                      (is_subtraction) ? 1'b1 :
-                     (is_vadc || (is_vmadc && use_mask)) ? data_vm[3]:
+                     (is_vadc || (is_vmadc && use_mask)) ? data_vm[5]:
                      1'b0;
 assign carry_in[6] = ((sew_i == SEW_32) || (sew_i == SEW_64)) ? carry_out[5] :
                      (is_subtraction) ? 1'b1 :
