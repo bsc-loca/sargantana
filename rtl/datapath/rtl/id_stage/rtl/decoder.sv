@@ -1109,6 +1109,7 @@ module decoder
                                         if (imm_value != 'b0) begin // Do not allow VMV<nr>R with nr>1
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
+                                            decode_instr_int.vregfile_we = 1'b1; // Write result even if vl=0
                                             decode_instr_int.use_vs1 = 1'b0;
                                             decode_instr_int.use_vs2 = 1'b1;
                                             decode_instr_int.instr_type = VMV1R;
