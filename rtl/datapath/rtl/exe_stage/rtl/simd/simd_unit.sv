@@ -508,7 +508,11 @@ always_comb begin
             end
         endcase
     end else if (instr_to_out.instr.instr_type == VPOPC) begin
-        data_rd = data_vpopc_rd;
+        if((vl_i == 0)) begin
+            data_rd = '0;
+        end else begin
+            data_rd = data_vpopc_rd;
+        end
     end else begin
         data_rd = 64'b0;
     end
