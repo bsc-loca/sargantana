@@ -323,9 +323,7 @@ generate
                          data_vm[gv_fu] = {{62{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/32)) +: 2]};
                     end
                     SEW_64: begin
-                        //data_vm[gv_fu] = instruction_i.data_vm[63:0];
-                        data_vm[gv_fu] =  {{48{1'b0}}, instruction_i.data_vm};
-                        //data_vm[gv_fu] = {64{1'b0}};
+                        data_vm[gv_fu] =  {{48{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/64)) +: 1]};
                     end
                     default: begin
                         data_vm[gv_fu] = {64{1'b0}};
