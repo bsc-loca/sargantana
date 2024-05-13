@@ -568,7 +568,7 @@ always_comb begin
                     end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && (((velem_cnt_q + 1'b1) >= vl_q) || (mask_buffer[velem_cnt_q]));
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && (((velem_cnt_q + 1'b1) >= vl_q) || (mask_buffer[velem_cnt_q]));
             vaddr_d = vaddr_q;
             velem_incr = 1'b1;
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
