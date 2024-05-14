@@ -1187,28 +1187,24 @@ module decoder
                                         decode_instr_int.instr_type = VMAND;
                                     end
                                     F6_VMNAND: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMNAND;
                                     end
                                     F6_VMANDNOT: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMANDN;
                                     end
                                     F6_VMNOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VMNOR;
                                     end                                                                            
                                     F6_VMORNOT: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1227,7 +1223,6 @@ module decoder
                                         decode_instr_int.instr_type = VMXOR;
                                     end
                                     F6_VMXNOR: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1324,7 +1319,6 @@ module decoder
                                         if (decode_i.inst.vtype.vs1 == VS1_VID) begin
                                             decode_instr_int.instr_type = VID;
                                         end else if (decode_i.inst.vtype.vs1 == VS1_VIOTA) begin
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs2 = 1'b1; 
                                             decode_instr_int.instr_type = VIOTA;
@@ -1665,13 +1659,11 @@ module decoder
                                         decode_instr_int.instr_type = VMV_S_X;
                                     end
                                     F6_VSLIDE1UP: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         // decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VSLIDE1UP;
                                     end
                                     F6_VSLIDE1DOWN: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         // decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VSLIDE1DOWN;
