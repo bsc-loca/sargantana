@@ -352,7 +352,7 @@ typedef enum logic [8:0] {
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
-   VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE,
+   VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
    VCNT
 } instr_type_t;
@@ -366,7 +366,8 @@ typedef enum logic[CSR_CMD_SIZE-1:0] {
     CSR_CMD_READ      = 4'b0101,
     CSR_CMD_VSETVL    = 4'b0110,
     CSR_CMD_VSETVLMAX = 4'b0111,
-    CSR_CMD_WRITE     = 4'b1000
+    CSR_CMD_WRITE     = 4'b1000,
+    CSR_CMD_VLEFF     = 4'b1001
 } csr_cmd_t;                // Comands to lowrisc CSR
 
 

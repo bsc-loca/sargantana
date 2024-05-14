@@ -258,6 +258,7 @@ endfunction
     bus64_t exe_data_frs2;
     bus64_t exe_data_frs3;
     rr_exe_instr_t reg_to_exe;
+    logic [VMAXELEM_LOG:0] vleff_vl_int;
 
     // codifies if the branch was correctly predicted 
     // this signal goes from exe stage to fetch stage
@@ -1140,6 +1141,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .sew_i(sew_i),
         .vl_i(vl_i),
         .vxrm_i(vxrm_i),
+        .vleff_vl_o(vleff_vl_int),
         
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
@@ -1390,6 +1392,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .result_gl_i                (result_gl_out_int),
         .csr_addr_gl_i              (csr_addr_gl_out_int),
         .vsetvl_vtype_i             (vsetvl_vtype_int),
+        .vleff_vl_i                 (vleff_vl_int),
         .instruction_to_commit_i    (instruction_to_commit),
         .stall_exe_i                (control_int.stall_exe),
         .commit_store_or_amo_i      (commit_store_or_amo_int[0]),

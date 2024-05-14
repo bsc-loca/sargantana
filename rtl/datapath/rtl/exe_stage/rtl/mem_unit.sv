@@ -46,6 +46,7 @@ module mem_unit
 
     input logic [1:0] priv_lvl_i,
     input logic [VMAXELEM_LOG:0] vl_i,
+    output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
@@ -158,6 +159,7 @@ bus_simd_t vdata_to_wb;
 logic [VMAXELEM_LOG:0] vl_to_dcache;
 logic [VMAXELEM_LOG:0] vl_s1;
 logic [VMAXELEM_LOG:0] vl_to_wb;
+logic [VMAXELEM_LOG:0] vleff_vl_int;
 
 bus_simd_t vload_packer_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
 gl_index_t vload_packer_id_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
@@ -1037,7 +1039,7 @@ assign instruction_simd_o.gl_index        = instruction_to_wb.gl_index;
 assign instruction_simd_o.branch_taken    = 1'b0;
 assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
-assign instruction_simd_o.ex              = instruction_to_wb.ex;
+assign instruction_simd_o.ex              = ((instruction_to_wb.instr.instr_type == VLEFF) && (instruction_to_wb.velem_id != 'h0)) ? 0 : instruction_to_wb.ex;
 assign instruction_simd_o.vs_ovf          = 1'b0;
 
 `ifdef REGISTER_HPDC_OUTPUT
@@ -1045,6 +1047,21 @@ assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2
 `else
 assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s1_q) ? instruction_to_wb.ex : 'h0;
 `endif
+
+// New vl after vleff instruction, this assumes front end stall when decoding the vleff
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if(~rstn_i) begin
+        vleff_vl_int <= 'h0;
+    end else begin
+        if ((instruction_to_wb.ex.valid == 1'b1) && (instruction_to_wb.instr.instr_type == VLEFF) && (instruction_to_wb.velem_id != 'h0) && (vleff_vl_int == 'h0)) begin
+            vleff_vl_int <= {1'b0, instruction_to_wb.velem_id};
+        end else if ((instruction_to_wb.instr.valid == 1'b1) && (instruction_to_wb.velem_id == 'h0)) begin
+            vleff_vl_int <= 'h0;
+        end
+    end
+end
+
+assign vleff_vl_o = vleff_vl_int;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///// Outputs for the execution module or Dcache interface

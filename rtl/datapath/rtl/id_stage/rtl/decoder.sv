@@ -652,6 +652,12 @@ module decoder
                                                     decode_instr_int.instr_type = VLM;
                                                     xcpt_illegal_instruction_int = vill_i;
                                                 end
+                                                LUMOP_FAULT_ONLY_FIRST: begin
+                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.instr_type = VLEFF;
+                                                    decode_instr_int.stall_csr_fence = 1'b1;
+                                                    xcpt_illegal_instruction_int = vill_i;
+                                                end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end

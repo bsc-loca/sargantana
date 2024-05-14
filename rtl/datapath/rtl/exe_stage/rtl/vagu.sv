@@ -643,7 +643,7 @@ always_comb begin
             if ((memp_instr_i.instr.valid) && (vl_i != 'h0)) begin
                 vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
                                    (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
-                                   ((memp_instr_i.instr.instr_type == VLSE) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
+                                   (((memp_instr_i.instr.instr_type == VLSE)|| (memp_instr_i.instr.instr_type == VLEFF)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
                                    (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSSE)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0))) ? VS_STRIDED :
                                    ((memp_instr_i.instr.instr_type == VLXE) && (mop_i      == 3'b011)                )   ? VL_INDEXED :
                                    ((memp_instr_i.instr.instr_type == VSXE) && (mop_i[1:0] == 2'b11 )                )   ? VS_INDEXED :
@@ -667,10 +667,10 @@ always_comb begin
             vsew_d = vsew_i;
             acum_velem_incr_d = 'h0;
             velem_incr = '1;
-            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && ~|(stride_i[5:0] & (stride_i[5:0] - 1'b1))) begin
+            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && ~|(stride_i[5:0] & (stride_i[5:0] - 1'b1)) && (memp_instr_i.instr.instr_type != VLEFF)) begin
                 group_d = 1'b1;
                 group_neg_d = 1'b0;
-            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && ~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1))) begin
+            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && ~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1)) && (memp_instr_i.instr.instr_type != VLEFF)) begin
                 group_d = 1'b0;
                 group_neg_d = 1'b1;
             end else begin

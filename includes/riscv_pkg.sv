@@ -439,7 +439,8 @@ typedef enum logic [1:0] {
 typedef enum logic [4:0] {
     LUMOP_UNIT_STRIDE       = 5'b00000,
     LUMOP_UNIT_STRIDE_WREG  = 5'b01000,
-    LUMOP_MASK              = 5'b01011
+    LUMOP_MASK              = 5'b01011,
+    LUMOP_FAULT_ONLY_FIRST  = 5'b10000
 } lumop_t;
 
 typedef enum logic [4:0] {
