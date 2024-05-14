@@ -143,7 +143,15 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSGTU) ||             
              (instr.instr.instr_type == VMSGT)  ||
              (instr.instr.instr_type == VMADC)  ||
-             (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VMSBC)  ||
+             (instr.instr.instr_type == VMAND)  ||
+             (instr.instr.instr_type == VMNAND)  ||
+             (instr.instr.instr_type == VMANDN)  ||
+             (instr.instr.instr_type == VMXOR)  ||
+             (instr.instr.instr_type == VMOR)  ||
+             (instr.instr.instr_type == VMNOR)  ||
+             (instr.instr.instr_type == VMORN)  ||
+             (instr.instr.instr_type == VMXNOR)) ? 1'b1 : 1'b0;
 endfunction
 
 function bus64_t min_unsigned (input bus64_t a, b);
