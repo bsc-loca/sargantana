@@ -28,6 +28,7 @@
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input sew_t                         sew_i,                  // SEW from vl CSR
     input logic [VMAXELEM_LOG:0]        vl_i,
+    input vxrm_t                        vxrm_i,
 
     input logic [1:0]                   commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
@@ -314,6 +315,7 @@ simd_unit simd_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .vl_i           (vl_i),
+    .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)

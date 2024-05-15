@@ -21,6 +21,7 @@ module functional_unit
     input fu_id_t               fu_id_i,         // Functional Unit's ID
     input rr_exe_simd_instr_t   instruction_i,   // Instruction input
     input rr_exe_simd_instr_t   sel_out_instr_i, // Instruction to select the output result
+    input vxrm_t                vxrm_i,          // Vector Fixed-Point Rounding Mode
     input bus64_t               data_vs1_i,      // 64-bit source operand 1
     input bus64_t               data_vs2_i,      // 64-bit source operand 2
     input bus64_t               data_vm,         // 64-bit mask operands
@@ -30,7 +31,7 @@ module functional_unit
 
 bus64_t result_vaddsub;
 bus64_t result_vwaddsub;
-bus64_t result_vsaddsub;
+bus64_t result_vsaaddsub;
 bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
@@ -152,12 +153,13 @@ vwaddsub vwaddsub_inst(
     .data_vd_o     (result_vwaddsub)
 );
 
-vsaddsub vsaddsub_inst(
+vsaaddsub vsaaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.sew),
+    .vxrm_i        (vxrm_i),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
-    .data_vd_o     (result_vsaddsub),
+    .data_vd_o     (result_vsaaddsub),
     .sat_ovf_o     (sat_ovf_o)
 );
 vcomp vcomp_inst(
@@ -194,7 +196,10 @@ always_comb begin
             data_vd_o = result_vaddsub;
         end
         VSADDU, VSADD, VSSUBU, VSSUB: begin
-            data_vd_o = result_vsaddsub;
+            data_vd_o = result_vsaaddsub;
+        end
+        VAADDU, VAADD, VASUBU, VASUB: begin
+            data_vd_o = result_vsaaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
             data_vd_o = result_vwaddsub;

@@ -20,6 +20,7 @@
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
     input logic [VMAXELEM_LOG:0]  vl_i,                   // Current vector lenght in elements
+    input vxrm_t                  vxrm_i,                 // Vector Fixed-Point Rounding Mode
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o      // Out instruction
@@ -351,6 +352,7 @@ generate
             .fu_id_i         (fu_id[gv_fu]),
             .instruction_i   (instruction_i),
             .sel_out_instr_i (instr_to_out),
+            .vxrm_i          (vxrm_i),
             .data_vs1_i      (vs1_elements[gv_fu]),
             .data_vs2_i      (vs2_elements[gv_fu]),
             .data_vm         (data_vm[gv_fu]),

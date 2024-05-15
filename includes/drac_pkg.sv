@@ -219,6 +219,13 @@ typedef enum logic[1:0] {
     SEW_64 = 2'b11
 } sew_t;
 
+typedef enum logic[1:0] {
+    RNU_V = 2'b00,
+    RNE_V = 2'b01,
+    RDN_V = 2'b10,
+    ROD_V = 2'b11
+} vxrm_t;
+
 typedef struct packed {
     logic is_branch;                    // Was predicted to be branch
     branch_pred_decision_t decision;    // Taken or not taken
@@ -332,7 +339,7 @@ typedef enum logic [8:0] {
    VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
    // Vectorial Instructions
    VADD, VSUB, VRSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VSADD, VSADDU, VSSUB, VSSUBU, VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW, VSLL, VSRA, VSRL, VNSRL, VNSRA, VMERGE, VMV, VMV1R, VEXT, VMV_X_S, VMV_S_X, VMUL, VMULH, VMULHU, VMULHSU,
-   VMADD, VNMSUB, VMACC, VNMSAC, VADC, VMADC, VSBC, VMSBC, VWMUL, VWMULU, VWMULSU, VWMACC, VWMACCU, VWMACCUS, VWMACCSU,
+   VMADD, VNMSUB, VMACC, VNMSAC, VADC, VMADC, VSBC, VMSBC, VWMUL, VWMULU, VWMULSU, VWMACC, VWMACCU, VWMACCUS, VWMACCSU, VAADD, VAADDU, VASUB, VASUBU,
    //Vector Integer Extension
    VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8,
    // Vector Mask Instructions

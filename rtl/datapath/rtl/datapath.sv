@@ -39,6 +39,7 @@ module datapath
     input logic [VMAXELEM_LOG:0] vl_i,
     input logic             vnarrow_wide_en_i,
     input logic             vill_i,
+    input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
     output req_cpu_dcache_t req_cpu_dcache_o, 
@@ -1138,6 +1139,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .from_rr_i(reg_to_exe),
         .sew_i(sew_i),
         .vl_i(vl_i),
+        .vxrm_i(vxrm_i),
         
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),

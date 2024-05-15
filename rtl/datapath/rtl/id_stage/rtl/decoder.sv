@@ -1503,6 +1503,30 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VCOMPRESS;
                                     end
+                                    F6_VAADDU: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VAADDU;
+                                    end
+                                    F6_VAADD: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VAADD;
+                                    end
+                                    F6_VASUBU: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VASUBU;
+                                    end
+                                    F6_VASUB: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VASUB;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1688,6 +1712,22 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         // decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VSLIDE1DOWN;
+                                    end
+                                    F6_VAADDU: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VAADDU;
+                                    end
+                                    F6_VAADD: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VAADD;
+                                    end
+                                    F6_VASUBU: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VASUBU;
+                                    end
+                                    F6_VASUB: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VASUB;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
