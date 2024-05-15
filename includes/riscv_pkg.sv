@@ -409,12 +409,16 @@ typedef enum logic [4:0] {
 
 typedef enum logic [4:0] {
     VS1_VMV_X_S = 5'b00000,
-    VS1_VPOPC   = 5'b10000
+    VS1_VPOPC   = 5'b10000,
+    VS1_VMSOF   = 5'b00010,
+    VS1_VFIRST  = 5'b10001
 } op_vwxunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
     VS1_VID     = 5'b10001,
-    VS1_VIOTA   = 5'b10000
+    VS1_VIOTA   = 5'b10000,
+    VS1_VMSBF   = 5'b00001,
+    VS1_VMSIF   = 5'b00011
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {

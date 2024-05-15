@@ -2,13 +2,8 @@
  * Project Name   : DRAC
  * File           : vaddsub.sv
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Gerard Candón Arenas
- * Email(s)       : gerard.candon@bsc.es
- * -----------------------------------------------
- * Revision History
- *  Revision   | Author    | Description
- *  0.1        | Gerard C. | 
- *  0.2        | Juan Antonio Rodriguez | Adding Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+ * Author(s)      : Juan Antonio Rodriguez
+ * Email(s)       : juan.rodriguez4@bsc.es
  * -----------------------------------------------
  */
 

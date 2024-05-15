@@ -273,11 +273,9 @@ always_comb begin
                 end
             endcase
         end
-
         VSLL, VSRA, VSRL, VNSRL, VNSRA: begin
             data_vd_o = result_vshift;
         end
-
         VID: begin
             case (sel_out_instr_i.sew)
                 SEW_8: begin

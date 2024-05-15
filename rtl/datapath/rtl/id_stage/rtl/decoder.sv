@@ -1322,6 +1322,21 @@ module decoder
                                             decode_instr_int.regfile_we = 1'b0;
                                             decode_instr_int.use_vs2 = 1'b1; 
                                             decode_instr_int.instr_type = VIOTA;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VMSBF) begin
+                                            decode_instr_int.instr_type = VMSBF;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_vs1 = 1'b0;
+                                            decode_instr_int.vregfile_we = 1'b1;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VMSIF) begin
+                                            decode_instr_int.instr_type = VMSIF;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_vs1 = 1'b0;
+                                            decode_instr_int.vregfile_we = 1'b1;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VMSOF) begin
+                                            decode_instr_int.instr_type = VMSOF;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_vs1 = 1'b0;
+                                            decode_instr_int.vregfile_we = 1'b1;
                                         end else begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
@@ -1337,6 +1352,12 @@ module decoder
                                             decode_instr_int.regfile_we = 1'b1;
                                             decode_instr_int.use_vs2 = 1'b1;
                                             decode_instr_int.instr_type = VPOPC;
+                                        end else if (decode_i.inst.vtype.vs1 == VS1_VFIRST) begin
+                                            decode_instr_int.vregfile_we = 1'b0;
+                                            decode_instr_int.regfile_we  = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.use_vs1 = 1'b0;
+                                            decode_instr_int.instr_type = VFIRST;
                                         end else begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end

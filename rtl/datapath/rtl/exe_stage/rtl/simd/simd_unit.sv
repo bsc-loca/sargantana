@@ -69,7 +69,8 @@ function logic not_masked_output(input rr_exe_simd_instr_t instr);
     not_masked_output = ((instr.instr.instr_type == VADC) ||
                          (instr.instr.instr_type == VSBC) ||
                          (instr.instr.instr_type == VMADC) ||
-                         (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
+                         (instr.instr.instr_type == VMSBC) ||
+                         (instr.instr.instr_type == VFIRST)) ? 1'b1 : 1'b0;
 endfunction
 function logic is_vred(input rr_exe_simd_instr_t instr);
     is_vred = ((instr.instr.instr_type == VREDSUM)   ||
@@ -142,8 +143,6 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSLE)  ||
              (instr.instr.instr_type == VMSGTU) ||             
              (instr.instr.instr_type == VMSGT)  ||
-             (instr.instr.instr_type == VMADC)  ||
-             (instr.instr.instr_type == VMSBC)  ||
              (instr.instr.instr_type == VMAND)  ||
              (instr.instr.instr_type == VMNAND)  ||
              (instr.instr.instr_type == VMANDN)  ||
@@ -151,7 +150,12 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMOR)  ||
              (instr.instr.instr_type == VMNOR)  ||
              (instr.instr.instr_type == VMORN)  ||
-             (instr.instr.instr_type == VMXNOR)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VMXNOR) ||
+             (instr.instr.instr_type == VMSBF)  ||
+             (instr.instr.instr_type == VMSIF)  ||
+             (instr.instr.instr_type == VMSOF)  ||
+             (instr.instr.instr_type == VMADC)  ||             
+             (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
 endfunction
 
 function bus64_t min_unsigned (input bus64_t a, b);
@@ -403,6 +407,16 @@ vpopc vpopc_inst(
     .data_vd_o     (data_vpopc_rd)
 );
 
+bus64_t result_vfirst;
+vfirst vfirst_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs2_i    (instruction_i.data_vs2),
+    .data_vm       (instruction_i.data_vm),
+    .use_mask      (instruction_i.instr.use_mask),
+    .data_rd_o     (result_vfirst)
+);
+
 bus64_t ext_element;
 //Compute the result of operations that don't operate on vector element
 //granularity, and produce a scalar result
@@ -519,6 +533,10 @@ always_comb begin
         end else begin
             data_rd = data_vpopc_rd;
         end
+        data_rd = data_vpopc_rd;
+    end else if (instr_to_out.instr.instr_type == VFIRST) begin
+        // VFIRST directly returns a scalar value
+        data_rd = result_vfirst;
     end else begin
         data_rd = 64'b0;
     end
@@ -561,6 +579,15 @@ viota viota_inst(
     .use_mask_i    (instruction_i.instr.use_mask),
     .data_vd_o     (data_viota_vd)
 );
+bus64_t result_vmsbf;
+vmsb_i_o_f vmsbf_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.sew),
+    .data_vs2_i    (instruction_i.data_vs2),
+    .data_vm       (instruction_i.data_vm),
+    .use_mask      (instruction_i.instr.use_mask),
+    .data_vd_o     (result_vmsbf)
+);
 
 
 bus_simd_t result_data_vd;
@@ -602,6 +629,10 @@ always_comb begin
                  (instr_to_out.instr.instr_type == VMXOR) || (instr_to_out.instr.instr_type == VMXNOR)) begin
         result_data_vd = '1;
         result_data_vd[63:0] = fu_data_vd[63:0]; // Works with VLEN up to 512, higher than that requires concatenation of results from FU
+    end else if ((instr_to_out.instr.instr_type == VMSBF) || (instr_to_out.instr.instr_type == VMSIF) ||
+                 (instr_to_out.instr.instr_type == VMSOF)) begin
+        result_data_vd = '1;
+        result_data_vd[63:0] = result_vmsbf[63:0];   
     end else if ((instr_to_out.instr.instr_type == VMSEQ)  || (instr_to_out.instr.instr_type == VMSNE) ||
                  (instr_to_out.instr.instr_type == VMSLTU) || (instr_to_out.instr.instr_type == VMSLT) || 
                  (instr_to_out.instr.instr_type == VMSLEU) || (instr_to_out.instr.instr_type == VMSLE) ||
