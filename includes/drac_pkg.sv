@@ -979,6 +979,8 @@ typedef struct packed {
     logic [1:0] csr_retire;
     // exception cause
     bus64_t     csr_xcpt_cause;
+    // exception origin
+    bus64_t     csr_xcpt_origin;
     // xcpt pc 
     bus64_t     csr_pc;
     logic [4:0] fp_status;       // FP status of the executed instruction

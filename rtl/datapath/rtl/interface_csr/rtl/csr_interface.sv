@@ -149,7 +149,7 @@ assign req_cpu_csr_o.csr_rw_addr = (csr_ena_int) ? csr_addr_int : {CSR_ADDR_SIZE
 // if csr not enabled send command NOP
 assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
 // if csr not enabled send the interesting addr that you are accesing, exception help
-assign req_cpu_csr_o.csr_rw_data = (csr_ena_int) ? csr_rw_data_int : (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
+assign req_cpu_csr_o.csr_rw_data = csr_rw_data_int;
 
 assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
 
@@ -183,6 +183,7 @@ end
 assign req_cpu_csr_o.csr_vxsat = ((retire_inst_o[0] & instruction_to_commit_i[0].vs_ovf) | (retire_inst_o[1] & instruction_to_commit_i[1].vs_ovf));  
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
+assign req_cpu_csr_o.csr_xcpt_origin = (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
 assign req_cpu_csr_o.csr_pc = instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;

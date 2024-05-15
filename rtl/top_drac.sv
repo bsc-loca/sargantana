@@ -375,6 +375,7 @@ csr_bsc #(
 
     .ex_i(req_datapath_csr_interface.csr_exception),                       // exception produced in the core
     .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                 //cause of the exception
+    .ex_origin_i(req_datapath_csr_interface.csr_xcpt_origin),                //origin of the exception
     .pc_i(req_datapath_csr_interface.csr_pc),                       //pc were the exception is produced
 
     .retire_i(req_datapath_csr_interface.csr_retire),                   // shows if a instruction is retired from the core.
