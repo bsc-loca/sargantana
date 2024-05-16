@@ -315,6 +315,8 @@ assign sew = sew_t'(vpu_csr[38:37]);            //SEW extracted from VPU-CSR
 assign vl = vpu_csr[14 +: (VMAXELEM_LOG+1)];    //Vector Length extracted from VPU-CSR
 assign vnarrow_wide_en = vpu_csr[13];           //Enable vector instructions that use SEW*2
 assign vill = vpu_csr[42];                      //Illegal configuration of vtype
+assign vxrm = vxrm_t'(vpu_csr[30:29]);          //Vector Fixed-Point rounding mode
+
 
 datapath #(
     .DracCfg(DracCfg)
@@ -358,6 +360,7 @@ datapath #(
 // that the CSR are not blocked. In the implementation, since we only have one 
 // inorder core any access to the CSR/PCR will be available. In multicore
 // scenarios or higher performance cores you may need csr_replay.
+
 
 csr_bsc #(
     .PPN_WIDTH(drac_pkg::PPN_SIZE)
