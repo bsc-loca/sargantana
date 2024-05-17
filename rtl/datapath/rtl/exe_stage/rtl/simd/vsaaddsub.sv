@@ -179,13 +179,13 @@ always_comb begin
             for (int i = 0; i < 4; i++) begin
                 case (vxrm_i)
                     RNU_V:
-                        to_add[i] = results[2*(i + 1) - 1][0];
+                        to_add[i] = results[2*i][0];
                     RNE_V:
-                        to_add[i] = results[2*(i + 1) - 1][0] & results[2*(i + 1) - 1][1]; // Due to be a shift of 1 the part of v[d-2:0] does not make sense because it would be v[-1:0]
+                        to_add[i] = results[2*i][0] & results[2*i][1]; // Due to be a shift of 1 the part of v[d-2:0] does not make sense because it would be v[-1:0]
                     RDN_V:
                         to_add[i] = 1'b0;
                     ROD_V:
-                        to_add[i] = ~results[2*(i + 1) - 1][1] & results[2*(i + 1) - 1][0]; // results[0] is the same as results[d-1:0] != 0
+                        to_add[i] = ~results[2*i][1] & results[2*i][0]; // results[0] is the same as results[d-1:0] != 0
                     default:
                         to_add[i] = 1'b0;
                 endcase
@@ -213,13 +213,13 @@ always_comb begin
             for (int i = 0; i < 2; i++) begin
                 case (vxrm_i)
                     RNU_V:
-                        to_add[i] = results[4*(i + 1) - 1][0];
+                        to_add[i] = results[4*i][0];
                     RNE_V:
-                        to_add[i] = results[4*(i + 1) - 1][0] & results[4*(i + 1) - 1][1]; // Due to be a shift of 1 the part of v[d-2:0] does not make sense because it would be v[-1:0]
+                        to_add[i] = results[4*i][0] & results[4*i][1]; // Due to be a shift of 1 the part of v[d-2:0] does not make sense because it would be v[-1:0]
                     RDN_V:
                         to_add[i] = 1'b0;
                     ROD_V:
-                        to_add[i] = ~results[4*(i + 1) - 1][1] & results[4*(i + 1) - 1][0]; // results[0] is the same as results[d-1:0] != 0
+                        to_add[i] = ~results[4*i][1] & results[4*i][0]; // results[0] is the same as results[d-1:0] != 0
                     default:
                         to_add[i] = 1'b0;
                 endcase
