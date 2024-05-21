@@ -667,10 +667,10 @@ always_comb begin
             vsew_d = vsew_i;
             acum_velem_incr_d = 'h0;
             velem_incr = '1;
-            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && ~|(stride_i[5:0] & (stride_i[5:0] - 1'b1)) && (memp_instr_i.instr.instr_type != VLEFF)) begin
+            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && (~|(stride_i[5:0] & (stride_i[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
                 group_d = 1'b1;
                 group_neg_d = 1'b0;
-            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && ~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1)) && (memp_instr_i.instr.instr_type != VLEFF)) begin
+            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && (~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
                 group_d = 1'b0;
                 group_neg_d = 1'b1;
             end else begin

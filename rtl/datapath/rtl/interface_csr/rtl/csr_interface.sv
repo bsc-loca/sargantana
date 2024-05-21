@@ -22,7 +22,7 @@ module csr_interface
     input  bus64_t          result_gl_i,
     input  reg_csr_addr_t   csr_addr_gl_i,
     input  reg_csr_addr_t   vsetvl_vtype_i,
-    input  [VMAXELEM_LOG:0] vleff_vl_i,
+    input  logic [VMAXELEM_LOG:0] vleff_vl_i,
     input  gl_instruction_t [1:0] instruction_to_commit_i,  // Instruction to be Committed
     input  logic            stall_exe_i,              // Exe Stage is Stalled
     input  logic            commit_store_or_amo_i,    // The Commit Instruction is AMO or STORE

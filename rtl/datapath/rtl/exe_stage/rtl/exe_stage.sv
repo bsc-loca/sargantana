@@ -132,7 +132,7 @@ logic [2:0] vagu_mop;
 logic [VLEN+VMAXELEM-1:0] vagu_mask;
 logic vagu_store_data_valid;
 logic [VMAXELEM_LOG:0] vagu_vl;
-logic vstore_unit_stride;
+logic vmem_unit_stride;
 bus64_t vagu_stride;
 
 // Bypasses
@@ -145,11 +145,12 @@ bus64_t vagu_stride;
     end
 `endif
 
-assign vstore_unit_stride = ((from_rr_i.instr.instr_type == VSE) || (from_rr_i.instr.instr_type == VSM) || (from_rr_i.instr.instr_type == VS1R)) ? 1'b1 : 1'b0;
+assign vmem_unit_stride = ((from_rr_i.instr.instr_type == VSE) || (from_rr_i.instr.instr_type == VSM) || (from_rr_i.instr.instr_type == VS1R) ||
+                           (from_rr_i.instr.instr_type == VLEFF)) ? 1'b1 : 1'b0;
 
 // Select rs2 from imm to avoid bypasses
 assign rs1_data_def = from_rr_i.instr.use_pc ? from_rr_i.instr.pc : from_rr_i.data_rs1;
-assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : (vstore_unit_stride) ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
+assign rs2_data_def = from_rr_i.instr.use_imm ? from_rr_i.instr.imm : from_rr_i.data_rs2;
 
 score_board_scalar score_board_scalar_inst(
     .clk_i            (clk_i),
@@ -200,7 +201,7 @@ always_comb begin
     arith_instr.instr               = from_rr_i.instr;
 
     mem_instr.data_rs1            = from_rr_i.data_rs1;
-    mem_instr.data_rs2            = (vstore_unit_stride) ? from_rr_i.data_vs2 : from_rr_i.data_rs2;
+    mem_instr.data_rs2            = from_rr_i.data_rs2;
     mem_instr.data_old_vd         = from_rr_i.data_old_vd;
     mem_instr.data_vm             = from_rr_i.data_vm;
     mem_instr.sew                 = sew_i;
@@ -364,7 +365,7 @@ always_comb begin
             end
         end
     endcase
-    if (vstore_unit_stride) begin
+    if (vmem_unit_stride) begin
         case (mem_instr.instr.mem_size)
             4'b0000: vagu_stride = 'h1;
             4'b0101: vagu_stride = 'h2;
