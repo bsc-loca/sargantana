@@ -50,7 +50,6 @@ function [3:0] trunc_4bits_vl_i(input [VMAXELEM_LOG + 1:0] val_in);
     trunc_4bits_vl_i = val_in[3:0];
 endfunction
 
-// Forood: start from here to fix the linting
 function [2:0] trunc_3bits(input [VMAXELEM_LOG + 1:0] val_in);
     trunc_3bits = val_in[2:0];
 endfunction
@@ -443,7 +442,6 @@ always_comb begin
         endcase
     end 
 
-    //Forood: should I disable this instruction or not?
     
     // else if (instr_to_out.instr.instr_type == VEXT) begin
     //     //Extract element specified by rs1
@@ -737,8 +735,6 @@ always_comb begin
     end 
     else if (instr_to_out.instr.instr_type == VSLIDEUP) begin
         result_data_vd = instr_to_out.data_old_vd;
-        // Forood: I dont know which one must be used to store the 
-        // Code at the momment temporary result so I'm just following Narcis's Implememntation
         shift_amount_in_vslide = 0;
         if(instr_to_out.instr.is_opvi) begin
             shift_amount_in_vslide = instruction_i.instr.imm;
@@ -751,23 +747,12 @@ always_comb begin
         case (instr_to_out.sew)
             SEW_8: begin
                 if(shift_amount_in_vslide < (VLEN/8)) begin
-                    // for (int i = 0; i < (VLEN/8); ++i) begin
-                    //     if(i == shift_amount_in_vslide) begin
-                    //         for (int j = ((VLEN/8) - 1); ((j >= 0) && ((j - i) >= 0)); --j )  begin
-                    //             result_data_vd[(j - i) * 8 +: 8] = instruction_i.data_vs2[j * 8 +: 8];
-                    //         end
-                    //         break;
-                    //     end
-                    // end
-
                     for (int i = 0; i < (VLEN/8) ; ++i) begin
                         if((i + shift_amount_in_vslide) < (VLEN/8)  ) begin
                             result_data_vd[(i + shift_amount_in_vslide) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
 
                     end
-
-
                 end
             end
             SEW_16: begin
@@ -814,11 +799,8 @@ always_comb begin
         endcase
     end else if (instr_to_out.instr.instr_type == VSLIDEDOWN) begin
         result_data_vd = 0;
-        // Forood: I dont know which one must be used to store the 
-        // Code at the momment temporary result so I'm just following Narcis's Implememntation
-        // Forood: we can possibly fuse the slideup and slidedown, I implemented seperatly so that the logic would be 
-        // more undestandable and also the debug is easier in case of any problems
         shift_amount_in_vslide = 0;
+
         if(instr_to_out.instr.is_opvi) begin
             shift_amount_in_vslide = instruction_i.instr.imm;
         end
@@ -898,8 +880,7 @@ always_comb begin
     else if (instr_to_out.instr.instr_type == VSLIDE1UP) begin
         //Forood: This instruction can easily be fused with VLSIDE1DOWN
         // I coded them seperatly in order to keep things clean and understandable in case
-        // future debugging is needed.
-        result_data_vd = '1;
+        result_data_vd = '0;
         
         case (instr_to_out.sew)
             SEW_8: begin
@@ -948,8 +929,7 @@ always_comb begin
         //Forood: This instruction can easily be fused with VLSIDE1DUP
         // I coded them seperatly in order to keep things clean and understandable in case
         // future debugging is needed.
-        result_data_vd = '1;
-        
+        result_data_vd = '0;
         case (instr_to_out.sew)
             SEW_8: begin                 
                     for (int i = 1 ; i < (VLEN/8)  ; ++i) begin
@@ -1047,12 +1027,11 @@ always_comb begin
             end
         endcase
     end 
-    else if (instr_to_out.instr.instr_type == VRGATHERI16) begin
+    else if (instr_to_out.instr.instr_type == VRGATHEREI16) begin
         result_data_vd = instr_to_out.data_old_vd;
         //Forood: don't know what to do when the SEW < 16 because there are more elements than indexes, at the moment they are left
         // untouched but they may be forced to set to 0
         // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked 
-        //this is not tested at all
 
 
         case (instr_to_out.sew)
@@ -1111,7 +1090,7 @@ always_comb begin
     end
 
     else if ((instr_to_out.instr.instr_type == VRGATHER) && ((instr_to_out.instr.is_opvx) || (instr_to_out.instr.is_opvi))) begin
-        result_data_vd = instr_to_out.data_old_vd;
+        result_data_vd = 0;
 
         gather_index = 0;
         if(instr_to_out.instr.is_opvi) begin
@@ -1177,9 +1156,6 @@ always_comb begin
     else if ((instr_to_out.instr.instr_type == VCOMPRESS)) begin
         result_data_vd = instr_to_out.data_old_vd;
 
-        //Forood : I have no Idea wether I should leave the elements that are before vl but are not changed or just set them to 0
-        // in each element of the mask, should I check it to be exactly 1 or a non zero value is enough?
-        // at the momment non zero is checked.
 
         //this variable is used to track the last occupied element of vd
         gather_index = 0;
@@ -1189,8 +1165,6 @@ always_comb begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
                     if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
                         result_data_vd[(gather_index * 8) +: 8] = instruction_i.data_vs2[(i) * 8 +: 8];
-                        // I'm not sure if this line cause problems with the combinational logic,
-                        // I just hope it's fine at the momment.
                         gather_index = gather_index[62:0] + 1'b1;
                     end
                 end     
@@ -1199,8 +1173,6 @@ always_comb begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
                     if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
                         result_data_vd[(gather_index * 16) +: 16] = instruction_i.data_vs2[(i) * 16 +: 16];
-                        // I'm not sure if this line cause problems with the combinational logic,
-                        // I just hope it's fine at the momment.
                         gather_index = gather_index[62:0] + 1'b1;
                     end
                 end    
@@ -1209,8 +1181,6 @@ always_comb begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
                     if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
                         result_data_vd[(gather_index * 32) +: 32] = instruction_i.data_vs2[(i) * 32 +: 32];
-                        // I'm not sure if this line cause problems with the combinational logic,
-                        // I just hope it's fine at the momment.
                         gather_index = gather_index[62:0] + 1'b1;
                     end
                 end    
@@ -1219,8 +1189,6 @@ always_comb begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
                     if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
-                        // I'm not sure if this line cause problems with the combinational logic,
-                        // I just hope it's fine at the momment.
                         gather_index = gather_index[62:0] + 1'b1;
                     end
                 end   
@@ -1229,8 +1197,6 @@ always_comb begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
                     if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
-                        // I'm not sure if this line cause problems with the combinational logic,
-                        // I just hope it's fine at the momment.
                         gather_index = gather_index[62:0] + 1'b1;
                     end
                 end   

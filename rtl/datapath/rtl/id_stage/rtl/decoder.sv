@@ -890,7 +890,8 @@ module decoder
                                         decode_instr_int.instr_type = VRGATHER;
                                     end
                                     F6_VSLIDEUP: begin
-                                        decode_instr_int.instr_type = VRGATHERI16;
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VRGATHEREI16;
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -1012,11 +1013,7 @@ module decoder
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     F6_VSLIDEUP: begin
-                                        // decode_instr_int.vregfile_we = 1'b1;
-                                        // decode_instr_int.regfile_we = 1'b0;
-                                        // decode_instr_int.use_vs1 = 1'b1;
-                                        // decode_instr_int.use_vs2 = 1'b0;
-                                        // decode_instr_int.use_rs1 = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VSLIDEUP;
                                     end
                                     F6_VSLIDEDOWN: begin
@@ -1123,6 +1120,7 @@ module decoder
                                     end
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_vs1 = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VSLIDEUP;
                                     end
                                     F6_VSLIDEDOWN: begin
@@ -1503,7 +1501,7 @@ module decoder
                                         end
                                     end
                                     F6_VCOMPRESS: begin
-                                        // decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;

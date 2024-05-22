@@ -348,7 +348,7 @@ typedef enum logic [8:0] {
    VREDSUM, VREDAND, VREDOR, VREDXOR, VREDMAX, VREDMAXU, VREDMIN, VREDMINU,
    //Vectorial Permutation Instructions
    //Forood: to add the pre implemented instructions too
-   VSLIDEUP, VSLIDEDOWN, VSLIDE1UP, VSLIDE1DOWN, VRGATHER, VRGATHERI16, VCOMPRESS,
+   VSLIDEUP, VSLIDEDOWN, VSLIDE1UP, VSLIDE1DOWN, VRGATHER, VRGATHEREI16, VCOMPRESS,
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
