@@ -533,7 +533,6 @@ always_comb begin
         end else begin
             data_rd = data_vpopc_rd;
         end
-        data_rd = data_vpopc_rd;
     end else if (instr_to_out.instr.instr_type == VFIRST) begin
         // VFIRST directly returns a scalar value
         data_rd = result_vfirst;

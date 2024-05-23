@@ -49,6 +49,23 @@ logic is_sub;
 
 logic is_averaging;
 
+function [7:0] trunc_9_to_8_bits(input [8:0] val_in);
+    trunc_9_to_8_bits = val_in[7:0];
+endfunction
+
+function [15:0] trunc_17_to_16_bits(input [16:0] val_in);
+    trunc_17_to_16_bits = val_in[15:0];
+endfunction
+
+function [31:0] trunc_33_to_32_bits(input [32:0] val_in);
+    trunc_33_to_32_bits = val_in[31:0];
+endfunction
+
+function [63:0] trunc_65_to_64_bits(input [64:0] val_in);
+    trunc_65_to_64_bits = val_in[63:0];
+endfunction
+
+
 assign is_saddu = (instr_type_i == VSADDU);
 assign is_sadd  = (instr_type_i == VSADD);
 assign is_ssubu = (instr_type_i == VSSUBU);
@@ -164,11 +181,11 @@ always_comb begin
                     VSSUBU:
                         data_vd_o[i*8 +: 8] = (overflow[i]) ? 8'h00 : results[i];
                     VAADDU:
-                        data_vd_o[i*8 +: 8] = {carry_out[i], results[i][7:1]} + to_add[i];
+                        data_vd_o[i*8 +: 8] = trunc_9_to_8_bits({carry_out[i], results[i][7:1]} + to_add[i]);
                     VASUBU:
-                        data_vd_o[i*8 +: 8] = {~carry_out[i], results[i][7:1]} + to_add[i];
+                        data_vd_o[i*8 +: 8] = trunc_9_to_8_bits({~carry_out[i], results[i][7:1]} + to_add[i]);
                     VAADD, VASUB:
-                        data_vd_o[i*8 +: 8] = {results[i][7], results[i][7:1]} + to_add[i];
+                        data_vd_o[i*8 +: 8] = trunc_9_to_8_bits({results[i][7], results[i][7:1]} + to_add[i]);
                     default:
                         data_vd_o = 64'h0000000000000000;
                 endcase
@@ -200,11 +217,11 @@ always_comb begin
                     VSSUBU:
                         data_vd_o[16*i +: 16] = (overflow[2*(i + 1) - 1]) ? 8'h00 : results[2*i +: 2];
                     VAADDU:
-                        data_vd_o[16*i +: 16] = {carry_out[2*(i + 1) - 1], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i];
+                        data_vd_o[16*i +: 16] = trunc_17_to_16_bits({carry_out[2*(i + 1) - 1], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i]);
                     VASUBU:
-                        data_vd_o[16*i +: 16] = {~carry_out[2*(i + 1) - 1], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i];
+                        data_vd_o[16*i +: 16] = trunc_17_to_16_bits({~carry_out[2*(i + 1) - 1], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i]);
                     VAADD, VASUB:
-                        data_vd_o[16*i +: 16] = {results[2*(i + 1) - 1][7], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i];
+                        data_vd_o[16*i +: 16] = trunc_17_to_16_bits({results[2*(i + 1) - 1][7], results[2*(i + 1) - 1], results[2*(i + 1) - 2][7:1]} + to_add[i]);
                     default:
                         data_vd_o = 64'h0000000000000000;
                 endcase
@@ -233,11 +250,11 @@ always_comb begin
                     VSSUBU:
                         data_vd_o[32*i +: 32] = (overflow[4*(i + 1) - 1]) ? 32'h00000000 : results[4*i +: 4];
                     VAADDU:
-                        data_vd_o[32*i +: 32] = {carry_out[4*(i + 1) - 1], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i];
+                        data_vd_o[32*i +: 32] = trunc_33_to_32_bits({carry_out[4*(i + 1) - 1], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i]);
                     VASUBU:
-                        data_vd_o[32*i +: 32] = {~carry_out[4*(i + 1) - 1], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i];
+                        data_vd_o[32*i +: 32] = trunc_33_to_32_bits({~carry_out[4*(i + 1) - 1], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i]);
                     VAADD, VASUB:
-                        data_vd_o[32*i +: 32] = {results[4*(i + 1) - 1][7], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i];
+                        data_vd_o[32*i +: 32] = trunc_33_to_32_bits({results[4*(i + 1) - 1][7], results[4*(i + 1) - 1], results[4*(i + 1) - 2], results[4*(i + 1) - 3], results[4*(i + 1) - 4][7:1]} + to_add[i]);
                     default:
                         data_vd_o = 64'h0000000000000000;
                 endcase
@@ -265,11 +282,11 @@ always_comb begin
                 VSSUBU:
                     data_vd_o = (overflow[7]) ? 64'h0000000000000000 : results;
                 VAADDU:
-                    data_vd_o = {carry_out[7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0];
+                    data_vd_o = trunc_65_to_64_bits({carry_out[7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0]);
                 VASUBU:
-                    data_vd_o = {~carry_out[7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0];
+                    data_vd_o = trunc_65_to_64_bits({~carry_out[7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0]);
                 VAADD, VASUB:
-                    data_vd_o = {results[7][7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0];
+                    data_vd_o = trunc_65_to_64_bits({results[7][7], results[7], results[6], results[5], results[4], results[3], results[2], results[1], results[0][7:1]} + to_add[0]);
                 default:
                     data_vd_o = 64'h0000000000000000;
             endcase
