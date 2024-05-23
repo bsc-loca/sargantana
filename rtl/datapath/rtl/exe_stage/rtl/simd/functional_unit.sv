@@ -35,6 +35,8 @@ bus64_t result_vsaaddsub;
 bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
+bus64_t result_vdiv_vrem;
+
 
 bus64_t data1_vaddsub_i;
 bus64_t data2_vaddsub_i;
@@ -186,6 +188,17 @@ vmul vmul_inst(
     .data_vs2_i    (data2_vmul_i),
     .data_vd_o     (result_vmul)
 );
+
+vdiv vdiv_inst(
+    .clk_i          (clk_i),          
+    .rstn_i         (rstn_i),         
+    .instr_type_i   (instruction_i.instr.instr_type),
+    .instr_valid_i  (instruction_i.instr.valid),  
+    .sew_i          (instruction_i.instr.sew),          
+    .data_vs1_i     (data_vs1_i),     
+    .data_vs2_i     (data_vs2_i),     
+    .data_vd_o      (result_vdiv_vrem)       
+);
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8: begin
@@ -307,6 +320,9 @@ always_comb begin
         end
         VMV1R: begin
             data_vd_o = data_vs2_i;
+        end
+        VDIV, VDIVU, VREM, VREMU: begin
+            data_vd_o = result_vdiv_vrem;
         end
         default: begin
             data_vd_o = 64'b0;

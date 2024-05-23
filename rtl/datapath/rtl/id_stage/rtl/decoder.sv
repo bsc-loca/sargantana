@@ -1796,6 +1796,36 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VASUB;
                                     end
+                                    F6_VDIVU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VDIVU;
+                                    end
+                                    F6_VDIV: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VDIV;
+                                    end
+                                    F6_VREMU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREMU;
+                                    end
+                                    F6_VREM: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VREM;
+                                    end
+
+
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1822,6 +1852,26 @@ module decoder
                                     F6_VMULH: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VMULH;
+                                    end
+                                    F6_VDIVU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VDIVU;
+                                    end
+                                    F6_VDIV: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VDIV;
+                                    end
+                                    F6_VREMU: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VREMU;
+                                    end
+                                    F6_VREM: begin
+                                        decode_instr_int.vregfile_we = 1'b1;
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VREM;
                                     end
                                     F6_VMADD: begin
                                         decode_instr_int.regfile_we = 1'b0;

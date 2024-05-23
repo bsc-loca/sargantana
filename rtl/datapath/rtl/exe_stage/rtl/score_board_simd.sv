@@ -23,11 +23,14 @@
      input  sew_t            sew_i,          // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
  
      // OUTPUTS
-     output logic [3:0]      simd_exe_stages_o,
+     output logic [5:0]      simd_exe_stages_o, 
      output logic            stall_simd_o    // Stall pipeline
  );
- 
+
 localparam int MAX_STAGES = $clog2(VLEN/8) + 1;  // Number of stages based on the minimum SEW
+localparam int DIV_STAGES = 33; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
+                                // because for 1 clock cycle the number is being registered but not counted
+
 
 typedef struct packed {
     logic valid;
@@ -39,16 +42,26 @@ typedef struct packed {
 instr_pipe_t simd_pipe_d [MAX_STAGES:2][MAX_STAGES-2:0];
 instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-2:0];
 
-logic [3:0] simd_exe_stages;
+// This pipeline is taking care of in-flight DIV/REM instructions
+// it's seperated from other instructions as DIV/REM is way more time consuming
+// than other instructions.
+// The behaviour and managment of this pipeline is alike the simd_pipe
+// the differences are explained
+instr_pipe_t division_pipe_d [DIV_STAGES - 1:0];
+instr_pipe_t division_pipe_q [DIV_STAGES - 1:0];
+
+
+logic [5:0] simd_exe_stages;
 logic is_vmul;
 logic is_vred;
 logic is_vmadd;
+logic is_vdiv;
 
 logic stall_simd;
 
 // Truncate function
-function [3:0] trunc_stages(input [31:0] val_in);
-    trunc_stages = val_in[3:0];
+function [5:0] trunc_stages(input [31:0] val_in);
+    trunc_stages = val_in[5:0];
 endfunction
 
 assign is_vmadd = ((instr_entry_i.instr_type == VMADD)  ||
@@ -59,6 +72,11 @@ assign is_vmadd = ((instr_entry_i.instr_type == VMADD)  ||
                    (instr_entry_i.instr_type == VWMACCU)  ||
                    (instr_entry_i.instr_type == VWMACCUS)  ||
                    (instr_entry_i.instr_type == VWMACCSU)) ? 1'b1 : 1'b0;
+
+assign is_vdiv =  ((instr_entry_i.instr_type == VDIV )  ||
+                   (instr_entry_i.instr_type == VDIVU ) ||
+                   (instr_entry_i.instr_type == VREM )  ||
+                   (instr_entry_i.instr_type == VREMU)) ? 1'b1 : 1'b0;
 
 assign is_vmul = ((instr_entry_i.instr_type == VWMUL)   ||
                 (instr_entry_i.instr_type == VWMULU)   ||
@@ -79,10 +97,10 @@ assign is_vred = ((instr_entry_i.instr_type == VREDSUM)   ||
 
 always_comb begin
     if (is_vmul) begin
-        simd_exe_stages = (sew_i == SEW_64) ? 4'd3 : 4'd2;
+        simd_exe_stages = (sew_i == SEW_64) ? 6'd3 : 6'd2;
     end 
     else if (is_vmadd) begin
-        simd_exe_stages = (sew_i == SEW_64) ? 4'd4 : 4'd3;
+        simd_exe_stages = (sew_i == SEW_64) ? 6'd4 : 6'd3;
     end 
     else if (is_vred) begin
         case (sew_i)
@@ -91,8 +109,10 @@ always_comb begin
             SEW_64 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) - 1);
             default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
         endcase
+    end else if(is_vdiv) begin
+        simd_exe_stages = 6'd33;                     
     end else begin
-        simd_exe_stages = 4'd1;
+        simd_exe_stages = 6'd1;
     end
 end
 
@@ -105,19 +125,25 @@ end
 */
 
 always_ff @(posedge clk_i, negedge rstn_i) begin
-if (~rstn_i) begin
-    for (int i=2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < (MAX_STAGES-1); j++) begin
-            simd_pipe_q[i][j] <= '0;
+    if (~rstn_i) begin
+        for (int i=2; i <= MAX_STAGES; i++) begin
+            for (int j = 0; j < (MAX_STAGES-1); j++) begin
+                simd_pipe_q[i][j] <= '0;
+            end
+        end
+        for (int i = 0; i < DIV_STAGES; i++) begin
+            division_pipe_q[i] <= '0;
+        end
+    end else begin
+        for (int i=2; i <= MAX_STAGES; i++) begin
+            for (int j = 0; j < (MAX_STAGES-1); j++) begin
+                simd_pipe_q[i][j] <= simd_pipe_d[i][j];
+            end
+        end
+        for (int i = 0; i < DIV_STAGES; i++) begin
+                division_pipe_q[i] <= division_pipe_d[i];
         end
     end
-end else begin
-    for (int i=2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < (MAX_STAGES-1); j++) begin
-            simd_pipe_q[i][j] <= simd_pipe_d[i][j];
-        end
-    end
-end
 end
 
 
@@ -150,6 +176,30 @@ always_comb begin
             end
         end
     end
+
+
+    for (int j = 0; j < DIV_STAGES; j++) begin
+        if (j==0) begin
+            if(is_vdiv) begin
+                division_pipe_d[0].valid = ~stall_simd & ready_i & (instr_entry_i.unit == UNIT_SIMD);
+                `ifdef VERILATOR
+                division_pipe_d[0].simd_instr_type = instr_entry_i.instr_type;
+                `endif
+            end
+            else begin
+                division_pipe_d[0].valid = 1'b0;
+                `ifdef VERILATOR
+                division_pipe_d[0].simd_instr_type = ADD;
+                `endif
+            end
+        end else begin
+            division_pipe_d[j].valid = division_pipe_q[j-1].valid;
+            `ifdef VERILATOR
+            division_pipe_d[j].simd_instr_type = division_pipe_q[j-1].simd_instr_type;
+            `endif
+                 
+        end
+    end
 end
 
 // Management to stall the instruction if necessary (we cannot write back more than 1 simd instruction)
@@ -159,6 +209,20 @@ always_comb begin
         if ( ($unsigned(trunc_stages(i)) > $unsigned(simd_exe_stages)) && (simd_pipe_q[i][trunc_stages(i)-simd_exe_stages-1].valid) ) begin
             stall_simd = 1'b1;
         end
+    end
+    // unlike the normal pipeline in Division pipeline the very last index has to be
+    // checked
+    if(division_pipe_q[DIV_STAGES - simd_exe_stages].valid) begin
+        stall_simd = 1'b1;
+    end
+    // Since the DIV/REM pipeline is circular and not linear (the same hardware is used in every clock) a new
+    // DIV/REM instruction can not be issued while the previous one is still in flight, the check below does this.
+    if (is_vdiv && (!stall_simd)) begin
+        for (int i = 0; ((i < (DIV_STAGES - 1)) && (!stall_simd)); i++) begin
+            if(division_pipe_q[i].valid) begin
+                stall_simd = 1'b1;
+            end
+        end 
     end
 end
 

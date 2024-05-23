@@ -319,6 +319,7 @@ typedef enum logic [1:0]{
     SIMD_RF        // Select simd regfile
 } regfile_sel_t;
 
+
 typedef enum logic [8:0] { 
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
@@ -370,8 +371,9 @@ typedef enum logic [8:0] {
    // Vectorial Reduction Instructions
    VREDSUM, VREDAND, VREDOR, VREDXOR, VREDMAX, VREDMAXU, VREDMIN, VREDMINU,
    //Vectorial Permutation Instructions
-   //Forood: to add the pre implemented instructions too
    VSLIDEUP, VSLIDEDOWN, VSLIDE1UP, VSLIDE1DOWN, VRGATHER, VRGATHEREI16, VCOMPRESS,
+   //Vectorial Division Instructions
+   VDIVU, VDIV, VREMU, VREM,
    // Vectorial FP instructions
    VFADD, VFMV,
    // Vectorial memory operations
@@ -717,7 +719,7 @@ typedef struct packed {
 
     gl_index_t gl_index;                // Graduation List entry
 
-    logic [3:0] exe_stages;              // Number of executuion stages
+    logic [5:0] exe_stages;              // Number of executuion stages
 } rr_exe_simd_instr_t;
 
 

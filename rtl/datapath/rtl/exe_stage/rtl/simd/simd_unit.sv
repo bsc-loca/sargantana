@@ -27,6 +27,9 @@
 );
 
 localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module will have the maximum stages
+localparam int DIV_STAGES = 33; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
+                                // because for 1 clock cycle the number is being registered but not counted
+
 
 bus64_t [drac_pkg::VELEMENTS-1:0] vs1_elements;
 bus64_t [drac_pkg::VELEMENTS-1:0] vs2_elements;
@@ -38,8 +41,8 @@ bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 
-function [3:0] trunc_4bits(input [31:0] val_in);
-    trunc_4bits = val_in[3:0];
+function [5:0] trunc_6bits(input [31:0] val_in);
+    trunc_6bits = val_in[5:0];
 endfunction
 
 function [$clog2(VLEN/8) - 1 :0] trunc_vl_i_sew8(input [VMAXELEM_LOG + 1:0] val_in);
@@ -59,7 +62,7 @@ function [$clog2(VLEN/64) - 1 : 0] trunc_vl_i_sew64(input [VMAXELEM_LOG + 1:0] v
 endfunction
 
 
-logic [3:0] simd_exe_stages;
+logic [5:0] simd_exe_stages;
 
 function logic not_masked_output(input rr_exe_simd_instr_t instr);
     not_masked_output = ((instr.instr.instr_type == VADC) ||
@@ -77,6 +80,14 @@ function logic is_vred(input rr_exe_simd_instr_t instr);
                (instr.instr.instr_type == VREDMAX)    ||
                (instr.instr.instr_type == VREDMINU)    ||
                (instr.instr.instr_type == VREDMIN)) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vdiv(input rr_exe_simd_instr_t instr);
+    is_vdiv = ((instr.instr.instr_type == VDIV)    ||
+               (instr.instr.instr_type == VDIVU)   ||
+               (instr.instr.instr_type == VREM)    ||
+               (instr.instr.instr_type == VREMU)) ? 1'b1 : 1'b0;
+    
 endfunction
 
 function logic is_vmul(input rr_exe_simd_instr_t instr);
@@ -166,6 +177,18 @@ typedef struct packed {
 instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 
+
+// This pipeline is taking care of in-flight DIV/REM instructions
+// it's seperated from other instructions as DIV/REM is way more time consuming
+// than other instructions.
+// The behaviour and managment of this pipeline is alike the simd_pipe
+// the differences are explained
+// Note that there can't be more than 1 in flight DIV/REM at a time, should another
+// DIV/REM instruction be dispatched while the previous one is being processed, the
+// pipline is stalled. The stalling mechanism can be seen in sargantana/rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv
+instr_pipe_t division_pipe_d [DIV_STAGES - 1:0];
+instr_pipe_t division_pipe_q [DIV_STAGES - 1:0];
+
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
  * 2 cycle -> |0|1|
@@ -176,20 +199,22 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 
 always_comb begin
     if (is_vmul(instruction_i)) begin
-        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 4'd3 : 4'd2;
+        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd3 : 6'd2;
     end
     else if (is_vmadd(instruction_i)) begin
-        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 4'd4 : 4'd3;
+        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
         case (instruction_i.instr.sew)
-            SEW_8, SEW_16 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) + 1);
-            SEW_32 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3));
-            SEW_64 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) - 1);
-            default : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3));
+            SEW_8, SEW_16 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 1);
+            SEW_32 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
+            SEW_64 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) - 1);
+            default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
         endcase
+    end else if (is_vdiv(instruction_i)) begin
+        simd_exe_stages = 6'd33;                     
     end else begin
-        simd_exe_stages = 4'd1;
+        simd_exe_stages = 6'd1;
     end
 end
 
@@ -200,11 +225,17 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= '0;
             end
         end
+        for (int i = 0; i < DIV_STAGES; i++) begin
+            division_pipe_q[i] <= '0;
+        end
     end else begin
         for (int i = 2; i <= MAX_STAGES; i++) begin
             for (int j = 0; j < MAX_STAGES; j++) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
+        end
+        for (int i = 0; i < DIV_STAGES; i++) begin
+            division_pipe_q[i] <= division_pipe_d[i];
         end
     end
 end
@@ -235,6 +266,25 @@ always_comb begin
             end
         end
     end
+
+    
+    for (int j = 0; j < DIV_STAGES; j++) begin
+        if (j==0) begin
+            if(is_vdiv(instruction_i)) begin
+                division_pipe_d[0].valid = instruction_i.instr.valid;
+                division_pipe_d[0].simd_instr = instruction_i;
+            end
+            else begin
+                division_pipe_d[0].valid = 1'b0;
+                division_pipe_d[0].simd_instr = '0;
+            end
+        end else begin
+            division_pipe_d[j].valid = division_pipe_q[j-1].valid;
+            division_pipe_d[j].simd_instr = division_pipe_q[j-1].simd_instr;
+                 
+        end
+    end
+    
 end
 
 //Select the instruction that completes its correspondent pipeline
@@ -248,6 +298,12 @@ always_comb begin
             instr_score_board = simd_pipe_q[i][i-2].simd_instr;
             valid_found = 1'b1;
         end
+    end
+    // unlike the normal pipeline in Division pipeline the very last index has to be
+    // checked
+    if((!valid_found) && (division_pipe_q[DIV_STAGES - 1].valid)) begin
+        instr_score_board = division_pipe_q[DIV_STAGES - 1].simd_instr;
+        valid_found = 1'b1;
     end
 end
 
@@ -1007,7 +1063,7 @@ always_comb begin
         endcase
     end 
     else if ((instr_to_out.instr.instr_type == VRGATHER) && (~instr_to_out.instr.is_opvx) && (~instr_to_out.instr.is_opvi)) begin
-        result_data_vd = 0;
+        result_data_vd = '0;
         
         case (instr_to_out.instr.sew)
             SEW_8: begin

@@ -125,7 +125,7 @@ logic ready_div_32_inst;
 logic div_unit_sel;
 logic ready_div_unit;
 
-logic [3:0] simd_exe_stages;
+logic [5:0] simd_exe_stages;
 
 exception_t mem_ex_int;
 gl_index_t mem_ex_index_int;
