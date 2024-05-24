@@ -128,5 +128,11 @@ package def_pkg;
     // (e.g. 27*4K == 39bit address space).
     localparam PPN4K_WIDTH = 38;
 
+    typedef enum int {
+        SARGANTANA_CORE,
+        LKA_CORE,
+        LOX_CORE
+    }   core_type_t;
+
 endpackage
 `endif
