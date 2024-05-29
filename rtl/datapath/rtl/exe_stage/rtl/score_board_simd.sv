@@ -28,7 +28,7 @@
  );
 
 localparam int MAX_STAGES = $clog2(VLEN/8) + 1;  // Number of stages based on the minimum SEW
-localparam int DIV_STAGES = 33; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
+localparam int DIV_STAGES = 32; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
                                 // because for 1 clock cycle the number is being registered but not counted
 
 
@@ -62,6 +62,10 @@ logic stall_simd;
 // Truncate function
 function [5:0] trunc_stages(input [31:0] val_in);
     trunc_stages = val_in[5:0];
+endfunction
+
+function [4:0] trunc_5_bit(input [31:0] val_in);
+    trunc_5_bit = val_in[4:0];
 endfunction
 
 assign is_vmadd = ((instr_entry_i.instr_type == VMADD)  ||
@@ -110,7 +114,7 @@ always_comb begin
             default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
         endcase
     end else if(is_vdiv) begin
-        simd_exe_stages = 6'd33;                     
+        simd_exe_stages = 6'd32;                     
     end else begin
         simd_exe_stages = 6'd1;
     end
@@ -212,7 +216,7 @@ always_comb begin
     end
     // unlike the normal pipeline in Division pipeline the very last index has to be
     // checked
-    if(division_pipe_q[DIV_STAGES - simd_exe_stages].valid) begin
+    if(division_pipe_q[trunc_5_bit(DIV_STAGES - simd_exe_stages)].valid) begin
         stall_simd = 1'b1;
     end
     // Since the DIV/REM pipeline is circular and not linear (the same hardware is used in every clock) a new

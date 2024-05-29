@@ -27,7 +27,7 @@
 );
 
 localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module will have the maximum stages
-localparam int DIV_STAGES = 33; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
+localparam int DIV_STAGES = 32; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
                                 // because for 1 clock cycle the number is being registered but not counted
 
 
@@ -212,7 +212,7 @@ always_comb begin
             default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
         endcase
     end else if (is_vdiv(instruction_i)) begin
-        simd_exe_stages = 6'd33;                     
+        simd_exe_stages = 6'd32;                     
     end else begin
         simd_exe_stages = 6'd1;
     end
