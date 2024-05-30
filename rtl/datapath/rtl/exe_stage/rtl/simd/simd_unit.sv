@@ -139,6 +139,8 @@ function logic is_vw(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VWADDUW)  ||
              (instr.instr.instr_type == VWSUBW)   ||
              (instr.instr.instr_type == VWSUBUW)  ||
+             (instr.instr.instr_type == VWREDSUM) ||
+             (instr.instr.instr_type == VWREDSUMU)||
              (instr.instr.instr_type == VWMUL)    ||
              (instr.instr.instr_type == VWMULU)   ||
              (instr.instr.instr_type == VWMULSU)  ||
@@ -718,7 +720,7 @@ vredtree vredtree_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.instr.sew),
     .vl_i          (instruction_i.instr.vl),
-    .data_1st_i    (instruction_i.data_vs1[63:0]),
+    .data_vs1_i    (instruction_i.data_vs1[63:0]),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),

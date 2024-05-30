@@ -1133,6 +1133,14 @@ module decoder
                                     F6_VMV1R_VSMUL: begin
                                         decode_instr_int.instr_type = VSMUL;
                                     end
+                                    F6_VWREDSUMU: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWREDSUMU;
+                                    end
+                                    F6_VWREDSUM: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VWREDSUM;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1446,48 +1454,56 @@ module decoder
                                 case (decode_i.inst.vtype.func6)
                                     F6_VREDSUM: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDSUM;
                                     end
                                     F6_VREDAND: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDAND;
                                     end
                                     F6_VREDOR: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDOR;
                                     end
                                     F6_VREDXOR: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDXOR;
                                     end
                                     F6_VREDMINU: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDMINU;
                                     end
                                     F6_VREDMIN: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDMIN;
                                     end
                                     F6_VREDMAXU: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDMAXU;
                                     end
                                     F6_VREDMAX: begin
                                         decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREDMAX;

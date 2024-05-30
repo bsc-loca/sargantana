@@ -339,6 +339,8 @@ typedef enum logic [5:0] {
     F6_VNSRA        = 6'b101101,
     F6_VNCLIPU      = 6'b101110,
     F6_VNCLIP       = 6'b101111,
+    F6_VWREDSUMU    = 6'b110000,
+    F6_VWREDSUM     = 6'b110001,
     F6_VSLIDEUP     = 6'b001110,
     F6_VSLIDEDOWN   = 6'b001111,
     F6_VRGATHER     = 6'b001100
