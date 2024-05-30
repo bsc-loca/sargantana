@@ -418,11 +418,15 @@ always_comb begin
         SEW_64: begin
             if (!gen_intermediate_q[NUM_STAGES-3].mask[0]) begin
                 case (gen_intermediate_q[NUM_STAGES-1].instr_type) 
-                    VWREDSUM : red_data_vd_o = (VLEN > 128) ? {{data_old_vd[VLEN-1:128]}, (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128])}
-                                                    : (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
-                    VWREDSUMU: red_data_vd_o = (VLEN > 128) ? {{(VLEN-128){1'b0}}, gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]} 
-                                                    : (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
-                    default:   red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+                    VWREDSUM : begin
+                        red_data_vd_o = data_old_vd;
+                        red_data_vd_o[127:0] = gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128];
+                    end
+                    VWREDSUMU: begin
+                        red_data_vd_o = '0;
+                        red_data_vd_o[127:0] = gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128];
+                    end
+                    default: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
                 endcase
                 
             end else begin
@@ -437,13 +441,13 @@ always_comb begin
                     VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])) ? gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64] : gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
                     VWREDSUM: begin
                         middle_sum[63:0] = (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64]);
-                        red_data_vd_o = (VLEN > 128) ? {{data_old_vd[VLEN-1:128]}, ({{64{middle_sum[63]}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128])}
-                                                    : ({{64{middle_sum[63]}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
+                        red_data_vd_o = data_old_vd;
+                        red_data_vd_o[127:0] = ({{64{middle_sum[63]}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
                     end 
                     VWREDSUMU: begin
                         middle_sum[63:0] = (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 64]);
-                        red_data_vd_o = (VLEN > 128) ? {{data_old_vd[VLEN-1:128]}, ({{64{1'b0}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128])}
-                                                    : ({{64{1'b0}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
+                        red_data_vd_o = data_old_vd;
+                        red_data_vd_o[127:0] = ({{64{1'b0}}, middle_sum[63:0]} + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 128]);
                     end 
                 endcase
             end
