@@ -1079,6 +1079,12 @@ module decoder
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
                                     end
+                                    F6_VSSRL: begin
+                                        decode_instr_int.instr_type = VSSRL;
+                                    end
+                                    F6_VSSRA: begin
+                                        decode_instr_int.instr_type = VSSRA;
+                                    end
                                     F6_VNSRL: begin
                                         if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -1220,6 +1226,12 @@ module decoder
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
                                     end
+                                    F6_VSSRL: begin
+                                        decode_instr_int.instr_type = VSSRL;
+                                    end
+                                    F6_VSSRA: begin
+                                        decode_instr_int.instr_type = VSSRA;
+                                    end
                                     F6_VNSRL: begin
                                         if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -1322,6 +1334,12 @@ module decoder
                                     end
                                     F6_VSRA: begin
                                         decode_instr_int.instr_type = VSRA;
+                                    end
+                                    F6_VSSRL: begin
+                                        decode_instr_int.instr_type = VSSRL;
+                                    end
+                                    F6_VSSRA: begin
+                                        decode_instr_int.instr_type = VSSRA;
                                     end
                                     F6_VNSRL: begin
                                         if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin

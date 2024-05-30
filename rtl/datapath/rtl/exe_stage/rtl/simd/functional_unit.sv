@@ -174,6 +174,7 @@ vcomp vcomp_inst(
 vshift vshift_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.instr.sew),
+    .vxrm_i        (vxrm_i),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vshift)
@@ -291,7 +292,7 @@ always_comb begin
                 end
             endcase
         end
-        VSLL, VSRA, VSRL, VNSRL, VNSRA: begin
+        VSLL, VSRA, VSRL, VNSRL, VNSRA, VSSRL, VSSRA: begin
             data_vd_o = result_vshift;
         end
         VID: begin
