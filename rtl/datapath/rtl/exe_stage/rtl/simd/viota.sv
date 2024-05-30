@@ -1,14 +1,13 @@
 /* -----------------------------------------------
  * Project Name   : DRAC
- * File           : vaddsub.sv
+ * File           : viota.sv
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Gerard Candón Arenas
- * Email(s)       : gerard.candon@bsc.es
+ * Author(s)      : Juan Antonio Rodriguez
+ * Email(s)       : juan.rodriguez4@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author    | Description
- *  0.1        | Gerard C. | 
- *  0.2        | Juan Antonio Rodriguez | Adding Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+ *  0.1        | Juan Antonio Rodriguez | Adding viota inst
  * -----------------------------------------------
  */
 

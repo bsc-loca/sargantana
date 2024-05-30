@@ -405,6 +405,7 @@ vpopc vpopc_inst(
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm_i     (instruction_i.data_vm),
     .use_mask_i    (instruction_i.instr.use_mask),
+    .vl_i          (vl_i),
     .data_vd_o     (data_vpopc_rd)
 );
 
@@ -415,6 +416,7 @@ vfirst vfirst_inst(
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm       (instruction_i.data_vm),
     .use_mask      (instruction_i.instr.use_mask),
+    .vl_i          (vl_i),
     .data_rd_o     (result_vfirst)
 );
 
