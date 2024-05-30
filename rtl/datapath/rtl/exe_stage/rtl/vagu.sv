@@ -123,7 +123,7 @@ logic is_vector;
 
 assign is_vector = ((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R) ||
                     (memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R) ||
-                    (memp_instr_i.instr.instr_type == VLSE)|| (memp_instr_i.instr.instr_type == VSSE)||
+                    (memp_instr_i.instr.instr_type == VLSE)||(memp_instr_i.instr.instr_type == VLEFF)|| (memp_instr_i.instr.instr_type == VSSE) ||
                     (memp_instr_i.instr.instr_type == VLXE)|| (memp_instr_i.instr.instr_type == VSXE)) ? 1'b1 : 1'b0;
 
 always_comb begin
