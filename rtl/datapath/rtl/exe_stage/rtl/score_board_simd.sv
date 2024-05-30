@@ -28,7 +28,7 @@
  );
 
 localparam int MAX_STAGES = $clog2(VLEN/8) + 1;  // Number of stages based on the minimum SEW
-localparam int DIV_STAGES = 32; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
+localparam int DIV_STAGES = 31; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
                                 // because for 1 clock cycle the number is being registered but not counted
 
 
@@ -114,7 +114,7 @@ always_comb begin
             default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
         endcase
     end else if(is_vdiv) begin
-        simd_exe_stages = 6'd32;                     
+        simd_exe_stages = 6'd31;                     
     end else begin
         simd_exe_stages = 6'd1;
     end
@@ -222,7 +222,7 @@ always_comb begin
     // Since the DIV/REM pipeline is circular and not linear (the same hardware is used in every clock) a new
     // DIV/REM instruction can not be issued while the previous one is still in flight, the check below does this.
     if (is_vdiv && (!stall_simd)) begin
-        for (int i = 0; ((i < (DIV_STAGES - 1)) && (!stall_simd)); i++) begin
+        for (int i = 0; ((i < (DIV_STAGES)) && (!stall_simd)); i++) begin
             if(division_pipe_q[i].valid) begin
                 stall_simd = 1'b1;
             end

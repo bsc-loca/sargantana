@@ -1,5 +1,5 @@
 /* -----------------------------------------------
- * Project Name   : DRAC //Forood??
+ * Project Name   : DRAC 
  * File           : vdiv.sv
  * Organization   : Barcelona Supercomputing Center
  * Author(s)      : Alireza Foroodnia 
@@ -98,6 +98,19 @@ bus64_t remnant_q;
 bus64_t dividend_quotient_q;
 bus64_t divisor_q;
 
+// these variables hold the very first input to the
+// arithmetic part
+bus64_t first_remnant;
+bus64_t first_dividend_quotient;
+bus64_t first_divisor;
+
+// these variables feed data directly to the arithmetic 
+// part of module
+bus64_t remnant_i;
+bus64_t dividend_quotient_i;
+bus64_t divisor_i;
+
+
 
 // these variables are holding the partial or final
 // outputs of div_2bits module
@@ -110,8 +123,7 @@ bus64_t divisor_out;
 // the division by 0 and sign of the result is yet to applied to them.
 bus64_t remnants;
 bus64_t quotients;
-bus64_t last_remnant;
-bus64_t last_quotient;
+
 
 
 // these are the final results of divisions
@@ -130,6 +142,22 @@ instr_type_t          instr_type_q;
 
 sew_t                 sew_d;
 sew_t                 sew_q;
+sew_t                 sew_input; //sew_i is already taken
+
+
+assign remnant_i = ((is_division(instr_type_i) || is_remainder(instr_type_i)) && instr_valid_i) ? 
+first_remnant : remnant_q;
+
+assign dividend_quotient_i = ((is_division(instr_type_i) || is_remainder(instr_type_i)) && instr_valid_i) ? 
+first_dividend_quotient : dividend_quotient_q;
+
+assign divisor_i = ((is_division(instr_type_i) || is_remainder(instr_type_i)) && instr_valid_i) ?
+first_divisor : divisor_q;
+
+assign sew_input = ((is_division(instr_type_i) || is_remainder(instr_type_i)) && instr_valid_i) ?
+sew_i : sew_q;
+
+
 
 //--------------------------------------------------------------------------------------------------
 //----- FIRST CLOCK OF NEW INSTRUCTION  ------------------------------------------------------------
@@ -140,6 +168,9 @@ always_comb begin
     // signs are formed here, the instr_valid_i is important hence it indicates wether the 
     // simd unit is stalled for any reason or not, and while stalled the new instruction must
     // not enter the execution pipeline.
+    first_remnant = '0;
+    first_dividend_quotient = '0;
+    first_divisor = '0;
     if((is_division(instr_type_i) || is_remainder(instr_type_i)) && instr_valid_i) begin
 
         result_signs_d       = '0;
@@ -164,6 +195,8 @@ always_comb begin
                     magnitudes_vs2_d[(i * 8) +: 8] = (is_signed_inst(instr_type_i) && data_vs2_i[((i * 8) + 7)]) ? 
                     trunc_8_sum(~data_vs2_i[(i * 8) +: 8] + 8'b1): data_vs2_i[(i * 8) +: 8];
 
+                    first_dividend_quotient = {56'b0, magnitudes_vs2_d[63:56]};
+                    first_divisor = {56'b0, magnitudes_vs1_d[63:56]};
                 end
             end
             SEW_16: begin
@@ -177,6 +210,9 @@ always_comb begin
 
                     magnitudes_vs2_d[(i * 16) +: 16] = (is_signed_inst(instr_type_i) && data_vs2_i[((i * 16) + 15)]) ? 
                     trunc_16_sum(~data_vs2_i[(i * 16) +: 16] + 16'b1): data_vs2_i[(i * 16) +: 16];
+
+                    first_dividend_quotient = {48'b0, magnitudes_vs2_d[63:48]};
+                    first_divisor = {48'b0, magnitudes_vs1_d[63:48]};                    
                     
                 end
                 
@@ -192,7 +228,9 @@ always_comb begin
                     
                     magnitudes_vs2_d[(i * 32) +: 32] = (is_signed_inst(instr_type_i) && data_vs2_i[((i * 32) + 31)]) ? 
                     trunc_32_sum(~data_vs2_i[(i * 32) +: 32] + 32'b1): data_vs2_i[(i * 32) +: 32];
-
+                    
+                    first_dividend_quotient = {32'b0, magnitudes_vs2_d[63:32]};
+                    first_divisor = {32'b0, magnitudes_vs1_d[63:32]};
                 end
                 
             end
@@ -208,6 +246,8 @@ always_comb begin
                     magnitudes_vs2_d[(i * 64) +: 64] = (is_signed_inst(instr_type_i) && data_vs2_i[((i * 64) + 63)]) ? 
                     trunc_64_sum(~data_vs2_i[(i * 64) +: 64] + 64'b1): data_vs2_i[(i * 64) +: 64];
 
+                    first_dividend_quotient = magnitudes_vs2_d;
+                    first_divisor = magnitudes_vs1_d;
                 end
             end
 
@@ -223,6 +263,8 @@ always_comb begin
                     magnitudes_vs2_d[(i * 64) +: 64] = (is_signed_inst(instr_type_i) && data_vs2_i[((i * 64) + 63)]) ? 
                     trunc_64_sum(~data_vs2_i[(i * 64) +: 64] + 64'b1): data_vs2_i[(i * 64) +: 64];
 
+                    first_dividend_quotient = magnitudes_vs2_d;
+                    first_divisor = magnitudes_vs1_d;
                 end
             end
         endcase
@@ -254,13 +296,13 @@ end
 // the used algorithm is similar to pen and paper algorithm and takes N iterations 
 // for data width of N bits.
 div_2bits div_2bits_simd (
-        .remanent_i(remnant_q),
-        .dividend_quotient_i(dividend_quotient_q),
-        .divisor_i(divisor_q),
+        .remanent_i(remnant_i),
+        .dividend_quotient_i(dividend_quotient_i),
+        .divisor_i(divisor_i),
         .remanent_o(remnant_out),
         .dividend_quotient_o(dividend_quotient_out),
         .divisor_o(divisor_out),
-        .sew_i(sew_q)
+        .sew_i(sew_i)
     );
 
 
@@ -307,36 +349,37 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 // The number_of_divisions is set to save the number of remaining Divisions
                 // The cycle_counter will also save the number of clock cycles it takes to finalize 
                 // this specific element's division, so the smaller the SEW the less clocks it takes
-                remnant_q           <= 'h0;
-
+                remnant_q            <= remnant_out;
+                dividend_quotient_q  <= dividend_quotient_out;
+                divisor_q            <= divisor_out;
                 case (sew_d)
 
                     SEW_8: begin
                         number_of_divisions <= 4'b0111;
-                        cycles_counter <= 6'b000011;
-                        dividend_quotient_q <= {56'b0, magnitudes_vs2_d[63:56]};
-                        divisor_q <= {56'b0, magnitudes_vs1_d[63:56]};
+                        cycles_counter <= 6'b000010;
+                        // dividend_quotient_q <= {56'b0, magnitudes_vs2_d[63:56]};
+                        // divisor_q <= {56'b0, magnitudes_vs1_d[63:56]};
                     end
 
                     SEW_16: begin
                         number_of_divisions <= 4'b0011;
-                        cycles_counter <= 6'b000111;
-                        dividend_quotient_q <= {48'b0, magnitudes_vs2_d[63:48]};
-                        divisor_q <= {48'b0, magnitudes_vs1_d[63:48]};
+                        cycles_counter <= 6'b000110;
+                        // dividend_quotient_q <= {48'b0, magnitudes_vs2_d[63:48]};
+                        // divisor_q <= {48'b0, magnitudes_vs1_d[63:48]};
                     end
 
                     SEW_32: begin
                         number_of_divisions <= 4'b0001;
-                        cycles_counter <= 6'b001111;
-                        dividend_quotient_q <= {32'b0, magnitudes_vs2_d[63:32]};
-                        divisor_q <= {32'b0, magnitudes_vs1_d[63:32]};
+                        cycles_counter <= 6'b001110;
+                        // dividend_quotient_q <= {32'b0, magnitudes_vs2_d[63:32]};
+                        // divisor_q <= {32'b0, magnitudes_vs1_d[63:32]};
                     end
 
                     SEW_64: begin
                         number_of_divisions <= 4'b0000;
-                        cycles_counter <= 6'b011111;
-                        dividend_quotient_q <= magnitudes_vs2_d;
-                        divisor_q <= magnitudes_vs1_d;
+                        cycles_counter <= 6'b011110;
+                        // dividend_quotient_q <= magnitudes_vs2_d;
+                        // divisor_q <= magnitudes_vs1_d;
                     end
 
                 endcase
@@ -385,7 +428,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                             number_of_divisions <= number_of_divisions - 1'b1;
                         end
 
-                        //Forood: the SEW_64 and default won't happen
+                        //the SEW_64 and default won't happen
                         SEW_64: begin
                             // quotients[((number_of_divisions) * 64) +: 64] <= dividend_quotient_out[0 +: 64];
                             // remnants[((number_of_divisions) * 64) +: 64] <= remnant_out[0 +: 64];
@@ -406,107 +449,12 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
 
                 endcase
 
-                // if there is no in-flight operation and also no remaining instruction,
-                // finalize the result
-                end
-                //  else if((cycles_counter == '0) && (number_of_divisions == '0)) begin
-                    
-                //     case (sew_q)
-
-                        
-                //         SEW_8: begin
-                //             quotients[0 +: 8] <= dividend_quotient_out[0 +: 8];
-                //             remnants[0 +: 8] <= remnant_out[0 +: 8];
-                            
-                //         end
-
-                //         SEW_16: begin
-                //             quotients[0 +: 16] <= dividend_quotient_out[0 +: 16];
-                //             remnants[0 +: 16] <= remnant_out[0 +: 16];
-                            
-                //         end
-
-                //         SEW_32: begin
-                //             quotients[0 +: 32] <= dividend_quotient_out[0 +: 32];
-                //             remnants[0 +: 32] <= remnant_out[0 +: 32];
-                            
-                //         end
-
-                //         SEW_64: begin
-                //             quotients[0 +: 64] <= dividend_quotient_out[0 +: 64];
-                //             remnants[0 +: 64] <= remnant_out[0 +: 64];
-                            
-                //         end
-
-                //         default : begin
-                //             quotients[0 +: 64] <= dividend_quotient_out[0 +: 64];
-                //             remnants[0 +: 64] <= remnant_out[0 +: 64];
-                            
-                //         end
-
-                // endcase
-                // end
+                end             
             end
         end
     end
 
 
-always_comb begin
-    // if(cycles_counter == '0) begin
-        last_quotient = '0;
-        last_remnant  = '0;
-        case(sew_q) 
-            SEW_8: begin
-                last_quotient[0 +: 8] = dividend_quotient_out[0 +: 8];
-                last_remnant[0 +: 8] = remnant_out[0 +: 8];
-            end
-
-            SEW_16: begin
-                last_quotient[0 +: 16] = dividend_quotient_out[0 +: 16];
-                last_remnant[0 +: 16] = remnant_out[0 +: 16];
-            end
-
-            SEW_32: begin
-                last_quotient[0 +: 32] = dividend_quotient_out[0 +: 32];
-                last_remnant[0 +: 32] = remnant_out[0 +: 32];
-            end
-
-            SEW_64: begin
-                last_quotient = dividend_quotient_out;
-                last_remnant  = remnant_out;
-            end
-
-            default: begin
-                last_quotient = dividend_quotient_out;
-                last_remnant  = remnant_out;
-            end
-
-        endcase
-    // end
-    // else begin
-    //     case(sew_q) 
-    //         SEW_8: begin
-    //             quotients[((number_of_divisions[2:0]) * 8) +: 8] = dividend_quotient_out[0 +: 8];
-    //             remnants[((number_of_divisions[2:0]) * 8) +: 8] = remnant_out[0 +: 8];
-    //         end
-
-    //         SEW_16: begin
-    //             quotients[((number_of_divisions[1:0]) * 16) +: 16] = dividend_quotient_out[0 +: 16];
-    //             remnants[((number_of_divisions[1:0]) * 16) +: 16] = remnant_out[0 +: 16];
-    //         end
-
-    //         SEW_32: begin
-    //             quotients[((number_of_divisions[0]) * 32) +: 32] = dividend_quotient_out[0 +: 32];
-    //             remnants[((number_of_divisions[0]) * 32) +: 32] = remnant_out[0 +: 32];
-    //         end
-
-    //         SEW_64: begin
-    //             quotients[0 +: 64] = dividend_quotient_out[0 +: 64];
-    //             remnants[0 +: 64] = remnant_out[0 +: 64];
-    //         end
-    //     endcase
-    // end
-end
 
 //--------------------------------------------------------------------------------------------------
 //----- OUTPUT INSTRUCTION -------------------------------------------------------------------------
@@ -536,12 +484,12 @@ always_comb begin
                     end
                     else begin
                         if((is_signed_inst(instr_type_q))) begin
-                            quotients_out[(i * 8) +: 8] = result_signs_q[i] ? trunc_8_sum(~last_quotient[(i * 8) +: 8] + 8'b1) : last_quotient[(i * 8) +: 8];
-                            remnants_out[(i * 8) +: 8] = dividened_elements_q[(i * 8) + 7]  ? trunc_8_sum(~last_remnant[(i * 8) +: 8] + 8'b1) : last_remnant[(i * 8) +: 8];
+                            quotients_out[(i * 8) +: 8] = result_signs_q[i] ? trunc_8_sum(~dividend_quotient_out[(i * 8) +: 8] + 8'b1) : dividend_quotient_out[(i * 8) +: 8];
+                            remnants_out[(i * 8) +: 8] = dividened_elements_q[(i * 8) + 7]  ? trunc_8_sum(~remnant_out[(i * 8) +: 8] + 8'b1) : remnant_out[(i * 8) +: 8];
                         end
                         else begin
-                            quotients_out[(i * 8) +: 8] = last_quotient[(i * 8) +: 8] ;
-                            remnants_out[(i * 8) +: 8] = last_remnant[(i * 8) +: 8];
+                            quotients_out[(i * 8) +: 8] = dividend_quotient_out[(i * 8) +: 8] ;
+                            remnants_out[(i * 8) +: 8] = remnant_out[(i * 8) +: 8];
                         end
                     end
                 end
@@ -567,12 +515,12 @@ always_comb begin
                     end
                     else begin
                         if(is_signed_inst(instr_type_q)) begin
-                            quotients_out[(i * 16) +: 16] = result_signs_q[i] ? trunc_16_sum(~last_quotient[(i * 16) +: 16] + 16'b1) : last_quotient[(i * 16) +: 16];
-                            remnants_out[(i * 16) +: 16] = dividened_elements_q[(i * 16) + 15]  ? trunc_16_sum(~last_remnant[(i * 16) +: 16] + 16'b1) : last_remnant[(i * 16) +: 16];
+                            quotients_out[(i * 16) +: 16] = result_signs_q[i] ? trunc_16_sum(~dividend_quotient_out[(i * 16) +: 16] + 16'b1) : dividend_quotient_out[(i * 16) +: 16];
+                            remnants_out[(i * 16) +: 16] = dividened_elements_q[(i * 16) + 15]  ? trunc_16_sum(~remnant_out[(i * 16) +: 16] + 16'b1) : remnant_out[(i * 16) +: 16];
                         end
                         else begin
-                            quotients_out[(i * 16) +: 16] = last_quotient[(i * 16) +: 16] ;
-                            remnants_out[(i * 16) +: 16] = last_remnant[(i * 16) +: 16];
+                            quotients_out[(i * 16) +: 16] = dividend_quotient_out[(i * 16) +: 16] ;
+                            remnants_out[(i * 16) +: 16] = remnant_out[(i * 16) +: 16];
                         end
                     end
                 end
@@ -598,12 +546,12 @@ always_comb begin
                     end
                     else begin
                         if(is_signed_inst(instr_type_q)) begin
-                            quotients_out[(i * 32) +: 32] = result_signs_q[i] ? trunc_32_sum(~last_quotient[(i * 32) +: 32] + 32'b1) : last_quotient[(i * 32) +: 32]  ;
-                            remnants_out[(i * 32) +: 32] = dividened_elements_q[(i * 32) + 31]  ? trunc_32_sum(~last_remnant[(i * 32) +: 32] + 32'b1) : last_remnant[(i * 32) +: 32];
+                            quotients_out[(i * 32) +: 32] = result_signs_q[i] ? trunc_32_sum(~dividend_quotient_out[(i * 32) +: 32] + 32'b1) : dividend_quotient_out[(i * 32) +: 32]  ;
+                            remnants_out[(i * 32) +: 32] = dividened_elements_q[(i * 32) + 31]  ? trunc_32_sum(~remnant_out[(i * 32) +: 32] + 32'b1) : remnant_out[(i * 32) +: 32];
                         end
                         else begin
-                            quotients_out[(i * 32) +: 32] = last_quotient[(i * 32) +: 32] ;
-                            remnants_out[(i * 32) +: 32] = last_remnant[(i * 32) +: 32];
+                            quotients_out[(i * 32) +: 32] = dividend_quotient_out[(i * 32) +: 32] ;
+                            remnants_out[(i * 32) +: 32] = remnant_out[(i * 32) +: 32];
                         end
                     end
                 end
@@ -631,12 +579,12 @@ always_comb begin
                     // else 
                     begin
                         if(is_signed_inst(instr_type_q)) begin
-                            quotients_out[(i * 64) +: 64] = result_signs_q[i] ? trunc_64_sum(~last_quotient[(i * 64) +: 64] + 64'b1) : last_quotient[(i * 64) +: 64]  ;
-                            remnants_out[(i * 64) +: 64] = dividened_elements_q[(i * 64) + 63]  ? trunc_64_sum(~last_remnant[(i * 64) +: 64] + 64'b1) : last_remnant[(i * 64) +: 64];
+                            quotients_out[(i * 64) +: 64] = result_signs_q[i] ? trunc_64_sum(~dividend_quotient_out[(i * 64) +: 64] + 64'b1) : dividend_quotient_out[(i * 64) +: 64]  ;
+                            remnants_out[(i * 64) +: 64] = dividened_elements_q[(i * 64) + 63]  ? trunc_64_sum(~remnant_out[(i * 64) +: 64] + 64'b1) : remnant_out[(i * 64) +: 64];
                         end
                         else begin
-                            quotients_out[(i * 64) +: 64] = last_quotient[(i * 64) +: 64] ;
-                            remnants_out[(i * 64) +: 64] = last_remnant[(i * 64) +: 64];
+                            quotients_out[(i * 64) +: 64] = dividend_quotient_out[(i * 64) +: 64] ;
+                            remnants_out[(i * 64) +: 64] = remnant_out[(i * 64) +: 64];
                         end
                     end
                 end
@@ -663,12 +611,12 @@ always_comb begin
                     // else
                     begin
                         if(is_signed_inst(instr_type_q)) begin
-                            quotients_out[(i * 64) +: 64] = result_signs_q[i] ? trunc_64_sum(~last_quotient[(i * 64) +: 64] + 64'b1) : last_quotient[(i * 64) +: 64]  ;
-                            remnants_out[(i * 64) +: 64] = dividened_elements_q[(i * 64) + 63]  ? trunc_64_sum(~last_remnant[(i * 64) +: 64] + 64'b1) : last_remnant[(i * 64) +: 64];
+                            quotients_out[(i * 64) +: 64] = result_signs_q[i] ? trunc_64_sum(~dividend_quotient_out[(i * 64) +: 64] + 64'b1) : dividend_quotient_out[(i * 64) +: 64]  ;
+                            remnants_out[(i * 64) +: 64] = dividened_elements_q[(i * 64) + 63]  ? trunc_64_sum(~remnant_out[(i * 64) +: 64] + 64'b1) : remnant_out[(i * 64) +: 64];
                         end
                         else begin
-                            quotients_out[(i * 64) +: 64] = last_quotient[(i * 64) +: 64] ;
-                            remnants_out[(i * 64) +: 64] = last_remnant[(i * 64) +: 64];
+                            quotients_out[(i * 64) +: 64] = dividend_quotient_out[(i * 64) +: 64] ;
+                            remnants_out[(i * 64) +: 64] = remnant_out[(i * 64) +: 64];
                         end
                     end
                 end
