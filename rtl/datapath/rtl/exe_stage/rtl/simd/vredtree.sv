@@ -29,12 +29,12 @@ module vredtree (
 
 localparam int NUM_STAGES = $clog2(VLEN / 8);      // Number of stages based on the minimum SEW
 
-function int get_sew_size(sew_t sew);
+function sew_t increase_sew_size(sew_t sew);
     case (sew)
-        SEW_8: return 8;
-        SEW_16: return 16;
-        SEW_32: return 32;
-        SEW_64: return 64;
+        SEW_8: return SEW_16;
+        SEW_16: return SEW_32;
+        SEW_32: return SEW_64;
+        default: return SEW_16;
     endcase
 endfunction
 
@@ -97,7 +97,7 @@ end
 always_comb begin
     for (int i = 0; i < NUM_STAGES; i++) begin 
         if (i == 0) begin
-            gen_intermediate_d[0].sew = sew_i;
+            gen_intermediate_d[0].sew = (is_vw(instr_type_i)) ? increase_sew_size(sew_i) : sew_i;
             gen_intermediate_d[0].mask = data_vm;
             gen_intermediate_d[0].instr_type = instr_type_i;
             gen_intermediate_d[0].intermediate = data_vs2_i;
@@ -121,7 +121,7 @@ always_comb begin
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM, VWREDSUM, VWREDSUMU: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
+                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
                                             trunc_8bits(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] + gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
                                             (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] & gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
@@ -160,7 +160,7 @@ always_comb begin
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM, VWREDSUM, VWREDSUMU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
                                              trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
                                             (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] & gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
@@ -180,6 +180,24 @@ always_comb begin
                                     VREDMINU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
                                             ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
                                             gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
+                                    VWREDSUM: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                        end
+                                    end
+                                    VWREDSUMU: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
+                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                        end
+                                    end
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
@@ -199,7 +217,7 @@ always_comb begin
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM, VWREDSUM, VWREDSUMU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
                                                 trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] & gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
@@ -219,6 +237,24 @@ always_comb begin
                                     VREDMINU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
                                             ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
                                             gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
+                                    VWREDSUM: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                        end
+                                    end
+                                    VWREDSUMU: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
+                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                        end
+                                    end
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
@@ -238,7 +274,7 @@ always_comb begin
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM, VWREDSUM, VWREDSUMU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
                                                 trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
                                     VREDAND: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
                                                 (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] & gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
@@ -258,6 +294,24 @@ always_comb begin
                                     VREDMINU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
                                             ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
                                             gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
+                                    VWREDSUM: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
+                                        end
+                                    end
+                                    VWREDSUMU: begin
+                                        if (i == 1) begin
+                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
+                                        end else begin
+                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
+                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
+                                        end
+                                    end
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end

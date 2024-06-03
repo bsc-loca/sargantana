@@ -110,14 +110,16 @@ assign is_vmul = ((instr_entry_i.instr.instr_type == VWMUL)   ||
                 (instr_entry_i.instr.instr_type == VMULHU) ||
                 (instr_entry_i.instr.instr_type == VMULHSU)) ? 1'b1 : 1'b0;
 
-assign is_vred = ((instr_entry_i.instr.instr_type == VREDSUM)   ||
+assign is_vred = ((instr_entry_i.instr.instr_type == VREDSUM) ||
                 (instr_entry_i.instr.instr_type == VREDAND)   ||
                 (instr_entry_i.instr.instr_type == VREDOR)    ||
-                (instr_entry_i.instr.instr_type == VREDXOR)    ||
-                (instr_entry_i.instr.instr_type == VREDMAXU)    ||
-                (instr_entry_i.instr.instr_type == VREDMAX)    ||
-                (instr_entry_i.instr.instr_type == VREDMINU)    ||
-                (instr_entry_i.instr.instr_type == VREDMIN)) ? 1'b1 : 1'b0;
+                (instr_entry_i.instr.instr_type == VREDXOR)   ||
+                (instr_entry_i.instr.instr_type == VREDMAXU)  ||
+                (instr_entry_i.instr.instr_type == VREDMAX)   ||
+                (instr_entry_i.instr.instr_type == VREDMINU)  ||
+                (instr_entry_i.instr.instr_type == VREDMIN)   ||
+                (instr_entry_i.instr.instr_type == VWREDSUM)  ||
+                (instr_entry_i.instr.instr_type == VWREDSUMU)) ? 1'b1 : 1'b0;
 
 // This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
 // this happens when the opearands and type matched the previous DIV/REM and the result

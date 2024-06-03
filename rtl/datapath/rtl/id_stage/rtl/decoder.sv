@@ -1134,12 +1134,20 @@ module decoder
                                         decode_instr_int.instr_type = VSMUL;
                                     end
                                     F6_VWREDSUMU: begin
-                                        decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VWREDSUMU;
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWREDSUMU;
+                                        end
                                     end
                                     F6_VWREDSUM: begin
-                                        decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VWREDSUM;
+                                        if (!v_2sew_en_i) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VWREDSUM;
+                                        end
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;

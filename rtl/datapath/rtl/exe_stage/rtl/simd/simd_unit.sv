@@ -93,11 +93,13 @@ function logic is_vred(input rr_exe_simd_instr_t instr);
     is_vred = ((instr.instr.instr_type == VREDSUM)   ||
                (instr.instr.instr_type == VREDAND)   ||
                (instr.instr.instr_type == VREDOR)    ||
-               (instr.instr.instr_type == VREDXOR)    ||
-               (instr.instr.instr_type == VREDMAXU)    ||
-               (instr.instr.instr_type == VREDMAX)    ||
-               (instr.instr.instr_type == VREDMINU)    ||
-               (instr.instr.instr_type == VREDMIN)) ? 1'b1 : 1'b0;
+               (instr.instr.instr_type == VREDXOR)   ||
+               (instr.instr.instr_type == VREDMAXU)  ||
+               (instr.instr.instr_type == VREDMAX)   ||
+               (instr.instr.instr_type == VREDMINU)  ||
+               (instr.instr.instr_type == VREDMIN)   ||
+               (instr.instr.instr_type == VWREDSUM)  ||
+               (instr.instr.instr_type == VWREDSUMU)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vdiv(input rr_exe_simd_instr_t instr);
