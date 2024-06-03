@@ -26,6 +26,22 @@ module vshift
 //This module performs vector shifting operations. The strategy is to use
 //only right signed shifters while supporting all types of shifts.
 
+function [7:0] trunc_9_8(input [8:0] val_in);
+  trunc_9_8 = val_in[7:0];
+endfunction
+
+function [15:0] trunc_17_16(input [16:0] val_in);
+  trunc_17_16 = val_in[15:0];
+endfunction
+
+function [31:0] trunc_33_32(input [32:0] val_in);
+  trunc_33_32 = val_in[31:0];
+endfunction
+
+function [63:0] trunc_65_64(input [64:0] val_in);
+  trunc_65_64 = val_in[63:0];
+endfunction
+
 bus64_t data_vs1_flipped;
 bus64_t data_vs2_flipped;
 bus64_t data_a;
@@ -277,7 +293,7 @@ always_comb begin
                 for (int i = 0; i<8; ++i) begin
                     data_vd[(i*8)+:8] = $signed({is_signed & data_a[(i*8)+7], data_a[(i*8)+:8]}) >>> data_b[(i*8)+:3];
                     if (is_scaling) begin
-                        data_vd[(i*8)+:8] = data_vd[(i*8)+:8] + rounding_increment[i];
+                        data_vd[(i*8)+:8] = trunc_9_8(data_vd[(i*8)+:8] + rounding_increment[i]);
                     end
                 end
             end
@@ -285,7 +301,7 @@ always_comb begin
                 for (int i = 0; i<4; ++i) begin
                     data_vd[(i*16)+:16] = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*16)+:4];
                     if (is_scaling) begin
-                        data_vd[(i*16)+:16] = data_vd[(i*16)+:16] + rounding_increment[i];
+                        data_vd[(i*16)+:16] = trunc_17_16(data_vd[(i*16)+:16] + rounding_increment[i]);
                     end
                 end
             end
@@ -293,14 +309,14 @@ always_comb begin
                 for (int i = 0; i<2; ++i) begin
                     data_vd[(i*32)+:32] = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*32)+:5];
                     if (is_scaling) begin
-                        data_vd[(i*32)+:32] = data_vd[(i*32)+:32] + rounding_increment[i];
+                        data_vd[(i*32)+:32] = trunc_33_32(data_vd[(i*32)+:32] + rounding_increment[i]);
                     end
                 end
             end
             SEW_64: begin
                 data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
                 if (is_scaling) begin
-                    data_vd= data_vd + rounding_increment[0];
+                    data_vd = trunc_65_64(data_vd + rounding_increment[0]);
                 end
             end
             default: begin
