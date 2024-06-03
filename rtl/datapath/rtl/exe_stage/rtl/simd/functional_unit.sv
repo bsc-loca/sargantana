@@ -196,7 +196,8 @@ vdiv vdiv_inst(
     .instr_valid_i  (instruction_i.instr.valid),  
     .sew_i          (instruction_i.instr.sew),          
     .data_vs1_i     (data_vs1_i),     
-    .data_vs2_i     (data_vs2_i),     
+    .data_vs2_i     (data_vs2_i),
+    .exe_stages     (instruction_i.exe_stages),     
     .data_vd_o      (result_vdiv_vrem)       
 );
 always_comb begin

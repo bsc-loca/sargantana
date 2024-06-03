@@ -41,6 +41,25 @@ bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 
+// these variabls hold data related to the previous
+// DIV/REM inst in order for us to be able to indicate
+// if the current DIV/REM can be skipped
+
+bus64_t         previous_div_rs1_q;                 // Register Source 1  of previous div/rem
+bus64_t         previous_div_rs1_d;                 // Register Source 1  of previous div/rem
+
+bus_simd_t      previous_div_vs1_q;                 // VRegister Source 1 of previous div/rem
+bus_simd_t      previous_div_vs1_d;                 // VRegister Source 1 of previous div/rem
+
+bus_simd_t      previous_div_vs2_q;                 // VRegister Source 2 of previous div/rem
+bus_simd_t      previous_div_vs2_d;                 // VRegister Source 2 of previous div/rem
+
+logic           previous_div_is_opvx_q;             // Instruction uses rs1 instead of vs1 of previous div/rem
+logic           previous_div_is_opvx_d;             // Instruction uses rs1 instead of vs1 of previous div/rem
+
+instr_type_t    previous_div_instr_type_q;          // Type of instruction of previous div/rem
+instr_type_t    previous_div_instr_type_d;          // Type of instruction of previous div/rem          
+
 function [5:0] trunc_6bits(input [31:0] val_in);
     trunc_6bits = val_in[5:0];
 endfunction
@@ -169,6 +188,22 @@ function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
 
+// This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
+// this happens when the opearands and type matched the previous DIV/REM and the result
+// is ready
+function logic is_div_1_clock(input bus_simd_t vs1, input bus_simd_t vs2, input bus64_t rs1,
+                            input logic is_opvx, input instr_type_t instr_type, input rr_exe_simd_instr_t instr_entry_i);
+
+    is_div_1_clock = (is_opvx != instr_entry_i.instr.is_opvx) ? 1'b0 :    (((instr_type == instr_entry_i.instr.instr_type)                ||
+                                                                    ((instr_type == VDIV) && (instr_entry_i.instr.instr_type == VREM))    ||
+                                                                    ((instr_type == VREM) && (instr_entry_i.instr.instr_type == VDIV))    ||
+                                                                    ((instr_type == VDIVU) && (instr_entry_i.instr.instr_type == VREMU))  ||
+                                                                    ((instr_type == VREMU) && (instr_entry_i.instr.instr_type == VDIVU))      ) ? (is_opvx ?  ((vs2 == instr_entry_i.data_vs2) && (rs1 == instr_entry_i.data_rs1)) :
+                                                                                                                                                        ((vs2 == instr_entry_i.data_vs2) && (vs1 == instr_entry_i.data_vs1))) : 1'b0); 
+    
+endfunction
+
+
 
 typedef struct packed {
     logic valid;
@@ -198,6 +233,12 @@ instr_pipe_t division_pipe_q [DIV_STAGES - 1:0];
 */
 
 always_comb begin
+    previous_div_rs1_d = previous_div_rs1_q;               
+    previous_div_vs1_d = previous_div_vs1_q;                
+    previous_div_vs2_d = previous_div_vs2_q;                
+    previous_div_is_opvx_d = previous_div_is_opvx_q;            
+    previous_div_instr_type_d = previous_div_instr_type_q; 
+
     if (is_vmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd3 : 6'd2;
     end
@@ -212,8 +253,38 @@ always_comb begin
             default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
         endcase
     end else if (is_vdiv(instruction_i)) begin
-        simd_exe_stages = 6'd31;                     
-    end else begin
+        
+        // Deciding on how many cycles to do the DIV/REM
+        if(is_div_1_clock(  .vs1(previous_div_vs1_q), .vs2(previous_div_vs2_q), .rs1(previous_div_rs1_q), .is_opvx(previous_div_is_opvx_q),
+        .instr_type(previous_div_instr_type_q), .instr_entry_i(instruction_i)) && instruction_i.instr.valid) begin
+
+            simd_exe_stages = 6'd1; 
+
+        end else begin
+
+           simd_exe_stages = 6'd31; 
+
+        end
+
+        // when a new DIV/REM is issued, it's operands are saved
+        // for comparision with future DIV/REM
+        if(instruction_i.instr.valid) begin
+            previous_div_rs1_d = instruction_i.data_rs1;                 
+            previous_div_vs1_d = instruction_i.data_vs1;                
+            previous_div_vs2_d = instruction_i.data_vs2;                
+            previous_div_is_opvx_d = instruction_i.instr.is_opvx;            
+            previous_div_instr_type_d = instruction_i.instr.instr_type;
+        end
+        else begin
+            previous_div_rs1_d = previous_div_rs1_q;               
+            previous_div_vs1_d = previous_div_vs1_q;                
+            previous_div_vs2_d = previous_div_vs2_q;                
+            previous_div_is_opvx_d = previous_div_is_opvx_q;            
+            previous_div_instr_type_d = previous_div_instr_type_q;  
+        end                    
+    end 
+    
+    else begin
         simd_exe_stages = 6'd1;
     end
 end
@@ -228,6 +299,14 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         for (int i = 0; i < DIV_STAGES; i++) begin
             division_pipe_q[i] <= '0;
         end
+        
+        previous_div_rs1_q          <= '0;                
+        previous_div_vs1_q          <= '0;               
+        previous_div_vs2_q          <= '0;              
+        previous_div_is_opvx_q      <= '0;          
+        previous_div_instr_type_q   <= ADD;
+
+
     end else begin
         for (int i = 2; i <= MAX_STAGES; i++) begin
             for (int j = 0; j < MAX_STAGES; j++) begin
@@ -237,6 +316,12 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         for (int i = 0; i < DIV_STAGES; i++) begin
             division_pipe_q[i] <= division_pipe_d[i];
         end
+
+        previous_div_rs1_q          <= previous_div_rs1_d;                
+        previous_div_vs1_q          <= previous_div_vs1_d;               
+        previous_div_vs2_q          <= previous_div_vs2_d;              
+        previous_div_is_opvx_q      <= previous_div_is_opvx_d;          
+        previous_div_instr_type_q   <= previous_div_instr_type_d;
     end
 end
 
@@ -270,7 +355,7 @@ always_comb begin
     
     for (int j = 0; j < DIV_STAGES; j++) begin
         if (j==0) begin
-            if(is_vdiv(instruction_i)) begin
+            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd31)) begin
                 division_pipe_d[0].valid = instruction_i.instr.valid;
                 division_pipe_d[0].simd_instr = instruction_i;
             end

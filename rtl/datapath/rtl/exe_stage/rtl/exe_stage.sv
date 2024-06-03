@@ -177,7 +177,7 @@ score_board_simd score_board_simd_inst(
     .rstn_i              (rstn_i),
     .flush_i             (flush_i),
     .ready_i             (ready),
-    .instr_entry_i       (simd_instr.instr),
+    .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
