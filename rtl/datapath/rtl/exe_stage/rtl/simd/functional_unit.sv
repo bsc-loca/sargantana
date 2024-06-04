@@ -46,6 +46,7 @@ sew_t vaddsub_sew_i;
 bus64_t data2_vmul_i;
 
 bus64_t result_vmul_2;
+logic sat_ovf_saaddsub;
 
 /* Register fo multiplication + addition/subtract
  * Due to timing problems when doing the addition on the same cycle than the
@@ -161,7 +162,7 @@ vsaaddsub vsaaddsub_inst(
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vsaaddsub),
-    .sat_ovf_o     (sat_ovf_o)
+    .sat_ovf_o     (sat_ovf_saaddsub)
 );
 vcomp vcomp_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
@@ -201,8 +202,27 @@ vdiv vdiv_inst(
     .exe_stages     (instruction_i.exe_stages),     
     .data_vd_o      (result_vdiv_vrem)       
 );
+
+bus64_t result_vnclip;
+logic sat_ovf_vnclip;
+
+vnclip vnclip_int(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .sew_i         (instruction_i.instr.sew),
+    .vxrm_i        (vxrm_i),
+    .data_vs1_i    (data_vs1_i),
+    .data_vs2_i    (data_vs2_i),
+    .sat_ovf_o     (sat_ovf_vnclip),
+    .data_vd_o     (result_vnclip)
+);
+
 always_comb begin
+    sat_ovf_o = '0;
     case (sel_out_instr_i.instr.instr_type)
+        VNCLIP, VNCLIPU: begin
+            data_vd_o = result_vnclip;
+            sat_ovf_o = sat_ovf_saaddsub;
+        end
         VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8: begin
             data_vd_o = data_vs2_i;
         end
@@ -214,6 +234,7 @@ always_comb begin
         end
         VAADDU, VAADD, VASUBU, VASUB: begin
             data_vd_o = result_vsaaddsub;
+            sat_ovf_o = sat_ovf_saaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
             data_vd_o = result_vwaddsub;
