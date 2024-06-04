@@ -27,8 +27,7 @@
 );
 
 localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module will have the maximum stages
-localparam int DIV_STAGES = 31; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
-                                // because for 1 clock cycle the number is being registered but not counted
+localparam int DIV_STAGES = 32;             // number of clocks a DIV/REM instruction takes
 
 
 bus64_t [drac_pkg::VELEMENTS-1:0] vs1_elements;
@@ -188,7 +187,7 @@ function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
 
-// This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
+// This fucntion indicates wether the current DIV/REM can be done in 1 clock cycle
 // this happens when the opearands and type matched the previous DIV/REM and the result
 // is ready
 function logic is_div_1_clock(input bus_simd_t vs1, input bus_simd_t vs2, input bus64_t rs1,
@@ -221,8 +220,8 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 // Note that there can't be more than 1 in flight DIV/REM at a time, should another
 // DIV/REM instruction be dispatched while the previous one is being processed, the
 // pipline is stalled. The stalling mechanism can be seen in sargantana/rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv
-instr_pipe_t division_pipe_d [DIV_STAGES - 1:0];
-instr_pipe_t division_pipe_q [DIV_STAGES - 1:0];
+instr_pipe_t division_pipe_d [DIV_STAGES - 2:0];
+instr_pipe_t division_pipe_q [DIV_STAGES - 2:0];
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -262,7 +261,7 @@ always_comb begin
 
         end else begin
 
-           simd_exe_stages = 6'd31; 
+            simd_exe_stages = 6'd32; 
 
         end
 
@@ -296,7 +295,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= '0;
             end
         end
-        for (int i = 0; i < DIV_STAGES; i++) begin
+        for (int i = 0; i < (DIV_STAGES - 1); i++) begin
             division_pipe_q[i] <= '0;
         end
         
@@ -313,7 +312,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
-        for (int i = 0; i < DIV_STAGES; i++) begin
+        for (int i = 0; i < (DIV_STAGES - 1); i++) begin
             division_pipe_q[i] <= division_pipe_d[i];
         end
 
@@ -353,9 +352,10 @@ always_comb begin
     end
 
     
-    for (int j = 0; j < DIV_STAGES; j++) begin
+    for (int j = 0; j < (DIV_STAGES - 1); j++) begin
         if (j==0) begin
-            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd31)) begin
+
+            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32)) begin
                 division_pipe_d[0].valid = instruction_i.instr.valid;
                 division_pipe_d[0].simd_instr = instruction_i;
             end
@@ -384,10 +384,10 @@ always_comb begin
             valid_found = 1'b1;
         end
     end
-    // unlike the normal pipeline in Division pipeline the very last index has to be
-    // checked
-    if((!valid_found) && (division_pipe_q[DIV_STAGES - 1].valid)) begin
-        instr_score_board = division_pipe_q[DIV_STAGES - 1].simd_instr;
+    // like the normal pipeline in Division pipeline we check to see if we have
+    // a finalized instruction
+    if((!valid_found) && (division_pipe_q[DIV_STAGES - 2].valid)) begin
+        instr_score_board = division_pipe_q[DIV_STAGES - 2].simd_instr;
         valid_found = 1'b1;
     end
 end

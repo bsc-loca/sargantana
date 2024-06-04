@@ -29,8 +29,7 @@
  );
 
 localparam int MAX_STAGES = $clog2(VLEN/8) + 1;  // Number of stages based on the minimum SEW
-localparam int DIV_STAGES = 31; // number of clocks a DIV/REM instruction takes, it's basically 1 less than the actual 34 clocks
-                                // because for 1 clock cycle the number is being registered but not counted
+localparam int DIV_STAGES = 32;                 // number of clocks a DIV/REM instruction takes
 
 
 typedef struct packed {
@@ -48,8 +47,8 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-2:0];
 // than other instructions.
 // The behaviour and managment of this pipeline is alike the simd_pipe
 // the differences are explained
-instr_pipe_t division_pipe_d [DIV_STAGES - 1:0];
-instr_pipe_t division_pipe_q [DIV_STAGES - 1:0];
+instr_pipe_t division_pipe_d [DIV_STAGES - 2:0];
+instr_pipe_t division_pipe_q [DIV_STAGES - 2:0];
 
 
 logic [5:0] simd_exe_stages;
@@ -168,7 +167,7 @@ always_comb begin
         
         else begin
 
-           simd_exe_stages = 6'd31;                     
+           simd_exe_stages = 6'd32;                     
         end
         
         // when a new DIV/REM is issued, it's operands are saved
@@ -208,7 +207,8 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= '0;
             end
         end
-        for (int i = 0; i < DIV_STAGES; i++) begin
+
+        for (int i = 0; i < (DIV_STAGES - 1); i++) begin
             division_pipe_q[i] <= '0;
         end
 
@@ -224,7 +224,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
-        for (int i = 0; i < DIV_STAGES; i++) begin
+        for (int i = 0; i < (DIV_STAGES - 1); i++) begin
                 division_pipe_q[i] <= division_pipe_d[i];
         end
 
@@ -269,9 +269,9 @@ always_comb begin
     end
 
 
-    for (int j = 0; j < DIV_STAGES; j++) begin
+    for (int j = 0; j < (DIV_STAGES - 1); j++) begin
         if (j==0) begin
-            if(is_vdiv && (simd_exe_stages == 6'd31)) begin
+            if(is_vdiv && (simd_exe_stages == 6'd32)) begin
                 division_pipe_d[0].valid = ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
                 `ifdef VERILATOR
                 division_pipe_d[0].simd_instr_type = instr_entry_i.instr.instr_type;
@@ -301,15 +301,15 @@ always_comb begin
             stall_simd = 1'b1;
         end
     end
-    // unlike the normal pipeline in Division pipeline the very last index has to be
-    // checked
-    if(division_pipe_q[trunc_5_bit(DIV_STAGES - simd_exe_stages)].valid) begin
+
+    // we do the same checking for the Division pipeline to set stall if needed
+    if(division_pipe_q[trunc_5_bit((DIV_STAGES - simd_exe_stages) - 1)].valid) begin
         stall_simd = 1'b1;
     end
     // Since the DIV/REM pipeline is circular and not linear (the same hardware is used in every clock) a new
     // DIV/REM instruction can not be issued while the previous one is still in flight, the check below does this.
     if (is_vdiv && (!stall_simd)) begin
-        for (int i = 0; ((i < (DIV_STAGES)) && (!stall_simd)); i++) begin
+        for (int i = 0; ((i < (DIV_STAGES - 1)) && (!stall_simd)); i++) begin
             if(division_pipe_q[i].valid) begin
                 stall_simd = 1'b1;
             end
