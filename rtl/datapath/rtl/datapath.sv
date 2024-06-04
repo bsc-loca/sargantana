@@ -1695,17 +1695,17 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     //VISA Signals
     assign visa_o.commit_valid0 = retire_inst_gl[0];
-    assign visa_o.commit_valid1 = retire_inst_gl[1];
-    assign visa_o.commit_pc0 = instruction_to_commit[0].pc;
-    assign visa_o.commit_pc1 = instruction_to_commit[1].pc;
-    assign visa_o.commit_rd0 = instruction_to_commit[0].rd;
-    assign visa_o.commit_rd1 = instruction_to_commit[1].rd;
-    assign visa_o.commit_regfile_we0 = instruction_to_commit[0].regfile_we;
-    assign visa_o.commit_regfile_we1 = instruction_to_commit[1].regfile_we;
     assign visa_o.commit_xcpt = commit_xcpt;
-    assign visa_o.commit_xcpt_cause = commit_xcpt_cause;
-    assign visa_o.fetch_valid = stage_if_1_if_2_d.valid;
-    assign visa_o.fetch_pc = stage_if_1_if_2_d.pc_inst;
+    assign visa_o.commit_xcpt_cause = {commit_xcpt_cause[63], commit_xcpt_cause[3:0]};
+    assign visa_o.stall_if_1 = control_int.stall_if_1;
+    assign visa_o.stall_if_2 = control_int.stall_if_2;
+    assign visa_o.stall_id = control_int.stall_id;
+    assign visa_o.stall_iq = control_int.stall_iq;
+    assign visa_o.stall_rr = control_int.stall_rr;
+    assign visa_o.stall_exe = control_int.stall_exe;
+    assign visa_o.stall_commit = control_int.stall_commit;
+    assign visa_o.flush_if = flush_int.flush_if;
+    assign visa_o.flush_rr = flush_int.flush_rr;
 
     //PMU
     assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;

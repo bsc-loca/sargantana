@@ -1289,17 +1289,17 @@ typedef struct packed {
 
 typedef struct packed {
     logic commit_valid0;
-    logic commit_valid1;
-    addrPC_t commit_pc0;
-    addrPC_t commit_pc1;
-    reg_t commit_rd0;
-    reg_t commit_rd1;
-    logic commit_regfile_we0;
-    logic commit_regfile_we1;
     logic commit_xcpt;
-    bus64_t commit_xcpt_cause;
-    addrPC_t fetch_pc;
-    logic fetch_valid;
+    logic [4:0] commit_xcpt_cause;
+    logic stall_if_1;       
+    logic stall_if_2;      
+    logic stall_id;         
+    logic stall_iq;             
+    logic stall_rr;       
+    logic stall_exe;       
+    logic stall_commit;   
+    logic flush_if;
+    logic flush_rr;
 } visa_signals_t;
 
 `ifdef SIM_COMMIT_LOG
