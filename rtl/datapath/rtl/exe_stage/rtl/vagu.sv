@@ -710,7 +710,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         neg_stride_q <= 1'b0;
         mask_buffer <= 'h0;
     end else begin
-        if (stall_i) begin
+        if (stall_i && !flush_i) begin
             vmem_ops_state_q <= vmem_ops_state_q;
             vaddr_q <= vaddr_q;
             velem_cnt_q <= velem_cnt_q;
