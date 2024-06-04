@@ -388,12 +388,12 @@ package fpnew_pkg;
 
   // Returns the number of lanes according to width, format and vectors
   function automatic int unsigned num_lanes(int unsigned width, fp_format_e fmt, logic vec);
-    return vec ? width / fp_width(fmt) : 1; // if no vectors, only one lane
+    return vec ? (width / fp_width(fmt)) : 1; // if no vectors, only one lane
   endfunction
 
   // Returns the maximum number of lanes in the FPU according to width, format config and vectors
   function automatic int unsigned max_num_lanes(int unsigned width, fmt_logic_t cfg, logic vec);
-    return vec ? width / min_fp_width(cfg) : 1; // if no vectors, only one lane
+    return vec ? (width / min_fp_width(cfg)) : 1; // if no vectors, only one lane
   endfunction
 
   // Returns a mask of active FP formats that are present in lane lane_no of a multiformat slice
@@ -421,7 +421,7 @@ package fpnew_pkg;
       for (int unsigned fmt = 0; fmt < NUM_FP_FORMATS; fmt++)
         // Mask active int formats with the width of the float formats
         if ((fp_width(fp_format_e'(fmt)) == int_width(int_format_e'(ifmt))))
-          res[ifmt] |= icfg[ifmt] && lanefmts[fmt];
+          res[ifmt] |= (icfg[ifmt] && lanefmts[fmt]);
     return res;
   endfunction
 
