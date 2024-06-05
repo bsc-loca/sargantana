@@ -220,8 +220,14 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 // Note that there can't be more than 1 in flight DIV/REM at a time, should another
 // DIV/REM instruction be dispatched while the previous one is being processed, the
 // pipline is stalled. The stalling mechanism can be seen in sargantana/rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv
-instr_pipe_t division_pipe_d [DIV_STAGES - 2:0];
-instr_pipe_t division_pipe_q [DIV_STAGES - 2:0];
+logic division_pipe_d [DIV_STAGES - 2:0];
+logic division_pipe_q [DIV_STAGES - 2:0];
+
+// in order to reduce the area and not use a redundant array of rr_exe_simd_instr_t
+// a global instruction is stored, since there can't be more than 1 in-flight div/rems 
+rr_exe_simd_instr_t division_instruction_d;
+rr_exe_simd_instr_t division_instruction_q;
+
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -296,7 +302,8 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             end
         end
         for (int i = 0; i < (DIV_STAGES - 1); i++) begin
-            division_pipe_q[i] <= '0;
+            division_pipe_q[i]      <= '0;
+            division_instruction_q  <= '0;
         end
         
         previous_div_rs1_q          <= '0;                
@@ -312,9 +319,11 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
+        
         for (int i = 0; i < (DIV_STAGES - 1); i++) begin
-            division_pipe_q[i] <= division_pipe_d[i];
+            division_pipe_q[i]      <= division_pipe_d[i];
         end
+        division_instruction_q  <= division_instruction_d;
 
         previous_div_rs1_q          <= previous_div_rs1_d;                
         previous_div_vs1_q          <= previous_div_vs1_d;               
@@ -351,21 +360,25 @@ always_comb begin
         end
     end
 
-    
+
+    // division_instruction_d = division_instruction_q;
     for (int j = 0; j < (DIV_STAGES - 1); j++) begin
         if (j==0) begin
 
-            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32)) begin
-                division_pipe_d[0].valid = instruction_i.instr.valid;
-                division_pipe_d[0].simd_instr = instruction_i;
+            if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32) && instruction_i.instr.valid) begin
+                division_pipe_d[0] = instruction_i.instr.valid;
+                division_instruction_d = instruction_i;
+                // division_pipe_d[0].simd_instr = instruction_i;
             end
             else begin
-                division_pipe_d[0].valid = 1'b0;
-                division_pipe_d[0].simd_instr = '0;
+                division_pipe_d[0] = 1'b0;
+                division_instruction_d = division_instruction_q;
+                // division_pipe_d[0].simd_instr = '0;
             end
         end else begin
-            division_pipe_d[j].valid = division_pipe_q[j-1].valid;
-            division_pipe_d[j].simd_instr = division_pipe_q[j-1].simd_instr;
+            division_pipe_d[j] = division_pipe_q[j-1];
+            // division_instruction_d = division_instruction_q;
+            // division_pipe_d[j].simd_instr = division_pipe_q[j-1].simd_instr;
                  
         end
     end
@@ -386,8 +399,9 @@ always_comb begin
     end
     // like the normal pipeline in Division pipeline we check to see if we have
     // a finalized instruction
-    if((!valid_found) && (division_pipe_q[DIV_STAGES - 2].valid)) begin
-        instr_score_board = division_pipe_q[DIV_STAGES - 2].simd_instr;
+    if((!valid_found) && (division_pipe_q[DIV_STAGES - 2])) begin
+        // instr_score_board = division_pipe_q[DIV_STAGES - 2].simd_instr;
+        instr_score_board = division_instruction_q;
         valid_found = 1'b1;
     end
 end
