@@ -179,6 +179,7 @@ score_board_simd score_board_simd_inst(
     .ready_i             (ready),
     .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
+    .vl_i                (simd_instr.instr.vl),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
@@ -341,7 +342,7 @@ assign simd_to_simd_wb.valid = 1'b0;
 `endif
 
 `ifndef DISABLE_SIMD
-assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
+assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (from_rr_i.instr.vl[VMAXELEM_LOG:0] + 'd7) >> 3 : 
                  ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
                  from_rr_i.instr.vl[VMAXELEM_LOG:0];
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;

@@ -258,12 +258,7 @@ always_comb begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
-        case (instruction_i.instr.sew)
-            SEW_8, SEW_16 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 1);
-            SEW_32 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
-            SEW_64 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) - 1);
-            default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
-        endcase
+        simd_exe_stages = $clog2(vl_i) + 2;
     end else if (is_vdiv(instruction_i)) begin
         
         // Deciding on how many cycles to do the DIV/REM
@@ -726,6 +721,7 @@ vredtree vredtree_inst(
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
+    .instr_to_out_i(instr_to_out.instr.instr_type),
     .sew_to_out_i  (instr_to_out.instr.sew),
     .red_data_vd_o (red_data_vd)
 );

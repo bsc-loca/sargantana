@@ -18,11 +18,12 @@
      input logic                    flush_i,
  
      // INPUTS
-     input  logic                   ready_i,            // Instruction valid and ready to be issued to SIMD unit
-     input  rr_exe_simd_instr_t     instr_entry_i,      // Instruction entry
+     input  logic                         ready_i,            // Instruction valid and ready to be issued to SIMD unit
+     input  rr_exe_simd_instr_t            instr_entry_i,      // Instruction entry
      //input  instr_entry_t           instr_entry_i,      
-     input  sew_t                   sew_i,              // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
-    
+     input  sew_t                          sew_i,              // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
+     input  logic [VMAXELEM_LOG:0]  vl_i,           // Vector Lenght
+ 
      // OUTPUTS
      output logic [5:0]             simd_exe_stages_o, 
      output logic                   stall_simd_o        // Stall pipeline
@@ -153,12 +154,7 @@ always_comb begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd4 : 6'd3;
     end 
     else if (is_vred) begin
-        case (sew_i)
-            SEW_8, SEW_16 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) + 1);
-            SEW_32 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
-            SEW_64 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) - 1);
-            default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
-        endcase
+        simd_exe_stages = $clog2(vl_i) + 2;
     end else if(is_vdiv) begin
 
         // Deciding on how many cycles to do the DIV/REM
