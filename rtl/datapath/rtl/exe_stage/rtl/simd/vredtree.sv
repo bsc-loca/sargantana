@@ -391,10 +391,10 @@ always_comb begin
             end
         end
         SEW_64: begin
-            if (!gen_intermediate_q[NUM_STAGES-3].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 64])};
+            if (!gen_intermediate_q[NUM_STAGES-4].mask[0]) begin
+                red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
             end else begin
-                case (gen_intermediate_q[NUM_STAGES-3].instr_type)
+                case (gen_intermediate_q[NUM_STAGES-4].instr_type)
                     VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] + gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
                     VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] & gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
                     VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] | gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
