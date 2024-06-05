@@ -28,7 +28,7 @@ module vredtree (
     output bus_simd_t red_data_vd_o         // 128-bit result (only cares last element)
 );
 
-localparam int NUM_STAGES = $clog2(VLEN / 8) + 2;      // Number of stages based on the minimum SEW
+localparam int NUM_STAGES = $clog2(VLEN / 8) + 1;      // Number of stages based on the minimum SEW
 
 function sew_t increase_sew_size(sew_t sew);
     case (sew)
