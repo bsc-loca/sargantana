@@ -26,7 +26,7 @@
     output exe_wb_simd_instr_t    instruction_simd_o      // Out instruction
 );
 
-localparam MAX_STAGES = $clog2(VLEN/8) + 1; // The vector reduction tree module will have the maximum stages
+localparam MAX_STAGES = $clog2(VLEN/8) + 2; // The vector reduction tree module will have the maximum stages
 localparam int DIV_STAGES = 32;             // number of clocks a DIV/REM instruction takes
 
 

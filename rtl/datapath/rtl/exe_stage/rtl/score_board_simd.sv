@@ -29,7 +29,7 @@
      output logic                   stall_simd_o        // Stall pipeline
  );
 
-localparam int MAX_STAGES = $clog2(VLEN/8) + 1;  // Number of stages based on the minimum SEW
+localparam int MAX_STAGES = $clog2(VLEN/8) + 2;  // Number of stages based on the minimum SEW
 localparam int DIV_STAGES = 32;                 // number of clocks a DIV/REM instruction takes
 
 
