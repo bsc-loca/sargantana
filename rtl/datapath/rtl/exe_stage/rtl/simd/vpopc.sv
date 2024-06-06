@@ -27,6 +27,7 @@ logic [63:0] count;
 
 always_comb begin
     count = '0;
+    if(instr_type_i == VPOPC) begin 
         unique case (sew_i)
             SEW_8 : begin
                 for (int i = 0; i < (VLEN/8); i++) begin
@@ -85,6 +86,7 @@ always_comb begin
                 count = '0;
             end
         endcase
+    end
 end
 
 assign data_vd_o = count;

@@ -32,6 +32,8 @@ bus_simd_t data_vd_i;
 
 always_comb begin
     count = '0;
+    data_vd_i = '0;
+    if(instr_type_i == VIOTA) begin 
         unique case (sew_i)
             SEW_8 : begin
                 for (int i = 0; i < (VLEN/8); i++) begin
@@ -78,6 +80,9 @@ always_comb begin
                 count = '0;
             end
         endcase
+    end else begin
+        data_vd_i = '0;
+    end
 end
 
 assign data_vd_o = data_vd_i;
