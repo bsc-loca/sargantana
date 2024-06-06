@@ -14,18 +14,19 @@ import drac_pkg::*;
 import riscv_pkg::*;
 
 module vredtree (
-    input  logic clk_i,                     // Clock signal
-    input  logic rstn_i,                    // Reset signal
-    input  instr_type_t instr_type_i,       // Instruction type
-    input  sew_t sew_i,                     // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
-    input  logic [VMAXELEM_LOG:0] vl_i,     // Current vector lenght in elements
-    input  bus_simd_t data_vs1_i,           // 128-bit from vs1
-    input  bus_simd_t data_vs2_i,           // 128-bit source operand 
-    input  bus_simd_t data_old_vd,
-    input  bus_mask_t data_vm_i,            // Vector mask of VLEN/8 size
-    input  instr_type_t instr_to_out_i,     // Instruction to output
-    input  sew_t sew_to_out_i,              // SEW indication for output 
-    output bus_simd_t red_data_vd_o         // 128-bit result (only cares last element)
+    input  logic clk_i,                         // Clock signal
+    input  logic rstn_i,                        // Reset signal
+    input  instr_type_t instr_type_i,           // Instruction type
+    input  sew_t sew_i,                         // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
+    input  logic [VMAXELEM_LOG:0] vl_i,         // Current vector lenght in elements
+    input  bus_simd_t data_vs1_i,               // 128-bit from vs1
+    input  bus_simd_t data_vs2_i,               // 128-bit source operand 
+    input  bus_simd_t data_old_vd,              // Backup of previous vector destination value
+    input  bus_mask_t data_vm_i,                // Vector mask of VLEN/8 size
+    input  instr_type_t instr_to_out_i,         // Instruction to output
+    input  logic [VMAXELEM_LOG:0] vl_to_out_i,  // Vector Lenght to output
+    input  sew_t sew_to_out_i,                  // SEW indication for output 
+    output bus_simd_t red_data_vd_o             // 128-bit result (only cares last element)
 );
 
 localparam int NUM_STAGES = $clog2(VLEN / 8) + 1;      // Number of stages based on the minimum SEW
@@ -331,78 +332,79 @@ always_comb begin
     end
 end
 
-logic [63:0] middle_sum;
 sew_t sew_to_out;
+logic [VMAXELEM_LOG-1:0] stage_to_out;
+
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
+assign stage_to_out = $clog2(vl_to_out_i);
 
 always_comb begin
     red_data_vd_o = '0;
-    middle_sum = '0;
     case (sew_to_out)
         SEW_8: begin
-            if (!gen_intermediate_q[NUM_STAGES-1].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
+            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
+                red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
             end else begin
-                case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
+                case (gen_intermediate_q[stage_to_out].instr_type)
+                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[0 +: 8])};
+                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[0 +: 8])};
+                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
                     default: red_data_vd_o = '0;
                 endcase
             end
         end
         SEW_16: begin
-            if (!gen_intermediate_q[NUM_STAGES-2].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
+            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
+                red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
             end else begin
-                case (gen_intermediate_q[NUM_STAGES-2].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] + gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] & gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] | gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] ^ gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16])   < $signed(gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])) ? gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16] : gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])) ? gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16] : gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16])   < $signed(gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])) ? gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] : gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])) ? gen_intermediate_q[NUM_STAGES-2].intermediate[0 +: 16] : gen_intermediate_q[NUM_STAGES-2].data_vs1[0 +: 16])};
+                case (gen_intermediate_q[stage_to_out].instr_type)
+                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
+                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
+                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
+                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
+                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 16])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 16] : gen_intermediate_q[stage_to_out].intermediate[0 +: 16])};
+                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 16] : gen_intermediate_q[stage_to_out].intermediate[0 +: 16])};
+                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 16])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 16] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
+                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 16] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
                     default: red_data_vd_o = '0;
                 endcase
             end
         end
         SEW_32: begin
-            if (!gen_intermediate_q[NUM_STAGES-3].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
+            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
+                red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
             end else begin
-                case (gen_intermediate_q[NUM_STAGES-3].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] + gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] & gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] | gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] ^ gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32])   < $signed(gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])) ? gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32] : gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])) ? gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32] : gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32])   < $signed(gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])) ? gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] : gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])) ? gen_intermediate_q[NUM_STAGES-3].intermediate[0 +: 32] : gen_intermediate_q[NUM_STAGES-3].data_vs1[0 +: 32])};
+                case (gen_intermediate_q[stage_to_out].instr_type)
+                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
+                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
+                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
+                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
+                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 32])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 32] : gen_intermediate_q[stage_to_out].intermediate[0 +: 32])};
+                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 32] : gen_intermediate_q[stage_to_out].intermediate[0 +: 32])};
+                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 32])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 32] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
+                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 32] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
                     default: red_data_vd_o = '0;
                 endcase
             end
         end
         SEW_64: begin
-            if (!gen_intermediate_q[NUM_STAGES-4].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
+            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
+                red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
             end else begin
-                case (gen_intermediate_q[NUM_STAGES-4].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] + gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] & gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] | gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] ^ gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64])   < $signed(gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])) ? gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64] : gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])) ? gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64] : gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64])   < $signed(gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])) ? gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] : gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])) ? gen_intermediate_q[NUM_STAGES-4].intermediate[0 +: 64] : gen_intermediate_q[NUM_STAGES-4].data_vs1[0 +: 64])};
+                case (gen_intermediate_q[stage_to_out].instr_type)
+                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
+                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
+                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
+                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
+                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 64])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 64] : gen_intermediate_q[stage_to_out].intermediate[0 +: 64])};
+                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 64] : gen_intermediate_q[stage_to_out].intermediate[0 +: 64])};
+                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 64])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 64] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
+                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 64] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
                     default: red_data_vd_o = '0;
                 endcase
             end
@@ -410,58 +412,58 @@ always_comb begin
     endcase
 end
 /*SEW_8: begin
-    if (!gen_intermediate_q[NUM_STAGES-1].mask[1] && !gen_intermediate_q[NUM_STAGES-1].mask[0]) begin
-        red_data_vd_o = {{data_old_vd[VLEN-1:8]}, gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]};
-    end else if (gen_intermediate_q[NUM_STAGES-1].mask[1] && !gen_intermediate_q[NUM_STAGES-1].mask[0]) begin
-        case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))   ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])};
-            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])};
-            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))   ? gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
+    if (!gen_intermediate_q[stage_to_out].mask[1] && !gen_intermediate_q[stage_to_out].mask[0]) begin
+        red_data_vd_o = {{data_old_vd[VLEN-1:8]}, gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]};
+    end else if (gen_intermediate_q[stage_to_out].mask[1] && !gen_intermediate_q[stage_to_out].mask[0]) begin
+        case (gen_intermediate_q[stage_to_out].instr_type)
+            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8])};
+            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8])};
+            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
             default : red_data_vd_o = '0;
         endcase
-    end else if (!gen_intermediate_q[NUM_STAGES-1].mask[1] && gen_intermediate_q[NUM_STAGES-1].mask[0]) begin
-        case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))   ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])};
-            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])};
-            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))   ? gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
+    end else if (!gen_intermediate_q[stage_to_out].mask[1] && gen_intermediate_q[stage_to_out].mask[0]) begin
+        case (gen_intermediate_q[stage_to_out].instr_type)
+            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0])};
+            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0])};
+            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].intermediate[7:0] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
             default: red_data_vd_o = '0;
         endcase
     end else begin
-        case (gen_intermediate_q[NUM_STAGES-1].instr_type)
-            VREDSUM:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
-                                                        + gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
-                                                        + gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
-                                                        & gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
-                                                        & gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
-                                                        | gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
-                                                        | gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] 
-                                                        ^ gen_intermediate_q[NUM_STAGES-1].intermediate[7:0] 
-                                                        ^ gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])) ? 
-                                                                (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])    < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]) :
-                                                                (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]))};
-            VREDMAXU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])) ? 
-                                                                (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])  < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]) :
-                                                                (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8] : gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]))};
-            VREDMIN:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])) ? 
-                                                                (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8])   < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]) :
-                                                                (($signed(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])    < $signed(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]  : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))};
-            VREDMINU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])) ? 
-                                                                (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[15:8]) < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[15:8] : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]) :
-                                                                (($unsigned(gen_intermediate_q[NUM_STAGES-1].intermediate[7:0])  < $unsigned(gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8])) ? gen_intermediate_q[NUM_STAGES-1].intermediate[7:0]  : gen_intermediate_q[NUM_STAGES-1].data_vs1[0 +: 8]))};
+        case (gen_intermediate_q[stage_to_out].instr_type)
+            VREDSUM:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
+                                                        + gen_intermediate_q[stage_to_out].intermediate[7:0] 
+                                                        + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDAND:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
+                                                        & gen_intermediate_q[stage_to_out].intermediate[7:0] 
+                                                        & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDOR:   red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
+                                                        | gen_intermediate_q[stage_to_out].intermediate[7:0] 
+                                                        | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDXOR:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
+                                                        ^ gen_intermediate_q[stage_to_out].intermediate[7:0] 
+                                                        ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
+            VREDMAX:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
+                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])    < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0]) :
+                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8]))};
+            VREDMAXU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
+                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])  < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0]) :
+                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8]))};
+            VREDMIN:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
+                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]) :
+                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])    < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0]  : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))};
+            VREDMINU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
+                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]) :
+                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])  < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0]  : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))};
             default: red_data_vd_o = '0;
         endcase
     end

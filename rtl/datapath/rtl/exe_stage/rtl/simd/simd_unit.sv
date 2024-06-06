@@ -39,6 +39,7 @@ bus_simd_t fu_data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
+logic [VMAXELEM_LOG:0] vl_to_out;
 
 // these variabls hold data related to the previous
 // DIV/REM inst in order for us to be able to indicate
@@ -214,6 +215,7 @@ endfunction
 typedef struct packed {
     logic valid;
     rr_exe_simd_instr_t simd_instr;
+    logic [VMAXELEM_LOG:0] vl;
 } instr_pipe_t;
 instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
@@ -258,7 +260,7 @@ always_comb begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
-        simd_exe_stages = $clog2(vl_i) + 2;
+        simd_exe_stages = $clog2(instruction_i.instr.vl) + 2;
     end else if (is_vdiv(instruction_i)) begin
         
         // Deciding on how many cycles to do the DIV/REM
@@ -346,17 +348,21 @@ always_comb begin
                 if (simd_exe_stages == i) begin
                     simd_pipe_d[i][0].valid = instruction_i.instr.valid;
                     simd_pipe_d[i][0].simd_instr = instruction_i;
+                    simd_pipe_d[i][0].vl = instruction_i.instr.vl;
                 end else begin
                     simd_pipe_d[i][0].valid = 1'b0;
                     simd_pipe_d[i][0].simd_instr = '0; // Implicitly sets SEW_8
+                    simd_pipe_d[i][0].vl = '0;
                 end
             end else begin
                 if (j < i) begin
                     simd_pipe_d[i][j].valid = simd_pipe_q[i][j-1].valid;
                     simd_pipe_d[i][j].simd_instr = simd_pipe_q[i][j-1].simd_instr;
+                    simd_pipe_d[i][j].vl = simd_pipe_q[i][j-1].vl;
                 end else begin
                     simd_pipe_d[i][j].valid = 1'b0;
                     simd_pipe_d[i][j].simd_instr = '0;
+                    simd_pipe_d[i][j].vl = '0;
                 end
             end
         end
@@ -388,14 +394,14 @@ always_comb begin
 end
 
 //Select the instruction that completes its correspondent pipeline
-rr_exe_simd_instr_t instr_score_board;
+instr_pipe_t instr_score_board;
 logic valid_found;
 always_comb begin
     instr_score_board = '0;
     valid_found = 1'b0;
     for (int i = 2; (i <= MAX_STAGES) && (!valid_found); i++) begin
         if (simd_pipe_q[i][i-2].valid) begin
-            instr_score_board = simd_pipe_q[i][i-2].simd_instr;
+            instr_score_board = simd_pipe_q[i][i-2];
             valid_found = 1'b1;
         end
     end
@@ -409,12 +415,15 @@ always_comb begin
 end
 
 always_comb begin
-    if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
-        instr_to_out = instr_score_board;
+    if (valid_found && (instr_score_board.simd_instr.vl != 'h0)) begin
+        instr_to_out = instr_score_board.simd_instr;
+        vl_to_out = instr_score_board.simd_instr.vl;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
+        vl_to_out = instruction_i.instr.vl;
     end else begin
         instr_to_out = '0;
+        vl_to_out = '0;
     end 
 end
 
@@ -722,6 +731,7 @@ vredtree vredtree_inst(
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
     .instr_to_out_i(instr_to_out.instr.instr_type),
+    .vl_to_out_i   (vl_to_out),
     .sew_to_out_i  (instr_to_out.instr.sew),
     .red_data_vd_o (red_data_vd)
 );
