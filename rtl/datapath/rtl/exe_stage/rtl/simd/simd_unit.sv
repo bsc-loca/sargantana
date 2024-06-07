@@ -41,6 +41,18 @@ bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 logic [VMAXELEM_LOG:0] vl_to_out;
 
+function [3:0] trunc_4bits(input [31:0] val_in);
+    trunc_4bits = val_in[3:0];
+endfunction
+
+function [3:0] trunc_33_to_4bits(input [32:0] val_in);
+    trunc_33_to_4bits = val_in[3:0];
+endfunction
+
+function [4:0] trunc_64_to_5_bits(input [63:0] val_in);
+    trunc_64_to_5_bits = val_in[4:0];
+endfunction
+
 // these variabls hold data related to the previous
 // DIV/REM inst in order for us to be able to indicate
 // if the current DIV/REM can be skipped
@@ -260,7 +272,7 @@ always_comb begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
-        simd_exe_stages = $clog2(instruction_i.instr.vl) + 2;
+        simd_exe_stages = trunc_33_to_4bits($clog2(instruction_i.instr.vl) + 2);
     end else if (is_vdiv(instruction_i)) begin
         
         // Deciding on how many cycles to do the DIV/REM
@@ -415,9 +427,9 @@ always_comb begin
 end
 
 always_comb begin
-    if (valid_found && (instr_score_board.simd_instr.vl != 'h0)) begin
+    if (valid_found && (instr_score_board.simd_instr.instr.vl != 'h0)) begin
         instr_to_out = instr_score_board.simd_instr;
-        vl_to_out = instr_score_board.simd_instr.vl;
+        vl_to_out = instr_score_board.simd_instr.instr.vl;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
         vl_to_out = instruction_i.instr.vl;

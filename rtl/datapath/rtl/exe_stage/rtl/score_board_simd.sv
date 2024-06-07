@@ -79,13 +79,17 @@ logic  previous_div_is_opvx_d;            // Instruction uses rs1 instead of vs1
 instr_type_t previous_div_instr_type_q;   // Type of instruction of previous div/rem
 instr_type_t previous_div_instr_type_d;   // Type of instruction of previous div/rem
 
-// Truncate function
+// Truncate functions
 function [5:0] trunc_stages(input [31:0] val_in);
     trunc_stages = val_in[5:0];
 endfunction
 
 function [4:0] trunc_5_bit(input [31:0] val_in);
     trunc_5_bit = val_in[4:0];
+endfunction
+
+function [3:0] trunc_33_to_4bits(input [32:0] val_in);
+    trunc_33_to_4bits = val_in[3:0];
 endfunction
 
 assign is_vmadd_vsmul = ((instr_entry_i.instr.instr_type == VMADD)  ||
@@ -154,7 +158,7 @@ always_comb begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd4 : 6'd3;
     end 
     else if (is_vred) begin
-        simd_exe_stages = $clog2(vl_i) + 2;
+        simd_exe_stages = trunc_33_to_4bits($clog2(vl_i) + 2);
     end else if(is_vdiv) begin
 
         // Deciding on how many cycles to do the DIV/REM

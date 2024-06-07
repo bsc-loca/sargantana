@@ -1134,7 +1134,7 @@ module decoder
                                         decode_instr_int.instr_type = VSMUL;
                                     end
                                     F6_VWREDSUMU: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.use_old_vd = 1'b1;
@@ -1142,7 +1142,7 @@ module decoder
                                         end
                                     end
                                     F6_VWREDSUM: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.use_old_vd = 1'b1;

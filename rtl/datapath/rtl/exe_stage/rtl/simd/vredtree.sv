@@ -30,6 +30,7 @@ module vredtree (
 );
 
 localparam int NUM_STAGES = $clog2(VLEN / 8) + 1;      // Number of stages based on the minimum SEW
+localparam int NUM_STAGES_LOG = $clog2(NUM_STAGES);
 
 function sew_t increase_sew_size(sew_t sew);
     case (sew)
@@ -58,6 +59,10 @@ endfunction
 
 function [63:0] trunc_64bits(input [64:0] val_in);
     trunc_64bits = val_in[63:0];
+endfunction
+
+function [NUM_STAGES_LOG-1:0]  trunc_stage_to_out(input [31:0] val_in);
+    trunc_stage_to_out = val_in[NUM_STAGES_LOG-1:0];
 endfunction
 
 // Intermediate vector declaration with a generate block
@@ -333,10 +338,10 @@ always_comb begin
 end
 
 sew_t sew_to_out;
-logic [VMAXELEM_LOG-1:0] stage_to_out;
+logic [NUM_STAGES_LOG-1:0] stage_to_out;
 
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
-assign stage_to_out = $clog2(vl_to_out_i);
+assign stage_to_out = trunc_stage_to_out($clog2(vl_to_out_i));
 
 always_comb begin
     red_data_vd_o = '0;
