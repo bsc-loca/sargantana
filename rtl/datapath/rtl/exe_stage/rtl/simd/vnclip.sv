@@ -38,10 +38,6 @@ localparam [7:0] NEGATIVE_SIGNED_RANGE_SEW_8 = 2**(8-1);
 
 
 
-function [7:0] trunc_17_to_8_bits(input [16:0] val_in);
-    trunc_17_to_8_bits = val_in[7:0];
-endfunction
-
 function [15:0] trunc_17_to_16_bits(input [16:0] val_in);
     trunc_17_to_16_bits = val_in[15:0];
 endfunction
@@ -88,7 +84,7 @@ logic [3:0] not_negative;
 logic [3:0] to_add;
 logic [129:0] vs2_shifted_result;
 
-logic[33:0] del;
+
 //Rounding
 always_comb begin
     result_rounded_vd_o = '0;
@@ -104,14 +100,14 @@ always_comb begin
                 end
                 RNE_V: begin
                     if (data_vs1_i[5:0] > 0) begin
-                        not_negative[0] = (data_vs1_i[5:0] - 2) >= 0;
-                        vs2_shifted_result = data_vs2_i << (64 - (data_vs1_i[5:0] - 2));
+                        not_negative[0] = (data_vs1_i[5:0] - 2) >= 0; 
+                        vs2_shifted_result = data_vs2_i << (64 - (data_vs1_i[5:0] - 2)); //shift the values to the left
                         vs2_truncated_value = trunc_130_to_64_bits(vs2_shifted_result);
                         to_add[0] = data_vs2_i[data_vs1_i[5:0] - 1] & //v[d-1] & (v[d-2:0]≠0 | v[d])
                                     (((vs2_truncated_value != '0) & not_negative[0])
                                     | (data_vs2_i[data_vs1_i[5:0]]));
                     end else begin 
-                        to_add[0] = 0;
+                        to_add[0] = 1'b0;
                     end
                 end    
                 RDN_V: begin
@@ -129,11 +125,11 @@ always_comb begin
             endcase
             case (instr_type_i)
                 VNCLIP: begin
-                    shift_result_to_truncate = ($signed(data_vs2_i) >>> data_vs1_i[5:0]);
+                    shift_result_to_truncate = ($signed(data_vs2_i) >>> data_vs1_i[5:0]); //signed shift
                     result_rounded_vd_o = trunc_65_to_64_bits(shift_result_to_truncate + to_add[0]);
                 end
                 VNCLIPU: begin
-                    shift_result_to_truncate = (data_vs2_i >> data_vs1_i[5:0]);
+                    shift_result_to_truncate = (data_vs2_i >> data_vs1_i[5:0]); //unsigned shift
                     result_rounded_vd_o = trunc_65_to_64_bits(shift_result_to_truncate + to_add[0]);                
                 end
                 default: begin
@@ -158,7 +154,7 @@ always_comb begin
                                         (((vs2_truncated_value[i*32 +: 32] != '0) & not_negative[i])
                                         | (data_vs2_i[(i*32) + data_vs1_i[i*16 +: 5]]));//v[d-1] & (v[d-2:0]≠0 | v[d])
                         end else begin
-                            to_add[i] = 0;
+                            to_add[i] = 1'b0;
                         end    
                     end
                     RDN_V: begin
@@ -206,7 +202,7 @@ always_comb begin
                                         (((vs2_truncated_value[i*16 +: 16] != '0) & not_negative[i])
                                         | (data_vs2_i[i*16 + data_vs1_i[i*8 +: 4]]));//v[d-1] & (v[d-2:0]≠0 | v[d])
                         end else begin
-                            to_add[i] = 0;
+                            to_add[i] = 1'b0;
                         end
                     end
                     RDN_V: begin
@@ -250,7 +246,6 @@ always_comb begin
     data_vd_o = '0;
     case (sew_i)
         SEW_32: begin
-            del = result_rounded_vd_o[0*16 +: 16];
             case (instr_type_i)
                 VNCLIPU: begin
                     if(result_rounded_vd_o >= UNSIGNED_RANGE_SEW_32) begin
@@ -278,7 +273,6 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i < 2; i++) begin
-                del = result_rounded_vd_o[0*32 +: 32];
                 case (instr_type_i)
                     VNCLIPU: begin
                         if(result_rounded_vd_o[i*32 +: 32] >= UNSIGNED_RANGE_SEW_16) begin
@@ -307,7 +301,6 @@ always_comb begin
         end
         SEW_8: begin
             for (int i = 0; i < 4; i++) begin
-                del = result_rounded_vd_o[0*16 +: 16];
                 case (instr_type_i)
                     VNCLIPU: begin
                         if(result_rounded_vd_o[i*16 +: 16] >= UNSIGNED_RANGE_SEW_8) begin
