@@ -137,11 +137,11 @@ endfunction
 
 always_comb begin
 
-    previous_div_rs1_d = previous_div_rs1_q;               
-    previous_div_vs1_d = previous_div_vs1_q;                
-    previous_div_vs2_d = previous_div_vs2_q;                
-    previous_div_is_opvx_d = previous_div_is_opvx_q;            
-    previous_div_instr_type_d = previous_div_instr_type_q;
+    previous_div_rs1_d          = previous_div_rs1_q;               
+    previous_div_vs1_d          = previous_div_vs1_q;                
+    previous_div_vs2_d          = previous_div_vs2_q;                
+    previous_div_is_opvx_d      = previous_div_is_opvx_q;            
+    previous_div_instr_type_d   = previous_div_instr_type_q;
 
     if (is_vmul) begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd3 : 6'd2;
@@ -173,19 +173,19 @@ always_comb begin
         // when a new DIV/REM is issued, it's operands are saved
         // for comparision with future DIV/REM
         if((~stall_simd) && ready_i) begin
-            previous_div_rs1_d = instr_entry_i.data_rs1;                 
-            previous_div_vs1_d = instr_entry_i.data_vs1;                
-            previous_div_vs2_d = instr_entry_i.data_vs2;                
-            previous_div_is_opvx_d = instr_entry_i.instr.is_opvx;            
-            previous_div_instr_type_d = instr_entry_i.instr.instr_type;   
+            previous_div_rs1_d          = instr_entry_i.data_rs1;                 
+            previous_div_vs1_d          = instr_entry_i.data_vs1;                
+            previous_div_vs2_d          = instr_entry_i.data_vs2;                
+            previous_div_is_opvx_d      = instr_entry_i.instr.is_opvx;            
+            previous_div_instr_type_d   = instr_entry_i.instr.instr_type;   
     
         end
         else begin
-            previous_div_rs1_d = previous_div_rs1_q;               
-            previous_div_vs1_d = previous_div_vs1_q;                
-            previous_div_vs2_d = previous_div_vs2_q;                
-            previous_div_is_opvx_d = previous_div_is_opvx_q;            
-            previous_div_instr_type_d = previous_div_instr_type_q;   
+            previous_div_rs1_d          = previous_div_rs1_q;               
+            previous_div_vs1_d          = previous_div_vs1_q;                
+            previous_div_vs2_d          = previous_div_vs2_q;                
+            previous_div_is_opvx_d      = previous_div_is_opvx_q;            
+            previous_div_instr_type_d   = previous_div_instr_type_q;   
         end                     
     end else begin
         simd_exe_stages = 6'd1;

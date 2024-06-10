@@ -274,18 +274,18 @@ always_comb begin
         // when a new DIV/REM is issued, it's operands are saved
         // for comparision with future DIV/REM
         if(instruction_i.instr.valid) begin
-            previous_div_rs1_d = instruction_i.data_rs1;                 
-            previous_div_vs1_d = instruction_i.data_vs1;                
-            previous_div_vs2_d = instruction_i.data_vs2;                
-            previous_div_is_opvx_d = instruction_i.instr.is_opvx;            
-            previous_div_instr_type_d = instruction_i.instr.instr_type;
+            previous_div_rs1_d          = instruction_i.data_rs1;                 
+            previous_div_vs1_d          = instruction_i.data_vs1;                
+            previous_div_vs2_d          = instruction_i.data_vs2;                
+            previous_div_is_opvx_d      = instruction_i.instr.is_opvx;            
+            previous_div_instr_type_d   = instruction_i.instr.instr_type;
         end
         else begin
-            previous_div_rs1_d = previous_div_rs1_q;               
-            previous_div_vs1_d = previous_div_vs1_q;                
-            previous_div_vs2_d = previous_div_vs2_q;                
-            previous_div_is_opvx_d = previous_div_is_opvx_q;            
-            previous_div_instr_type_d = previous_div_instr_type_q;  
+            previous_div_rs1_d          = previous_div_rs1_q;               
+            previous_div_vs1_d          = previous_div_vs1_q;                
+            previous_div_vs2_d          = previous_div_vs2_q;                
+            previous_div_is_opvx_d      = previous_div_is_opvx_q;            
+            previous_div_instr_type_d   = previous_div_instr_type_q;  
         end                    
     end 
     
@@ -323,7 +323,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         for (int i = 0; i < (DIV_STAGES - 1); i++) begin
             division_pipe_q[i]      <= division_pipe_d[i];
         end
-        division_instruction_q  <= division_instruction_d;
+        division_instruction_q      <= division_instruction_d;
 
         previous_div_rs1_q          <= previous_div_rs1_d;                
         previous_div_vs1_q          <= previous_div_vs1_d;               
@@ -366,17 +366,17 @@ always_comb begin
         if (j==0) begin
 
             if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32) && instruction_i.instr.valid) begin
-                division_pipe_d[0] = instruction_i.instr.valid;
-                division_instruction_d = instruction_i;
+                division_pipe_d[0]      = instruction_i.instr.valid;
+                division_instruction_d  = instruction_i;
                 // division_pipe_d[0].simd_instr = instruction_i;
             end
             else begin
-                division_pipe_d[0] = 1'b0;
-                division_instruction_d = division_instruction_q;
+                division_pipe_d[0]      = 1'b0;
+                division_instruction_d  = division_instruction_q;
                 // division_pipe_d[0].simd_instr = '0;
             end
         end else begin
-            division_pipe_d[j] = division_pipe_q[j-1];
+            division_pipe_d[j]          = division_pipe_q[j-1];
             // division_instruction_d = division_instruction_q;
             // division_pipe_d[j].simd_instr = division_pipe_q[j-1].simd_instr;
                  

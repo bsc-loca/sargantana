@@ -52,47 +52,47 @@ module div_2bits
         case (sew_i)
 
             SEW_8: begin
-                tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[7]};
-                tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+                tmp_remanent[1]                 = {remanent_i[62:0], dividend_quotient_i[7]};
+                tmp_dividend_quotient[1]        = {dividend_quotient_i[62:0], quotient_bit[1]};
                 for(int i = 0; i >= 0; i--) begin
-                    tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][7]};
-                    tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
+                    tmp_remanent[i]             = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][7]};
+                    tmp_dividend_quotient[i]    = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
                 end
             end
 
             SEW_16: begin
-                tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[15]};
-                tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+                tmp_remanent[1]                 = {remanent_i[62:0], dividend_quotient_i[15]};
+                tmp_dividend_quotient[1]        = {dividend_quotient_i[62:0], quotient_bit[1]};
                 for(int i = 0; i >= 0; i--) begin
-                    tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][15]};
-                    tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
+                    tmp_remanent[i]             = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][15]};
+                    tmp_dividend_quotient[i]    = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
                 end
             end
 
             SEW_32: begin
-                tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[31]};
-                tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+                tmp_remanent[1]                 = {remanent_i[62:0], dividend_quotient_i[31]};
+                tmp_dividend_quotient[1]        = {dividend_quotient_i[62:0], quotient_bit[1]};
                 for(int i = 0; i >= 0; i--) begin
-                    tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][31]};
-                    tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
+                    tmp_remanent[i]             = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][31]};
+                    tmp_dividend_quotient[i]    = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
                 end
             end
 
             SEW_64: begin
-                tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[63]};
-                tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+                tmp_remanent[1]                 = {remanent_i[62:0], dividend_quotient_i[63]};
+                tmp_dividend_quotient[1]        = {dividend_quotient_i[62:0], quotient_bit[1]};
                 for(int i = 0; i >= 0; i--) begin
-                    tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][63]};
-                    tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
+                    tmp_remanent[i]             = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][63]};
+                    tmp_dividend_quotient[i]    = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
                 end
             end
 
             default: begin
-                tmp_remanent[1] = {remanent_i[62:0], dividend_quotient_i[63]};
-                tmp_dividend_quotient[1] = {dividend_quotient_i[62:0], quotient_bit[1]};
+                tmp_remanent[1]                 = {remanent_i[62:0], dividend_quotient_i[63]};
+                tmp_dividend_quotient[1]        = {dividend_quotient_i[62:0], quotient_bit[1]};
                 for(int i = 0; i >= 0; i--) begin
-                    tmp_remanent[i] = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][63]};
-                    tmp_dividend_quotient[i] = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
+                    tmp_remanent[i]             = {tmp_remanent_sub[i+1][62:0],tmp_dividend_quotient[i+1][63]};
+                    tmp_dividend_quotient[i]    = {tmp_dividend_quotient[i+1][62:0], quotient_bit[i]};
                 end
             end
             
@@ -106,17 +106,17 @@ module div_2bits
         for(int i = 1; i >= 0; i--) begin
             if ($unsigned(tmp_remanent[i]) >= $unsigned(divisor_i)) begin 
                 tmp_remanent_sub[i] = trunc_65_64(tmp_remanent[i] - divisor_i);
-                quotient_bit[i] = 1'b1;
+                quotient_bit[i]     = 1'b1;
             end else begin
                 tmp_remanent_sub[i] = tmp_remanent[i];
-                quotient_bit[i] = 1'b0;
+                quotient_bit[i]     = 1'b0;
             end
         end
     end
     
-    assign remanent_o = tmp_remanent_sub[0][63:0];
-    assign dividend_quotient_o = tmp_dividend_quotient[0][63:0];
-    assign divisor_o = divisor_i;
+    assign remanent_o           = tmp_remanent_sub[0][63:0];
+    assign dividend_quotient_o  = tmp_dividend_quotient[0][63:0];
+    assign divisor_o            = divisor_i;
 
 endmodule 
 
