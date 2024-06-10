@@ -56,6 +56,8 @@ module mem_unit
     output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
 );
 
+localparam VLEN_LOG = $clog2(VLEN);
+
 `ifdef SIM_COMMIT_LOG
     bus_simd_t vector_store_data;
     logic vector_store_first_req;
@@ -69,28 +71,20 @@ function [6:0] trunc_sum_7bits(input [7:0] val_in);
   trunc_sum_7bits = val_in[6:0];
 endfunction
 
-function [4:0] trunc_7_5(input [6:0] val_in);
-  trunc_7_5 = val_in[4:0];
+function [VLEN_LOG-1:0] trunc_vlenlog_shift2(input [VLEN_LOG+1:0] val_in);
+  trunc_vlenlog_shift2 = val_in[VLEN_LOG-1:0];
 endfunction
 
-function [6:0] trunc_9_7(input [8:0] val_in);
-  trunc_9_7 = val_in[6:0];
+function [VLEN_LOG-1:0] trunc_vlenlog_shift3(input [VLEN_LOG+2:0] val_in);
+  trunc_vlenlog_shift3 = val_in[VLEN_LOG-1:0];
 endfunction
 
-function [6:0] trunc_10_7(input [9:0] val_in);
-  trunc_10_7 = val_in[6:0];
+function [VLEN_LOG-1:0] trunc_vlenlog_shift4(input [VLEN_LOG+3:0] val_in);
+  trunc_vlenlog_shift4 = val_in[VLEN_LOG-1:0];
 endfunction
 
-function [6:0] trunc_11_7(input [10:0] val_in);
-  trunc_11_7 = val_in[6:0];
-endfunction
-
-function [6:0] trunc_12_7(input [11:0] val_in);
-  trunc_12_7 = val_in[6:0];
-endfunction
-
-function [4:0] trunc_6_5(input [5:0] val_in);
-  trunc_6_5 = val_in[4:0];
+function [VLEN_LOG-1:0] trunc_vlenlog_shift5(input [VLEN_LOG+4:0] val_in);
+  trunc_vlenlog_shift5 = val_in[VLEN_LOG-1:0];
 endfunction
 
 function [1:0] trunc_3_2(input [2:0] val_in);
@@ -446,7 +440,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             mem_gl_index_o  <= instruction_s1_d.gl_index;
         end
         `endif   
-        else if (flush_store && vstore_packer_complete) begin
+        else if (vstore_packer_complete) begin
             store_on_fly    <= 1'b0;
             mem_gl_index_o  <= 'h0;
         end
@@ -718,7 +712,7 @@ always_comb begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
-                            vdata_to_wb[(trunc_9_7(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
+                            vdata_to_wb[(trunc_vlenlog_shift2(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
@@ -727,7 +721,7 @@ always_comb begin
                 packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb[(trunc_9_7(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
+                        vdata_to_wb[(trunc_vlenlog_shift2(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
                         packed_velems = packed_velems - 1'b1;
                     end
                 end 
@@ -743,7 +737,7 @@ always_comb begin
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb[(trunc_10_7(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
+                            vdata_to_wb[(trunc_vlenlog_shift3(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
@@ -752,7 +746,7 @@ always_comb begin
                 packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb[(trunc_10_7(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
+                        vdata_to_wb[(trunc_vlenlog_shift3(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
                         packed_velems = packed_velems - 1'b1;
                     end
                 end 
@@ -768,7 +762,7 @@ always_comb begin
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb[(trunc_11_7(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
+                            vdata_to_wb[(trunc_vlenlog_shift4(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
@@ -777,7 +771,7 @@ always_comb begin
                 packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb[(trunc_11_7(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
+                        vdata_to_wb[(trunc_vlenlog_shift4(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
                         packed_velems = packed_velems - 1'b1;
                     end
                 end 
@@ -793,7 +787,7 @@ always_comb begin
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
                         if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
-                            vdata_to_wb[(trunc_12_7(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
+                            vdata_to_wb[(trunc_vlenlog_shift5(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
                     end
@@ -802,7 +796,7 @@ always_comb begin
                 packed_velems = instruction_to_wb.velem_incr - 1'b1;
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (instruction_to_wb.load_mask[i]) begin
-                        vdata_to_wb[(trunc_12_7(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
+                        vdata_to_wb[(trunc_vlenlog_shift5(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
                         packed_velems = packed_velems - 1'b1;
                     end
                 end 
@@ -1070,7 +1064,7 @@ assign vleff_vl_o = vleff_vl_int;
 assign mem_store_or_amo_o = store_on_fly | amo_on_fly;
 
 //// Stall committing instruction because it is a store
-assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~(flush_store & vstore_packer_complete)) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
+assign mem_commit_stall_o = mem_commit_stall_s0 | (store_on_fly & ~(vstore_packer_complete)) | (amo_on_fly & ~flush_amo & ~flush_amo_prmq);
 
 //// Block incoming Mem instructions
 assign lock_o   = full_lsq;

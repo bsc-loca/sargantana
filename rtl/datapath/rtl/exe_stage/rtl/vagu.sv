@@ -69,16 +69,16 @@ function [DCACHE_RESP_DATA_LOG-3:0] trunc_velem_incr(input [DCACHE_RESP_DATA_LOG
   trunc_velem_incr = val_in[DCACHE_RESP_DATA_LOG-3:0];
 endfunction
 
-function [7:0] trunc_11_8(input [10:0] val_in);
-  trunc_11_8 = val_in[7:0];
+function [DCACHE_RESP_DATA_LOG:0] trunc_dcachedatalog_shift3(input [DCACHE_RESP_DATA_LOG+3:0] val_in);
+  trunc_dcachedatalog_shift3 = val_in[DCACHE_RESP_DATA_LOG:0];
 endfunction
 
-function [7:0] trunc_12_8(input [11:0] val_in);
-  trunc_12_8 = val_in[7:0];
+function [DCACHE_RESP_DATA_LOG:0] trunc_dcachedatalog_shift4(input [DCACHE_RESP_DATA_LOG+4:0] val_in);
+  trunc_dcachedatalog_shift4 = val_in[DCACHE_RESP_DATA_LOG:0];
 endfunction
 
-function [7:0] trunc_13_8(input [12:0] val_in);
-  trunc_13_8 = val_in[7:0];
+function [DCACHE_RESP_DATA_LOG:0] trunc_dcachedatalog_shift5(input [DCACHE_RESP_DATA_LOG+5:0] val_in);
+  trunc_dcachedatalog_shift5 = val_in[DCACHE_RESP_DATA_LOG:0];
 endfunction
 
 function [3:0] trunc_5_4(input [4:0] val_in);
@@ -93,8 +93,8 @@ function [MAX_VELEM_LOG:0] trunc_max_velem_log_sum(input [MAX_VELEM_LOG+1:0] val
   trunc_max_velem_log_sum = val_in[MAX_VELEM_LOG:0];
 endfunction
 
-function [7:0] padd_7_8(input [6:0] val_in);
-  padd_7_8 = {1'b0, val_in};
+function [DCACHE_RESP_DATA_LOG:0] padd_dcachedatalog_plus1(input [DCACHE_RESP_DATA_LOG-1:0] val_in);
+  padd_dcachedatalog_plus1 = {1'b0, val_in};
 endfunction
 
 req_vmem_ops_t vmem_ops_state_d, vmem_ops_state_q;
@@ -229,7 +229,7 @@ always_comb begin
                         vaddr_incr = 64'd1;
                         velem_incr = 'd1;
                     end
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[3:0] << 3);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-1:0] << 3);
                     memp_instr_o.sew = SEW_8;
                 end
                 4'b0101: begin
@@ -258,7 +258,7 @@ always_comb begin
                         vaddr_incr = 64'd2;
                         velem_incr = 'd1;
                     end
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[2:0] << 4);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     memp_instr_o.sew = SEW_16;
                     misalign_xcpt_int = vaddr_q[0];
                 end
@@ -284,7 +284,7 @@ always_comb begin
                         vaddr_incr = 64'd4;
                         velem_incr = 'd1;
                     end
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[1:0] << 5);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     memp_instr_o.sew = SEW_32;
                     misalign_xcpt_int = |vaddr_q[1:0];
                 end
@@ -306,7 +306,7 @@ always_comb begin
                         vaddr_incr = 64'd8;
                         velem_incr = 'd1;
                     end
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> (velem_cnt_q[0] << 6);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     memp_instr_o.sew = SEW_64;
                     misalign_xcpt_int = |vaddr_q[2:0];
                 end
@@ -489,27 +489,27 @@ always_comb begin
                 4'b0000: begin
                     memp_instr_o.instr.instr_type = SB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[3:0] << 3);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-1:0] << 3);
                     memp_instr_o.sew = SEW_8;
                 end
                 4'b0101: begin
                     memp_instr_o.instr.instr_type = SH;
                     memp_instr_o.instr.mem_size = 4'b0001;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[2:0] << 4);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     misalign_xcpt_int = vaddr_q[0];
                     memp_instr_o.sew = SEW_16;
                 end
                 4'b0110: begin
                     memp_instr_o.instr.instr_type = SW;
                     memp_instr_o.instr.mem_size = 4'b0010;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[1:0] << 5);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     misalign_xcpt_int = |vaddr_q[1:0];
                     memp_instr_o.sew = SEW_32;
                 end
                 4'b0111: begin
                     memp_instr_o.instr.instr_type = SD;
                     memp_instr_o.instr.mem_size = 4'b0011;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[0] << 6);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     misalign_xcpt_int = |vaddr_q[2:0];
                     memp_instr_o.sew = SEW_64;
                 end
@@ -532,39 +532,39 @@ always_comb begin
                 SEW_8: begin
                     memp_instr_o.instr.instr_type = LB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
                     memp_instr_o.instr.instr_type = LH;
                     memp_instr_o.instr.mem_size = 4'b0001;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
                 end
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = LW;
                     memp_instr_o.instr.mem_size = 4'b0010;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_13_8((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end
                 end
                 default: begin
                     memp_instr_o.instr.instr_type = LD;
                     memp_instr_o.instr.mem_size = 4'b0011;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0110) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_13_8((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_13_8((velem_cnt_q*64)+MAX_VELEM))+:64]);
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end
                 end
             endcase
@@ -585,43 +585,43 @@ always_comb begin
                 SEW_8: begin
                     memp_instr_o.instr.instr_type = SB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[3:0] << 3);
-                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-1:0] << 3);
+                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
                     memp_instr_o.instr.instr_type = SH;
                     memp_instr_o.instr.mem_size = 4'b0001;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[2:0] << 4);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
                 end
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = SW;
                     memp_instr_o.instr.mem_size = 4'b0010;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[1:0] << 5);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_13_8((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end
                 end
                 default: begin
                     memp_instr_o.instr.instr_type = SD;
                     memp_instr_o.instr.mem_size = 4'b0011;
-                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_7_8(velem_cnt_q[0] << 6);
+                    memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_11_8((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_11_8((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_12_8((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0110) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_13_8((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_12_8((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_13_8((velem_cnt_q*64)+MAX_VELEM))+:64]);
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end
                 end
             endcase
