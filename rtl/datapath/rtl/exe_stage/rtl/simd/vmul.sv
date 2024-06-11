@@ -24,7 +24,8 @@ module vmul (
   input sew_t                 sew_i,          // Element width
   input bus64_t               data_vs1_i,     // 64-bit source operand 1
   input bus64_t               data_vs2_i,     // 64-bit source operand 2
-  output bus64_t              data_vd_o       // 64-bit result
+  output bus64_t              data_vd_o,      // 64-bit result
+  output bus128_t             full_data_o     // 128-bit generated result (needed for vsmul)
 );
 
 function [7:0] trunc_9_8(input [8:0] val_in);
@@ -368,11 +369,16 @@ end
 
 bus64_t data_vd_o1;
 bus64_t data_vd_o2;
+
+bus128_t full_data_o1;
+bus128_t full_data_o2;
+
 logic [63:0] full_precision_result_64b;
 
 // Output the results (8, 16, 32 bits)
 always_comb begin
     full_precision_result_64b = 'b0;
+    full_data_o1 = 'b0;
     unique case (sew_1)
         SEW_8 : begin
             if (is_widened_1 == 1'b1) begin
@@ -391,6 +397,8 @@ always_comb begin
                     data_vd_o1[i*8+:8] = (is_mulh_1) ?
                                         full_precision_result_64b[15:8] :
                                         full_precision_result_64b[7:0];
+                    
+                    full_data_o1[16*i +: 16] = full_precision_result_64b[15:0];
                 end
             end
         end
@@ -411,6 +419,8 @@ always_comb begin
                     data_vd_o1[i*16+:16] = (is_mulh_1) ?
                                         full_precision_result_64b[31:16] :
                                         full_precision_result_64b[15:0];
+
+                    full_data_o1[32*i +: 32] = full_precision_result_64b[31:0];
                 end
             end
         end
@@ -429,6 +439,8 @@ always_comb begin
                     data_vd_o1[i*32+:32] = (is_mulh_1) ?
                                         full_precision_result_64b[63:32] :
                                         full_precision_result_64b[31:0];
+
+                    full_data_o1[64*i +: 64] = full_precision_result_64b[63:0];
                 end
             end
         end
@@ -450,9 +462,12 @@ always_comb begin
             data_vd_o2 = (is_mulh_2) ?
                          full_precision_result_128b[127:64] :
                          full_precision_result_128b[63:0];
+            
+            full_data_o2 = full_precision_result_128b;
         end
         default : begin
             full_precision_result_128b[127:0] = 128'd0;
+            full_data_o2 = 128'b0;
             data_vd_o2 = 64'b0;
         end
     endcase
@@ -460,5 +475,6 @@ end
 
 // Needed for multiplication + add/subtract
 assign data_vd_o = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
+assign full_data_o = (sew_2 == SEW_64) ? full_data_o2 : full_data_o1;
 
 endmodule

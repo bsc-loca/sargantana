@@ -70,6 +70,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vsaaddsub.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vwaddsub.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vnclip.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vsmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/div_4bits.sv
 ./rtl/datapath/rtl/exe_stage/rtl/store_buffer.sv
 ./rtl/datapath/rtl/exe_stage/rtl/vagu.sv

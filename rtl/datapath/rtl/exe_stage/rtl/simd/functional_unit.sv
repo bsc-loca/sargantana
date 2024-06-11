@@ -36,7 +36,9 @@ bus64_t result_vcomp;
 bus64_t result_vshift;
 bus64_t result_vmul;
 bus64_t result_vdiv_vrem;
+bus64_t result_vsmul;
 
+bus128_t full_result_vmul;
 
 bus64_t data1_vaddsub_i;
 bus64_t data2_vaddsub_i;
@@ -48,6 +50,9 @@ bus64_t data2_vmul_i;
 bus64_t result_vmul_2;
 logic sat_ovf_saaddsub;
 
+bus128_t full_result_vmul_2;
+logic sat_vsmul;
+
 /* Register fo multiplication + addition/subtract
  * Due to timing problems when doing the addition on the same cycle than the
  * output of the multiplication we need to add a register on the exit of the
@@ -56,9 +61,11 @@ logic sat_ovf_saaddsub;
 always_ff@ (posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
         result_vmul_2 <= 64'b0;
+        full_result_vmul_2 <= 128'b0;
     end
     else begin
         result_vmul_2 <= result_vmul;
+        full_result_vmul_2 <= full_result_vmul;
     end
 end
 
@@ -122,7 +129,7 @@ end
 */
 always_comb begin
     case (instruction_i.instr.instr_type)
-        VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU: begin
+        VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU, VSMUL: begin
             data2_vmul_i = data_vs2_i;
         end
         VMADD, VNMSUB: begin
@@ -188,7 +195,16 @@ vmul vmul_inst(
     .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data2_vmul_i),
-    .data_vd_o     (result_vmul)
+    .data_vd_o     (result_vmul),
+    .full_data_o   (full_result_vmul)
+);
+
+vsmul vsmul_inst(
+    .sew_i         (sel_out_instr_i.sew),
+    .vxrm_i        (vxrm_i),
+    .data_i        (full_result_vmul_2),
+    .data_vd_o     (result_vsmul),
+    .sat_ovf_o     (sat_vsmul)
 );
 
 vdiv vdiv_inst(
@@ -231,16 +247,20 @@ always_comb begin
         end
         VSADDU, VSADD, VSSUBU, VSSUB: begin
             data_vd_o = result_vsaaddsub;
+            sat_ovf_o = sat_ovf_saaddsub;
         end
         VAADDU, VAADD, VASUBU, VASUB: begin
             data_vd_o = result_vsaaddsub;
-            sat_ovf_o = sat_ovf_saaddsub;
         end
         VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW: begin
             data_vd_o = result_vwaddsub;
         end
         VMUL, VMULH, VMULHU, VMULHSU, VWMUL, VWMULU, VWMULSU: begin
             data_vd_o = result_vmul;
+        end
+        VSMUL: begin
+            data_vd_o = result_vsmul;
+            sat_ovf_o = sat_vsmul;
         end
         VMADD, VNMSUB, VMACC, VNMSAC: begin
             data_vd_o = result_vaddsub;
@@ -352,4 +372,5 @@ always_comb begin
         end
     endcase
 end
+
 endmodule

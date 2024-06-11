@@ -1130,6 +1130,9 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b0;
                                         end
                                     end
+                                    F6_VMV1R_VSMUL: begin
+                                        decode_instr_int.instr_type = VSMUL;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1289,6 +1292,9 @@ module decoder
                                     F6_VRGATHER: begin
                                         decode_instr_int.instr_type = VRGATHER;
                                     end
+                                    F6_VMV1R_VSMUL: begin
+                                        decode_instr_int.instr_type = VSMUL;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -1410,7 +1416,7 @@ module decoder
                                         decode_instr_int.use_vs2 = (~decode_i.inst.vtype.vm) ? 1'b1 : 1'b0;
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
-                                    F6_VMV1R: begin
+                                    F6_VMV1R_VSMUL: begin
                                         if (imm_value != 'b0) begin // Do not allow VMV<nr>R with nr>1
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin

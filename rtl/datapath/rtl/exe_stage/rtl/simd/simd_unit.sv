@@ -118,15 +118,16 @@ function logic is_vmul(input rr_exe_simd_instr_t instr);
                (instr.instr.instr_type == VMULHSU)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vmadd(input rr_exe_simd_instr_t instr);
-    is_vmadd = ((instr.instr.instr_type == VMADD)  ||
-               (instr.instr.instr_type == VNMSUB) ||
-               (instr.instr.instr_type == VMACC)  ||
-               (instr.instr.instr_type == VNMSAC) ||
-               (instr.instr.instr_type == VWMACC) ||
-               (instr.instr.instr_type == VWMACCU) ||
-               (instr.instr.instr_type == VWMACCUS) ||
-               (instr.instr.instr_type == VWMACCSU)) ? 1'b1 : 1'b0;
+function logic is_vmadd_vsmul(input rr_exe_simd_instr_t instr);
+    is_vmadd_vsmul = ((instr.instr.instr_type == VMADD)  ||
+                      (instr.instr.instr_type == VNMSUB) ||
+                      (instr.instr.instr_type == VMACC)  ||
+                      (instr.instr.instr_type == VNMSAC) ||
+                      (instr.instr.instr_type == VWMACC) ||
+                      (instr.instr.instr_type == VWMACCU) ||
+                      (instr.instr.instr_type == VWMACCUS) ||
+                      (instr.instr.instr_type == VWMACCSU)||
+                      (instr.instr.instr_type == VSMUL)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vw(input rr_exe_simd_instr_t instr);
@@ -249,7 +250,7 @@ always_comb begin
     if (is_vmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd3 : 6'd2;
     end
-    else if (is_vmadd(instruction_i)) begin
+    else if (is_vmadd_vsmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin

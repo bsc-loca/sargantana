@@ -87,14 +87,15 @@ function [4:0] trunc_5_bit(input [31:0] val_in);
     trunc_5_bit = val_in[4:0];
 endfunction
 
-assign is_vmadd = ((instr_entry_i.instr.instr_type == VMADD)  ||
-                   (instr_entry_i.instr.instr_type == VNMSUB) ||
-                   (instr_entry_i.instr.instr_type == VMACC)  ||
-                   (instr_entry_i.instr.instr_type == VNMSAC) ||
-                   (instr_entry_i.instr.instr_type == VWMACC)  ||
-                   (instr_entry_i.instr.instr_type == VWMACCU)  ||
-                   (instr_entry_i.instr.instr_type == VWMACCUS)  ||
-                   (instr_entry_i.instr.instr_type == VWMACCSU)) ? 1'b1 : 1'b0;
+assign is_vmadd_vsmul = ((instr_entry_i.instr.instr_type == VMADD)  ||
+                         (instr_entry_i.instr.instr_type == VNMSUB) ||
+                         (instr_entry_i.instr.instr_type == VMACC)  ||
+                         (instr_entry_i.instr.instr_type == VNMSAC) ||
+                         (instr_entry_i.instr.instr_type == VWMACC)  ||
+                         (instr_entry_i.instr.instr_type == VWMACCU)  ||
+                         (instr_entry_i.instr.instr_type == VWMACCUS)  ||
+                         (instr_entry_i.instr.instr_type == VWMACCSU)||
+                         (instr_entry_i.instr.instr_type == VSMUL)) ? 1'b1 : 1'b0;
 
 assign is_vdiv =  ((instr_entry_i.instr.instr_type == VDIV )  ||
                    (instr_entry_i.instr.instr_type == VDIVU ) ||
@@ -146,7 +147,7 @@ always_comb begin
     if (is_vmul) begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd3 : 6'd2;
     end 
-    else if (is_vmadd) begin
+    else if (is_vmadd_vsmul) begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd4 : 6'd3;
     end 
     else if (is_vred) begin
