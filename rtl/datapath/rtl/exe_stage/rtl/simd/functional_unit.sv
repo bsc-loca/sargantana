@@ -200,7 +200,7 @@ vmul vmul_inst(
 );
 
 vsmul vsmul_inst(
-    .sew_i         (sel_out_instr_i.sew),
+    .sew_i         (sel_out_instr_i.instr.sew),
     .vxrm_i        (vxrm_i),
     .data_i        (full_result_vmul_2),
     .data_vd_o     (result_vsmul),

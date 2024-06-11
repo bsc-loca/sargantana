@@ -21,7 +21,7 @@ module vsmul
     output bus64_t              data_vd_o,      // 64-bit result
     output logic                sat_ovf_o       // saturation done on overflow
 );
-
+/*
 function [7:0] trunc_16_to_8_bits(input [15:0] val_in);
     trunc_16_to_8_bits = val_in[15:8];
 endfunction
@@ -37,7 +37,7 @@ endfunction
 function [63:0] trunc_127_to_64_bits(input [127:0] val_in);
     trunc_127_to_64_bits = val_in[126:63];
 endfunction
-
+*/
 logic [7:0][7:0] data_shifted_8;
 logic [3:0][15:0] data_shifted_16;
 logic [1:0][31:0] data_shifted_32;
@@ -54,14 +54,14 @@ always_comb begin
     case (sew_i)
         SEW_8: begin
             for (int i = 0; i < 8; ++i) begin
-                data_shifted_8[i] = trunc_16_to_8_bits(data_i[16*i-1 +: 16]);
+                data_shifted_8[i] = data_i[(16*i)+7 +: 8];
             end
 
             data_shifted = data_shifted_8;
         end
         SEW_16: begin
             for (int i = 0; i < 4; ++i) begin
-                data_shifted_16[i] = trunc_32_to_16_bits(data_i[32*i-1 +: 32]);
+                data_shifted_16[i] = data_i[32*i+15 +: 16];
 
                 data_shifted[2*i] = data_shifted_16[i][7:0];
                 data_shifted[2*i + 1] = data_shifted_16[i][15:8];
@@ -69,7 +69,7 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i < 2; ++i) begin
-                data_shifted_32[i] = trunc_64_to_32_bits(data_i[64*i-1 +: 64]);
+                data_shifted_32[i] = data_i[64*i+31 +: 32];
 
                 for (int j = 0; j < 3; ++j) begin
                     data_shifted[4*i + j] = data_shifted_32[i][8*j +: 8];
@@ -78,7 +78,7 @@ always_comb begin
             end
         end
         SEW_64: begin
-            data_shifted_64 = trunc_127_to_64_bits(data_i);
+            data_shifted_64 = data_i[126:63];
 
             for (int j = 0; j < 7; ++j) begin
                 data_shifted[j] = data_shifted_64[8*j +: 8];
@@ -247,7 +247,7 @@ always_comb begin
             end
         end
         SEW_32: begin
-            for (int i = 0; i < 4; ++i) begin
+            for (int i = 0; i < 2; ++i) begin
                 data_vd_o[32*i +: 32] = (overflow[4*i + 3]) ? 32'h7FFFFFFF : results[4*i +: 4];
             end
         end
