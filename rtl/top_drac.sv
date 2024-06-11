@@ -28,7 +28,6 @@ module top_drac
     `ifdef PITON_CINCORANCH
     input logic [1:0]           boot_main_id_i,
     `endif  // Custom for CincoRanch
-    input logic [63:0]          boot_addr_i,
     `ifdef EXTERNAL_HPM_EVENT_NUM
      input logic [`EXTERNAL_HPM_EVENT_NUM-1: 0] external_hpm_i,
      `endif
@@ -376,24 +375,24 @@ csr_bsc #(
     `ifdef PITON_CINCORANCH
     .boot_main_id_i(boot_main_id_i),
     `endif  // Custom for CincoRanch
-    .boot_addr_i(boot_addr_i),
+    .trap_vector_addr_i({{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40}), // Address of the exception vector
 
-    .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                  //read and write address form the core
-    .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                   //specific operation to execute from the core 
-    .w_data_core_i(req_datapath_csr_interface.csr_rw_data),              //write data from the core
-    .r_data_core_o(resp_csr_interface_datapath.csr_rw_rdata),              // read data to the core, address specified with the rw_addr_i
+    .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                               // read and write address form the core
+    .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                                 // specific operation to execute from the core 
+    .w_data_core_i(req_datapath_csr_interface.csr_rw_data),                           // write data from the core
+    .r_data_core_o(resp_csr_interface_datapath.csr_rw_rdata),                         // read data to the core, address specified with the rw_addr_i
 
-    .ex_i(req_datapath_csr_interface.csr_exception),                       // exception produced in the core
-    .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                 //cause of the exception
-    .ex_origin_i(req_datapath_csr_interface.csr_xcpt_origin),                //origin of the exception
-    .pc_i(req_datapath_csr_interface.csr_pc),                       //pc were the exception is produced
+    .ex_i(req_datapath_csr_interface.csr_exception),                                  // exception produced in the core
+    .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                           // cause of the exception
+    .ex_origin_i(req_datapath_csr_interface.csr_xcpt_origin),                         // origin of the exception
+    .pc_i(req_datapath_csr_interface.csr_pc),                                         // pc were the exception is produced
 
-    .retire_i(req_datapath_csr_interface.csr_retire),                   // shows if a instruction is retired from the core.
-    .time_irq_i(time_irq_i),                 // timer interrupt
-    .irq_i(irq_i),                      // external interrupt in
+    .retire_i(req_datapath_csr_interface.csr_retire),                                 // shows if a instruction is retired from the core.
+    .time_irq_i(time_irq_i),                                                          // timer interrupt
+    .irq_i(irq_i),                                                                    // external interrupt in
     .m_soft_irq_i(soft_irq_i),
-    .interrupt_o(resp_csr_interface_datapath.csr_interrupt),                // Inerruption wire to the core
-    .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),          // Interruption cause
+    .interrupt_o(resp_csr_interface_datapath.csr_interrupt),                          // Inerruption wire to the core
+    .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),              // Interruption cause
 
     .time_i(time_i),                    // time passed since the core is reset
 
