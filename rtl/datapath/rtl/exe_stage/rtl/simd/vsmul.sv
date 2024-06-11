@@ -128,89 +128,87 @@ logic [7:0] to_add;
 /* Calc to add for averaging
 */
 always_comb begin
-    for (int i = 0; i < 8; ++i) begin
-        case (sew_i)
-            SEW_8: begin
-                for (int i = 0; i < 8; ++i) begin
-                    case (vxrm_i)
-                        RNU_V: begin
-                            to_add[i] = data_i[16*i + 6];
-                        end
-                        RNE_V: begin
-                            to_add[i] = data_i[16*i + 6] & ((data_i[16*i +: 5] != 0) | data_i[16*i + 7]);
-                        end
-                        RDN_V: begin
-                            to_add[i] = 0;
-                        end
-                        ROD_V: begin
-                            to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 6] != 0);
-                        end
-                    endcase
-                end
-            end
-            SEW_16: begin
-                for (int i = 0; i < 4; ++i) begin
-                     case (vxrm_i)
-                        RNU_V: begin
-                            to_add[2*i] = data_i[32*i + 14];
-                        end
-                        RNE_V: begin
-                            to_add[2*i] = data_i[32*i + 14] & ((data_i[32*i +: 13] != 0) | data_i[32*i + 15]);
-                        end
-                        RDN_V: begin
-                            to_add[2*i] = 0;
-                        end
-                        ROD_V: begin
-                            to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 14] != 0);
-                        end
-                    endcase
-                    to_add[2*i + 1] = 1'b0;
-                end
-            end
-            SEW_32: begin
-                for (int i = 0; i < 2; ++i) begin
-                     case (vxrm_i)
-                        RNU_V: begin
-                            to_add[4*i] = data_i[64*i + 30];
-                        end
-                        RNE_V: begin
-                            to_add[4*i] = data_i[64*i + 30] & ((data_i[64*i +: 29] != 0) | data_i[64*i + 31]);
-                        end
-                        RDN_V: begin
-                            to_add[4*i] = 0;
-                        end
-                        ROD_V: begin
-                            to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 30] != 0);
-                        end
-                    endcase
-
-                    for (int j = 1; j < 4; ++j) begin
-                        to_add[4*i + j] = 1'b0;
-                    end
-                end
-            end
-            SEW_64: begin
+    case (sew_i)
+        SEW_8: begin
+            for (int i = 0; i < 8; ++i) begin
                 case (vxrm_i)
                     RNU_V: begin
-                        to_add[0] = data_i[62];
+                        to_add[i] = data_i[16*i + 6];
                     end
                     RNE_V: begin
-                        to_add[0] = data_i[62] & ((data_i[61:0] != 0) | data_i[63]);
+                        to_add[i] = data_i[16*i + 6] & ((data_i[16*i +: 5] != 0) | data_i[16*i + 7]);
                     end
                     RDN_V: begin
-                        to_add[0] = 1'b0;
+                        to_add[i] = 0;
                     end
                     ROD_V: begin
-                        to_add[0] = (~data_i[63]) & (data_i[62:0] != 0);
+                        to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 6] != 0);
+                    end
+                endcase
+            end
+        end
+        SEW_16: begin
+            for (int i = 0; i < 4; ++i) begin
+                    case (vxrm_i)
+                    RNU_V: begin
+                        to_add[2*i] = data_i[32*i + 14];
+                    end
+                    RNE_V: begin
+                        to_add[2*i] = data_i[32*i + 14] & ((data_i[32*i +: 13] != 0) | data_i[32*i + 15]);
+                    end
+                    RDN_V: begin
+                        to_add[2*i] = 0;
+                    end
+                    ROD_V: begin
+                        to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 14] != 0);
+                    end
+                endcase
+                to_add[2*i + 1] = 1'b0;
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i < 2; ++i) begin
+                    case (vxrm_i)
+                    RNU_V: begin
+                        to_add[4*i] = data_i[64*i + 30];
+                    end
+                    RNE_V: begin
+                        to_add[4*i] = data_i[64*i + 30] & ((data_i[64*i +: 29] != 0) | data_i[64*i + 31]);
+                    end
+                    RDN_V: begin
+                        to_add[4*i] = 0;
+                    end
+                    ROD_V: begin
+                        to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 30] != 0);
                     end
                 endcase
 
-                for (int i = 1; i < 8; ++i) begin
-                    to_add[i] = 1'b0;
+                for (int j = 1; j < 4; ++j) begin
+                    to_add[4*i + j] = 1'b0;
                 end
             end
-        endcase
-    end
+        end
+        SEW_64: begin
+            case (vxrm_i)
+                RNU_V: begin
+                    to_add[0] = data_i[62];
+                end
+                RNE_V: begin
+                    to_add[0] = data_i[62] & ((data_i[61:0] != 0) | data_i[63]);
+                end
+                RDN_V: begin
+                    to_add[0] = 1'b0;
+                end
+                ROD_V: begin
+                    to_add[0] = (~data_i[63]) & (data_i[62:0] != 0);
+                end
+            endcase
+
+            for (int i = 1; i < 8; ++i) begin
+                to_add[i] = 1'b0;
+            end
+        end
+    endcase
 end
 
 /* Averaging

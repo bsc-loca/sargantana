@@ -54,7 +54,7 @@ instr_pipe_t division_pipe_q [DIV_STAGES - 2:0];
 logic [5:0] simd_exe_stages;
 logic is_vmul;
 logic is_vred;
-logic is_vmadd;
+logic is_vmadd_vsmul;
 logic is_vdiv;
 
 logic stall_simd;
