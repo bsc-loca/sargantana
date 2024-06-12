@@ -1065,6 +1065,8 @@ typedef struct packed {
     logic           halt_ack;
     // ACKs the restart of the pipeline
     logic           resume_ack;
+    // Indicates the core is halted in Debug Mode
+    logic halted;
 } debug_intel_out_t;
 
 typedef enum logic[1:0] {

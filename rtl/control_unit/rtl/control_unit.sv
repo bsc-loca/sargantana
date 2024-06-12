@@ -64,6 +64,7 @@ module control_unit
     always_comb begin
         debug_intel_o.resume_ack = 1'b0;
         debug_intel_o.halt_ack = 1'b0;
+        debug_intel_o.halted = 1'b0;
         state_debug_d = state_debug_q;
         halt_debug_intel = 1'b0;
 
@@ -92,6 +93,7 @@ module control_unit
                     debug_intel_o.resume_ack = 1'b1;
                 end 
                 halt_debug_intel = 1'b1;
+                debug_intel_o.halted = 1'b1;
             end
         endcase
     end
