@@ -150,7 +150,7 @@ module control_unit
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
-                                                            csr_cu_i.debug_mode_en ||
+                                                            //csr_cu_i.debug_mode_en || // This will cause the core to have an exception each cycle when debug mode is on!
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&

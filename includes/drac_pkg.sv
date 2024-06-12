@@ -1045,15 +1045,15 @@ typedef struct packed {
     // Rename read request 
     logic           rnm_read_en;
     // Virtual register address that needs to be renamed 
-    logic           rnm_read_reg;
+    reg_t           rnm_read_reg;
     // Register file read request 
     logic           rf_en;
     // Physical register address that needs to be read/write
-    logic           rf_preg;
+    phreg_t         rf_preg;
     // Write enable of the register file 
     logic           rf_we;
     // Data to be written 
-    logic           rf_wdata;
+    bus64_t         rf_wdata;
 } debug_reg_in_t;
 
 typedef struct packed {
@@ -1077,7 +1077,7 @@ typedef struct packed {
     // Response of a rename request 
     logic           rnm_read_resp;
     // Response form a read request
-    logic           rf_rdata;
+    bus64_t         rf_rdata;
 } debug_reg_out_t;
 
 typedef enum logic[2:0] {
