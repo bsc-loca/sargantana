@@ -453,7 +453,6 @@ typedef struct packed {
     functional_unit_t unit;             // Functional unit
 
     // Control bits
-    logic change_pc_ena;                // Change PC 
     logic regfile_we;                   // Write to register file
     logic vregfile_we;                  // Write to vregister file
     logic fregfile_we;                  // Write to fregister file
@@ -718,7 +717,6 @@ typedef struct packed {
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
     logic regfile_we;                   // Write to register file
-    logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef SIM_COMMIT_LOG
@@ -751,7 +749,6 @@ typedef struct packed {
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
     logic vregfile_we;                  // Write to vregister file
-    logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef SIM_KONATA_DUMP
@@ -783,7 +780,6 @@ typedef struct packed {
     branch_pred_t bpred;                // Branch Prediciton
     exception_t ex;                     // Exceptions
     logic regfile_we;                   // Write to register file
-    logic change_pc_ena;                // Change PC
     logic stall_csr_fence;              // CSR or fence
     reg_csr_addr_t csr_addr;            // CSR Address
     `ifdef SIM_KONATA_DUMP
@@ -869,7 +865,6 @@ typedef struct packed {
     logic valid_3;                // Valid Instruction SIMD
     logic valid_fp;               // Valid Intruction FP
     logic valid_fp_mem;           // Valid Intruction FP MEM
-    logic change_pc_ena_1;        // Enable PC write
     logic is_branch;              // There is a branch in the ALU
     logic branch_taken;           // Branch taken
     logic stall;                  // Execution unit stalled
@@ -880,7 +875,6 @@ typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] valid;         // Valid Intruction
     logic [NUM_SIMD_WB-1:0]  vvalid;         // Valid SIMD Instruction
     logic [NUM_FP_WB-1:0]    fvalid;         // Valid FP Intruction
-    logic change_pc_ena;                     // Enable PC write
     logic checkpoint_done;        // It has a checkpoint
     checkpoint_ptr  chkp;         // Label of the checkpoint
     gl_index_t gl_index;          // Graduation List entry of ALU
@@ -1030,51 +1024,69 @@ typedef struct packed {
     bus64_t     csr_interrupt_cause;
     // tval
     bus64_t     csr_tval;
+    // entering to debug mode
+    logic       debug_mode_en;
+    // Step_mode_enbled
+    logic       debug_step;
 } resp_csr_cpu_t;
-
-typedef struct packed {
-    // Triggers a halt on the pipeline 
-    logic           halt_valid;
-    // New PC addr
-    addrPC_t        change_pc_addr;
-    // change new pc valid
-    logic           change_pc_valid;
-    // Read from register file valid
-    logic           reg_read_valid;
-    // Read/Write addr from register file addr
-    logic  [4:0]    reg_read_write_addr;
-    // Write to register file valid
-    logic           reg_write_valid;
-    // Write to register file data
-    bus64_t         reg_write_data;
-    // Input register paddr
-    logic  [5:0]    reg_read_write_paddr;
-    // Read register file with paddr
-    logic           reg_p_read_valid;
-} debug_in_t;
 
 typedef struct packed {
     // Triggers a halt on the pipeline 
     logic           halt_req;
     // Triggers a restart on the pipeline
     logic           resume_req;
-} debug_intel_in_t;
+    // The core starts to fetch from the debug program buffer
+    logic           progbuf_req;
+    // Indicates that the core should halt after exiting form a reset
+    logic           halt_on_reset;
+} debug_contr_in_t;
+
+typedef struct packed {
+    // Rename read request 
+    logic           rnm_read_en;
+    // Virtual register address that needs to be renamed 
+    logic           rnm_read_reg;
+    // Register file read request 
+    logic           rf_en;
+    // Physical register address that needs to be read/write
+    logic           rf_preg;
+    // Write enable of the register file 
+    logic           rf_we;
+    // Data to be written 
+    logic           rf_wdata;
+} debug_reg_in_t;
 
 typedef struct packed {
     // ACKs the halt of the pipeline 
     logic           halt_ack;
+    // The pipelines is halted
+    logic           halted;
     // ACKs the restart of the pipeline
     logic           resume_ack;
-    // Indicates the core is halted in Debug Mode
-    logic halted;
-} debug_intel_out_t;
+    // The pipeline is running
+    logic           running;
+    // ACKs the probram buffer execution request
+    logic           progbuf_ack;
+    // The pipeline is halted and is not executing from the probram buffer (parked state)
+    logic           parked;
+    // Indicates if the debugging is unavailable
+    logic           unavail;
+} debug_contr_out_t;
 
-typedef enum logic[1:0] {
+typedef struct packed {
+    // Response of a rename request 
+    logic           rnm_read_resp;
+    // Response form a read request
+    logic           rf_rdata;
+} debug_reg_out_t;
+
+typedef enum logic[2:0] {
     DEBUG_RESET,
     DEBUG_RUNNING, 
-    DEBUG_CLEAR, 
-    DEBUG_HALT
-} debug_intel_state_t;
+    DEBUG_HALTING, 
+    DEBUG_HALTED,
+    DEBUG_PROGBUFF
+} debug_contr_state_t;
 
 // LSQ in/out of instruction signals
 typedef struct packed {
@@ -1134,40 +1146,6 @@ typedef struct packed {
     fpnew_pkg::status_t fp_status;          // FP status of the executed instruction
     logic vs_ovf;
 } gl_wb_data_t;
-
-
-typedef struct packed {
-    // current pc in fetch stage
-    addr_t          pc_fetch;
-    // current pc in decode stage
-    addr_t          pc_dec;
-    // current pc in read register stage
-    addr_t          pc_rr;
-    // current pc in execution stage
-    addr_t          pc_exe;
-    // current pc in write-back stage
-    addr_t          pc_wb;
-    // valid write-back
-    logic           wb_valid_1;
-    // write-back register file addr
-    logic  [4:0]    wb_reg_addr_1;
-    // write-back register file we
-    logic           wb_reg_we_1;
-        // valid write-back
-    logic           wb_valid_2;
-    // write-back register file addr
-    logic  [4:0]    wb_reg_addr_2;
-    // write-back register file we
-    logic           wb_reg_we_2;
-    // write-back register file read data
-    bus64_t         reg_read_data;
-    // Signal to ensure the debug ring only interacts when the
-    // pipeline is empty
-    logic           reg_backend_empty;
-    // physical register addres from the list
-    logic  [5:0]    reg_list_paddr;
-} debug_out_t;
-
 
 localparam drac_cfg_t DracDefaultConfig = '{
     NIOSections: 1, // number of IO space sections

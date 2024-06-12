@@ -74,7 +74,6 @@ control_unit module_inst (
     .wb_cu_i(wb_cu_i),
     .csr_cu_i(csr_cu_i),
     .correct_branch_pred_i(correct_branch_pred_i),
-    .debug_halt_i(1'b0),
 
     .pipeline_ctrl_o(pipeline_ctrl_o),
     .pipeline_flush_o(pipeline_flush_o),
@@ -192,14 +191,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=0;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=0;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=0;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;
@@ -266,14 +263,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=0;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=0;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=0;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;
@@ -340,14 +335,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=1;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=1;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=0;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;
@@ -414,14 +407,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=1;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=1;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=1;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;
@@ -488,14 +479,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=0;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=0;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=0;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;
@@ -563,14 +552,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=0;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=0;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=1;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=1;
             wb_cu_i.stall_csr_fence<=0;
@@ -637,14 +624,12 @@ control_unit module_inst (
             rr_cu_i.stall_csr_fence<=0;
 
             exe_cu_i.valid<=0;
-            exe_cu_i.change_pc_ena<=0;
             exe_cu_i.is_branch<=0;
             exe_cu_i.stall<=0;
             exe_cu_i.stall_csr_fence<=0;
 
             wb_cu_i.pc<=64'h0;
             wb_cu_i.valid<=1;
-            wb_cu_i.change_pc_ena<=0;
             wb_cu_i.csr_enable_wb<=0;
             wb_cu_i.write_enable<=0;
             wb_cu_i.stall_csr_fence<=0;

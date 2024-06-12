@@ -157,21 +157,6 @@ module tb_decoder();
         end
     endtask 
 
-    task automatic checkPCENA;
-        input  int expectedValue;
-        output int differ;
-        begin
-            if (tb_decode_instr_o.change_pc_ena != expectedValue) begin
-                `START_RED_PRINT
-                    $error("Change PC enable differs");
-                `END_COLOR_PRINT
-                differ=1;
-            end else begin
-                differ=0;
-            end
-        end
-    endtask 
-
     task automatic checkValidInst;
         input  int expectedValue;
         output int differ;
@@ -459,7 +444,6 @@ module tb_decoder();
             checkOP32(InstrEntry.op_32,differ);
             tmp=tmp+differ;
 
-            checkPCENA(InstrEntry.change_pc_ena,differ);
             tmp=tmp+differ;
             checkWENA(InstrEntry.regfile_we,differ);
             tmp=tmp+differ;
@@ -668,7 +652,6 @@ module tb_decoder();
             tb_decode_i.bpred.decision = PRED_NOT_TAKEN;
             tb_decode_i.bpred.pred_addr = 0;
             half_tick();
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(1,differ);
             tmp=tmp+differ;
@@ -720,7 +703,6 @@ module tb_decoder();
             // Check enables
             checkIllegalInstr(differ);
             tmp=tmp+differ;
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidInst(1,differ);
             tmp=tmp+differ;
@@ -740,7 +722,6 @@ module tb_decoder();
             // Check enables
             checkIllegalInstr(differ);
             tmp=tmp+differ;
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidInst(1,differ);
             tmp=tmp+differ;
@@ -760,7 +741,6 @@ module tb_decoder();
             // Check enables
             checkIllegalInstr(differ);
             tmp=tmp+differ;
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidInst(1,differ);
             tmp=tmp+differ;
@@ -801,7 +781,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -849,7 +828,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -899,7 +877,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -924,7 +901,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -949,7 +925,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -974,7 +949,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(0,differ);
             tmp=tmp+differ;
             if (tb_decode_instr_o.ex.valid != 1'b1 || 
                 tb_decode_instr_o.ex.cause != INSTR_ADDR_MISALIGNED) begin
@@ -1032,7 +1006,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(1,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -1060,7 +1033,6 @@ module tb_decoder();
             
             half_tick();
             
-            checkPCENA(1,differ);
             tmp=tmp+differ;
             checkValidEx(0,differ);
             tmp=tmp+differ;
@@ -1089,7 +1061,6 @@ module tb_decoder();
                 $display ("Checking func3: %0d", array[i]);
                 tb_decode_i.inst.itype.func3=array[i];
                 half_tick();
-                checkPCENA(1,differ);
                 tmp=tmp+differ;
                 checkValidInst(1,differ);
                 tmp=tmp+differ;
@@ -1140,7 +1111,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b1;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_BRANCH;
-            expected_out.change_pc_ena = 1'b1;
             expected_out.regfile_we = 1'b0;
             expected_out.instr_type = BEQ;
             expected_out.result = 'h40;
@@ -1273,7 +1243,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_MEM;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             expected_out.instr_type = BEQ;
             expected_out.result = 'h00;
@@ -1418,7 +1387,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_MEM;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b0;
             //expected_out.instr_type = BEQ;
             expected_out.result = 32;
@@ -1557,7 +1525,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_ALU;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             expected_out.result = 1;
             expected_out.signed_op = 1'b0;
@@ -1708,7 +1675,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_ALU;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             //expected_out.result = 1;
             expected_out.signed_op = 1'b0;
@@ -1880,7 +1846,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b1;
             expected_out.unit = UNIT_ALU;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             expected_out.result = 9;
             expected_out.signed_op = 1'b0;
@@ -1988,7 +1953,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b1;
             expected_out.unit = UNIT_ALU;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             //expected_out.result = 9;
             expected_out.signed_op = 1'b0;
@@ -2107,7 +2071,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_ALU;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b0;
             //expected_out.result = 9;
             expected_out.signed_op = 1'b0;
@@ -2187,7 +2150,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_SYSTEM;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b0;
             //expected_out.result = 9;
             expected_out.signed_op = 1'b0;
@@ -2411,7 +2373,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_MEM;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             expected_out.instr_type = BEQ;
             expected_out.result = 'h00;
@@ -2761,7 +2722,6 @@ module tb_decoder();
             expected_out.use_pc = 1'b0;
             expected_out.op_32 = 1'b0;
             expected_out.unit = UNIT_MUL;
-            expected_out.change_pc_ena = 1'b0;
             expected_out.regfile_we = 1'b1;
             expected_out.instr_type = MUL;
             expected_out.result = 'h00;

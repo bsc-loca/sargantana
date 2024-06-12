@@ -31,8 +31,8 @@ module datapath
     input logic [1:0]       csr_vs_i,  
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
-    input debug_in_t        debug_i,
-    input debug_intel_in_t  debug_intel_i,
+    input debug_reg_in_t    debug_reg_i,
+    input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
@@ -45,8 +45,8 @@ module datapath
     output req_cpu_dcache_t req_cpu_dcache_o, 
     output req_cpu_icache_t req_cpu_icache_o,
     output req_cpu_csr_t    req_cpu_csr_o,
-    output debug_out_t      debug_o,
-    output debug_intel_out_t debug_intel_o,
+    output debug_reg_out_t  debug_reg_o,
+    output debug_contr_out_t debug_contr_o,
     output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
@@ -354,11 +354,9 @@ endfunction
         .invalidate_buffer_o(invalidate_buffer_int),
         .correct_branch_pred_exe_i(correct_branch_pred),
         .correct_branch_pred_wb_i(correct_branch_pred_wb),
-        .debug_halt_i(debug_i.halt_valid),
-        .debug_change_pc_i(debug_i.change_pc_valid),
-        .debug_wr_valid_i(debug_i.reg_write_valid),
-        .debug_intel_i(debug_intel_i),
-        .debug_intel_o(debug_intel_o),
+        .debug_wr_valid_i(debug_reg_i.rf_we),
+        .debug_contr_i(debug_contr_i),
+        .debug_contr_o(debug_contr_o),
         .gl_empty_i(gl_empty),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int),
@@ -369,10 +367,7 @@ endfunction
     // from decode or wb 
     always_comb begin
         retry_fetch = 1'b0;
-        // TODO (guillemlp) highest priority?
-        if (control_int.sel_addr_if == SEL_JUMP_DEBUG) begin
-            pc_jump_if_int = debug_i.change_pc_addr;
-        end else if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
+        if (control_int.sel_addr_if == SEL_JUMP_EXECUTION) begin
             pc_jump_if_int = branch_addr_result_wb;
         end else if (control_int.sel_addr_if == SEL_JUMP_CSR) begin
             pc_jump_if_int = pc_evec_q;
@@ -401,7 +396,7 @@ endfunction
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
-        .stall_debug_i(debug_i.halt_valid),
+        .stall_debug_i(debug_contr_o.halted),
         .stall_i(control_int.stall_if_1),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
@@ -491,8 +486,8 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
-assign free_list_read_src1_int = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_iq_ir_q.instr.rs1;
-assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
+assign free_list_read_src1_int = (debug_reg_i.rnm_read_en && debug_contr_o.halted)  ? debug_reg_i.rnm_read_reg : stage_iq_ir_q.instr.rs1;
+assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     // Register ID to IR when stall
     register #($bits(id_ir_stage_t)) reg_id_inst(
@@ -586,7 +581,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .old_dst_i(stage_iq_ir_q.instr.rd),
         .write_dst_i(stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(free_register_to_rename),
-        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_i.reg_read_valid  && debug_i.halt_valid)),
+        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_reg_i.rnm_read_en  && debug_contr_o.halted)),
         .use_rs2_i(stage_iq_ir_q.instr.use_rs2),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
@@ -891,7 +886,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .vsetvl_vtype_o(vsetvl_vtype_int),
         .exception_o(ex_gl_out_int)
     );
-    assign debug_o.reg_backend_empty = gl_empty;
 
     always_comb begin
         snoop_rr_rdy1 = 1'b0;
@@ -923,7 +917,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         end
     end
 
-    assign reg_prd1_addr  = (debug_i.reg_p_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_paddr : stage_ir_rr_q.prs1;
+    assign reg_prd1_addr  = (debug_reg_i.rf_en  && debug_contr_o.halted)  ? debug_reg_i.rf_preg : stage_ir_rr_q.prs1;
     
     // RR Stage
     regfile regfile_inst(
@@ -1308,7 +1302,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
             end
             wb_cu_int.valid[i]        = wb_scalar[i].valid;
         end
-        wb_cu_int.change_pc_ena = wb_scalar[0].change_pc_ena;
 
         for (int i = 0; i<NUM_SIMD_WB; ++i) begin
             //Graduation list writeback arrays
@@ -1362,9 +1355,9 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
-                if (debug_i.reg_write_valid && debug_i.halt_valid) begin
-                    data_wb_to_rr[i] = debug_i.reg_write_data;
-                    write_paddr_rr[i] = debug_i.reg_read_write_paddr;
+                if (debug_reg_i.rf_we && debug_contr_o.halted) begin
+                    data_wb_to_rr[i] = debug_reg_i.rf_wdata;
+                    write_paddr_rr[i] = debug_reg_i.rf_preg;
                 end else begin
                     data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : wb_scalar[i].result;
                     write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].prd : wb_scalar[i].prd;
@@ -1478,9 +1471,6 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         
     assign commit_cu_int.stall_commit = mem_commit_stall_int | (commit_store_or_amo_int[0] & ((commit_cu_int.gl_index != mem_gl_index_int) | !mem_commit_store_or_amo_int));
     assign commit_cu_int.retire = retire_inst_gl;
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////// DEBUG SIGNALS                                                                                /////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 `ifdef SIM_COMMIT_LOG
     // Debug signals
@@ -1694,21 +1684,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign valid_wb = wb_scalar[0].valid;
 
     // Debug Ring signals Output
-    // PC
-    assign debug_o.pc_fetch = pc_if1[38:0];
-    assign debug_o.pc_dec   = pc_id[38:0];
-    assign debug_o.pc_rr    = pc_rr[38:0];
-    assign debug_o.pc_exe   = pc_exe[38:0];
-    assign debug_o.pc_wb    = pc_wb[38:0];
-    // Write-back signals
-    assign debug_o.wb_valid_1 = wb_scalar[0].valid;
-    assign debug_o.wb_reg_addr_1 = wb_scalar[0].rd;
-    assign debug_o.wb_reg_we_1 = wb_scalar[0].regfile_we;
-    assign debug_o.wb_valid_2 = wb_scalar[1].valid;
-    assign debug_o.wb_reg_addr_2 = wb_scalar[1].rd;
-    assign debug_o.wb_reg_we_2 = wb_scalar[1].regfile_we;
-    // Register File read 
-    assign debug_o.reg_read_data = stage_rr_exe_d.data_rs1;
+    assign debug_reg_o.rf_rdata = stage_rr_exe_d.data_rs1;
 
     //VISA Signals
     assign visa_o.commit_valid0 = retire_inst_gl[0];

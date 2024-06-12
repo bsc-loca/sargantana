@@ -466,6 +466,13 @@ package fpnew_pkg;
       return 1'b0;
   endfunction
 
+  // Return whether the active format is set as MERGED
+  function automatic logic is_enabled_multi(fp_format_e fmt,
+                                                  fmt_unit_types_t types);
+    if ((types[fmt] == MERGED)) return 1'b1;
+    else return 1'b0;
+  endfunction
+
   // Return whether the given format is the first active one set as MERGED
   function automatic logic is_first_enabled_multi(fp_format_e fmt,
                                                   fmt_unit_types_t types,

@@ -33,21 +33,10 @@ module top_drac
      `endif
 //------------------------------------------------------------------------------------
 // DEBUG RING SIGNALS INPUT
-// debug_halt_i is istall_test 
 //------------------------------------------------------------------------------------    
-    input logic                 debug_halt_i,
-    input debug_intel_in_t      debug_intel_i,
-
-
-    input addr_t                debug_pc_addr_i,
-    input logic                 debug_pc_valid_i,
-    
-    input logic                 debug_reg_read_valid_i,
-    input logic [4:0]           debug_reg_read_addr_i,
-    input logic                 debug_preg_write_valid_i,
-    input bus64_t               debug_preg_write_data_i,
-    input logic [5:0] 	        debug_preg_addr_i,
-    input logic                 debug_preg_read_valid_i,
+    input debug_contr_in_t      debug_contr_i,
+    input debug_reg_in_t        debug_reg_i,
+    input addr_t                debug_program_buff_addr_i,
 
 //------------------------------------------------------------------------------------
 // I-CACHE INTERFACE
@@ -77,24 +66,8 @@ module top_drac
 //-----------------------------------------------------------------------------------
 // DEBUGGING MODULE SIGNALS
 //-----------------------------------------------------------------------------------
-
-// PC
-    output addr_t               debug_fetch_pc_o,
-    output addr_t               debug_decode_pc_o,
-    output addr_t               debug_register_read_pc_o,
-    output addr_t               debug_execute_pc_o,
-    output addr_t               debug_writeback_pc_o,
-// WB
-    output logic                debug_writeback_pc_valid_o,
-    output logic  [4:0]         debug_writeback_addr_o,
-    output logic                debug_writeback_we_o,
-    output bus64_t              debug_mem_addr_o,
-
-    output logic		        debug_backend_empty_o,
-    output logic  [5:0]		    debug_preg_addr_o,
-    output bus64_t              debug_preg_data_o,
-    output debug_intel_out_t    debug_intel_o,
-
+    output debug_contr_out_t    debug_contr_o,
+    output debug_reg_out_t      debug_reg_o,
 
 // VISA
     output visa_signals_t       visa_o,
@@ -143,14 +116,12 @@ logic [1:0] vcsr_vs;
 logic en_ld_st_translation;
 logic en_translation;
 logic [42:0] vpu_csr;
+logic debug_mode_csr_en;
+
 assign en_translation_o = en_translation;
 assign priv_lvl_o = csr_priv_lvl;
 
 addr_t dcache_addr;
-
-// struct debug input/output
-debug_in_t debug_in;
-debug_out_t debug_out;
 
 //--PMU
 to_PMU_t       pmu_flags    ;
@@ -160,28 +131,6 @@ logic [63:0]              data_csr_hpm, data_hpm_csr;
 logic                     we_csr_hpm;
 logic [31:0]              mcountinhibit_hpm;
 
-assign debug_in.halt_valid=debug_halt_i;
-assign debug_in.change_pc_addr={24'b0,debug_pc_addr_i};
-assign debug_in.change_pc_valid=debug_pc_valid_i;
-assign debug_in.reg_read_valid=debug_reg_read_valid_i;
-assign debug_in.reg_read_write_addr=debug_reg_read_addr_i;
-assign debug_in.reg_write_valid=debug_preg_write_valid_i;
-assign debug_in.reg_write_data=debug_preg_write_data_i;
-assign debug_in.reg_p_read_valid=debug_preg_read_valid_i;
-assign debug_in.reg_read_write_paddr=debug_preg_addr_i;
-    
-assign debug_fetch_pc_o=debug_out.pc_fetch;
-assign debug_decode_pc_o=debug_out.pc_dec;
-assign debug_register_read_pc_o=debug_out.pc_rr;
-assign debug_execute_pc_o=debug_out.pc_exe;
-assign debug_writeback_pc_o=debug_out.pc_wb;
-assign debug_writeback_pc_valid_o=debug_out.wb_valid_1;
-assign debug_writeback_addr_o=debug_out.wb_reg_addr_1;
-assign debug_writeback_we_o=debug_out.wb_reg_we_1;
-assign debug_preg_data_o=debug_out.reg_read_data;
-assign debug_preg_addr_o=debug_out.reg_list_paddr;
-assign debug_backend_empty_o=debug_out.reg_backend_empty;
-
 // Register to save the last access to memory 
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i)
@@ -189,8 +138,6 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     else
         dcache_addr <= req_cpu_dcache_o.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:0];
 end
-
-assign debug_mem_addr_o = {24'b0,dcache_addr};
  
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
@@ -338,14 +285,14 @@ datapath #(
     .vill_i(vill),
     .vxrm_i(vxrm),
     .en_translation_i( en_translation ), 
-    .debug_i(debug_in),
     .req_icache_ready_i(req_icache_ready_i),
     .dtlb_comm_i(dtlb_comm_i),
+    .debug_contr_i(debug_contr_i),
+    .debug_reg_i(debug_reg_i),
     // Output datapath
     .req_cpu_dcache_o(req_cpu_dcache_o),
     .req_cpu_icache_o(req_cpu_icache_o),
     .req_cpu_csr_o(req_datapath_csr_interface),
-    .debug_o(debug_out),
     .visa_o(visa_o),
     .csr_priv_lvl_i(ld_st_priv_lvl),
     .csr_frm_i(fcsr_rm),
@@ -353,8 +300,8 @@ datapath #(
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .dtlb_comm_o(dtlb_comm_o),
-    .debug_intel_i(debug_intel_i),
-    .debug_intel_o(debug_intel_o),
+    .debug_contr_o(debug_contr_o),
+    .debug_reg_o(debug_reg_o),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -436,6 +383,12 @@ csr_bsc #(
     .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
 
+    .debug_program_buff_addr_i(debug_program_buff_addr_i),
+    .debug_halt_ack_i(debug_contr_o.halt_ack),
+    .debug_resume_ack_i(debug_contr_o.resume_ack),
+    .debug_mode_en_o(resp_csr_interface_datapath.debug_mode_en),
+    .debug_step_o(resp_csr_interface_datapath.debug_step),
+    
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module
     .perf_data_i(data_hpm_csr),                // read data from performance counter module

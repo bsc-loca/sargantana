@@ -172,7 +172,7 @@ module fpnew_opgroup_block #(
 
     logic in_valid;
 
-    assign in_valid = in_valid_i & (FmtUnitTypes[dst_fmt_i] == fpnew_pkg::MERGED);
+    assign in_valid = in_valid_i  && (fpnew_pkg::is_enabled_multi(dst_fmt_i,FmtUnitTypes));
 
     fpnew_opgroup_multifmt_slice #(
       .OpGroup       ( OpGroup          ),

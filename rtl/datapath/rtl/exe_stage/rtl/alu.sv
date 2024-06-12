@@ -119,7 +119,6 @@ assign instruction_o.pc              = instruction_i.instr.pc;
 assign instruction_o.bpred           = instruction_i.instr.bpred;
 assign instruction_o.rs1             = instruction_i.instr.rs1;
 assign instruction_o.rd              = instruction_i.instr.rd;
-assign instruction_o.change_pc_ena   = instruction_i.instr.change_pc_ena;
 assign instruction_o.regfile_we      = instruction_i.instr.regfile_we;
 assign instruction_o.instr_type      = instruction_i.instr.instr_type;
 assign instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;

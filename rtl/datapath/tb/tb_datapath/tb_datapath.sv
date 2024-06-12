@@ -73,16 +73,6 @@ module tb_datapath();
     assign resp_csr_cpu_i.csr_interrupt = 1'b0;
     assign resp_csr_cpu_i.csr_interrupt_cause = 64'b0;
     
-    debug_in_t debug_in;
-    debug_out_t debug_out;
-    
-    assign debug_in.halt_valid=1'b0;
-    assign debug_in.change_pc_addr='h0;   
-    assign debug_in.change_pc_valid='h0;
-    assign debug_in.reg_read_valid='h0;
-    assign debug_in.reg_read_write_addr='h0;
-    assign debug_in.reg_write_valid='h0;
-    assign debug_in.reg_write_data='h0;
     
     logic [1:0] csr_priv_lvl_i;
     to_PMU_t pmu_flags;
@@ -98,12 +88,12 @@ module tb_datapath();
         .req_cpu_icache_o(tb_fetch_icache_o),
         .soft_rstn_i(1'b1),
         .reset_addr_i(40'h000),
-        .debug_i(debug_in),
+        .debug_contr_i('0),
+        .debug_reg_i('0),
         .resp_csr_cpu_i(resp_csr_cpu_i),
         .req_cpu_csr_o(req_cpu_csr_o),
         .req_cpu_dcache_o(tb_req_cpu_dcache_o),
         .resp_dcache_cpu_i(tb_resp_dcache_cpu_i),
-        .debug_o(debug_out),
         .csr_priv_lvl_i(csr_priv_lvl_i),
         .pmu_flags_o        (pmu_flags)
     );

@@ -102,7 +102,6 @@ module tb_top();
         .RST(tb_rstn_i),
         .SOFT_RST(1'b1),
         .RESET_ADDRESS(40'h000),
-        .debug_halt_i(1'b0),
 
         .CSR_RW_RDATA(tb_csr_rw_rdata),
         .CSR_CSR_STALL(tb_csr_stall),

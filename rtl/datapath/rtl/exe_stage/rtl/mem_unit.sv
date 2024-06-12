@@ -960,7 +960,6 @@ assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
 assign instruction_scalar_o.bpred         = instruction_to_wb.instr.bpred;
 assign instruction_scalar_o.rs1           = instruction_to_wb.instr.rs1;
 assign instruction_scalar_o.rd            = instruction_to_wb.instr.rd;
-assign instruction_scalar_o.change_pc_ena = instruction_to_wb.instr.change_pc_ena;
 assign instruction_scalar_o.regfile_we    = instruction_to_wb.instr.regfile_we;
 assign instruction_scalar_o.instr_type    = instruction_to_wb.instr.instr_type;
 `ifdef SIM_KONATA_DUMP
@@ -988,7 +987,6 @@ assign instruction_fp_o.pc                = instruction_to_wb.instr.pc;
 assign instruction_fp_o.bpred             = instruction_to_wb.instr.bpred;
 assign instruction_fp_o.rs1               = instruction_to_wb.instr.rs1;
 assign instruction_fp_o.rd                = instruction_to_wb.instr.rd;
-assign instruction_fp_o.change_pc_ena     = instruction_to_wb.instr.change_pc_ena;
 assign instruction_fp_o.regfile_we        = instruction_to_wb.instr.fregfile_we;
 assign instruction_fp_o.instr_type        = instruction_to_wb.instr.instr_type;
 `ifdef SIM_KONATA_DUMP
@@ -1015,7 +1013,6 @@ assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;
 assign instruction_simd_o.bpred           = instruction_to_wb.instr.bpred;
 assign instruction_simd_o.rs1             = instruction_to_wb.instr.rs1;
 assign instruction_simd_o.vd              = instruction_to_wb.instr.vd;
-assign instruction_simd_o.change_pc_ena   = instruction_to_wb.instr.change_pc_ena;
 assign instruction_simd_o.vregfile_we     = instruction_to_wb.instr.vregfile_we;
 assign instruction_simd_o.instr_type      = instruction_to_wb.instr.instr_type;
 `ifdef SIM_KONATA_DUMP

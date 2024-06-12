@@ -618,7 +618,6 @@ assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
 assign exe_cu_o.valid_3 = simd_to_simd_wb_o.valid;
 //assign exe_cu_o.valid_4 = mul_div_to_scalar_wb_o.valid;
-assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
 assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
 assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;

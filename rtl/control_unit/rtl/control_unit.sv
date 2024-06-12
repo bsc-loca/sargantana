@@ -31,13 +31,11 @@ module control_unit
     input resp_csr_cpu_t    csr_cu_i,
     input logic             correct_branch_pred_wb_i,
     input logic             correct_branch_pred_exe_i,
-    input logic             debug_halt_i,
-    input logic             debug_change_pc_i,
     input logic             debug_wr_valid_i,
 
     input logic             gl_empty_i,
 
-    input debug_intel_in_t debug_intel_i,
+    input debug_contr_in_t  debug_contr_i,
 
     output pipeline_ctrl_t  pipeline_ctrl_o,
     output pipeline_flush_t pipeline_flush_o,
@@ -50,7 +48,7 @@ module control_unit
     output cu_wb_t          cu_wb_o,
     output cu_commit_t      cu_commit_o,
 
-    output debug_intel_out_t debug_intel_o,
+    output debug_contr_out_t debug_contr_o,
 
     output logic            pmu_jump_misspred_o
 
@@ -58,42 +56,70 @@ module control_unit
     reg csr_fence_in_pipeline;
     logic flush_csr_fence;
 
-    debug_intel_state_t state_debug_q, state_debug_d;
-    logic halt_debug_intel;
+    debug_contr_state_t state_debug_q, state_debug_d;
+    logic on_halt_state;
 
     always_comb begin
-        debug_intel_o.resume_ack = 1'b0;
-        debug_intel_o.halt_ack = 1'b0;
-        debug_intel_o.halted = 1'b0;
+        debug_contr_o.resume_ack = 1'b0;
+        debug_contr_o.halt_ack = 1'b0;
         state_debug_d = state_debug_q;
-        halt_debug_intel = 1'b0;
+        on_halt_state = 1'b0;
+        debug_contr_o.halted = 1'b0;
+        debug_contr_o.running = 1'b0;
+        debug_contr_o.parked = 1'b0; 
+        debug_contr_o.unavail = 1'b0;
 
         case (state_debug_q)
             DEBUG_RESET: begin
-                state_debug_d = DEBUG_RUNNING;
-                debug_intel_o.resume_ack = 1'b1;
-                halt_debug_intel = 1'b0;
+                if (debug_contr_i.halt_on_reset) begin
+                    state_debug_d = DEBUG_HALTED;
+                    debug_contr_o.halt_ack = 1'b1;
+                    on_halt_state = 1'b1;
+                end else begin
+                    state_debug_d = DEBUG_RUNNING;
+                    on_halt_state = 1'b0;
+                end
             end
             DEBUG_RUNNING: begin
-                if (debug_intel_i.halt_req) begin
-                    state_debug_d = DEBUG_CLEAR;
+                if (csr_cu_i.debug_mode_en) begin
+                    state_debug_d = DEBUG_HALTED;
+                    debug_contr_o.halt_ack = 1'b1;
+                end else if (debug_contr_i.halt_req) begin
+                    state_debug_d = DEBUG_HALTING;
                 end 
-                halt_debug_intel = 1'b0;
+                on_halt_state = 1'b0;
+                debug_contr_o.running = 1'b1;
             end
-            DEBUG_CLEAR: begin
-                if (gl_empty_i) begin
-                    state_debug_d = DEBUG_HALT;
-                    debug_intel_o.halt_ack = 1'b1;
+            DEBUG_HALTING: begin
+                if (gl_empty_i || csr_cu_i.debug_mode_en) begin
+                    state_debug_d = DEBUG_HALTED;
+                    debug_contr_o.halt_ack = 1'b1;
                 end 
-                halt_debug_intel = 1'b1;
+                on_halt_state = 1'b1;
+                debug_contr_o.running = 1'b1;
             end
-            DEBUG_HALT: begin
-                if (debug_intel_i.resume_req) begin
+            DEBUG_HALTED: begin
+                if (debug_contr_i.resume_req) begin
                     state_debug_d = DEBUG_RUNNING;
-                    debug_intel_o.resume_ack = 1'b1;
+                    debug_contr_o.resume_ack = 1'b1;
+                end else if (debug_contr_i.progbuf_req) begin
+                    state_debug_d = DEBUG_PROGBUFF;
+                    debug_contr_o.progbuf_ack = 1'b1;
+                end
+                on_halt_state = 1'b1;
+                debug_contr_o.halted = 1'b1;
+                debug_contr_o.parked = 1'b1;
+            end
+            DEBUG_PROGBUFF: begin
+                if (debug_contr_i.resume_req) begin
+                    state_debug_d = DEBUG_RUNNING;
+                    debug_contr_o.resume_ack = 1'b1;
+                end else if (csr_cu_i.debug_mode_en) begin
+                    state_debug_d = DEBUG_HALTED;
+                    debug_contr_o.halt_ack = 1'b1;
                 end 
-                halt_debug_intel = 1'b1;
-                debug_intel_o.halted = 1'b1;
+                on_halt_state = 1'b0;
+                debug_contr_o.halted = 1'b1;
             end
         endcase
     end
@@ -104,7 +130,7 @@ module control_unit
             csr_fence_in_pipeline <= 0;
         else if (flush_csr_fence)
             csr_fence_in_pipeline <= 0;
-        else if(id_cu_i.valid & id_cu_i.stall_csr_fence)
+        else if(id_cu_i.valid & (id_cu_i.stall_csr_fence | csr_cu_i.debug_step))
             csr_fence_in_pipeline <= 1;
         else if (commit_cu_i.valid & commit_cu_i.stall_csr_fence)
             csr_fence_in_pipeline <= 0;
@@ -124,12 +150,14 @@ module control_unit
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
+                                                            csr_cu_i.debug_mode_en ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&
                                                             !((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
+                                                            csr_cu_i.debug_mode_en ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
 
     // logic enable write register file at commit
@@ -139,7 +167,7 @@ module control_unit
                 // we don't allow regular reads/writes if not halted
                 if (( commit_cu_i.valid && !commit_cu_i.xcpt &&
                                !csr_cu_i.csr_exception && commit_cu_i.write_enable) ||
-                             ( wb_cu_i.valid[i] && wb_cu_i.write_enable[i]) || (debug_wr_valid_i && debug_halt_i)) 
+                             ( wb_cu_i.valid[i] && wb_cu_i.write_enable[i]) || (debug_wr_valid_i && on_halt_state)) 
                 begin
                     cu_rr_o.write_enable[i] = 1'b1;
                 end else begin
@@ -198,7 +226,7 @@ module control_unit
         end
 
         // we don't allow regular reads/writes if not halted
-        if (debug_wr_valid_i && debug_halt_i) begin
+        if (debug_wr_valid_i && on_halt_state) begin
             cu_rr_o.write_enable_dbg = 1'b1;
         end else begin
             cu_rr_o.write_enable_dbg = 1'b0;
@@ -208,16 +236,13 @@ module control_unit
     // logic to select the next pc
     always_comb begin
         // branches or valid jal
-        if (debug_change_pc_i && debug_halt_i) begin
-            cu_if_o.next_pc = NEXT_PC_SEL_DEBUG;
-        end else if (jump_enable_int || exception_enable_q || csr_enable_q) begin
+        if (jump_enable_int || exception_enable_q || csr_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (pipeline_ctrl_o.stall_if_1                 || 
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
                      csr_fence_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
-                     halt_debug_intel                           ||
-                     debug_halt_i                               )  begin
+                     on_halt_state)  begin
                      
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin
@@ -234,8 +259,6 @@ module control_unit
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR_RW;
         end else if (wb_cu_i.valid[0] && ~correct_branch_pred_wb_i) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_EXECUTION;
-        end else if (debug_change_pc_i && debug_halt_i) begin
-            pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DEBUG;
         end else begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_DECODE;
         end
@@ -362,7 +385,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
-        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i) || halt_debug_intel) begin
+        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i) || on_halt_state) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;

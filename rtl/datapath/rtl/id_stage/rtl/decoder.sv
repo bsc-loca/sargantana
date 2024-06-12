@@ -95,7 +95,6 @@ module decoder
         ras_pop_int = 1'b0; //default value
 
         // By default all enables to zero
-        decode_instr_int.change_pc_ena = 1'b0;
         decode_instr_int.regfile_we    = 1'b0;
         decode_instr_int.vregfile_we   = 1'b0;
         decode_instr_int.fregfile_we   = 1'b0;
@@ -154,7 +153,6 @@ module decoder
                 end
                 OP_JAL: begin
                     decode_instr_int.regfile_we = 1'b1; // we write pc+4 to rd
-                    decode_instr_int.change_pc_ena = 1'b0; // Actually we change now
                     decode_instr_int.use_imm = 1'b1;
                     decode_instr_int.use_pc = 1'b1;
                     decode_instr_int.instr_type = JAL;
@@ -172,7 +170,6 @@ module decoder
                 end
                 OP_JALR: begin
                     decode_instr_int.regfile_we = 1'b1;
-                    decode_instr_int.change_pc_ena = 1'b1;
                     decode_instr_int.use_imm = 1'b0;
                     decode_instr_int.use_pc = 1'b0;
                     decode_instr_int.use_rs1 = 1'b1;
@@ -206,7 +203,6 @@ module decoder
                 end
                 OP_BRANCH: begin
                     decode_instr_int.regfile_we = 1'b0;
-                    decode_instr_int.change_pc_ena = 1'b1;
                     decode_instr_int.use_imm = 1'b0;
                     decode_instr_int.use_pc = 1'b0;
                     decode_instr_int.use_rs1 = 1'b1;
