@@ -42,24 +42,20 @@ function [3:0] trunc_4bits(input [31:0] val_in);
     trunc_4bits = val_in[3:0];
 endfunction
 
-function [4:0] trunc_64_to_5_bits(input [63:0] val_in);
-    trunc_64_to_5_bits = val_in[4:0];
+function [$clog2(VLEN/8) - 1 :0] trunc_vl_i_sew8(input [VMAXELEM_LOG + 1:0] val_in);
+    trunc_vl_i_sew8 = val_in[$clog2(VLEN/8) - 1 : 0];
 endfunction
 
-function [3:0] trunc_4bits_vl_i(input [VMAXELEM_LOG + 1:0] val_in);
-    trunc_4bits_vl_i = val_in[3:0];
+function [$clog2(VLEN/16) - 1 : 0] trunc_vl_i_sew16(input [VMAXELEM_LOG + 1:0] val_in);
+    trunc_vl_i_sew16 = val_in[$clog2(VLEN/16) - 1 : 0];
 endfunction
 
-function [2:0] trunc_3bits(input [VMAXELEM_LOG + 1:0] val_in);
-    trunc_3bits = val_in[2:0];
+function [$clog2(VLEN/32) - 1 : 0] trunc_vl_i_sew32(input [VMAXELEM_LOG + 1:0] val_in);
+    trunc_vl_i_sew32 = val_in[$clog2(VLEN/32) - 1 : 0];
 endfunction
 
-function [1:0] trunc_2bits(input [VMAXELEM_LOG + 1:0] val_in);
-    trunc_2bits = val_in[1:0];
-endfunction
-
-function logic trunc_1bits(input [VMAXELEM_LOG + 1:0] val_in);
-    trunc_1bits = val_in[0];
+function [$clog2(VLEN/64) - 1 : 0] trunc_vl_i_sew64(input [VMAXELEM_LOG + 1:0] val_in);
+    trunc_vl_i_sew64 = val_in[$clog2(VLEN/64) - 1 : 0];
 endfunction
 
 
@@ -738,7 +734,7 @@ always_comb begin
         result_data_vd = instr_to_out.data_old_vd;
         shift_amount_in_vslide = 0;
         if(instr_to_out.instr.is_opvi) begin
-            shift_amount_in_vslide = instruction_i.instr.imm;
+            shift_amount_in_vslide = instruction_i.instr.imm[4:0];
         end
         if(instr_to_out.instr.is_opvx) begin
             shift_amount_in_vslide = instruction_i.data_rs1;
@@ -803,7 +799,7 @@ always_comb begin
         shift_amount_in_vslide = 0;
 
         if(instr_to_out.instr.is_opvi) begin
-            shift_amount_in_vslide = instruction_i.instr.imm;
+            shift_amount_in_vslide = instruction_i.instr.imm[4:0];
         end
         if(instr_to_out.instr.is_opvx) begin
             shift_amount_in_vslide = instruction_i.data_rs1;
@@ -938,7 +934,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
                     end
-                    result_data_vd[trunc_4bits_vl_i(vl_i - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
+                    result_data_vd[trunc_vl_i_sew8(vl_i - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
                     
 
             end
@@ -948,7 +944,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                         end
                     end
-                    result_data_vd[trunc_3bits(vl_i - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
+                    result_data_vd[trunc_vl_i_sew16(vl_i - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
                     
             end
             SEW_32: begin
@@ -957,7 +953,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                         end
                     end
-                    result_data_vd[trunc_2bits(vl_i - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
+                    result_data_vd[trunc_vl_i_sew32(vl_i - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
             end
             SEW_64: begin
                 for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
@@ -965,7 +961,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
                     end
-                    result_data_vd[trunc_1bits(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+                    result_data_vd[trunc_vl_i_sew64(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
             end
 
             default: begin
@@ -974,7 +970,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
                     end
-                    result_data_vd[trunc_1bits(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+                    result_data_vd[trunc_vl_i_sew64(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
                 
             end
         endcase
@@ -1095,7 +1091,7 @@ always_comb begin
 
         gather_index = 0;
         if(instr_to_out.instr.is_opvi) begin
-            gather_index = instruction_i.instr.imm;
+            gather_index = instruction_i.instr.imm[4:0];
         end
         if(instr_to_out.instr.is_opvx) begin
             gather_index = instruction_i.data_rs1;
