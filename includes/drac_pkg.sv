@@ -1157,7 +1157,7 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitIOBase:  {40'h40000000}, // IO base 0 address after reset
     InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
 
-    NMappedSections: 2, // number of Memory space sections
+    NMappedSections: 3, // number of Memory space sections
     InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000000400}, // Memory base address after reset
     InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000000420}, // Memory end 0 address after reset
 
