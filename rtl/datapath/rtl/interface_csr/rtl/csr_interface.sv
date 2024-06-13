@@ -29,6 +29,9 @@ module csr_interface
     input  logic            mem_commit_stall_i,       // The Commit Instruction is Stalled at Mem Stage
     input  exception_t      exception_mem_commit_i,   // The Exception comming from AMO or STORE
     input  exception_t      exception_gl_i,
+    // CSR Debug
+    input  logic            debug_pc_valid_i,         // PC to CSRs is set as next_PC for debugging porpuses
+    input  bus64_t          debug_pc_i,  
     // CSR interruption
     output logic            csr_ena_int_o,            // Enable CSR petition
     // Request to CSR
@@ -190,7 +193,7 @@ assign req_cpu_csr_o.csr_vxsat = ((retire_inst_o[0] & instruction_to_commit_i[0]
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_xcpt_origin = (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
-assign req_cpu_csr_o.csr_pc = instruction_to_commit_i[0].pc;
+assign req_cpu_csr_o.csr_pc = (debug_pc_valid_i) ? debug_pc_i : instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;
 // Notify the CSR if the retiring instructions modify the FP regfile

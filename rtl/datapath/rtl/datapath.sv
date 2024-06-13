@@ -47,6 +47,7 @@ module datapath
     output req_cpu_csr_t    req_cpu_csr_o,
     output debug_reg_out_t  debug_reg_o,
     output debug_contr_out_t debug_contr_o,
+    output logic            debug_csr_halt_ack_o,
     output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
@@ -357,6 +358,7 @@ endfunction
         .debug_wr_valid_i(debug_reg_i.rf_we),
         .debug_contr_i(debug_contr_i),
         .debug_contr_o(debug_contr_o),
+        .debug_csr_halt_ack_o(debug_csr_halt_ack_o),
         .gl_empty_i(gl_empty),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int),
@@ -1399,6 +1401,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .mem_commit_stall_i         (commit_cu_int.stall_commit),
         .exception_mem_commit_i     (exception_mem_commit_int),
         .exception_gl_i             (ex_gl_out_int),
+        .debug_pc_valid_i           ((resp_csr_cpu_i.debug_step || debug_contr_o.halt_ack)),
+        .debug_pc_i                 (stage_if_1_if_2_d.pc_inst),
         .csr_ena_int_o              (csr_ena_int),
         .req_cpu_csr_o              (req_cpu_csr_o),
         .retire_inst_o              (retire_inst_gl)

@@ -49,6 +49,7 @@ module control_unit
     output cu_commit_t      cu_commit_o,
 
     output debug_contr_out_t debug_contr_o,
+    output logic            debug_csr_halt_ack_o,
 
     output logic            pmu_jump_misspred_o
 
@@ -68,6 +69,7 @@ module control_unit
         debug_contr_o.running = 1'b0;
         debug_contr_o.parked = 1'b0; 
         debug_contr_o.unavail = 1'b0;
+        debug_csr_halt_ack_o = 1'b0;
 
         case (state_debug_q)
             DEBUG_RESET: begin
@@ -81,7 +83,7 @@ module control_unit
                 end
             end
             DEBUG_RUNNING: begin
-                if (csr_cu_i.debug_mode_en) begin
+                if (csr_cu_i.debug_ebreak) begin
                     state_debug_d = DEBUG_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                 end else if (debug_contr_i.halt_req) begin
@@ -91,9 +93,12 @@ module control_unit
                 debug_contr_o.running = 1'b1;
             end
             DEBUG_HALTING: begin
-                if (gl_empty_i || csr_cu_i.debug_mode_en) begin
+                if (gl_empty_i || csr_cu_i.debug_ebreak) begin
                     state_debug_d = DEBUG_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
+                    if (gl_empty_i) begin
+                        debug_csr_halt_ack_o = 1'b1;
+                    end 
                 end 
                 on_halt_state = 1'b1;
                 debug_contr_o.running = 1'b1;
@@ -114,7 +119,7 @@ module control_unit
                 if (debug_contr_i.resume_req) begin
                     state_debug_d = DEBUG_RUNNING;
                     debug_contr_o.resume_ack = 1'b1;
-                end else if (csr_cu_i.debug_mode_en) begin
+                end else if (csr_cu_i.debug_ebreak) begin
                     state_debug_d = DEBUG_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                 end 
@@ -150,14 +155,14 @@ module control_unit
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
-                                                            //csr_cu_i.debug_mode_en || // This will cause the core to have an exception each cycle when debug mode is on!
+                                                            csr_cu_i.debug_ebreak || // This will cause the core to have an exception each cycle when debug mode is on!
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&
                                                             !((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
-                                                            csr_cu_i.debug_mode_en ||
+                                                            csr_cu_i.debug_ebreak ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
 
     // logic enable write register file at commit
@@ -236,7 +241,7 @@ module control_unit
     // logic to select the next pc
     always_comb begin
         // branches or valid jal
-        if (jump_enable_int || exception_enable_q || csr_enable_q) begin
+        if (jump_enable_int || exception_enable_q || csr_enable_q || debug_contr_o.halt_ack) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (pipeline_ctrl_o.stall_if_1                 || 
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
@@ -253,7 +258,7 @@ module control_unit
     // logic to select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
-        if (exception_enable_q) begin
+        if (exception_enable_q  || debug_contr_o.halt_ack) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (csr_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR_RW;
@@ -274,6 +279,7 @@ module control_unit
     // when it is a csr it should be checked more?
     assign invalidate_buffer_o = (commit_cu_i.valid && (commit_cu_i.fence_i | 
                                                     exception_enable_q |
+                                                    debug_contr_o.halt_ack |
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint

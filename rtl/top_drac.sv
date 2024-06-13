@@ -36,7 +36,6 @@ module top_drac
 //------------------------------------------------------------------------------------    
     input debug_contr_in_t      debug_contr_i,
     input debug_reg_in_t        debug_reg_i,
-    input addr_t                debug_program_buff_addr_i,
 
 //------------------------------------------------------------------------------------
 // I-CACHE INTERFACE
@@ -116,7 +115,7 @@ logic [1:0] vcsr_vs;
 logic en_ld_st_translation;
 logic en_translation;
 logic [42:0] vpu_csr;
-logic debug_mode_csr_en;
+logic debug_csr_halt_ack;
 
 assign en_translation_o = en_translation;
 assign priv_lvl_o = csr_priv_lvl;
@@ -302,6 +301,7 @@ datapath #(
     .dtlb_comm_o(dtlb_comm_o),
     .debug_contr_o(debug_contr_o),
     .debug_reg_o(debug_reg_o),
+    .debug_csr_halt_ack_o(debug_csr_halt_ack),
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -313,7 +313,8 @@ datapath #(
 
 
 csr_bsc #(
-    .PPN_WIDTH(drac_pkg::PPN_SIZE)
+    .PPN_WIDTH(drac_pkg::PPN_SIZE),
+    .PROGRAM_BUFFER_ADDR(DracCfg.DebugProgramBufferBase)
 ) csr_inst (
     .clk_i(clk_i),
     .rstn_i(rstn_i),
@@ -383,12 +384,11 @@ csr_bsc #(
     .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
 
-    .debug_program_buff_addr_i(debug_program_buff_addr_i),
-    .debug_halt_ack_i(debug_contr_o.halt_ack),
+    .debug_halt_ack_i(debug_csr_halt_ack),
     .debug_resume_ack_i(debug_contr_o.resume_ack),
     .debug_mode_en_o(resp_csr_interface_datapath.debug_mode_en),
+    .debug_ebreak_o(resp_csr_interface_datapath.debug_ebreak),
     .debug_step_o(resp_csr_interface_datapath.debug_step),
-    
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module
     .perf_data_i(data_hpm_csr),                // read data from performance counter module

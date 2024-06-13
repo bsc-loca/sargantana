@@ -150,6 +150,9 @@ typedef struct packed {
 
     logic [PHY_ADDR_SIZE-1:0] InitBROMBase;
     logic [PHY_ADDR_SIZE-1:0] InitBROMEnd;
+
+    logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferBase;
+    logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferEnd;
 } drac_cfg_t;
 
 function automatic logic range_check(addr_t start_region, addr_t end_region, bus64_t address);
@@ -1028,6 +1031,8 @@ typedef struct packed {
     logic       debug_mode_en;
     // Step_mode_enbled
     logic       debug_step;
+    // Ebreak in CSR module
+    logic       debug_ebreak;
 } resp_csr_cpu_t;
 
 typedef struct packed {
@@ -1075,7 +1080,7 @@ typedef struct packed {
 
 typedef struct packed {
     // Response of a rename request 
-    logic           rnm_read_resp;
+    phreg_t         rnm_read_resp;
     // Response form a read request
     bus64_t         rf_rdata;
 } debug_reg_out_t;
@@ -1153,11 +1158,14 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
 
     NMappedSections: 2, // number of Memory space sections
-    InitMappedBase: {40'h0040000000, 40'h0000000100}, // Memory base address after reset
-    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff}, // Memory end 0 address after reset
+    InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000000400}, // Memory base address after reset
+    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000000420}, // Memory end 0 address after reset
 
     InitBROMBase: 40'h0000000100,
-    InitBROMEnd: 40'h000000ffff
+    InitBROMEnd: 40'h000000ffff,
+
+    DebugProgramBufferBase: 40'h0000000400,
+    DebugProgramBufferEnd:  40'h0000000420
 };
 
 localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{
