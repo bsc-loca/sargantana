@@ -155,7 +155,8 @@ module control_unit
     assign exception_enable_d = exception_enable_q ? 1'b0 : ((commit_cu_i.valid && commit_cu_i.xcpt) || 
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
-                                                            csr_cu_i.debug_ebreak || // This will cause the core to have an exception each cycle when debug mode is on!
+                                                            csr_cu_i.debug_ebreak ||
+                                                            debug_contr_o.halt_ack ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&
@@ -163,6 +164,7 @@ module control_unit
                                                             csr_cu_i.csr_eret || 
                                                             csr_cu_i.csr_exception || 
                                                             csr_cu_i.debug_ebreak ||
+                                                            debug_contr_o.halt_ack ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
 
     // logic enable write register file at commit
@@ -241,7 +243,7 @@ module control_unit
     // logic to select the next pc
     always_comb begin
         // branches or valid jal
-        if (jump_enable_int || exception_enable_q || csr_enable_q || debug_contr_o.halt_ack) begin
+        if (jump_enable_int || exception_enable_q || csr_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (pipeline_ctrl_o.stall_if_1                 || 
                      (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
@@ -258,7 +260,7 @@ module control_unit
     // logic to select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr
-        if (exception_enable_q  || debug_contr_o.halt_ack) begin
+        if (exception_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR;
         end else if (csr_enable_q) begin
             pipeline_ctrl_o.sel_addr_if = SEL_JUMP_CSR_RW;
