@@ -1158,14 +1158,14 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
 
     NMappedSections: 3, // number of Memory space sections
-    InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000000400}, // Memory base address after reset
-    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000000420}, // Memory end 0 address after reset
+    InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000010000}, // Memory base address after reset
+    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000010020}, // Memory end 0 address after reset
 
     InitBROMBase: 40'h0000000100,
     InitBROMEnd: 40'h000000ffff,
 
-    DebugProgramBufferBase: 40'h0000000400,
-    DebugProgramBufferEnd:  40'h0000000420
+    DebugProgramBufferBase: 40'h0000010000,
+    DebugProgramBufferEnd:  40'h0000010020
 };
 
 localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{

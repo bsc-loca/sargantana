@@ -398,7 +398,7 @@ endfunction
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .reset_addr_i(reset_addr_i),
-        .stall_debug_i(debug_contr_o.halted),
+        .stall_debug_i(debug_contr_o.parked),
         .stall_i(control_int.stall_if_1),
         .cu_if_i(cu_if_int),
         .invalidate_icache_i(invalidate_icache_int),
