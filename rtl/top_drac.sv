@@ -384,6 +384,7 @@ csr_bsc #(
     .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
 
+    .debug_halt_req_i(debug_contr_i.halt_req),
     .debug_halt_ack_i(debug_csr_halt_ack),
     .debug_resume_ack_i(debug_contr_o.resume_ack),
     .debug_mode_en_o(resp_csr_interface_datapath.debug_mode_en),
