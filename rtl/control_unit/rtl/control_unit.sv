@@ -57,6 +57,8 @@ module control_unit
     reg csr_fence_in_pipeline;
     logic flush_csr_fence;
 
+    logic exception_enable_q, exception_enable_d;
+
     debug_contr_state_t state_debug_q, state_debug_d;
     logic on_halt_state;
 
@@ -69,6 +71,7 @@ module control_unit
         debug_contr_o.running = 1'b0;
         debug_contr_o.parked = 1'b0; 
         debug_contr_o.unavail = 1'b0;
+        debug_contr_o.progbuf_ack = 1'b0;
         debug_csr_halt_ack_o = 1'b0;
 
         case (state_debug_q)
@@ -142,7 +145,6 @@ module control_unit
     end
 
     logic jump_enable_int;
-    logic exception_enable_q, exception_enable_d;
     logic csr_enable_d, csr_enable_q;
     // jump enable logic
     always_comb begin
