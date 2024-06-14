@@ -72,29 +72,29 @@ module control_unit
         debug_csr_halt_ack_o = 1'b0;
 
         case (state_debug_q)
-            DEBUG_RESET: begin
+            DEBUG_STATE_RESET: begin
                 if (debug_contr_i.halt_on_reset) begin
-                    state_debug_d = DEBUG_HALTED;
+                    state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                     on_halt_state = 1'b1;
                 end else begin
-                    state_debug_d = DEBUG_RUNNING;
+                    state_debug_d = DEBUG_STATE_RUNNING;
                     on_halt_state = 1'b0;
                 end
             end
-            DEBUG_RUNNING: begin
+            DEBUG_STATE_RUNNING: begin
                 if (csr_cu_i.debug_ebreak) begin
-                    state_debug_d = DEBUG_HALTED;
+                    state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                 end else if (debug_contr_i.halt_req) begin
-                    state_debug_d = DEBUG_HALTING;
+                    state_debug_d = DEBUG_STATE_HALTING;
                 end 
                 on_halt_state = 1'b0;
                 debug_contr_o.running = 1'b1;
             end
-            DEBUG_HALTING: begin
+            DEBUG_STATE_HALTING: begin
                 if (gl_empty_i || csr_cu_i.debug_ebreak) begin
-                    state_debug_d = DEBUG_HALTED;
+                    state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                     if (gl_empty_i) begin
                         debug_csr_halt_ack_o = 1'b1;
@@ -103,24 +103,24 @@ module control_unit
                 on_halt_state = 1'b1;
                 debug_contr_o.running = 1'b1;
             end
-            DEBUG_HALTED: begin
+            DEBUG_STATE_HALTED: begin
                 if (debug_contr_i.resume_req) begin
-                    state_debug_d = DEBUG_RUNNING;
+                    state_debug_d = DEBUG_STATE_RUNNING;
                     debug_contr_o.resume_ack = 1'b1;
                 end else if (debug_contr_i.progbuf_req) begin
-                    state_debug_d = DEBUG_PROGBUFF;
+                    state_debug_d = DEBUG_STATE_PROGBUFF;
                     debug_contr_o.progbuf_ack = 1'b1;
                 end
                 on_halt_state = 1'b1;
                 debug_contr_o.halted = 1'b1;
                 debug_contr_o.parked = 1'b1;
             end
-            DEBUG_PROGBUFF: begin
+            DEBUG_STATE_PROGBUFF: begin
                 if (debug_contr_i.resume_req) begin
-                    state_debug_d = DEBUG_RUNNING;
+                    state_debug_d = DEBUG_STATE_RUNNING;
                     debug_contr_o.resume_ack = 1'b1;
-                end else if (csr_cu_i.debug_ebreak) begin
-                    state_debug_d = DEBUG_HALTED;
+                end else if (csr_cu_i.debug_ebreak || exception_enable_q) begin
+                    state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
                 end 
                 on_halt_state = 1'b0;
@@ -477,7 +477,7 @@ module control_unit
     // Delay exceptions one cycle
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
-            state_debug_q <= DEBUG_RESET;
+            state_debug_q <= DEBUG_STATE_RESET;
         end else begin 
             state_debug_q <= state_debug_d;
         end

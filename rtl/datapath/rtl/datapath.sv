@@ -464,6 +464,7 @@ endfunction
         .v_2sew_en_i    (vnarrow_wide_en_i),
         .vill_i         (vill_i),
         .vl_0_i         (vl_0_int),
+        .debug_mode_en_i(debug_contr_o.halted),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)
     );
@@ -488,7 +489,7 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
-assign free_list_read_src1_int = (debug_reg_i.rnm_read_en && debug_contr_o.halted)  ? debug_reg_i.rnm_read_reg : stage_iq_ir_q.instr.rs1;
+assign free_list_read_src1_int = (debug_reg_i.rnm_read_en && debug_contr_o.parked)  ? debug_reg_i.rnm_read_reg : stage_iq_ir_q.instr.rs1;
 assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     // Register ID to IR when stall
@@ -583,7 +584,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .old_dst_i(stage_iq_ir_q.instr.rd),
         .write_dst_i(stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(free_register_to_rename),
-        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_reg_i.rnm_read_en  && debug_contr_o.halted)),
+        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_reg_i.rnm_read_en  && debug_contr_o.parked)),
         .use_rs2_i(stage_iq_ir_q.instr.use_rs2),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
@@ -919,7 +920,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         end
     end
 
-    assign reg_prd1_addr  = (debug_reg_i.rf_en  && debug_contr_o.halted)  ? debug_reg_i.rf_preg : stage_ir_rr_q.prs1;
+    assign reg_prd1_addr  = (debug_reg_i.rf_en  && debug_contr_o.parked)  ? debug_reg_i.rf_preg : stage_ir_rr_q.prs1;
     
     // RR Stage
     regfile regfile_inst(
@@ -1357,7 +1358,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (i == 0) begin
                 // Change the data of write port 0 with dbg ring data
-                if (debug_reg_i.rf_we && debug_contr_o.halted) begin
+                if (debug_reg_i.rf_we && debug_contr_o.parked) begin
                     data_wb_to_rr[i] = debug_reg_i.rf_wdata;
                     write_paddr_rr[i] = debug_reg_i.rf_preg;
                 end else begin
@@ -1403,6 +1404,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .exception_gl_i             (ex_gl_out_int),
         .debug_pc_valid_i           ((resp_csr_cpu_i.debug_step || debug_contr_o.halt_ack)),
         .debug_pc_i                 (stage_if_1_if_2_d.pc_inst),
+        .debug_mode_en_i            (debug_contr_o.halted),
         .csr_ena_int_o              (csr_ena_int),
         .req_cpu_csr_o              (req_cpu_csr_o),
         .retire_inst_o              (retire_inst_gl)

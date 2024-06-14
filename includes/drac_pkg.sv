@@ -1085,12 +1085,37 @@ typedef struct packed {
     bus64_t         rf_rdata;
 } debug_reg_out_t;
 
-typedef enum logic[2:0] {
+//--------------------------------
+// Legacy Debug structs for Ka
+typedef struct packed {
+    // Triggers a halt on the pipeline 
+    logic           halt_req;
+    // Triggers a restart on the pipeline
+    logic           resume_req;
+} debug_intel_in_t;
+
+typedef struct packed {
+    // ACKs the halt of the pipeline 
+    logic           halt_ack;
+    // ACKs the restart of the pipeline
+    logic           resume_ack;
+} debug_intel_out_t;
+
+typedef enum logic[1:0] {
     DEBUG_RESET,
     DEBUG_RUNNING, 
-    DEBUG_HALTING, 
-    DEBUG_HALTED,
-    DEBUG_PROGBUFF
+    DEBUG_CLEAR, 
+    DEBUG_HALT
+} debug_intel_state_t;
+// End Legacy Debug structs for Ka
+//--------------------------------
+
+typedef enum logic[2:0] {
+    DEBUG_STATE_RESET,
+    DEBUG_STATE_RUNNING, 
+    DEBUG_STATE_HALTING, 
+    DEBUG_STATE_HALTED,
+    DEBUG_STATE_PROGBUFF
 } debug_contr_state_t;
 
 // LSQ in/out of instruction signals

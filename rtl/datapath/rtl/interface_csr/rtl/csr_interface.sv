@@ -31,7 +31,8 @@ module csr_interface
     input  exception_t      exception_gl_i,
     // CSR Debug
     input  logic            debug_pc_valid_i,         // PC to CSRs is set as next_PC for debugging porpuses
-    input  bus64_t          debug_pc_i,  
+    input  bus64_t          debug_pc_i,
+    input  logic            debug_mode_en_i,  
     // CSR interruption
     output logic            csr_ena_int_o,            // Enable CSR petition
     // Request to CSR
@@ -160,7 +161,7 @@ assign req_cpu_csr_o.csr_rw_cmd = (csr_ena_int) ? csr_cmd_int : CSR_CMD_NOPE;
 // if csr not enabled send the interesting addr that you are accesing, exception help
 assign req_cpu_csr_o.csr_rw_data = csr_rw_data_int;
 
-assign req_cpu_csr_o.csr_exception = commit_xcpt_i;
+assign req_cpu_csr_o.csr_exception = commit_xcpt_i && !debug_mode_en_i;
 
 assign req_cpu_csr_o.fp_status = (({instruction_to_commit_i[0].fp_status.NV,
                                     instruction_to_commit_i[0].fp_status.DZ,

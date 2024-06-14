@@ -1789,9 +1789,16 @@ module decoder
                         F3_ECALL_EBREAK_ERET: begin
                             decode_instr_int.regfile_we = 1'b0;
                             if (debug_mode_en_i) begin
-                                decode_instr_int.use_imm    = 1'b0;
-                                decode_instr_int.unit = UNIT_ALU;
-                                decode_instr_int.stall_csr_fence = 1'b0;
+                                if((decode_i.inst.rtype.func7 == F7_ECALL_EBREAK_URET) &&
+                                   (decode_i.inst.rtype.rs2 == RS2_EBREAK_SFENCEVM)) begin
+                                    // stops the probram buffer execution
+                                    xcpt_illegal_instruction_int = 1'b1;
+
+                                end else begin
+                                    decode_instr_int.use_imm = 1'b0;
+                                    decode_instr_int.unit = UNIT_ALU;
+                                    decode_instr_int.stall_csr_fence = 1'b0;
+                                end
                             end else begin
                                 if (decode_i.inst.itype.rd != 'h0 ) begin
                                     xcpt_illegal_instruction_int = 1'b1;
