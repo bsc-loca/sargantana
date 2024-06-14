@@ -463,6 +463,7 @@ endfunction
         .csr_fs_i       (csr_fs_i), 
         .csr_vs_i       (csr_vs_i), 
         .v_2sew_en_i    (vnarrow_wide_en_i),
+        .sew_i          (sew_i),
         .vill_i         (vill_i),
         .vl_0_i         (vl_0_int),
         .debug_mode_en_i(debug_contr_o.halted),

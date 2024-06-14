@@ -26,7 +26,8 @@ module decoder
     input   logic [2:0]      frm_i, // FP rounding Mode from CSR
     input   logic [1:0]      csr_fs_i, 
     input   logic [1:0]      csr_vs_i, 
-    input   logic            v_2sew_en_i, 
+    input   logic            v_2sew_en_i,
+    input   sew_t            sew_i, 
     input   logic            vill_i,
     input   logic            vl_0_i,
     input   logic            debug_mode_en_i,
@@ -889,6 +890,12 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VRGATHEREI16;
+                                        if(sew_i == SEW_8) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                        else begin
+                                            xcpt_illegal_instruction_int = 1'b0;
+                                        end
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
