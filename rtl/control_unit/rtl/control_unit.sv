@@ -94,6 +94,7 @@ module control_unit
                 end 
                 on_halt_state = 1'b0;
                 debug_contr_o.running = 1'b1;
+                debug_contr_o.resume_ack = debug_contr_i.resume_req;
             end
             DEBUG_STATE_HALTING: begin
                 if (gl_empty_i || csr_cu_i.debug_ebreak) begin
