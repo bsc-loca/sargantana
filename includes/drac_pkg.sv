@@ -1027,8 +1027,6 @@ typedef struct packed {
     bus64_t     csr_interrupt_cause;
     // tval
     bus64_t     csr_tval;
-    // entering to debug mode
-    logic       debug_mode_en;
     // Step_mode_enbled
     logic       debug_step;
     // Ebreak in CSR module

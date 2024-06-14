@@ -387,7 +387,6 @@ csr_bsc #(
     .debug_halt_req_i(debug_contr_i.halt_req),
     .debug_halt_ack_i(debug_csr_halt_ack),
     .debug_resume_ack_i(debug_contr_o.resume_ack),
-    .debug_mode_en_o(resp_csr_interface_datapath.debug_mode_en),
     .debug_ebreak_o(resp_csr_interface_datapath.debug_ebreak),
     .debug_step_o(resp_csr_interface_datapath.debug_step),
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
