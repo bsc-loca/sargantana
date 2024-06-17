@@ -49,7 +49,8 @@ module control_unit
     output cu_commit_t      cu_commit_o,
 
     output debug_contr_out_t debug_contr_o,
-    output logic            debug_csr_halt_ack_o,
+    output logic             debug_csr_halt_ack_o,
+    output logic             debug_insert_ebreak_o,
 
     output logic            pmu_jump_misspred_o
 
@@ -73,6 +74,7 @@ module control_unit
         debug_contr_o.unavail = 1'b0;
         debug_contr_o.progbuf_ack = 1'b0;
         debug_csr_halt_ack_o = 1'b0;
+        debug_insert_ebreak_o = 1'b0;
 
         case (state_debug_q)
             DEBUG_STATE_RESET: begin
@@ -95,6 +97,7 @@ module control_unit
                 on_halt_state = 1'b0;
                 debug_contr_o.running = 1'b1;
                 debug_contr_o.resume_ack = debug_contr_i.resume_req;
+                debug_insert_ebreak_o = id_cu_i.valid & csr_cu_i.debug_step;
             end
             DEBUG_STATE_HALTING: begin
                 if (gl_empty_i || csr_cu_i.debug_ebreak) begin
