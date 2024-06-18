@@ -730,6 +730,7 @@ typedef enum logic [11:0] {
     CSR_SIE            = 12'h104,
     CSR_STVEC          = 12'h105,
     CSR_SCOUNTEREN     = 12'h106,
+    CSR_SENVCFG        = 12'h10A,
     CSR_SSCRATCH       = 12'h140,
     CSR_SEPC           = 12'h141,
     CSR_SCAUSE         = 12'h142,
@@ -780,10 +781,12 @@ typedef enum logic [11:0] {
     CSR_MCAUSE         = 12'h342,
     CSR_MTVAL          = 12'h343,
     CSR_MIP            = 12'h344,
+    CSR_MENVCFG        = 12'h30A,
     CSR_MVENDORID      = 12'hF11,
     CSR_MARCHID        = 12'hF12,
     CSR_MIMPID         = 12'hF13,
     CSR_MHARTID        = 12'hF14,
+    CSR_MCONFIGPTR     = 12'hF15,
     `ifdef PITON_CINCORANCH
     CSR_MBOOT_MAIN_ID  = 12'hFC0,
     `endif
