@@ -335,7 +335,10 @@ package fpnew_pkg;
 
   // Returns the bias value for a given format (as per IEEE 754-2008)
   function automatic int unsigned bias(fp_format_e fmt);
-    return unsigned'((2**(FP_ENCODINGS[fmt].exp_bits-1))-1); // symmetrical bias
+    automatic int unsigned exp_bits, exp;
+    exp_bits = FP_ENCODINGS[fmt].exp_bits;
+    exp = (2**(exp_bits-1))-1;
+    return unsigned'(exp); // symmetrical bias
   endfunction
 
   function automatic fp_encoding_t super_format(fmt_logic_t cfg);
