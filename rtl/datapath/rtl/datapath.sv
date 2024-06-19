@@ -323,7 +323,6 @@ endfunction
 
     // Debug signals
     phreg_t    reg_prd1_addr;
-    logic debug_insert_ebreak_int;
     // stall IF
     logic miss_icache;
     `ifdef SIM_KONATA_DUMP
@@ -340,6 +339,7 @@ endfunction
         .rstn_i(rstn_i),
         .miss_icache_i(miss_icache),
         .ready_icache_i(req_icache_ready_i),
+        .if2_cu_valid_i(stage_if_1_if_2_q.valid),
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
         .cu_ir_o(cu_ir_int),
@@ -360,7 +360,6 @@ endfunction
         .debug_contr_i(debug_contr_i),
         .debug_contr_o(debug_contr_o),
         .debug_csr_halt_ack_o(debug_csr_halt_ack_o),
-        .debug_insert_ebreak_o(debug_insert_ebreak_int),
         .gl_empty_i(gl_empty),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int),
@@ -434,8 +433,7 @@ endfunction
         .flush_i(flush_int.flush_if),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
-        .stall_o(miss_icache),
-        .debug_insert_ebreak_i(debug_insert_ebreak_int)
+        .stall_o(miss_icache)
     );
 
     // Register IF to ID
@@ -1393,7 +1391,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign commit_cu_int.gl_index = (commit_store_or_amo_int[0]) ? index_gl_commit : trunc_sum_5bits(index_gl_commit + 1'b1);
     bus64_t debug_pc_int;
     // pc of the ebreak_instruction or pc-4 if single stepping, because an additional ebreak was inserted
-    assign debug_pc_int = resp_csr_cpu_i.debug_step ? stage_if_1_if_2_d.pc_inst - 4 : stage_if_1_if_2_d.pc_inst;
+    assign debug_pc_int = stage_if_1_if_2_d.pc_inst;
 
     csr_interface csr_interface_inst
     (

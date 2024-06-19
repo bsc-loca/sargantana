@@ -22,6 +22,7 @@ module control_unit
 
     input logic             miss_icache_i,
     input logic             ready_icache_i,
+    input logic             if2_cu_valid_i,
     input id_cu_t           id_cu_i,
     input ir_cu_t           ir_cu_i,
     input rr_cu_t           rr_cu_i,
@@ -50,13 +51,16 @@ module control_unit
 
     output debug_contr_out_t debug_contr_o,
     output logic             debug_csr_halt_ack_o,
-    output logic             debug_insert_ebreak_o,
 
     output logic            pmu_jump_misspred_o
 
 );
     reg csr_fence_in_pipeline;
     logic flush_csr_fence;
+    logic flush_step_inst;
+    logic step_inst_in_pipeline;
+    logic step_inst_in_if2;
+    logic step_inst_in_id;
 
     logic exception_enable_q, exception_enable_d;
 
@@ -74,7 +78,6 @@ module control_unit
         debug_contr_o.unavail = 1'b0;
         debug_contr_o.progbuf_ack = 1'b0;
         debug_csr_halt_ack_o = 1'b0;
-        debug_insert_ebreak_o = 1'b0;
 
         case (state_debug_q)
             DEBUG_STATE_RESET: begin
@@ -97,7 +100,6 @@ module control_unit
                 on_halt_state = 1'b0;
                 debug_contr_o.running = 1'b1;
                 debug_contr_o.resume_ack = debug_contr_i.resume_req;
-                debug_insert_ebreak_o = id_cu_i.valid & csr_cu_i.debug_step;
             end
             DEBUG_STATE_HALTING: begin
                 if (gl_empty_i || csr_cu_i.debug_ebreak) begin
@@ -136,16 +138,29 @@ module control_unit
         endcase
     end
 
+    assign step_inst_in_if2 = (if2_cu_valid_i & csr_cu_i.debug_step & (state_debug_q == DEBUG_STATE_RUNNING));
+    assign step_inst_in_id = (id_cu_i.valid & csr_cu_i.debug_step & (state_debug_q == DEBUG_STATE_RUNNING));
+
     always_ff@(posedge clk_i, negedge rstn_i)
     begin
         if (~rstn_i)
             csr_fence_in_pipeline <= 0;
         else if (flush_csr_fence)
             csr_fence_in_pipeline <= 0;
-        else if(id_cu_i.valid & (id_cu_i.stall_csr_fence | csr_cu_i.debug_step))
+        else if(id_cu_i.valid & id_cu_i.stall_csr_fence)
             csr_fence_in_pipeline <= 1;
         else if (commit_cu_i.valid & commit_cu_i.stall_csr_fence)
             csr_fence_in_pipeline <= 0;
+    end
+
+    always_ff@(posedge clk_i, negedge rstn_i)
+    begin
+        if (~rstn_i)
+            step_inst_in_pipeline <= 0;
+        else if (flush_step_inst)
+            step_inst_in_pipeline <= 0;
+        else if (step_inst_in_id)
+            step_inst_in_pipeline <= 1;
     end
 
     logic jump_enable_int;
@@ -252,8 +267,11 @@ module control_unit
         if (jump_enable_int || exception_enable_q || csr_enable_q) begin
             cu_if_o.next_pc = NEXT_PC_SEL_JUMP;
         end else if (pipeline_ctrl_o.stall_if_1                 || 
-                     (id_cu_i.valid & id_cu_i.stall_csr_fence)  || 
-                     csr_fence_in_pipeline                      || 
+                     (id_cu_i.valid & id_cu_i.stall_csr_fence)  ||
+                     step_inst_in_if2                           ||
+                     step_inst_in_id                            ||
+                     csr_fence_in_pipeline                      ||
+                     step_inst_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
                      on_halt_state)  begin
                      
@@ -316,7 +334,9 @@ module control_unit
                 pipeline_flush_o.flush_if  = 1'b1;
                 pipeline_flush_o.flush_id  = 1'b1;
         end else if ((id_cu_i.stall_csr_fence | 
-                      csr_fence_in_pipeline   | 
+                      csr_fence_in_pipeline   |
+                      step_inst_in_id         |
+                      step_inst_in_pipeline   |
                       commit_cu_i.stall_csr_fence) && !(csr_cu_i.csr_stall)) begin
             pipeline_flush_o.flush_if  = 1'b1;
             pipeline_flush_o.flush_id  = 1'b0;
@@ -339,11 +359,13 @@ module control_unit
         pipeline_flush_o.kill_exe       = 1'b0;
         pipeline_flush_o.flush_commit   = 1'b0;
         flush_csr_fence                 = 1'b0;
+        flush_step_inst                 = 1'b0;
         if (exception_enable_q) begin
             pipeline_flush_o.flush_ir      = 1'b1;
             pipeline_flush_o.flush_rr      = 1'b1;
             pipeline_flush_o.flush_exe     = 1'b1;
             flush_csr_fence                = 1'b1;
+            flush_step_inst                = 1'b1;
         end else if (wb_cu_i.valid[0] & ~correct_branch_pred_wb_i) begin
             pipeline_flush_o.flush_ir  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;
@@ -399,7 +421,12 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
-        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || (!miss_icache_i && !ready_icache_i) || on_halt_state) begin
+        end else if ((commit_cu_i.valid && commit_cu_i.stall_csr_fence) || 
+                    (!miss_icache_i && !ready_icache_i) || 
+                    on_halt_state                       || 
+                    step_inst_in_id                     ||
+                    step_inst_in_pipeline               ||
+                    step_inst_in_if2                    ) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;

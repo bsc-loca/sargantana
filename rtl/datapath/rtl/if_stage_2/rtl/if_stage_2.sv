@@ -29,9 +29,7 @@ module if_stage_2
     // fetch data output
     output if_id_stage_t        fetch_o,
     // stall fetch_1 if there are a miss
-    output logic                stall_o,
-    // Insert an ebreak when instruction-stepping in debug mode
-    input logic                 debug_insert_ebreak_i
+    output logic                stall_o
 );
 
 logic ex_if_page_fault_int;
@@ -67,11 +65,9 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
     assign fetch_o.ex.origin = fetch_i.ex.origin;
 
 // output instruction and valid bit
-    assign fetch_o.inst    = debug_insert_ebreak_i ?
-                                32'h00100073 :
-                                (resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data);
+    assign fetch_o.inst    = resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data;
 // valid if the response of the cache is valid or xcpt
-    assign fetch_o.valid   = debug_insert_ebreak_i | (fetch_i.valid && (resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid));
+    assign fetch_o.valid   = fetch_i.valid && (resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid);
 // stall the pipeline in case of a cache miss 
     assign stall_o         = fetch_i.valid && !(resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid); 
 
