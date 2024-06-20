@@ -647,7 +647,7 @@ always_comb begin
             neg_stride_d = stride_i[63];
             memp_instr_o.data_rs1 = memp_instr_i.data_rs1;
             end_int = 1'b0;
-            memp_instr_o.instr.valid = memp_instr_i.instr.valid && (vmem_ops_state_d == SCALAR);
+            memp_instr_o.instr.valid = memp_instr_i.instr.valid && (~is_vector);
             memp_instr_d = memp_instr_i;
             vl_d = vl_i;
             vsew_d = vsew_i;

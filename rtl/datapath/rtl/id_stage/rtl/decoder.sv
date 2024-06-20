@@ -639,23 +639,23 @@ module decoder
                                         MOP_UNIT_STRIDE: begin
                                             case (decode_i.inst.vltype.lumop)
                                                 LUMOP_UNIT_STRIDE: begin
-                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLE;
                                                     xcpt_illegal_instruction_int = vill_i;
                                                 end
                                                 LUMOP_UNIT_STRIDE_WREG: begin
-                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VL1R;
                                                 end
                                                 LUMOP_MASK: begin
-                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLM;
                                                     xcpt_illegal_instruction_int = vill_i;
                                                 end
                                                 LUMOP_FAULT_ONLY_FIRST: begin
-                                                    decode_instr_int.vregfile_we = 1'b1;
+                                                    decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLEFF;
-                                                    decode_instr_int.stall_csr_fence = 1'b1;
+                                                    decode_instr_int.stall_csr_fence = ~vl_0_i;
                                                     xcpt_illegal_instruction_int = vill_i;
                                                 end
                                                 default: begin
@@ -664,13 +664,13 @@ module decoder
                                             endcase
                                         end
                                         MOP_STRIDED: begin
-                                            decode_instr_int.vregfile_we = 1'b1;
+                                            decode_instr_int.vregfile_we = ~vl_0_i;
                                             decode_instr_int.instr_type = VLSE;
                                             decode_instr_int.use_rs2 = 1'b1;
                                             xcpt_illegal_instruction_int = vill_i;
                                         end
                                         MOP_INDEXED_ORDERED, MOP_INDEXED_UNORDERED: begin
-                                            decode_instr_int.vregfile_we = 1'b1;
+                                            decode_instr_int.vregfile_we = ~vl_0_i;
                                             decode_instr_int.instr_type = VLXE;
                                             decode_instr_int.use_vs2 = 1'b1;
                                             xcpt_illegal_instruction_int = vill_i;

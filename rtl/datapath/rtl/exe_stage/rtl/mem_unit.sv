@@ -727,7 +727,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || ((vl_to_wb <= i) && (vl_to_wb != 'h0))) begin
+                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end
@@ -752,7 +752,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if (instruction_to_wb.data_vm[i] || ((vl_to_wb <= i) && (vl_to_wb != 'h0))) begin
+                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
                 end
             end
@@ -777,7 +777,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (instruction_to_wb.data_vm[i] || ((vl_to_wb <= i) && (vl_to_wb != 'h0))) begin
+                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
                 end
             end
@@ -802,7 +802,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (instruction_to_wb.data_vm[i] || ((vl_to_wb <= i) && (vl_to_wb != 'h0))) begin
+                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
                 end
             end
