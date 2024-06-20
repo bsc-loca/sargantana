@@ -518,37 +518,37 @@ always_comb begin
                 SEW_8: begin
                     memp_instr_o.instr.instr_type = LB;
                     memp_instr_o.instr.mem_size = 4'b0000;
-                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
                     memp_instr_o.instr.instr_type = LH;
                     memp_instr_o.instr.mem_size = 4'b0001;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
                 end
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = LW;
                     memp_instr_o.instr.mem_size = 4'b0010;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end
                 end
                 default: begin
                     memp_instr_o.instr.instr_type = LD;
                     memp_instr_o.instr.mem_size = 4'b0011;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0110) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end
@@ -572,16 +572,16 @@ always_comb begin
                     memp_instr_o.instr.instr_type = SB;
                     memp_instr_o.instr.mem_size = 4'b0000;
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-1:0] << 3);
-                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                    memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
                     memp_instr_o.instr.instr_type = SH;
                     memp_instr_o.instr.mem_size = 4'b0001;
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
                 end
                 SEW_32: begin
@@ -589,11 +589,11 @@ always_comb begin
                     memp_instr_o.instr.mem_size = 4'b0010;
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end
                 end
                 default: begin
@@ -601,11 +601,11 @@ always_comb begin
                     memp_instr_o.instr.mem_size = 4'b0011;
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{56{mask_buffer[trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM+7)]}}, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0101) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{48{mask_buffer[trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM+15)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else if (memp_instr_q.instr.mem_size == 4'b0110) begin
-                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {{32{mask_buffer[trunc_dcachedatalog_shift5((velem_cnt_q*32)+MAX_VELEM+31)]}}, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                        memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end

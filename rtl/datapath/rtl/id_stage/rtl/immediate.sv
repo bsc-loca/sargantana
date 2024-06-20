@@ -126,7 +126,7 @@ module immediate
                     end
                     F3_OPCFG: begin
                         if (instr_i[31] & instr_i[30]) begin //VSETIVLI
-                            imm_o = {28'b0, instr_i[19:15], 23'b0, instr_i[29:20]};
+                            imm_o = {27'b0, instr_i[19:15], 22'b0, instr_i[29:20]};
                         end else begin
                             imm_o = imm_itype;
                         end
