@@ -143,7 +143,8 @@ pmrq_instr_t instruction_from_pmrq;
 // PMRQ control signals
 logic advance_head_prmq;
 logic mv_back_tail_prmq;
-logic full_pmrq;
+logic full_pmrq_d;
+logic full_pmrq_q;
 logic replay;
 
 // Select data source
@@ -332,7 +333,7 @@ always_comb begin
                     next_state             = ReadHead;
                     
                     //// Set request valid bit, stall_commit and next state signals 
-                    if (!instruction_to_dcache.instr.valid | full_pmrq | 
+                    if (!instruction_to_dcache.instr.valid | full_pmrq_q | 
                        ((instruction_to_dcache.velem_incr < vl_to_dcache) & // partial vector
                        ((vload_packer_full & ~req_cpu_dcache_o.is_store) | (vstore_packer_full & req_cpu_dcache_o.is_store)))) begin
                         // If not valid instruction or full Pending Request Memory Queue or full vpacker with partial vector instruction
@@ -409,7 +410,7 @@ end
 always_comb begin
     req_cpu_dcache_o.data_rs1        = instruction_to_dcache.data_rs1;
     req_cpu_dcache_o.data_rs2        = instruction_to_dcache.data_rs2;
-    req_cpu_dcache_o.instr_type      = instruction_to_dcache.instr.instr_type;
+    req_cpu_dcache_o.instr_type      = (killed_dcache_req_d) ? ADD : instruction_to_dcache.instr.instr_type;
     req_cpu_dcache_o.mem_size        = instruction_to_dcache.instr.mem_size;
     req_cpu_dcache_o.rd              = tag_id;
     req_cpu_dcache_o.is_amo_or_store = instruction_to_dcache.is_amo_or_store;
@@ -459,6 +460,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
+        full_pmrq_q          <= 1'b0;
         
         `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <=  'h0;
@@ -474,6 +476,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s1_q        <= 1'b0;
         io_s1_q              <= 1'b0;
         tag_id_s1_q          <=  'h0;
+        full_pmrq_q          <= 1'b0;
 
         `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <=  'h0;
@@ -489,6 +492,9 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         is_STORE_s1_q        <= req_cpu_dcache_o.is_store;
         io_s1_q              <= resp_dcache_cpu_i.io_address_space;
         tag_id_s1_q          <= tag_id;
+        if ((resp_dcache_cpu_i.ready) | (~full_pmrq_d)) begin
+            full_pmrq_q <= full_pmrq_d;
+        end
         
         `ifdef REGISTER_HPDC_OUTPUT
         instruction_s2_q     <= instruction_s1_q;
@@ -574,7 +580,7 @@ pending_mem_req_queue pending_mem_req_queue_inst (
     .advance_head_i        (advance_head_prmq),
     .mv_back_tail_i        (mv_back_tail_prmq),
     .finish_instr_o        (instruction_from_pmrq),
-    .full_o                (full_pmrq)
+    .full_o                (full_pmrq_d)
 );
 
 bus_dcache_data_t data_dcache;
