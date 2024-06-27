@@ -339,7 +339,7 @@ always_comb begin
                         // Wait until next state
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
-                        instruction_s1_d        = 'h0;
+                        instruction_s1_d        = (instruction_to_dcache.ex.valid) ? instruction_to_dcache : 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_or_store) begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid & ~stall_after_flush_lsq; // Don't send new request before sending the killed one
