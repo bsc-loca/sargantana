@@ -320,8 +320,8 @@ always_comb begin
             req_tag_d = (memp_instr_q.instr.valid & ~flush_i) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
         end
         VL_STRIDED: begin
-            make_req = memp_instr_q.instr.valid && ~flush_i && 
-                       (!masked_op_q || ((velem_cnt_q + velem_incr) >= vl_q) || (mask_buffer[velem_cnt_q]));
+            make_req = memp_instr_q.instr.valid && ~flush_i && ~stall_i && 
+                       (!masked_op_q || (mask_buffer[velem_cnt_q]));
             case (memp_instr_q.instr.mem_size) //vsew_q
                 4'b0000: begin
                     //check if the stride is power of 2 and it is lower than the dcache data width for grouping requests
@@ -333,7 +333,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << log_stride_q)] = 1'b1;
+                            load_mask[(i << log_stride_q)] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q) begin
                         velem_off = 'h0;
@@ -344,13 +344,12 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[MAX_VELEM-1-(i << log_stride_q)-velem_off_neg] = 1'b1;
+                            load_mask[MAX_VELEM-1-(i << log_stride_q)-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
                         vaddr_incr = (neg_stride_q) ? trunc_64_sum(~stride_q + 1'b1) : stride_q;
                         velem_incr = 1'b1;
-                        memp_instr_o.instr.instr_type = LB;
                         memp_instr_o.instr.mem_size = 4'b0000;
                         load_mask = {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -366,7 +365,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-1'b1))]= 1'b1;
+                            load_mask[(i << (log_stride_q-1'b1))]= ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h1)) begin
                         velem_off = 'h0;
@@ -377,13 +376,12 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 1)-1-(i << (log_stride_q-1))-velem_off_neg] = 1'b1;
+                            load_mask[(MAX_VELEM >> 1)-1-(i << (log_stride_q-1))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
                         vaddr_incr = (neg_stride_q) ? trunc_64_sum(~stride_q + 1'b1) : stride_q;
                         velem_incr = 1'b1;
-                        memp_instr_o.instr.instr_type = LH;
                         memp_instr_o.instr.mem_size = 4'b0001;
                         load_mask = {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -400,7 +398,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-2'd2))] = 1'b1;
+                            load_mask[(i << (log_stride_q-2'd2))] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h2)) begin
                         velem_off = 'h0;
@@ -411,13 +409,12 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 2)-1-(i << (log_stride_q-2))-velem_off_neg] = 1'b1;
+                            load_mask[(MAX_VELEM >> 2)-1-(i << (log_stride_q-2))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
                         vaddr_incr = (neg_stride_q) ? trunc_64_sum(~stride_q + 1'b1) : stride_q;
                         velem_incr = 1'b1;
-                        memp_instr_o.instr.instr_type = LW;
                         memp_instr_o.instr.mem_size = 4'b0010;
                         load_mask = {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -434,7 +431,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-2'd3))] = 1'b1;
+                            load_mask[(i << (log_stride_q-2'd3))] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h3)) begin
                         velem_off = 'h0;
@@ -445,13 +442,12 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 3)-1-(i << (log_stride_q-3))-velem_off_neg] = 1'b1;
+                            load_mask[(MAX_VELEM >> 3)-1-(i << (log_stride_q-3))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
                         vaddr_incr = (neg_stride_q) ? trunc_64_sum(~stride_q + 1'b1) : stride_q;
                         velem_incr = 1'b1;
-                        memp_instr_o.instr.instr_type = LD;
                         memp_instr_o.instr.mem_size = 4'b0011;
                         load_mask = {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -462,7 +458,7 @@ always_comb begin
             endcase
             // Do not generate requests for masked elements, if it is a masked operation check that we have an available mask
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i &&
-                                       (!masked_op_q || ((velem_cnt_q + velem_incr) >= vl_q) || (make_req || (memp_instr_o.instr.instr_type == VLSE)));
+                                       (make_req || ((velem_cnt_q + velem_incr) >= vl_q) || (memp_instr_o.instr.mem_size[3] == 1'b1));
             vaddr_d = trunc_64_sum(vaddr_q + vaddr_incr);
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
             vmem_ops_state_d = ((velem_cnt_d >= vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_STRIDED;
@@ -509,7 +505,7 @@ always_comb begin
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
-            load_mask[0] = memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]));
+            load_mask = (memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]))) ? 'h1 : 'h0;
         end
         VL_INDEXED: begin
             case (vsew_q)
@@ -559,7 +555,7 @@ always_comb begin
             velem_incr = 1'b1;
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
             vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_INDEXED;
-            load_mask = {63'd0, memp_instr_o.instr.valid};
+            load_mask = {63'd0, mask_buffer[velem_cnt_q]};
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -619,7 +615,7 @@ always_comb begin
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
-            load_mask[0] = memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]));
+            load_mask = (memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]))) ? 'h1 : 'h0;
         end
         default: begin //SCALAR
             // For scalar instructions, calculate the address and let them pass through

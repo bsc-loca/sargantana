@@ -126,7 +126,9 @@ always_comb begin
     translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
     
     // Exception treatment
-    if (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
+    if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
+        translated_instr.ex = 0;
+    end else if (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
         ((instr_to_translate.instr.mem_size == 4'b0010) & (|instr_to_translate.data_rs1[1:0])) |
         ((instr_to_translate.instr.mem_size == 4'b0011) & (|instr_to_translate.data_rs1[2:0])) |
         ((instr_to_translate.instr.mem_size == 4'b0101) & (|instr_to_translate.data_rs1[0:0])) |
