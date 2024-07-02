@@ -19,6 +19,7 @@
 (
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
+    input logic                   flush_i,                // Flush 
     input logic [VMAXELEM_LOG:0]  vl_i,                   // Current vector lenght in elements
     input vxrm_t                  vxrm_i,                 // Vector Fixed-Point Rounding Mode
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
@@ -213,7 +214,10 @@ end
 always_comb begin
     for (int i = 2; i <= MAX_STAGES; i++) begin
         for (int j = 0; j < MAX_STAGES; j++) begin
-            if (j==0) begin
+            if (flush_i) begin
+                simd_pipe_d[i][j].valid = 1'b0;
+                simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
+            end else if (j==0) begin
                 if (simd_exe_stages == i) begin
                     simd_pipe_d[i][0].valid = instruction_i.instr.valid;
                     simd_pipe_d[i][0].simd_instr = instruction_i;

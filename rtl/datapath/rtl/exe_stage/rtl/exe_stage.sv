@@ -316,6 +316,7 @@ branch_unit branch_unit_inst (
 simd_unit simd_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
+    .flush_i        (flush_i),
     .vl_i           (vl_i),
     .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),

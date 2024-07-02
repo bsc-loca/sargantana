@@ -125,7 +125,12 @@ end
 always_comb begin
     for (int i = 2; i <= MAX_STAGES; i++) begin
         for (int j = 0; j < (MAX_STAGES-1); j++) begin
-            if (j==0) begin
+            if (flush_i) begin
+                simd_pipe_d[i][j].valid = 1'b0;
+                `ifdef VERILATOR
+                simd_pipe_d[i][j].simd_instr_type = ADD;
+                `endif
+            end else if (j==0) begin
                 if (simd_exe_stages == (trunc_stages(i))) begin
                     simd_pipe_d[i][0].valid = ~stall_simd & ready_i & (instr_entry_i.unit == UNIT_SIMD);
                     `ifdef VERILATOR
@@ -138,17 +143,10 @@ always_comb begin
                     `endif
                 end
             end else begin
-                if (flush_i) begin 
-                    simd_pipe_d[i][j].valid = 1'b0;
-                    `ifdef VERILATOR
-                    simd_pipe_d[i][j].simd_instr_type = ADD;
-                    `endif
-                end else begin
-                    simd_pipe_d[i][j].valid = simd_pipe_q[i][j-1].valid;
-                    `ifdef VERILATOR
-                    simd_pipe_d[i][j].simd_instr_type = simd_pipe_q[i][j-1].simd_instr_type;
-                    `endif
-                end
+                simd_pipe_d[i][j].valid = simd_pipe_q[i][j-1].valid;
+                `ifdef VERILATOR
+                simd_pipe_d[i][j].simd_instr_type = simd_pipe_q[i][j-1].simd_instr_type;
+                `endif
             end
         end
     end
