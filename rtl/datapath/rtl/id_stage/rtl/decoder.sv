@@ -1086,14 +1086,14 @@ module decoder
                                         decode_instr_int.instr_type = VSSRA;
                                     end
                                     F6_VNCLIPU: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VNCLIPU;
                                         end
                                     end
                                     F6_VNCLIP: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VNCLIP;
@@ -1247,14 +1247,14 @@ module decoder
                                         decode_instr_int.instr_type = VSSRA;
                                     end
                                     F6_VNCLIPU: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VNCLIPU;
                                         end
                                     end
                                     F6_VNCLIP: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VNCLIP;
@@ -1370,7 +1370,7 @@ module decoder
                                         decode_instr_int.instr_type = VSSRA;
                                     end
                                     F6_VNCLIPU: begin
-                                       if (!v_2sew_en_i) begin
+                                       if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             if (decode_instr_int.imm > ((2**5)-1)) begin
@@ -1381,7 +1381,7 @@ module decoder
                                         end
                                     end
                                     F6_VNCLIP: begin
-                                        if (!v_2sew_en_i) begin
+                                        if (!v_2sew_en_int) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             if (decode_instr_int.imm > ((2**5)-1)) begin

@@ -221,7 +221,7 @@ always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VNCLIP, VNCLIPU: begin
             data_vd_o = result_vnclip;
-            sat_ovf_o = sat_ovf_saaddsub;
+            sat_ovf_o = sat_ovf_vnclip;
         end
         VZEXT_VF2, VSEXT_VF2, VZEXT_VF4, VSEXT_VF4, VZEXT_VF8, VSEXT_VF8: begin
             data_vd_o = data_vs2_i;
