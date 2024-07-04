@@ -311,6 +311,12 @@ datapath #(
 // inorder core any access to the CSR/PCR will be available. In multicore
 // scenarios or higher performance cores you may need csr_replay.
 
+// Trap vector is defined to be at an offset of 0x40 from whichever address the core boots from
+logic [63:0] trap_vector_addr;
+assign trap_vector_addr = {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40};
+
+logic fcsr_flags_valid;
+assign fcsr_flags_valid = |req_datapath_csr_interface.csr_retire;
 
 csr_bsc #(
     .PPN_WIDTH(drac_pkg::PPN_SIZE),
@@ -323,7 +329,7 @@ csr_bsc #(
     `ifdef PITON_CINCORANCH
     .boot_main_id_i(boot_main_id_i),
     `endif  // Custom for CincoRanch
-    .trap_vector_addr_i({{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40}), // Address of the exception vector
+    .trap_vector_addr_i(trap_vector_addr), // Address of the exception vector
 
     .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                               // read and write address form the core
     .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                                 // specific operation to execute from the core 
@@ -357,7 +363,7 @@ csr_bsc #(
 `endif // CONF_SARGANTANA_ENABLE_PCR
 
     .freg_modified_i(req_datapath_csr_interface.freg_modified),
-    .fcsr_flags_valid_i(|req_datapath_csr_interface.csr_retire),
+    .fcsr_flags_valid_i(fcsr_flags_valid),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
     .fcsr_rm_o(fcsr_rm),
     .fcsr_fs_o(fcsr_fs),

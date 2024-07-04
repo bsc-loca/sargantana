@@ -202,17 +202,23 @@ end
 
 assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops;
 
+logic pending_fp_op_queue_valid;
+assign pending_fp_op_queue_valid = enable_fp_op_int & ready_fpu;
+
+logic pending_fp_op_queue_advance_head;
+assign pending_fp_op_queue_advance_head = finish_fp_op_int.instr.valid & !stall_wb_i;
+
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
     .rstn_i(rstn_i),           // Negated Reset Signal
     .flush_i(flush_i),          // Flush all entries
-    .valid_i(enable_fp_op_int & ready_fpu),                // Valid instruction 
+    .valid_i(pending_fp_op_queue_valid),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
     .result_valid_i(result_valid_int),         // Result valid
     .result_tag_i(result_tag_int),           // Instruction that finishes
     .result_data_i(result_int),          // Result asociated data
     .result_fp_status_i(result_fp_status_int),
-    .advance_head_i(finish_fp_op_int.instr.valid & !stall_wb_i),         // Advance head pointer one position
+    .advance_head_i(pending_fp_op_queue_advance_head),         // Advance head pointer one position
     .finish_instr_fp_o(finish_fp_op_int),      // Next Instruction to Write Back FP
     .finish_fp_status_o(finish_fp_status_int),  // FP_STATUS
     .tag_o(tag_current_instr_int),                  // Tag given to the incoming instruction
@@ -223,6 +229,10 @@ typedef logic [3:0]W4_logic;
 typedef logic [2:0]W3_logic;
 typedef logic [1:0]W2_logic;
 
+fpnew_pkg::roundmode_e rnd_mode;
+assign rnd_mode = rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mode))
+                               : fpnew_pkg::roundmode_e'(W3_logic'(instruction_i.instr.frm));
+
 fpnew_top #(
    .Features       ( Features ),
    .Implementation ( Implementation )
@@ -232,8 +242,7 @@ fpnew_top #(
    .flush_i        ( flush_i ),
    // Input
    .operands_i     ( operands ),
-   .rnd_mode_i     ( rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mode)) : 
-    fpnew_pkg::roundmode_e'(W3_logic'(instruction_i.instr.frm))),
+   .rnd_mode_i     ( rnd_mode ),
    .op_i           ( fpnew_pkg::operation_e'(W4_logic'(op ))),
    .op_mod_i       ( op_mod ),
    .src_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(src_fmt ))),
