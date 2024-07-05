@@ -195,7 +195,12 @@ always_comb begin
             vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_UNIT;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             req_tag_d = (memp_instr_q.instr.valid & ~flush_i) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
-            load_mask = ({MAX_VELEM{1'b1}} >> (MAX_VELEM - velem_incr));
+            load_mask = 'h0;
+            for (int i = 0; i < 16; ++i) begin
+                if (i < velem_incr) begin
+                    load_mask[i] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                end
+            end
         end
         VS_UNIT: begin
             case (memp_instr_q.instr.mem_size) //vsew_q
