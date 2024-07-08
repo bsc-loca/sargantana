@@ -1074,6 +1074,8 @@ typedef struct packed {
     logic           parked;
     // Indicates if the debugging is unavailable
     logic           unavail;
+    // The execution of the program buffer stopped because of an exception
+    logic           progbuf_xcpt;
 } debug_contr_out_t;
 
 typedef struct packed {

@@ -66,6 +66,7 @@ module control_unit
 
     debug_contr_state_t state_debug_q, state_debug_d;
     logic on_halt_state;
+    logic debug_progbuf_xcpt_d, debug_progbuf_xcpt_q;
 
     always_comb begin
         debug_contr_o.resume_ack = 1'b0;
@@ -77,7 +78,9 @@ module control_unit
         debug_contr_o.parked = 1'b0; 
         debug_contr_o.unavail = 1'b0;
         debug_contr_o.progbuf_ack = 1'b0;
+        debug_contr_o.progbuf_xcpt = debug_progbuf_xcpt_q;
         debug_csr_halt_ack_o = 1'b0;
+        debug_progbuf_xcpt_d = debug_progbuf_xcpt_q;
 
         case (state_debug_q)
             DEBUG_STATE_RESET: begin
@@ -119,6 +122,7 @@ module control_unit
                 end else if (debug_contr_i.progbuf_req) begin
                     state_debug_d = DEBUG_STATE_PROGBUFF;
                     debug_contr_o.progbuf_ack = 1'b1;
+                    debug_progbuf_xcpt_d = 1'b0;
                 end
                 on_halt_state = 1'b1;
                 debug_contr_o.halted = 1'b1;
@@ -131,6 +135,7 @@ module control_unit
                 end else if (csr_cu_i.debug_ebreak || exception_enable_q) begin
                     state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
+                    debug_progbuf_xcpt_d = exception_enable_q;
                 end 
                 on_halt_state = 1'b0;
                 debug_contr_o.halted = 1'b1;
@@ -507,12 +512,13 @@ module control_unit
         end
     end
 
-    // Delay exceptions one cycle
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             state_debug_q <= DEBUG_STATE_RESET;
+            debug_progbuf_xcpt_q <= 1'b0;
         end else begin 
             state_debug_q <= state_debug_d;
+            debug_progbuf_xcpt_q <= debug_progbuf_xcpt_d;
         end
     end
     
