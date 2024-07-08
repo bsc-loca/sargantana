@@ -63,6 +63,7 @@ module control_unit
     logic step_inst_in_id;
 
     logic exception_enable_q, exception_enable_d;
+    bus64_t exception_cause_q, exception_cause_d;
 
     debug_contr_state_t state_debug_q, state_debug_d;
     logic on_halt_state;
@@ -135,7 +136,7 @@ module control_unit
                 end else if (csr_cu_i.debug_ebreak || exception_enable_q) begin
                     state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
-                    debug_progbuf_xcpt_d = exception_enable_q;
+                    debug_progbuf_xcpt_d = (exception_enable_q & (exception_cause_q != BREAKPOINT));
                 end 
                 on_halt_state = 1'b0;
                 debug_contr_o.halted = 1'b1;
@@ -184,6 +185,7 @@ module control_unit
                                                             csr_cu_i.debug_ebreak ||
                                                             debug_contr_o.halt_ack ||
                                                             (commit_cu_i.valid && commit_cu_i.ecall_taken));
+    assign exception_cause_d = exception_enable_q ? 'h0 : csr_cu_i.csr_exception_cause;
     // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
     assign csr_enable_d = csr_enable_q ? 1'b0 : (commit_cu_i.valid && commit_cu_i.stall_csr_fence) &&
                                                             !((commit_cu_i.valid && commit_cu_i.xcpt) || 
@@ -506,9 +508,11 @@ module control_unit
         if(!rstn_i) begin
             exception_enable_q <= 1'b0;
             csr_enable_q <= 1'b0;
+            exception_cause_q <= 'h0;
         end else begin 
             exception_enable_q <= exception_enable_d;
             csr_enable_q <= csr_enable_d;
+            exception_cause_q <= exception_cause_d;
         end
     end
 
