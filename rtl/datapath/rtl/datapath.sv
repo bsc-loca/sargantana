@@ -1441,7 +1441,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign commit_cu_int.xcpt = commit_xcpt;
 
     // tell cu that ecall was taken
-    assign commit_cu_int.ecall_taken = ((instruction_to_commit[0].instr_type == ECALL)  ||
+    assign commit_cu_int.ecall_taken = ~(debug_contr_o.halted) && 
+                                        ((instruction_to_commit[0].instr_type == ECALL)  ||
                                         (instruction_to_commit[0].instr_type == MRTS)   ||
                                         (instruction_to_commit[0].instr_type == EBREAK) );
 
