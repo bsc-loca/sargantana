@@ -157,52 +157,48 @@ localparam HPM_EXT_NUM_EVENT = 0;
 //-- HPM conection
 logic count_ovf_int_req;
 logic [HPM_NUM_COUNTERS+3-1:3] mhpm_ovf_bits;
-logic [HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT:1] hpm_events;
+logic [HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT:1] hpm_events_d, hpm_events_q;
 
-assign hpm_events[1]  = pmu_flags.branch_miss;
-assign hpm_events[2]  = pmu_flags.is_branch;
-assign hpm_events[3]  = pmu_flags.branch_taken;
-assign hpm_events[4]  = pmu_interface_i.exe_store;
-assign hpm_events[5]  = pmu_interface_i.exe_load;
-assign hpm_events[6]  = pmu_interface_i.icache_req;
-assign hpm_events[7]  = pmu_interface_i.icache_kill;
-assign hpm_events[8]  = pmu_flags.stall_if;
-assign hpm_events[9]  = pmu_flags.stall_id;
-assign hpm_events[10] = pmu_flags.stall_rr;
-assign hpm_events[11] = pmu_flags.stall_exe;
-assign hpm_events[12] = pmu_flags.stall_wb;
-assign hpm_events[13] = pmu_interface_i.icache_miss_l2_hit;
-assign hpm_events[14] = pmu_interface_i.icache_miss_kill;
-assign hpm_events[15] = pmu_interface_i.icache_busy;
-assign hpm_events[16] = pmu_interface_i.icache_miss_time;
-assign hpm_events[17] = pmu_flags.load_store;
-assign hpm_events[18] = pmu_flags.data_depend;
-assign hpm_events[19] = pmu_flags.struct_depend;
-assign hpm_events[20] = pmu_flags.grad_list_full;
-assign hpm_events[21] = pmu_flags.free_list_empty;
-assign hpm_events[22] = pmu_interface_i.itlb_access;
-assign hpm_events[23] = pmu_interface_i.itlb_miss;
-assign hpm_events[24] = pmu_interface_i.dtlb_access;
-assign hpm_events[25] = pmu_interface_i.dtlb_miss;
-assign hpm_events[26] = pmu_interface_i.ptw_buffer_hit;
-assign hpm_events[27] = pmu_interface_i.ptw_buffer_miss;
-assign hpm_events[28] = pmu_interface_i.itlb_stall;
-assign hpm_events[29] = pmu_interface_i.dcache_stall;
-assign hpm_events[30] = pmu_interface_i.dcache_stall_refill;
-assign hpm_events[31] = pmu_interface_i.dcache_rtab_rollback;
-assign hpm_events[32] = pmu_interface_i.dcache_req_onhold;
-assign hpm_events[33] = pmu_interface_i.dcache_prefetch_req;
-assign hpm_events[34] = pmu_interface_i.dcache_read_req;
-assign hpm_events[35] = pmu_interface_i.dcache_write_req;
-assign hpm_events[36] = pmu_interface_i.dcache_cmo_req;
-assign hpm_events[37] = pmu_interface_i.dcache_uncached_req;
-assign hpm_events[38] = pmu_interface_i.dcache_miss_read_req;
-assign hpm_events[39] = pmu_interface_i.dcache_miss_write_req;
-assign hpm_events[40] = pmu_flags.stall_ir;
-   
-
-
-
+assign hpm_events_d[1]  = pmu_flags.branch_miss;
+assign hpm_events_d[2]  = pmu_flags.is_branch;
+assign hpm_events_d[3]  = pmu_flags.branch_taken;
+assign hpm_events_d[4]  = pmu_interface_i.exe_store;
+assign hpm_events_d[5]  = pmu_interface_i.exe_load;
+assign hpm_events_d[6]  = pmu_interface_i.icache_req;
+assign hpm_events_d[7]  = pmu_interface_i.icache_kill;
+assign hpm_events_d[8]  = pmu_flags.stall_if;
+assign hpm_events_d[9]  = pmu_flags.stall_id;
+assign hpm_events_d[10] = pmu_flags.stall_rr;
+assign hpm_events_d[11] = pmu_flags.stall_exe;
+assign hpm_events_d[12] = pmu_flags.stall_wb;
+assign hpm_events_d[13] = pmu_interface_i.icache_miss_l2_hit;
+assign hpm_events_d[14] = pmu_interface_i.icache_miss_kill;
+assign hpm_events_d[15] = pmu_interface_i.icache_busy;
+assign hpm_events_d[16] = pmu_interface_i.icache_miss_time;
+assign hpm_events_d[17] = pmu_flags.load_store;
+assign hpm_events_d[18] = pmu_flags.data_depend;
+assign hpm_events_d[19] = pmu_flags.struct_depend;
+assign hpm_events_d[20] = pmu_flags.grad_list_full;
+assign hpm_events_d[21] = pmu_flags.free_list_empty;
+assign hpm_events_d[22] = pmu_interface_i.itlb_access;
+assign hpm_events_d[23] = pmu_interface_i.itlb_miss;
+assign hpm_events_d[24] = pmu_interface_i.dtlb_access;
+assign hpm_events_d[25] = pmu_interface_i.dtlb_miss;
+assign hpm_events_d[26] = pmu_interface_i.ptw_buffer_hit;
+assign hpm_events_d[27] = pmu_interface_i.ptw_buffer_miss;
+assign hpm_events_d[28] = pmu_interface_i.itlb_stall;
+assign hpm_events_d[29] = pmu_interface_i.dcache_stall;
+assign hpm_events_d[30] = pmu_interface_i.dcache_stall_refill;
+assign hpm_events_d[31] = pmu_interface_i.dcache_rtab_rollback;
+assign hpm_events_d[32] = pmu_interface_i.dcache_req_onhold;
+assign hpm_events_d[33] = pmu_interface_i.dcache_prefetch_req;
+assign hpm_events_d[34] = pmu_interface_i.dcache_read_req;
+assign hpm_events_d[35] = pmu_interface_i.dcache_write_req;
+assign hpm_events_d[36] = pmu_interface_i.dcache_cmo_req;
+assign hpm_events_d[37] = pmu_interface_i.dcache_uncached_req;
+assign hpm_events_d[38] = pmu_interface_i.dcache_miss_read_req;
+assign hpm_events_d[39] = pmu_interface_i.dcache_miss_write_req;
+assign hpm_events_d[40] = pmu_flags.stall_ir;
 
 `ifdef EXTERNAL_HPM_EVENT_NUM //can be 4,6,10
 
@@ -210,31 +206,37 @@ wire hpm_l2_access, hpm_l2_miss;
 wire hpm_l15_access, hpm_l15_miss;
 assign {hpm_l2_access, hpm_l2_miss, hpm_l15_access, hpm_l15_miss}= external_hpm_i[3:0];
 
-assign hpm_events[HPM_NUM_EVENTS+1] =  hpm_l2_miss;            //41
-assign hpm_events[HPM_NUM_EVENTS+2] =  hpm_l2_access;          //42
-assign hpm_events[HPM_NUM_EVENTS+3] =  hpm_l15_miss;           //43
-assign hpm_events[HPM_NUM_EVENTS+4] =  hpm_l15_access;         //44
+assign hpm_events_d[HPM_NUM_EVENTS+1] =  hpm_l2_miss;            //41
+assign hpm_events_d[HPM_NUM_EVENTS+2] =  hpm_l2_access;          //42
+assign hpm_events_d[HPM_NUM_EVENTS+3] =  hpm_l15_miss;           //43
+assign hpm_events_d[HPM_NUM_EVENTS+4] =  hpm_l15_access;         //44
 
 generate 
 if(HPM_EXT_NUM_EVENT == 10) begin 
     logic [2:0]hpm_noc_stall, hpm_noc_flit_val;
     assign {hpm_noc_stall, hpm_noc_flit_val}= external_hpm_i[9:4];
-    assign hpm_events[HPM_NUM_EVENTS+5] =  hpm_noc_flit_val[0]; //45
-    assign hpm_events[HPM_NUM_EVENTS+6] =  hpm_noc_flit_val[1]; //46 
-    assign hpm_events[HPM_NUM_EVENTS+7] =  hpm_noc_flit_val[2]; //47
-    assign hpm_events[HPM_NUM_EVENTS+8] =  hpm_noc_stall[0];    //48
-    assign hpm_events[HPM_NUM_EVENTS+9] =  hpm_noc_stall[1];    //49
-    assign hpm_events[HPM_NUM_EVENTS+10] =  hpm_noc_stall[2];    //50
+    assign hpm_events_d[HPM_NUM_EVENTS+5] =  hpm_noc_flit_val[0]; //45
+    assign hpm_events_d[HPM_NUM_EVENTS+6] =  hpm_noc_flit_val[1]; //46 
+    assign hpm_events_d[HPM_NUM_EVENTS+7] =  hpm_noc_flit_val[2]; //47
+    assign hpm_events_d[HPM_NUM_EVENTS+8] =  hpm_noc_stall[0];    //48
+    assign hpm_events_d[HPM_NUM_EVENTS+9] =  hpm_noc_stall[1];    //49
+    assign hpm_events_d[HPM_NUM_EVENTS+10] =  hpm_noc_stall[2];    //50
 end else if (HPM_EXT_NUM_EVENT == 6 )begin 
     logic hpm_nocs_stall, hpm_nocs_flit_val;
     assign {hpm_nocs_stall, hpm_nocs_flit_val}= external_hpm_i[5:4];
-    assign hpm_events[HPM_NUM_EVENTS+5] = hpm_nocs_flit_val;    //45
-    assign hpm_events[HPM_NUM_EVENTS+6] = hpm_nocs_stall;       //46
+    assign hpm_events_d[HPM_NUM_EVENTS+5] = hpm_nocs_flit_val;    //45
+    assign hpm_events_d[HPM_NUM_EVENTS+6] = hpm_nocs_stall;       //46
 end
 endgenerate
 
 `endif
-
+// Register HPM events to fix critical paths
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if(~rstn_i)
+        hpm_events_q <= 'h0;
+    else
+        hpm_events_q <= hpm_events_d;
+end
              
 hpm_counters #(
     .HPM_NUM_EVENTS(HPM_NUM_EVENTS+HPM_EXT_NUM_EVENT),
@@ -253,7 +255,7 @@ hpm_counters #(
     .priv_lvl_i(csr_priv_lvl),
 
     // Events
-    .events_i(hpm_events),
+    .events_i(hpm_events_q),
     
     .count_ovf_int_req_o(count_ovf_int_req),
     .mhpm_ovf_bits_o(mhpm_ovf_bits)
