@@ -57,7 +57,7 @@ package fpnew_pkg;
   };
 
   typedef logic [0:NUM_FP_FORMATS-1]       fmt_logic_t;    // Logic indexed by FP format (for masks)
-  typedef logic [0:NUM_FP_FORMATS-1][31:0] fmt_unsigned_t; // Unsigned indexed by FP format
+  typedef logic [NUM_FP_FORMATS-1:0][31:0] fmt_unsigned_t; // Unsigned indexed by FP format
 
   localparam fmt_logic_t CPK_FORMATS = 5'b11000; // FP32 and FP64 can provide CPK only
 
