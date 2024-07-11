@@ -116,6 +116,7 @@ sew_t vsew_d, vsew_q;
 logic [6:0] acum_velem_incr_d, acum_velem_incr_q;
 logic group_d, group_q, group_neg_d, group_neg_q;
 logic neg_stride_d, neg_stride_q;
+logic [MAX_VELEM-1:0] vl_mask;
 
 logic make_req;
 logic misalign_xcpt_int;
@@ -195,12 +196,7 @@ always_comb begin
             vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_UNIT;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             req_tag_d = (memp_instr_q.instr.valid & ~flush_i) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
-            load_mask = 'h0;
-            for (int i = 0; i < 16; ++i) begin
-                if (i < velem_incr) begin
-                    load_mask[i] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
-                end
-            end
+            load_mask = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? ({MAX_VELEM{1'b1}} >> (MAX_VELEM - velem_incr)) : 'h0;
         end
         VS_UNIT: begin
             case (memp_instr_q.instr.mem_size) //vsew_q
@@ -338,7 +334,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << log_stride_q)] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(i << log_stride_q)] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q) begin
                         velem_off = 'h0;
@@ -349,7 +345,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[MAX_VELEM-1-(i << log_stride_q)-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[MAX_VELEM-1-(i << log_stride_q)-velem_off_neg] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
@@ -370,7 +366,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-1'b1))]= ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(i << (log_stride_q-1'b1))]= (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h1)) begin
                         velem_off = 'h0;
@@ -381,7 +377,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 1)-1-(i << (log_stride_q-1))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(MAX_VELEM >> 1)-1-(i << (log_stride_q-1))-velem_off_neg] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
@@ -403,7 +399,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-2'd2))] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(i << (log_stride_q-2'd2))] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h2)) begin
                         velem_off = 'h0;
@@ -414,7 +410,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 2)-1-(i << (log_stride_q-2))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(MAX_VELEM >> 2)-1-(i << (log_stride_q-2))-velem_off_neg] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
@@ -436,7 +432,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(i << (log_stride_q-2'd3))] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(i << (log_stride_q-2'd3))] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                     end else if (group_neg_q && (log_stride_q >= 'h3)) begin
                         velem_off = 'h0;
@@ -447,7 +443,7 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
                         load_mask = 'h0;
                         for (int i = 0; i < velem_incr; ++i) begin
-                            load_mask[(MAX_VELEM >> 3)-1-(i << (log_stride_q-3))-velem_off_neg] = ((mask_buffer[MAX_VELEM:0] != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
+                            load_mask[(MAX_VELEM >> 3)-1-(i << (log_stride_q-3))-velem_off_neg] = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? 1'b1 : 1'b0;
                         end
                         memp_instr_o.neg_stride = 1'b1;
                     end else begin
@@ -747,6 +743,7 @@ assign stall_o = (vmem_ops_state_q == SCALAR) ? 1'b0 : 1'b1;
 assign end_o = end_int;
 assign load_mask_o = load_mask;
 assign misalign_xcpt_o = misalign_xcpt_int;
+assign vl_mask = ({MAX_VELEM{1'b1}} >> (MAX_VELEM - vl_q));
 
 endmodule
 
