@@ -850,7 +850,6 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign gl_is_vector_vl_0 = ((((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
                                 (stage_ir_rr_q.instr.regfile_we == 1'b0)) || 
                                 (stage_ir_rr_q.instr.instr_type == VLE) ||
-                                (stage_ir_rr_q.instr.instr_type == VL1R) ||
                                 (stage_ir_rr_q.instr.instr_type == VLM) ||
                                 (stage_ir_rr_q.instr.instr_type == VLEFF) ||
                                 (stage_ir_rr_q.instr.instr_type == VLSE) ||
@@ -1469,14 +1468,12 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid
                                         && !((vl_i == 'h0) && ((instruction_to_commit[0].instr_type == VSE) || 
-                                                               (instruction_to_commit[0].instr_type == VS1R)||
                                                                (instruction_to_commit[0].instr_type == VSM) ||
                                                                (instruction_to_commit[0].instr_type == VSSE)||
                                                                (instruction_to_commit[0].instr_type == VSXE))));
     assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
                                         (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid && !instruction_to_commit[0].ex_valid
                                         && !((vl_i == 'h0) && ((instruction_to_commit[1].instr_type == VSE) || 
-                                                               (instruction_to_commit[1].instr_type == VS1R)||
                                                                (instruction_to_commit[1].instr_type == VSM) ||
                                                                (instruction_to_commit[1].instr_type == VSSE)||
                                                                (instruction_to_commit[1].instr_type == VSXE))));

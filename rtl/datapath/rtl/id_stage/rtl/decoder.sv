@@ -642,7 +642,7 @@ module decoder
                                                     xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1
                                                 end
                                                 LUMOP_UNIT_STRIDE_WREG: begin
-                                                    decode_instr_int.vregfile_we = ~vl_0_i;
+                                                    decode_instr_int.vregfile_we = 1'b1;
                                                     decode_instr_int.instr_type = VL1R;
                                                 end
                                                 LUMOP_MASK: begin
