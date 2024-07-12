@@ -1076,6 +1076,8 @@ typedef struct packed {
     logic           unavail;
     // The execution of the program buffer stopped because of an exception
     logic           progbuf_xcpt;
+    // ACKs the reset of the pipeline 
+    logic           havereset;
 } debug_contr_out_t;
 
 typedef struct packed {

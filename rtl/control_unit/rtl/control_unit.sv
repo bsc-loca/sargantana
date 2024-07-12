@@ -79,11 +79,13 @@ module control_unit
         debug_contr_o.unavail = 1'b0;
         debug_contr_o.progbuf_ack = 1'b0;
         debug_contr_o.progbuf_xcpt = debug_progbuf_xcpt_q;
+        debug_contr_o.havereset = 1'b0;
         debug_csr_halt_ack_o = 1'b0;
         debug_progbuf_xcpt_d = debug_progbuf_xcpt_q;
 
         case (state_debug_q)
             DEBUG_STATE_RESET: begin
+                debug_contr_o.havereset = 1'b1;
                 if (debug_contr_i.halt_on_reset || debug_contr_i.halt_req) begin
                     state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
