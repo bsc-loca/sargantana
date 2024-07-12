@@ -155,6 +155,7 @@ logic [VMAXELEM_LOG:0] vl_to_dcache;
 logic [VMAXELEM_LOG:0] vl_s1;
 logic [VMAXELEM_LOG:0] vl_to_wb;
 logic [VMAXELEM_LOG:0] vleff_vl_int;
+gl_index_t vleff_gl_index;
 
 bus_simd_t vload_packer_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
 gl_index_t vload_packer_id_d [VECTOR_PACKER_NUM_ENTRIES-1:0];
@@ -733,8 +734,10 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
-                    masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
+                if (~instruction_to_wb.ex.valid) begin
+                    if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
+                        masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
+                    end
                 end
             end
         end
@@ -758,8 +761,10 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
-                    masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
+                if (~instruction_to_wb.ex.valid) begin
+                    if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                        masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
+                    end
                 end
             end
         end
@@ -783,8 +788,10 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
-                    masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
+                if (~instruction_to_wb.ex.valid) begin
+                    if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                        masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
+                    end
                 end
             end
         end
@@ -808,8 +815,10 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
-                    masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
+                if (~instruction_to_wb.ex.valid) begin
+                    if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                        masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
+                    end
                 end
             end
         end
@@ -1049,11 +1058,17 @@ assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s1
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         vleff_vl_int <= 'h0;
+        vleff_gl_index <= 'h0;
+    end else if (flush_to_lsq) begin
+        vleff_vl_int <= 'h0;
+        vleff_gl_index <= 'h0;
     end else begin
         if ((instruction_to_wb.ex.valid == 1'b1) && (instruction_to_wb.instr.instr_type == VLEFF) && (instruction_to_wb.velem_id != 'h0) && (vleff_vl_int == 'h0)) begin
             vleff_vl_int <= {1'b0, instruction_to_wb.velem_id};
-        end else if ((instruction_to_wb.instr.valid == 1'b1) && (instruction_to_wb.velem_id == 'h0)) begin
+            vleff_gl_index <= instruction_to_wb.gl_index;
+        end else if ((instruction_to_wb.instr.valid == 1'b1) && (instruction_to_wb.gl_index != vleff_gl_index)) begin
             vleff_vl_int <= 'h0;
+            vleff_gl_index <= 'h0;
         end
     end
 end

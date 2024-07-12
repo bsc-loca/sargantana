@@ -89,6 +89,8 @@ logic read_enable_sb;
 logic empty_int;
 logic translate_enable;
 logic translate_incoming;
+gl_index_t ex_gl_index;
+logic ex_reg;
 
 logic io_address_space;
 
@@ -126,7 +128,9 @@ always_comb begin
     translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
     
     // Exception treatment
-    if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
+    if ((ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index)) begin // a previous request of the same instruction generated an exception
+        translated_instr.ex.valid       = 1'b1;
+    end else if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
         translated_instr.ex = 0;
     end else if (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
         ((instr_to_translate.instr.mem_size == 4'b0010) & (|instr_to_translate.data_rs1[1:0])) |
@@ -154,6 +158,24 @@ always_comb begin
         translated_instr.ex.valid       = 1'b1;
     end else begin
         translated_instr.ex = 0;
+    end
+end
+
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if(~rstn_i) begin
+        ex_gl_index <= 'h0;
+        ex_reg <= 1'b0;
+    end else if (flush_i) begin
+        ex_gl_index <= 'h0;
+        ex_reg <= 1'b0;
+    end else begin
+        if ((translated_instr.ex.valid == 1'b1) && (translated_instr.instr.instr_type == VLEFF) && (translated_instr.velem_id != 'h0)) begin
+            ex_gl_index <= translated_instr.gl_index;
+            ex_reg <= 1'b1;
+        end else if ((translated_instr.instr.valid == 1'b1) && (translated_instr.gl_index != ex_gl_index)) begin
+            ex_gl_index <= 'h0;
+            ex_reg <= 1'b0;
+        end
     end
 end
 

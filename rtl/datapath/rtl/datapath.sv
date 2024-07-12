@@ -1321,7 +1321,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             simd_write_vaddr[i]     = wb_simd[i].vd;
             wb_cu_int.vwrite_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
-            wb_cu_int.vvalid[i]        = wb_simd[i].valid;
+            wb_cu_int.vvalid[i]        = wb_simd[i].valid && (!((wb_simd[i].instr_type == VLEFF) && (vleff_vl_int != 'h0)));
             `ifdef SIM_COMMIT_LOG
             instruction_simd_writeback_gl[i].addr      = wb_simd[i].addr;
             `endif
@@ -1493,7 +1493,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             commit_data[i].fdst            = instruction_to_commit[i].rd;
             commit_data[i].vdst            = instruction_to_commit[i].vd;
             commit_data[i].reg_wr_valid    = instruction_to_commit[i].regfile_we && instruction_to_commit[i].rd != 5'b0;
-            commit_data[i].vreg_wr_valid   = instruction_to_commit[i].vregfile_we;
+            commit_data[i].vreg_wr_valid   = instruction_to_commit[i].vregfile_we && (!((instruction_to_commit[i].instr_type == VLEFF) && (vleff_vl_int != 'h0)));
             commit_data[i].freg_wr_valid   = instruction_to_commit[i].fregfile_we && commit_valid[i];
             commit_data[i].csr_wr_valid    =
                 (instruction_to_commit[i].instr_type inside {CSRRW, CSRRWI} ) ||

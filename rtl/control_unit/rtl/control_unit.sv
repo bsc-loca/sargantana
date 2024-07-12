@@ -375,6 +375,10 @@ module control_unit
             pipeline_flush_o.flush_exe     = 1'b1;
             flush_csr_fence                = 1'b1;
             flush_step_inst                = 1'b1;
+        end else if (csr_enable_q) begin
+            pipeline_flush_o.flush_ir      = 1'b1;
+            pipeline_flush_o.flush_rr      = 1'b1;
+            pipeline_flush_o.flush_exe     = 1'b1;
         end else if (wb_cu_i.valid[0] & ~correct_branch_pred_wb_i) begin
             pipeline_flush_o.flush_ir  = 1'b1;
             pipeline_flush_o.flush_rr  = 1'b1;
