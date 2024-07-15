@@ -85,6 +85,10 @@ module control_unit
 
         case (state_debug_q)
             DEBUG_STATE_RESET: begin
+                state_debug_d = DEBUG_STATE_HAVERESET;
+                on_halt_state = 1'b1;
+            end
+            DEBUG_STATE_HAVERESET: begin
                 debug_contr_o.havereset = 1'b1;
                 if (debug_contr_i.halt_on_reset || debug_contr_i.halt_req) begin
                     state_debug_d = DEBUG_STATE_HALTED;

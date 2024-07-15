@@ -1114,6 +1114,7 @@ typedef enum logic[1:0] {
 
 typedef enum logic[2:0] {
     DEBUG_STATE_RESET,
+    DEBUG_STATE_HAVERESET,
     DEBUG_STATE_RUNNING, 
     DEBUG_STATE_HALTING, 
     DEBUG_STATE_HALTED,

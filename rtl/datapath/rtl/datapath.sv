@@ -21,7 +21,6 @@ module datapath
     input logic             clk_i,
     input logic             rstn_i,
     input addr_t            reset_addr_i,
-    input logic             soft_rstn_i,
     // icache/dcache/CSR interface input
     input resp_icache_cpu_t resp_icache_cpu_i,
     input resp_dcache_cpu_t resp_dcache_cpu_i,

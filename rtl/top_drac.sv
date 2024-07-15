@@ -130,9 +130,13 @@ logic [63:0]              data_csr_hpm, data_hpm_csr;
 logic                     we_csr_hpm;
 logic [31:0]              mcountinhibit_hpm;
 
+logic tile_rstn;
+
+assign tile_rstn = soft_rstn_i & rstn_i;
+
 // Register to save the last access to memory 
-always_ff @(posedge clk_i, negedge rstn_i) begin
-    if(~rstn_i)
+always_ff @(posedge clk_i, negedge tile_rstn) begin
+    if(~tile_rstn)
         dcache_addr <= 0;
     else
         dcache_addr <= req_cpu_dcache_o.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:0];
@@ -237,7 +241,7 @@ hpm_counters #(
     .HPM_NUM_COUNTERS(HPM_NUM_COUNTERS)
 ) hpm_counters_inst (
     .clk_i(clk_i),
-    .rstn_i(rstn_i),
+    .rstn_i(tile_rstn),
 
     // Access interface
     .addr_i(addr_csr_hpm),
@@ -271,10 +275,9 @@ datapath #(
     .DracCfg(DracCfg)
 ) datapath_inst (
     .clk_i(clk_i),
-    .rstn_i(rstn_i),
+    .rstn_i(tile_rstn),
     .reset_addr_i(reset_addr_i),
     // Input datapath
-    .soft_rstn_i(soft_rstn_i),
     .resp_icache_cpu_i(resp_icache_cpu_i), 
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
@@ -323,7 +326,7 @@ csr_bsc #(
     .PROGRAM_BUFFER_ADDR(DracCfg.DebugProgramBufferBase)
 ) csr_inst (
     .clk_i(clk_i),
-    .rstn_i(rstn_i),
+    .rstn_i(tile_rstn),
 
     .core_id_i(core_id_i),
     `ifdef PITON_CINCORANCH
