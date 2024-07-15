@@ -96,9 +96,14 @@ module control_unit
                     on_halt_state = 1'b1;
                     debug_csr_halt_ack_o = 1'b1;
                 end else begin
-                    state_debug_d = DEBUG_STATE_RUNNING;
+                    state_debug_d = DEBUG_STATE_RESUME;
                     on_halt_state = 1'b0;
                 end
+            end
+            DEBUG_STATE_RESUME: begin
+                state_debug_d = DEBUG_STATE_RUNNING;
+                debug_contr_o.resume_ack = 1'b1;
+                debug_contr_o.running = 1'b1;
             end
             DEBUG_STATE_RUNNING: begin
                 if (csr_cu_i.debug_ebreak) begin
@@ -109,7 +114,6 @@ module control_unit
                 end 
                 on_halt_state = 1'b0;
                 debug_contr_o.running = 1'b1;
-                debug_contr_o.resume_ack = debug_contr_i.resume_req;
             end
             DEBUG_STATE_HALTING: begin
                 if (gl_empty_i || csr_cu_i.debug_ebreak) begin
@@ -124,8 +128,7 @@ module control_unit
             end
             DEBUG_STATE_HALTED: begin
                 if (debug_contr_i.resume_req) begin
-                    state_debug_d = DEBUG_STATE_RUNNING;
-                    debug_contr_o.resume_ack = 1'b1;
+                    state_debug_d = DEBUG_STATE_RESUME;
                 end else if (debug_contr_i.progbuf_req) begin
                     state_debug_d = DEBUG_STATE_PROGBUFF;
                     debug_contr_o.progbuf_ack = 1'b1;
@@ -137,8 +140,7 @@ module control_unit
             end
             DEBUG_STATE_PROGBUFF: begin
                 if (debug_contr_i.resume_req) begin
-                    state_debug_d = DEBUG_STATE_RUNNING;
-                    debug_contr_o.resume_ack = 1'b1;
+                    state_debug_d = DEBUG_STATE_RESUME;
                 end else if (csr_cu_i.debug_ebreak || exception_enable_q) begin
                     state_debug_d = DEBUG_STATE_HALTED;
                     debug_contr_o.halt_ack = 1'b1;
@@ -150,8 +152,8 @@ module control_unit
         endcase
     end
 
-    assign step_inst_in_if2 = (if2_cu_valid_i & csr_cu_i.debug_step & (state_debug_q == DEBUG_STATE_RUNNING));
-    assign step_inst_in_id = (id_cu_i.valid & csr_cu_i.debug_step & (state_debug_q == DEBUG_STATE_RUNNING));
+    assign step_inst_in_if2 = (if2_cu_valid_i && csr_cu_i.debug_step && ((state_debug_q == DEBUG_STATE_RUNNING) || (state_debug_q == DEBUG_STATE_RESUME)));
+    assign step_inst_in_id = (id_cu_i.valid && csr_cu_i.debug_step && ((state_debug_q == DEBUG_STATE_RUNNING) || (state_debug_q == DEBUG_STATE_RESUME)));
 
     always_ff@(posedge clk_i, negedge rstn_i)
     begin
