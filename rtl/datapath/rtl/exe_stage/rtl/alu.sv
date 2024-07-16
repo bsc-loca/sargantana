@@ -20,8 +20,12 @@ module alu
 
 bus64_t data_rs1, data_rs2;
 
+reg_csr_addr_t vsetvl_csr_addr_int;
+
 assign data_rs1 = instruction_i.data_rs1;
 assign data_rs2 = instruction_i.data_rs2;
+
+assign vsetvl_csr_addr_int = {{(CSR_ADDR_SIZE-9){1'b0}}, (|data_rs2[63:8]), data_rs2[7:0]}; // vtype bits [62:8] are reserved, we can OR them
 
 // Truncate Function
 function [31:0] trunc_33_32(input [32:0] val_in);
@@ -122,7 +126,7 @@ assign instruction_o.rd              = instruction_i.instr.rd;
 assign instruction_o.regfile_we      = instruction_i.instr.regfile_we;
 assign instruction_o.instr_type      = instruction_i.instr.instr_type;
 assign instruction_o.stall_csr_fence = instruction_i.instr.stall_csr_fence;
-assign instruction_o.csr_addr        = (instruction_i.instr.instr_type == VSETVL) ? data_rs2[CSR_ADDR_SIZE-1:0] : instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_o.csr_addr        = (instruction_i.instr.instr_type == VSETVL) ? vsetvl_csr_addr_int : instruction_i.instr.imm[CSR_ADDR_SIZE-1:0];
 assign instruction_o.prd             = instruction_i.prd;
 assign instruction_o.checkpoint_done = instruction_i.checkpoint_done;
 assign instruction_o.chkp            = instruction_i.chkp;
