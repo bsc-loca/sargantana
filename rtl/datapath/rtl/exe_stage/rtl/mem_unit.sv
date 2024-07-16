@@ -333,20 +333,24 @@ always_comb begin
                     // Request Logic
                     next_state             = ReadHead;
                     
+                    if (instruction_to_dcache.instr.valid & instruction_to_dcache.ex.valid) begin
+                        req_cpu_dcache_valid_int = 1'b0;
+                        mem_commit_stall_s0      = 1'b0;
+                        instruction_s1_d         = instruction_to_dcache;
                     //// Set request valid bit, stall_commit and next state signals 
-                    if (!instruction_to_dcache.instr.valid | full_pmrq_q | 
+                    end else if (!instruction_to_dcache.instr.valid | full_pmrq_q | 
                        ((instruction_to_dcache.velem_incr < vl_to_dcache) & // partial vector
                        ((vload_packer_full & ~req_cpu_dcache_o.is_store) | (vstore_packer_full & req_cpu_dcache_o.is_store)))) begin
                         // If not valid instruction or full Pending Request Memory Queue or full vpacker with partial vector instruction
                         // Wait until next state
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
-                        instruction_s1_d        = (instruction_to_dcache.ex.valid) ? instruction_to_dcache : 'h0;
+                        instruction_s1_d        = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_or_store) begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid & ~stall_after_flush_lsq; // Don't send new request before sending the killed one
                         mem_commit_stall_s0    = 1'b0;
-                        instruction_s1_d = ((resp_dcache_cpu_i.ready & ~stall_after_flush_lsq) | instruction_to_dcache.ex.valid) ? instruction_to_dcache : 'h0;
+                        instruction_s1_d = (resp_dcache_cpu_i.ready & ~stall_after_flush_lsq) ? instruction_to_dcache : 'h0;
                     end else if (!((store_on_fly & req_cpu_dcache_o.is_amo) | amo_on_fly) |
                                  (mem_gl_index_o == instruction_to_dcache.gl_index)) begin // TODO: PReguntar al NArcis a veure si es pot treure
                         // If there is not a Store or AMO on fly or the current instruction
@@ -364,8 +368,7 @@ always_comb begin
                         // Otherwise if store or amo is launched, continue reading, otherwise wait
                         // until arriving to commit
                         instruction_s1_d = ((resp_dcache_cpu_i.ready & ~stall_after_flush_lsq 
-                                            & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])) 
-                                            | instruction_to_dcache.ex.valid | 
+                                            & (!req_cpu_dcache_o.is_amo_or_store | commit_store_or_amo_i[0] | commit_store_or_amo_i[1])) |
                                             ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.load_mask[0])) ? instruction_to_dcache : 'h0;
                     end else begin
                         req_cpu_dcache_valid_int = 1'b0;
