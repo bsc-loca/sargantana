@@ -333,7 +333,7 @@ always_comb begin
                     // Request Logic
                     next_state             = ReadHead;
                     
-                    if (instruction_to_dcache.instr.valid & instruction_to_dcache.ex.valid) begin
+                    if (instruction_to_dcache.instr.valid & instruction_to_dcache.ex.valid & ~store_on_fly & ~amo_on_fly) begin
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0      = 1'b0;
                         instruction_s1_d         = instruction_to_dcache;
@@ -377,8 +377,9 @@ always_comb begin
                     end
 
                     // Advance LSQ when a transaction is performed OR if the instruction has an exception
-                    read_next_lsq = (req_cpu_dcache_valid_int & resp_dcache_cpu_i.ready & ~stall_after_flush_lsq) | instruction_to_dcache.ex.valid | 
-                                    (((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid) & ~instruction_to_dcache.load_mask[0]);
+                    read_next_lsq = (req_cpu_dcache_valid_int & resp_dcache_cpu_i.ready & ~stall_after_flush_lsq)
+                                  | (instruction_to_dcache.ex.valid & (~store_on_fly) & (~amo_on_fly))
+                                  | (((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid) & ~instruction_to_dcache.load_mask[0]);
                 end
             end
         endcase
