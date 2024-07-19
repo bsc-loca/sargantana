@@ -465,6 +465,7 @@ endfunction
         .sew_i          (sew_i),
         .vill_i         (vill_i),
         .vl_0_i         (vl_0_int),
+        .vl_i           (vl_i),
         .debug_mode_en_i(debug_contr_o.halted),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int)

@@ -30,6 +30,7 @@ module decoder
     input   sew_t            sew_i, 
     input   logic            vill_i,
     input   logic            vl_0_i,
+    input   logic [VMAXELEM_LOG:0] vl_i,
     input   logic            debug_mode_en_i,
     output  id_ir_stage_t    decode_instr_o,
     output  jal_id_if_t      jal_id_if_o
@@ -639,7 +640,7 @@ module decoder
                                                 LUMOP_UNIT_STRIDE: begin
                                                     decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLE;
-                                                    xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1
+                                                    xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1
                                                 end
                                                 LUMOP_UNIT_STRIDE_WREG: begin
                                                     decode_instr_int.vregfile_we = 1'b1;
@@ -654,7 +655,7 @@ module decoder
                                                     decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLEFF;
                                                     decode_instr_int.stall_csr_fence = ~vl_0_i;
-                                                    xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1
+                                                    xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])) //LMUL > 1
                                                 end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
@@ -665,13 +666,13 @@ module decoder
                                             decode_instr_int.vregfile_we = ~vl_0_i;
                                             decode_instr_int.instr_type = VLSE;
                                             decode_instr_int.use_rs2 = 1'b1;
-                                            xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1;
+                                            xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1;
                                         end
                                         MOP_INDEXED_ORDERED, MOP_INDEXED_UNORDERED: begin
                                             decode_instr_int.vregfile_we = ~vl_0_i;
                                             decode_instr_int.instr_type = VLXE;
                                             decode_instr_int.use_vs2 = 1'b1;
-                                            xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1;
+                                            xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1;
                                         end
                                         default: begin
                                             xcpt_illegal_instruction_int = 1'b1;
@@ -725,7 +726,7 @@ module decoder
                                                     decode_instr_int.use_vs2 = 1'b1;
                                                     decode_instr_int.instr_type = VSE;
                                                     decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
-                                                    xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1;
+                                                    xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1;
                                                 end
                                                 SUMOP_UNIT_STRIDE_WREG: begin
                                                     decode_instr_int.use_vs2 = 1'b1;
@@ -748,7 +749,7 @@ module decoder
                                             decode_instr_int.instr_type = VSSE;
                                             decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
                                             decode_instr_int.use_rs2 = 1'b1;
-                                            xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1;
+                                            xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1;
                                         end
                                         MOP_INDEXED_ORDERED, MOP_INDEXED_UNORDERED: begin
                                             decode_instr_int.use_vs2 = 1'b1;
@@ -756,7 +757,7 @@ module decoder
                                             decode_instr_int.vs2 = decode_i.inst.vstype.vs3;
                                             decode_instr_int.use_vs1 = 1'b1;
                                             decode_instr_int.vs1 = decode_i.inst.vstype.sumop;
-                                            xcpt_illegal_instruction_int = vill_i | (decode_i.inst.vltype.width[13:12] > sew_i[1:0]); //LMUL > 1;
+                                            xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1;
                                         end
                                         default: begin
                                             xcpt_illegal_instruction_int = 1'b1;
