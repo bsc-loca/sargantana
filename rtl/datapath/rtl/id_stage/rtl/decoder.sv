@@ -655,7 +655,7 @@ module decoder
                                                     decode_instr_int.vregfile_we = ~vl_0_i;
                                                     decode_instr_int.instr_type = VLEFF;
                                                     decode_instr_int.stall_csr_fence = ~vl_0_i;
-                                                    xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])) //LMUL > 1
+                                                    xcpt_illegal_instruction_int = vill_i | (vl_i > (VMAXELEM >> decode_i.inst.vltype.width[13:12])); //LMUL > 1
                                                 end
                                                 default: begin
                                                     xcpt_illegal_instruction_int = 1'b1;
