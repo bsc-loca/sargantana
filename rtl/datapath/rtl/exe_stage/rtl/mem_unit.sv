@@ -920,8 +920,8 @@ always_comb begin
                     end
                 end
             end
-        `ifdef REGISTER_HPDC_OUTPUT
         end
+        `ifdef REGISTER_HPDC_OUTPUT
         if (flush_store) begin
             if ((instruction_s2_q.velem_incr >= vl_i[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
                 vstore_packer_complete = 1'b1;
@@ -941,7 +941,7 @@ always_comb begin
             end
         end
         `else
-        end else if (flush_store) begin
+        if (flush_store) begin
             if (instruction_s1_q.velem_incr >= vl_s1) begin
                 vstore_packer_complete = 1'b1;
             end else begin
