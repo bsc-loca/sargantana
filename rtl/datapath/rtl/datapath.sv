@@ -1321,7 +1321,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             simd_write_vaddr[i]     = wb_simd[i].vd;
             wb_cu_int.vwrite_enable[i] = wb_simd[i].vregfile_we;
             wb_cu_int.vsnoop_enable[i] = wb_simd[i].vregfile_we;
-            wb_cu_int.vvalid[i]        = wb_simd[i].valid && (!((wb_simd[i].instr_type == VLEFF) && (vleff_vl_int != 'h0)));
+            wb_cu_int.vvalid[i]        = wb_simd[i].valid;
             `ifdef SIM_COMMIT_LOG
             instruction_simd_writeback_gl[i].addr      = wb_simd[i].addr;
             `endif

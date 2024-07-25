@@ -722,7 +722,7 @@ always_comb begin
             if (~instruction_to_wb.neg_stride) begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
-                        if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off]) begin
+                        if (instruction_to_wb.load_mask[i-instruction_to_wb.velem_off] & (~instruction_to_wb.ex.valid)) begin
                             vdata_to_wb[(trunc_vlenlog_shift2(8*(packed_velems+instruction_to_wb.velem_id)))+:8] = data_to_wb[(8*i)+:8];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
@@ -738,7 +738,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if ((instruction_to_wb.data_vm[i] && (~instruction_to_wb.ex.valid)) || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end
@@ -747,7 +747,7 @@ always_comb begin
             if (~instruction_to_wb.neg_stride) begin
                 for (int i = 0; i<(VLEN/16); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
-                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
+                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)] & (~instruction_to_wb.ex.valid)) begin
                             vdata_to_wb[(trunc_vlenlog_shift3(16*(packed_velems+instruction_to_wb.velem_id)))+:16] = data_to_wb[(16*i)+:16];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
@@ -763,7 +763,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if ((instruction_to_wb.data_vm[i] && (~instruction_to_wb.ex.valid)) || (vl_to_wb <= i)) begin
+                if ((instruction_to_wb.data_vm[i]) || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
                 end
             end
@@ -772,7 +772,7 @@ always_comb begin
             if (~instruction_to_wb.neg_stride) begin
                 for (int i = 0; i<(VLEN/32); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
-                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
+                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)] & (~instruction_to_wb.ex.valid)) begin
                             vdata_to_wb[(trunc_vlenlog_shift4(32*(packed_velems+instruction_to_wb.velem_id)))+:32] = data_to_wb[(32*i)+:32];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
@@ -788,7 +788,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if ((instruction_to_wb.data_vm[i] && (~instruction_to_wb.ex.valid)) || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
                 end
             end
@@ -797,7 +797,7 @@ always_comb begin
             if (~instruction_to_wb.neg_stride) begin
                 for (int i = 0; i<(VLEN/64); ++i) begin
                     if (i >= instruction_to_wb.velem_off) begin
-                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)]) begin
+                        if (instruction_to_wb.load_mask[(i-instruction_to_wb.velem_off)] & (~instruction_to_wb.ex.valid)) begin
                             vdata_to_wb[(trunc_vlenlog_shift5(64*(packed_velems+instruction_to_wb.velem_id)))+:64] = data_to_wb[(64*i)+:64];
                             packed_velems = trunc_sum_vmaxelem_log(packed_velems + 1'b1);
                         end
@@ -813,7 +813,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if ((instruction_to_wb.data_vm[i] && (~instruction_to_wb.ex.valid)) || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
                 end
             end
