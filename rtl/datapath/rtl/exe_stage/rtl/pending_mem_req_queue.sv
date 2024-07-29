@@ -79,7 +79,7 @@ assign mv_back_head_enable = mv_back_tail_i & (!instruction_i.instr.valid) & (nu
 // FIFO Memory structure, stores instructions
 pmrq_instr_t instruction_table    [PMRQ_NUM_ENTRIES-1:0];
 // Tag Storage
-logic [6:0]    tag_table                [PMRQ_NUM_ENTRIES-1:0];
+logic [7:0]    tag_table                [PMRQ_NUM_ENTRIES-1:0];
 // Instruction already finished
 logic          finish_bit_table         [PMRQ_NUM_ENTRIES-1:0];
 
@@ -94,9 +94,10 @@ begin
     end else begin
         // Table initial state
         for (integer j = 0; j < PMRQ_NUM_ENTRIES; j++) begin
-            if (replay_valid_i && (tag_table[j] == tag_next_i)) begin
+            if (replay_valid_i && (tag_table[j] == {1'b1,tag_next_i})) begin
                 finish_bit_table[j] <= 1'b1;
                 instruction_table[j].data_rs2 <= replay_data_i;
+                tag_table[j] <= '0;
             end
         end
         
@@ -134,7 +135,7 @@ begin
             `ifdef SIM_COMMIT_LOG
             instruction_table[tail].vaddr           <= instruction_i.vaddr;
             `endif
-            tag_table[tail]              <= tag_i;
+            tag_table[tail]              <= {1'b1,tag_i};
 
             instruction_table[tail].data_rs2 <= 'h0;
             finish_bit_table[tail]           <= 1'b0;
