@@ -274,7 +274,7 @@ end
 
 
 // If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
-assign io_address_space = (is_inside_IO_sections(DracCfg, control_table[head].data_rs1)) && !en_ld_st_translation_i;
+assign io_address_space = is_inside_IO_sections(DracCfg, control_table[head].translated);
 
 always_comb begin
     blocked_store_o = 1'b1;
