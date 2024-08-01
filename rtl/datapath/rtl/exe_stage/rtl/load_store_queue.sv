@@ -144,12 +144,6 @@ always_comb begin
         translated_instr.ex.cause       = (instr_to_translate.is_amo_or_store && ~is_load_reserved) ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;
-    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
-
-        translated_instr.ex.cause  = (instr_to_translate.is_amo_or_store && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
-        translated_instr.ex.origin = instr_to_translate.data_rs1;
-        translated_instr.ex.valid  = 1'b1;
     end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Page fault store
         translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
@@ -158,6 +152,13 @@ always_comb begin
         translated_instr.ex.cause       = LD_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.valid       = 1'b1;
+    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
+                  (~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) ||
+                  (en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, translated_instr.data_rs1) || (translated_instr.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
+
+        translated_instr.ex.cause  = (instr_to_translate.is_amo_or_store && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
+        translated_instr.ex.origin = instr_to_translate.data_rs1;
+        translated_instr.ex.valid  = 1'b1;
     end else begin
         translated_instr.ex = 0;
     end
