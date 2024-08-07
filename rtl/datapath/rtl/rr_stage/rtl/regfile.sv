@@ -22,6 +22,7 @@ module regfile
     import riscv_pkg::*;
 (
     input   logic                                 clk_i,
+    input   logic                                 rstn_i,
     // write port input
     input   logic   [NUM_SCALAR_WB-1:0] write_enable_i,
     input   phreg_t [NUM_SCALAR_WB-1:0] write_addr_i,
@@ -88,7 +89,7 @@ always_ff @(posedge clk_i)  begin
     end else begin
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (write_enable_i[i] && (write_addr_i[i] > 0)) begin
-                registers[write_addr_i[i]] <= write_data_i[I];
+                registers[write_addr_i[i]] <= write_data_i[i];
             end
         end
     end

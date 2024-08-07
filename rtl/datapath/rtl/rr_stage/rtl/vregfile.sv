@@ -19,6 +19,7 @@ module vregfile
     import riscv_pkg::*;
 (
     input   logic                        clk_i,
+    input   logic                        rstn_i,
     // write port input
     input   logic      [NUM_SIMD_WB-1:0] write_enable_i,
     input   phvreg_t   [NUM_SIMD_WB-1:0] write_addr_i,
@@ -116,7 +117,7 @@ always_ff @(posedge clk_i)  begin
     end else begin
         for (int i = 0; i<NUM_SIMD_WB; ++i) begin
             if (write_enable_i[i]) begin
-                registers[write_addr_i[i]] <= write_data_i[I];
+                registers[write_addr_i[i]] <= write_data_i[i];
             end
         end
     end

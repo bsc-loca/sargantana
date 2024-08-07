@@ -935,6 +935,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     // RR Stage
     regfile regfile_inst(
         .clk_i (clk_i),
+        .rstn_i(rstn_i),
 
         .write_enable_i(cu_rr_int.write_enable),
         .write_addr_i(write_paddr_rr),
@@ -965,6 +966,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     vregfile vregfile(
         .clk_i (clk_i),
+        .rstn_i(rstn_i),
         .write_enable_i(cu_rr_int.vwrite_enable),
         .write_addr_i(simd_write_paddr_rr),
         .write_data_i(simd_data_wb_to_rr),
