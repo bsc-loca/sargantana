@@ -83,7 +83,7 @@ end
 
 always_ff @(posedge clk_i)  begin
     if (~rstn_i) begin
-        for (int i = 0; i<NUM_PHISICAL_REGISTERS-1 ; ++i) begin
+        for (int i = 1; i<NUM_PHISICAL_REGISTERS; ++i) begin
             registers[i] <= '0;
         end
     end else begin

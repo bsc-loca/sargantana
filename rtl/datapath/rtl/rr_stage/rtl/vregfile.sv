@@ -111,7 +111,7 @@ end
 
 always_ff @(posedge clk_i)  begin
     if (~rstn_i) begin
-        for (int i = 0; i<NUM_PHISICAL_VREGISTERS-1 ; ++i) begin
+        for (int i = 0; i<NUM_PHISICAL_VREGISTERS; ++i) begin
             registers[i] <= '0;
         end
     end else begin

@@ -107,7 +107,7 @@ always_ff @(posedge clk_i)  begin
         registers[1] <= 64'h01;
         registers[2] <= 64'h02;
 
-        for (int i = 3; i < NUM_PHYSICAL_FREGISTERS-1; ++i) begin
+        for (int i = 3; i < NUM_PHYSICAL_FREGISTERS; ++i) begin
             registers[i] <= '0;
         end
     end else begin
