@@ -505,8 +505,12 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
 
     // Syncronus Mux to decide between actual decode or one cycle before
-    always_ff @(posedge clk_i) begin
-        src_select_id_ir_q <= !control_int.stall_id;
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) begin
+            src_select_id_ir_q <= 'h0;
+        end else begin
+            src_select_id_ir_q <= !control_int.stall_id;
+        end
     end
 
     assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
@@ -726,9 +730,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
 
     // Syncronus Mux to decide between actual Rename or one cycle before Rename
-    always_ff @(posedge clk_i) begin
-        src_select_ir_rr_q <= !control_int.stall_ir;
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) begin
+            src_select_ir_rr_q <= 'h0;
+        end else begin
+            src_select_ir_rr_q <= !control_int.stall_ir;
+        end
     end
+
     always_comb begin
         if (src_select_ir_rr_q) begin
             stage_ir_rr_q.instr = stage_no_stall_rr_q.instr;

@@ -106,6 +106,10 @@ always_ff @(posedge clk_i)  begin
         registers[0] <= 64'h00;
         registers[1] <= 64'h01;
         registers[2] <= 64'h02;
+
+        for (int i = 3; i < NUM_PHYSICAL_FREGISTERS-1; ++i) begin
+            register[i] <= '0;
+        end
     end else begin
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
             if (write_enable_i[i]) begin

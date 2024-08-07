@@ -81,9 +81,15 @@ always_comb begin
 end
 
 always_ff @(posedge clk_i)  begin
-    for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-        if (write_enable_i[i] && (write_addr_i[i] > 0)) begin
-            registers[write_addr_i[i]] <= write_data_i[i];
+    if (~rstn_i) begin
+        for (int i = 0; i<NUM_PHISICAL_REGISTERS-1 ; ++i) begin
+            registers[i] <= '0;
+        end
+    end else begin
+        for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
+            if (write_enable_i[i] && (write_addr_i[i] > 0)) begin
+                registers[write_addr_i[i]] <= write_data_i[I];
+            end
         end
     end
 end

@@ -109,11 +109,19 @@ always_comb begin
 end
 
 always_ff @(posedge clk_i)  begin
-    for (int i = 0; i<NUM_SIMD_WB; ++i) begin
-        if (write_enable_i[i]) begin
-            registers[write_addr_i[i]] <= write_data_i[i];
+    if (~rstn_i) begin
+        for (int i = 0; i<NUM_PHISICAL_VREGISTERS-1 ; ++i) begin
+            registers[i] <= '0;
+        end
+    end else begin
+        for (int i = 0; i<NUM_SIMD_WB; ++i) begin
+            if (write_enable_i[i]) begin
+                registers[write_addr_i[i]] <= write_data_i[I];
+            end
         end
     end
+
+
 end
 
 endmodule
