@@ -98,7 +98,7 @@ always_comb begin
             end
             VSETVLI: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
-                csr_rw_data_int = result_gl_i; //(instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
+                csr_rw_data_int = (instruction_to_commit_i[0].rs1 == 'h0 && instruction_to_commit_i[0].rd == 'h0) ? 64'b1 : result_gl_i;
                 csr_ena_int = 1'b1;
             end
             VSETVL: begin
