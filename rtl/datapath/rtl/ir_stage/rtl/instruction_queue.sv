@@ -58,10 +58,16 @@ assign read_enable = read_head_i & (num > 0) ;
 
 id_ir_stage_t instruction_buffer[INSTRUCTION_QUEUE_NUM_ENTRIES-1:0];
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
-    if (write_enable) begin
-        instruction_buffer[tail] <= instruction_i;
+    if (~rstn_i) begin
+        for (int i = 0; i < INSTRUCTION_QUEUE_NUM_ENTRIES; ++i) begin
+            instruction_buffer[i] = '0;
+        end
+    end else begin
+        if (write_enable) begin
+            instruction_buffer[tail] <= instruction_i;
+        end
     end
 end
 
