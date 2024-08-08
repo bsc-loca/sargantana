@@ -62,7 +62,7 @@ always_ff @(posedge clk_i, negedge rstn_i)
 begin
     if (~rstn_i) begin
         for (int i = 0; i < INSTRUCTION_QUEUE_NUM_ENTRIES; ++i) begin
-            instruction_buffer[i] = '0;
+            instruction_buffer[i] <= '0;
         end
     end else begin
         if (write_enable) begin
