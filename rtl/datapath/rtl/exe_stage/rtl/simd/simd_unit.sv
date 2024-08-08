@@ -657,7 +657,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
-                    result_data_vd[i] = fu_data_vd[0];
+                    result_data_vd[i] = fu_data_vd[i*DATA_SIZE];
                 end
             end
         endcase
