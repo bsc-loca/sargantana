@@ -186,15 +186,21 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end
 end
 
-always_ff @(posedge clk_i)
+always_ff @(posedge clk_i, negedge rstn_i)
 begin
-    // Write tail
-    if (write_enable) begin
-        control_table[tail] <= (translate_enable & translate_incoming) ? translated_instr : instruction_i;
-    end
-    // Update entry to be translated
-    if (translate_enable && ~translate_incoming && (num_to_translate > 0)) begin
-        control_table[tlb_tail] <= translated_instr;
+    if (~rstn_i) begin
+        for (int i = 0; i < LSQ_NUM_ENTRIES; ++i) begin
+            control_table[i] <= '0;
+        end
+    end else begin
+        // Write tail
+        if (write_enable) begin
+            control_table[tail] <= (translate_enable & translate_incoming) ? translated_instr : instruction_i;
+        end
+        // Update entry to be translated
+        if (translate_enable && ~translate_incoming && (num_to_translate > 0)) begin
+            control_table[tlb_tail] <= translated_instr;
+        end
     end
 end
 
