@@ -23,6 +23,9 @@ module top_drac
     input logic                 clk_i,
     input logic                 rstn_i,
     input logic                 soft_rstn_i,
+    `ifdef INTEL_FSCAN_CTECH
+    input logic                 fscan_rstbypen,//AK
+    `endif // INTEL_FSCAN_CTECH
     input addr_t                reset_addr_i,
     input logic [63:0]          core_id_i,
     `ifdef PITON_CINCORANCH
@@ -131,8 +134,14 @@ logic                     we_csr_hpm;
 logic [31:0]              mcountinhibit_hpm;
 
 logic tile_rstn;
+`ifdef INTEL_FSCAN_CTECH
+logic top_drac_tile_rstn;
+assign top_drac_tile_rstn = soft_rstn_i & rstn_i;
 
+ctech_lib_mux_2to1 drac_openpiton_wrapper_reset_mux (.d1(rstn_i),.d2(top_drac_tile_rstn),.s(fscan_rstbypen),.o(tile_rstn));//AK
+`else
 assign tile_rstn = soft_rstn_i & rstn_i;
+`endif // INTEL_FSCAN_CTECH
 
 // Register to save the last access to memory 
 always_ff @(posedge clk_i, negedge tile_rstn) begin
