@@ -595,6 +595,8 @@ bus_simd_t result_data_vd;
 bus64_t shift_amount_in_vslide;
 bus64_t gather_index;
 always_comb begin
+    shift_amount_in_vslide = 'h0;
+    gather_index = 'h0;
     if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
