@@ -891,7 +891,7 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VRGATHEREI16;
-                                        if(sew_i == SEW_8) begin
+                                        if(vl_i > 'h08) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                         else begin
