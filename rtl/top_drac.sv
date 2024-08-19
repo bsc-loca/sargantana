@@ -103,7 +103,7 @@ module top_drac
 // INTERRUPTS
 //-----------------------------------------------------------------------------
     input  logic                 time_irq_i, // timer interrupt
-    input  logic                 irq_i,      // external interrupt in
+    input  logic [1:0]           irq_i,      // external interrupt in
     input  logic                 soft_irq_i, // software interrupt
     input  logic [63:0]          time_i     // time passed since the core is reset
 
