@@ -63,6 +63,9 @@ always_comb begin
         SEW_64: begin
             data_vs1_flipped = data_vs1_i;
         end
+        default: begin
+            data_vs1_flipped = 64'b0;
+        end
     endcase
             
 
@@ -123,6 +126,9 @@ always_comb begin
             end
             SEW_64: begin
                 data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
+            end
+            default: begin
+                data_vd = 64'b0;
             end
         endcase
     end

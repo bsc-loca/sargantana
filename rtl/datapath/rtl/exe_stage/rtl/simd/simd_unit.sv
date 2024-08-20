@@ -619,6 +619,9 @@ always_comb begin
                 //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
                 result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
             end
+            default: begin
+                result_data_vd = '0; 
+            end
         endcase  
     `ifdef VBPM_ENABLE
     end else if (instr_to_out.instr.instr_type == VBPM) begin
@@ -661,6 +664,9 @@ always_comb begin
                 for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
                     result_data_vd[i] = fu_data_vd[i*DATA_SIZE];
                 end
+            end
+            default: begin
+                result_data_vd = '0;
             end
         endcase
     end else if ((instr_to_out.instr.instr_type == VZEXT_VF2) || (instr_to_out.instr.instr_type == VZEXT_VF4) || (instr_to_out.instr.instr_type == VZEXT_VF8) ||
@@ -733,7 +739,10 @@ always_comb begin
                         result_data_vd[(i*DATA_SIZE) +: DATA_SIZE] = {{{56{1'b0}}}, fu_data_vd[(i*8)+:8]};
                     end
                 end
-            end                         
+            end    
+            default: begin
+                result_data_vd = '0;
+            end
         endcase
     end 
     else if (instr_to_out.instr.instr_type == VSLIDEUP) begin
@@ -742,8 +751,11 @@ always_comb begin
         if(instr_to_out.instr.is_opvi) begin
             shift_amount_in_vslide = instruction_i.instr.imm[4:0];
         end
-        if(instr_to_out.instr.is_opvx) begin
+        else if(instr_to_out.instr.is_opvx) begin
             shift_amount_in_vslide = instruction_i.data_rs1;
+        end
+        else begin // To avoid creating a latch
+            shift_amount_in_vslide = '0;
         end
 
 
@@ -807,8 +819,11 @@ always_comb begin
         if(instr_to_out.instr.is_opvi) begin
             shift_amount_in_vslide = instruction_i.instr.imm[4:0];
         end
-        if(instr_to_out.instr.is_opvx) begin
+        else if(instr_to_out.instr.is_opvx) begin
             shift_amount_in_vslide = instruction_i.data_rs1;
+        end
+        else begin // To avoid an unwanted latch
+            shift_amount_in_vslide = '0;
         end
         case (instr_to_out.sew)
             SEW_8: begin

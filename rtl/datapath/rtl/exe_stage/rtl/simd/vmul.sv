@@ -149,6 +149,10 @@ always_comb begin
         src2_data_0[63:0] = (src2_negative[0]) ? trunc_65_64(~src2_64bits[63:0] + 64'b1) : src2_64bits[63:0];
     end
     default : begin
+        src1_64bits[63:0] = 64'd0;
+        src2_64bits[63:0] = 64'd0;
+        src1_negative[0] = 1'b0;
+        src2_negative[0] = 1'b0;
         src1_data_0[63:0] = 64'd0;
         src2_data_0[63:0] = 64'd0;
         negative_results_0 = 8'b0;
@@ -435,6 +439,7 @@ always_comb begin
                          full_precision_result_128b[63:0];
         end
         default : begin
+            full_precision_result_128b[127:0] = 128'd0;
             data_vd_o2 = 64'b0;
         end
     endcase
