@@ -310,8 +310,12 @@ always_comb begin
                     data_vd_o = 64'h0000000000000000;
             endcase
         end
-        default:
+        default: begin
             data_vd_o = 64'h0000000000000000;
+            for (int i = 0; i < 8; i++) begin
+                to_add[i] = '0;
+            end
+        end
     endcase
 end
 
