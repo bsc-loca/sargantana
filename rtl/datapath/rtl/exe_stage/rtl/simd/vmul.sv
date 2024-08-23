@@ -90,6 +90,23 @@ logic src2_negative [7:0];
 
 always_comb begin
     negative_results_0 = 8'b0;
+    for (int i = 0; i < 8; i++) begin
+        src1_8bits[i]    = 8'd0;
+        src2_8bits[i]    = 8'd0;
+        src1_negative[i] = 1'b0;
+        src2_negative[i] = 1'b0;
+    end
+    for (int i = 0; i < 4; i++) begin
+        src1_16bits[i]   = 16'd0;
+        src2_16bits[i]   = 16'd0;
+    end
+    for (int i = 0; i < 2; i++) begin
+        src1_32bits[i]   = 32'd0;
+        src2_32bits[i]   = 32'd0;
+    end
+    src1_64bits   = 64'd0;
+    src2_64bits   = 64'd0;
+
     unique case (sew_i)
     SEW_8 : begin
         for (int i = 0; i < 8; i++) begin
@@ -149,10 +166,6 @@ always_comb begin
         src2_data_0[63:0] = (src2_negative[0]) ? trunc_65_64(~src2_64bits[63:0] + 64'b1) : src2_64bits[63:0];
     end
     default : begin
-        src1_64bits[63:0] = 64'd0;
-        src2_64bits[63:0] = 64'd0;
-        src1_negative[0] = 1'b0;
-        src2_negative[0] = 1'b0;
         src1_data_0[63:0] = 64'd0;
         src2_data_0[63:0] = 64'd0;
         negative_results_0 = 8'b0;
