@@ -34,11 +34,19 @@ bus64_t data_vd_flipped;
 logic is_signed;
 logic is_left;
 logic is_narrow;
+logic [15:0] tmp_data_16b;
+logic [31:0] tmp_data_32b;
+logic [63:0] tmp_data_64b;
 
 always_comb begin
     //If we need to perform a left shift, we flip all of the vs2 bits invert
     //the vs1 elements, perform a right shift, and then flip all the bits of
     //the result.
+
+    // Remove latches
+    tmp_data_16b = '0;
+    tmp_data_32b = '0;
+    tmp_data_64b = '0;
 
     for (int i = 0; i<64; ++i) begin
         data_vs2_flipped[i] = data_vs2_i[63-i];
@@ -81,23 +89,20 @@ always_comb begin
     if (is_narrow) begin
         case (sew_i)
             SEW_8: begin
-                logic [15:0] data_int;
                 for (int i = 0; i<4; ++i) begin
-                    data_int = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*8)+:4];
-                    data_vd[(i*8)+:8] = data_int[7:0];
+                    tmp_data_16b = $signed({is_signed & data_a[(i*16)+15], data_a[(i*16)+:16]}) >>> data_b[(i*8)+:4];
+                    data_vd[(i*8)+:8] = tmp_data_16b[7:0];
                 end
             end
             SEW_16: begin
-                logic [31:0] data_int;
                 for (int i = 0; i<2; ++i) begin
-                    data_int = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*16)+:5];
-                    data_vd[(i*16)+:16] = data_int[15:0];
+                    tmp_data_32b = $signed({is_signed & data_a[(i*32)+31], data_a[(i*32)+:32]}) >>> data_b[(i*16)+:5];
+                    data_vd[(i*16)+:16] = tmp_data_32b[15:0];
                 end
             end
             SEW_32: begin
-                logic [63:0] data_int;
-                data_int = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
-                data_vd[31:0] = data_int[31:0];
+                tmp_data_64b = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];
+                data_vd[31:0] = tmp_data_64b[31:0];
             end
             default: begin
                 data_vd = $signed({is_signed & data_a[63], data_a}) >>> data_b[5:0];

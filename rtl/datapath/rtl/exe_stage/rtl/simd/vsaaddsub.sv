@@ -176,6 +176,10 @@ logic [7:0] to_add;
 
 // Select result: operation result if no overflow, saturation if overflow
 always_comb begin
+    // Remove latches
+    for (int i = 0; i < 8 ; i++) begin
+        to_add[i] = 1'b0;
+    end
     case (sew_i)
         SEW_8:
             for (int i = 0; i < 8 ; i++) begin
