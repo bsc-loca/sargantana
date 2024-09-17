@@ -35,7 +35,11 @@ package def_pkg;
     localparam bit RVD = 1'b1; // Is D extension enabled
 `endif
     localparam bit RVA = 1'b1; // Is A extension enabled
+`ifndef DISABLE_SIMD
     localparam bit RVV = 1'b1; // Is V extension enabled
+`else
+    localparam bit RVV = 1'b0; // Is V extension enabled
+`endif
 
     // Transprecision floating-point extensions configuration
     localparam bit XF16    = 1'b0; // Is half-precision float extension (Xf16) enabled

@@ -559,6 +559,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .empty_o                (free_list_empty)
     );
 
+    `ifndef DISABLE_SIMD
     simd_free_list simd_free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
@@ -575,6 +576,9 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .out_of_checkpoints_o   (simd_out_of_checkpoints_free_list),
         .empty_o                (simd_free_list_empty) // TODO not connected
     );
+    `else
+    assign simd_free_register_to_rename = 'h0;
+    `endif
 
     fp_free_list fp_free_list_inst(
         .clk_i                  (clk_i),
@@ -624,6 +628,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .out_of_checkpoints_o(out_of_checkpoints_rename)
     );
 
+    `ifndef DISABLE_SIMD
     simd_rename_table simd_rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -658,6 +663,18 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .checkpoint_o(simd_checkpoint_rename),
         .out_of_checkpoints_o(simd_out_of_checkpoints_rename)
     );
+    `else 
+    assign stage_no_stall_rr_q.pvs1 = 'h0;
+    assign stage_no_stall_rr_q.vrdy1 = 1'b1;
+    assign stage_no_stall_rr_q.pvs2 = 'h0;
+    assign stage_no_stall_rr_q.vrdy2 = 1'b1;
+    assign stage_no_stall_rr_q.pvm = 'h0;
+    assign stage_no_stall_rr_q.vrdym = 1'b1;
+    assign stage_no_stall_rr_q.old_pvd = 'h0;
+    assign stage_no_stall_rr_q.vrdy_old_vd = 1'b1;
+    assign simd_checkpoint_rename = 'h0;
+    assign simd_out_of_checkpoints_rename = 'h0;
+    `endif // `ifndef DISABLE_SIMD
 
     // FP Rename Table 
     fp_rename_table fp_rename_table_inst(
@@ -977,6 +994,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .read_data3_o(stage_rr_exe_d.data_rs3)
     );
 
+    `ifndef DISABLE_SIMD
     vregfile vregfile(
         .clk_i (clk_i),
         .rstn_i(rstn_i),
@@ -993,6 +1011,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .read_data_old_vd_o(stage_rr_exe_d.data_old_vd),
         .read_mask_o(stage_rr_exe_d.data_vm)
     );
+    `endif
+
     // Decide from which Regfile to Read FP
     always_comb begin : read_src
         if (stage_ir_rr_q.instr.use_fs1) begin

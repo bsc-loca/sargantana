@@ -666,6 +666,7 @@ module decoder
                                 decode_instr_int.fregfile_we = 1'b1;
                             end
                         end
+                        `ifndef DISABLE_SIMD
                         F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vltype.vm;
                             decode_instr_int.mem_size = {1'b0, decode_i.inst.vltype.width};
@@ -728,6 +729,7 @@ module decoder
                                 end
                             end
                         end
+                        `endif // `ifndef DISABLE_SIMD
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
@@ -757,6 +759,7 @@ module decoder
                                 decode_instr_int.use_fs2    = 1'b1;
                             end
                         end
+                        `ifndef DISABLE_SIMD
                         F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vstype.vm;
                             decode_instr_int.mem_size = {1'b0, decode_i.inst.vstype.width};
@@ -819,11 +822,13 @@ module decoder
                                 end
                             end
                         end
+                        `endif // `ifndef DISABLE_SIMD
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
                     endcase
                 end
+                `ifndef DISABLE_SIMD
                 OP_V: begin
                     decode_instr_int.vregfile_we = ~vl_0;
                     decode_instr_int.unit = UNIT_SIMD;
@@ -1884,6 +1889,7 @@ module decoder
                         endcase
                     end
                 end
+                `endif // `ifndef DISABLE_SIMD
                 OP_FENCE: begin
                     // Prior riscv isa spec has both fence and
                     // fence i here, in the up to date spec this
