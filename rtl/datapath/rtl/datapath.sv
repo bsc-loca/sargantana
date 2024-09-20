@@ -1575,14 +1575,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     (
         .clk(clk_i),
         .rst(rstn_i),
-        .if1_valid(valid_if1),
+        .if1_valid(1'b1),
         .if1_id(id_fetch), 
-        .if1_stall(control_int.stall_if_1),
+        .if1_stall(1'b0),
         .if1_flush(flush_int.flush_if),
 
-        .if2_valid(valid_if2),
+        .if2_valid(stage_if_1_if_2_q.valid),
         .if2_id(stage_if_2_id_d.id),
-        .if2_stall(control_int.stall_if_2),
+        .if2_stall(1'b0),
         .if2_flush(flush_int.flush_if),
 
         .id_valid(valid_id),
