@@ -143,7 +143,6 @@ vaddsub vaddsub_inst(
     .use_mask      (sel_out_instr_i.instr.use_mask),
     .data_vd_o     (result_vaddsub)
 );
-;
 
 vwaddsub vwaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),

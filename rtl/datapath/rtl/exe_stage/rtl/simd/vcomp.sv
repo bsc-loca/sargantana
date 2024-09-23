@@ -52,6 +52,36 @@ assign is_sle =    ((instr_type_i == VMSLEU) || (instr_type_i == VMSLE))    ? 1'
 assign is_sgt =    ((instr_type_i == VMSGTU) || (instr_type_i == VMSGT))    ? 1'b1 : 1'b0;
 
 always_comb begin
+    case (sew_i)
+        SEW_8: begin
+            for (int i = 0; i<8; ++i) begin
+                //Determine most significant byte
+                use_sign_bit[i] = 1'b1;
+            end
+        end
+        SEW_16: begin
+            for (int i = 0; i<4; ++i) begin
+                //Determine most significant byte
+                use_sign_bit[i*2] = 1'b0;
+                use_sign_bit[(i*2)+1] = 1'b1;
+            end
+        end
+        SEW_32: begin
+            for (int i = 0; i<2; ++i) begin
+                //Determine most significant byte
+                use_sign_bit[i*4] = 1'b0;
+                use_sign_bit[(i*4)+1] = 1'b0;
+                use_sign_bit[(i*4)+2] = 1'b0;
+                use_sign_bit[(i*4)+3] = 1'b1;
+            end
+        end
+        SEW_64: begin
+            //Determine most significant byte
+            use_sign_bit[6:0] = 7'b0;
+            use_sign_bit[7] = 1'b1;
+        end
+    endcase
+
     for (int i = 0; i<8; ++i) begin
         //If the operation is signed and the byte element of a source operand uses their sign bit,
         //we append the most significant bit of the element to itself.
@@ -87,9 +117,6 @@ always_comb begin
     case (sew_i)
         SEW_8: begin
             for (int i = 0; i<8; ++i) begin
-                //Determine most significant byte
-                use_sign_bit[i] = 1'b1;
-
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = is_equal[i];
@@ -119,10 +146,6 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i<4; ++i) begin
-                //Determine most significant byte
-                use_sign_bit[i*2] = 1'b0;
-                use_sign_bit[(i*2)+1] = 1'b1;
-
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = &(is_equal[(2*i)+:2]);
@@ -154,12 +177,6 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i<2; ++i) begin
-                //Determine most significant byte
-                use_sign_bit[i*4] = 1'b0;
-                use_sign_bit[(i*4)+1] = 1'b0;
-                use_sign_bit[(i*4)+2] = 1'b0;
-                use_sign_bit[(i*4)+3] = 1'b1;
-
                 //VMSEQ
                 if (is_seq) begin
                     data_vd_o[i] = &(is_equal[(4*i)+:4]);
@@ -199,10 +216,6 @@ always_comb begin
             end
         end
         SEW_64: begin
-            //Determine most significant byte
-            use_sign_bit[6:0] = 7'b0;
-            use_sign_bit[7] = 1'b1;
-
             //VMSEQ
             if (is_seq) begin
                 data_vd_o = &(is_equal);
