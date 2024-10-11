@@ -37,6 +37,9 @@ always_comb begin
         SLLW, SRLW, SRAW: begin
             shamt = {1'b0, data_rs2_i[4:0]};
         end
+        default: begin
+            shamt = 6'b0;
+        end
     endcase
 end
 
