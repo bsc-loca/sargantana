@@ -48,59 +48,71 @@ function [63:0] trunc_127_64(input [126:0] val_in);
   trunc_127_64 = val_in[63:0];
 endfunction
 
-// Operation
+bus64_t alu_add_result;
+bus64_t alu_shift_result;
+bus64_t alu_cmp_result;
+bus64_t alu_logic_result;
 
+alu_add alu_add_inst (
+    .data_rs1_i(data_rs1),
+    .data_rs2_i(data_rs2),
+    .instr_type_i(instruction_i.instr.instr_type),
+    .result_o(alu_add_result)
+);
+
+alu_shift alu_shift_inst (
+    .data_rs1_i(data_rs1),
+    .data_rs2_i(data_rs2),
+    .instr_type_i(instruction_i.instr.instr_type),
+    .result_o(alu_shift_result)
+);
+
+alu_cmp alu_cmp_inst (
+    .data_rs1_i(data_rs1),
+    .data_rs2_i(data_rs2),
+    .instr_type_i(instruction_i.instr.instr_type),
+    .result_o(alu_cmp_result)
+);
+
+alu_logic alu_logic_inst (
+    .data_rs1_i(data_rs1),
+    .data_rs2_i(data_rs2),
+    .instr_type_i(instruction_i.instr.instr_type),
+    .result_o(alu_logic_result)
+);
+
+
+bus64_t result_modules;
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD: begin
-            instruction_o.result = trunc_65_64(data_rs1 + data_rs2);
+        ADD, SUB, ADDW, SUBW: begin
+            result_modules = alu_add_result;
         end
-        ADDW: begin
-            instruction_o.result[31:0] = trunc_33_32(data_rs1[31:0] + data_rs2[31:0]);
-            instruction_o.result[63:32] = {32{instruction_o.result[31]}};
+        SLL, SLLW, SRL, SRLW, SRA, SRAW: begin
+            result_modules = alu_shift_result;
         end
-        SUB: begin
-            instruction_o.result = trunc_65_64(data_rs1 - data_rs2);
+        SLT, SLTU: begin
+            result_modules = alu_cmp_result;
         end
-        SUBW: begin
-            instruction_o.result[31:0] = trunc_33_32(data_rs1[31:0] - data_rs2[31:0]);
-            instruction_o.result[63:32] = {32{instruction_o.result[31]}};
+        AND_INST, OR_INST, XOR_INST: begin
+            result_modules = alu_logic_result;
         end
-        SLL: begin
-            instruction_o.result = (data_rs1 << data_rs2[5:0]);
+        default: begin
+            result_modules = 64'b0;
         end
-        SLLW: begin
-            instruction_o.result[31:0] = (data_rs1[31:0] << data_rs2[4:0]);
-            instruction_o.result[63:32] = {32{instruction_o.result[31]}};
+    endcase
+end
+
+
+// Result
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST: begin
+            instruction_o.result = result_modules;
         end
-        SLT: begin
-            instruction_o.result = {63'b0, $signed(data_rs1) < $signed(data_rs2)};
-        end
-        SLTU: begin
-            instruction_o.result = {63'b0, data_rs1 < data_rs2};
-        end
-        XOR_INST: begin
-            instruction_o.result = data_rs1 ^ data_rs2;
-        end
-        SRL: begin
-            instruction_o.result = data_rs1 >> data_rs2[5:0];
-        end
-        SRLW: begin
-            instruction_o.result[31:0] = data_rs1[31:0] >> data_rs2[4:0];
-            instruction_o.result[63:32] = {32{instruction_o.result[31]}};
-        end
-        SRA: begin
-            instruction_o.result = $signed(data_rs1) >>> data_rs2[5:0];
-        end
-        SRAW: begin
-            instruction_o.result[31:0] = $signed(data_rs1[31:0]) >>> data_rs2[4:0];
-            instruction_o.result[63:32] = {32{instruction_o.result[31]}};
-        end
-        OR_INST: begin
-            instruction_o.result = data_rs1 | data_rs2;
-        end
-        AND_INST: begin
-            instruction_o.result = data_rs1 & data_rs2;
+        ADDW, SUBW, SLLW, SRLW, SRAW: begin
+            instruction_o.result[63:32] = {32{result_modules[31]}};
+            instruction_o.result[31:0] = result_modules[31:0];
         end
         VSETVL, VSETVLI, VSETIVLI: begin
             instruction_o.result = {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_i.instr.vl};

@@ -38,7 +38,11 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_rounding.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpnew_top.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_drac_wrapper.sv
-./rtl/datapath/rtl/exe_stage/rtl/alu.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu_add.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu_shift.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu_logic.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu_cmp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/functional_unit.sv
