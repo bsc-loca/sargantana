@@ -484,16 +484,138 @@ typedef enum logic [4:0] {
     AMOMAXU_D   = 5'b11100
 } op_func7_atomics_64_t;
 
+// ------------------------------------------------
+// Bit-manip
+// ------------------------------------------------
 
 typedef enum logic [6:0] {
-    F7_SRAI_SUB_SRA   = 7'b0100000,
-    F7_NORMAL         = 7'b0000000
-} op_func7_alu_t;
+    F7_SRAI_SUB_SRA_NLOG         = 7'b0100000,
+    F7_NORMAL                    = 7'b0000000,
+    F7_CLMUL_MIN_MAX             = 7'b0000101,
+    F7_SHADD                     = 7'b0010000,
+    F7_BSET                      = 7'b0010100,
+    F7_BCLR_BEXT                 = 7'b0100100,
+    F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT = 7'b0110000,
+    F7_BINV                      = 7'b0110100,
+    F7_REV8                      = 7'b0110101
+} op_func7_alu_t; // OP_ALU & OP_ALU_I
 
 typedef enum logic [6:0] {
-    F7_64_SRAIW_SUBW_SRAW  = 7'b0100000,
-    F7_64_NORMAL           = 7'b0000000
-} op_func7_alu_64_t;
+    F7_64_SRAIW_SUBW_SRAW           = 7'b0100000,
+    F7_64_NORMAL                    = 7'b0000000,
+    F7_64_ADDUW_ZEXTH_SLLIUW        = 7'b0000100,
+    F7_64_SHADDUW                   = 7'b0010000
+} op_func7_alu_64_t; // OP_ALU_W & OP_ALU_I_W
+
+typedef enum logic [4:0] {
+    RS2_CLZ    = 5'b00000,
+    RS2_CTZ    = 5'b00001,
+    RS2_CPOP   = 5'b00010,
+    RS2_SEXTB  = 5'b00100,
+    RS2_SEXTH  = 5'b00101
+} op_rs2_alu_imm_t; // The next 5 bits after func7
+
+typedef enum logic [4:0] {
+    RS2_CLZW   = 5'b00000,
+    RS2_CTZW   = 5'b00001,
+    RS2_CPOPW  = 5'b00010
+} op_rs2_alu_imm_64_t; // The next 5 bits after func7
+
+// Alu
+typedef enum logic [2:0] {
+    F3_CLMUL   = 3'b001,
+    F3_CLMULR  = 3'b010,
+    F3_CLMULH  = 3'b011,
+    F3_MIN     = 3'b100,
+    F3_MINU    = 3'b101,
+    F3_MAX     = 3'b110,
+    F3_MAXU    = 3'b111
+} op_func3_alu_clmul_min_max_t;
+
+typedef enum logic [2:0] {
+    F3_SUB  = 3'b000,
+    F3_XNOR = 3'b100,
+    F3_SRA  = 3'b101,
+    F3_ORN  = 3'b110,
+    F3_ANDN = 3'b111
+} op_func3_alu_sub_sra_neglog_t;
+
+typedef enum logic [2:0] { 
+    F3_SH1ADD = 3'b010,
+    F3_SH2ADD = 3'b100,
+    F3_SH3ADD = 3'b110
+} op_func3_alu_shadd_t;
+
+typedef enum logic [2:0] {
+    F3_BSET = 3'b000
+} op_func3_alu_bset_t;
+
+typedef enum logic [2:0] {
+    F3_BCLR = 3'b001,
+    F3_BEXT = 3'b101
+} op_func3_alu_bclr_bext_t;
+
+typedef enum logic [2:0] {
+    F3_ROL  = 3'b001,
+    F3_ROR  = 3'b101
+} op_func3_alu_rol_ror_t;
+
+typedef enum logic [2:0] { 
+    F3_BINV = 3'b001
+ } op_func3_alu_binv_t;
+
+// ALU imm
+typedef enum logic [2:0] { 
+    F3_BSETI = 3'b001,
+    F3_ORCB  = 3'b101
+} op_func3_alu_imm_bseti_orcb_t;
+
+typedef enum logic [2:0] {
+    F3_BCLRI = 3'b001,
+    F3_BEXTI = 3'b101
+} op_func3_alu_imm_bclri_bexti_t;
+
+typedef enum logic [2:0] { 
+    F3_CLZ_CTZ_CPOP_SEXTB_SEXTH = 3'b001,
+    F3_RORI                     = 3'b101
+} op_func3_alu_imm_clz_clt_cpop_sextb_sexth_rori_t;
+
+typedef enum logic [2:0] {
+    F3_BINVI = 3'b001
+} op_func3_alu_imm_binvi_t;
+
+typedef enum logic [2:0] {
+    F3_REV8 = 3'b101
+} op_func3_alu_imm_rev8_t;
+
+// ALU word
+typedef enum logic [2:0] {
+    F3_ADDUW = 3'b000,
+    F3_ZEXTH = 3'b100
+} op_func3_alu_64_adduw_zexth_t;
+
+typedef enum logic [2:0] { 
+    F3_SH1ADDUW = 3'b010,
+    F3_SH2ADDUW = 3'b100,
+    F3_SH3ADDUW = 3'b110
+} op_func3_alu_shadduw_t;
+
+typedef enum logic [2:0] {
+    F3_ROLW = 3'b001,
+    F3_RORW = 3'b101
+} op_func3_alu_rolw_rorw_t;
+
+// ALU imm word
+typedef enum logic [2:0] {
+    F3_SLLIUW = 3'b001
+} op_func3_alu_imm_64_slliuw_t;
+
+typedef enum logic [2:0] {
+    F3_CLZW_CTZW_CPOPW = 3'b001,
+    F3_RORIW           = 3'b101
+} op_func3_alu_imm_64_sraiw_t;
+
+// ------------------------------------------------
 
 typedef enum logic [6:0] {
     F7_ECALL_EBREAK_URET    = 7'b0000000,
