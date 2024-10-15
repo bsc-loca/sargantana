@@ -2,11 +2,12 @@
  * Project Name   : DRAC
  * File           : alu_shift.sv
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Raúl Gilabert Gämez
+ * Author(s)      : Raúl Gilabert Gámez
  * Email(s)       : raul.gilabert@bsc.es
  * -----------------------------------------------
  * Revision History
  *  Revision   | Author    | Description
+ *  0.1        | Raúl G.   | 
  * -----------------------------------------------
  */
 
@@ -31,7 +32,7 @@ logic [5:0] shamt;
 // Shift amount
 always_comb begin
     case (instr_type_i)
-        SLL, SRL, SRA: begin
+        SLL, SRL, SRA, SLLIUW: begin
             shamt = data_rs2_i[5:0];
         end
         SLLW, SRLW, SRAW: begin
@@ -46,28 +47,20 @@ end
 // Operation
 assign res_sll = data_rs1_i << shamt;
 assign res_srl = data_rs1_i >> shamt;
-assign res_srlw = data_rs1_i[31:0] >> shamt;
 assign res_sra = $signed(data_rs1_i) >>> shamt;
-assign res_sraw = $signed(data_rs1_i[31:0]) >>> shamt;
 
 
 // Output
 always_comb begin
     case (instr_type_i)
-        SLL, SLLW: begin
+        SLL, SLLW, SLLIUW: begin
             result_o = res_sll;
         end
-        SRL: begin
+        SRL, SRLW: begin
             result_o = res_srl;
         end
-        SRLW: begin
-            result_o = res_srlw;
-        end
-        SRA: begin
+        SRA, SRAW: begin
             result_o = res_sra;
-        end
-        SRAW: begin
-            result_o = res_sraw;
         end
         default: begin
             result_o = 64'b0;

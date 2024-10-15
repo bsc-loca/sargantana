@@ -43,7 +43,7 @@ module decoder
 
 	//Auxilar signals
 	localparam [5:0] F7_NORMAL_AUX = F7_NORMAL >> 1;
-    localparam [5:0] F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA >> 1;
+    localparam [5:0] F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA_NLOG >> 1;
 
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
@@ -490,7 +490,7 @@ module decoder
                         {F7_NORMAL,F3_ADD_SUB}: begin
                             decode_instr_int.instr_type = ADD;
                         end
-                        {F7_SRAI_SUB_SRA,F3_ADD_SUB}: begin
+                        {F7_SRAI_SUB_SRA_NLOG,F3_ADD_SUB}: begin
                             decode_instr_int.instr_type = SUB;
                         end
                         {F7_NORMAL,F3_SLL}: begin
@@ -508,7 +508,7 @@ module decoder
                         {F7_NORMAL,F3_SRL_SRA}: begin
                             decode_instr_int.instr_type = SRL;
                         end
-                        {F7_SRAI_SUB_SRA,F3_SRL_SRA}: begin
+                        {F7_SRAI_SUB_SRA_NLOG,F3_SRL_SRA}: begin
                             decode_instr_int.instr_type = SRA;
                         end
                         {F7_NORMAL,F3_OR}: begin
@@ -552,6 +552,15 @@ module decoder
                             decode_instr_int.instr_type = REMU;
                             decode_instr_int.unit = UNIT_DIV;
                         end
+                        {F7_SHADD, F3_SH1ADD}: begin
+                            decode_instr_int.instr_type = SH1ADD;
+                        end
+                        {F7_SHADD, F3_SH2ADD}: begin
+                            decode_instr_int.instr_type = SH2ADD;
+                        end
+                        {F7_SHADD, F3_SH3ADD}: begin
+                            decode_instr_int.instr_type = SH3ADD;
+                        end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
@@ -568,13 +577,19 @@ module decoder
                            decode_instr_int.instr_type = ADDW;
                         end
                         F3_64_SLLIW: begin
-                            decode_instr_int.instr_type = SLLW;
-                            // check for illegal isntruction
-                            if (decode_i.inst.rtype.func7 != F7_NORMAL) begin
-                                xcpt_illegal_instruction_int = 1'b1;
-                            end else begin
-                                xcpt_illegal_instruction_int = 1'b0;
-                            end
+                            case (decode_i.inst.rtype.func7)
+                                F7_64_NORMAL: begin
+                                    decode_instr_int.instr_type = SLLW;
+                                    xcpt_illegal_instruction_int = 1'b0;
+                                end
+                                {F7_64_ADDUW_ZEXTH_SLLIUW[6:1], 1'b0}, {F7_64_ADDUW_ZEXTH_SLLIUW[6:1], 1'b1}: begin
+                                    decode_instr_int.instr_type = SLLIUW;
+                                    xcpt_illegal_instruction_int = 1'b0;
+                                end
+                                default: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
                         end
                         F3_64_SRLIW_SRAIW: begin
                             case (decode_i.inst.rtype.func7)
@@ -603,7 +618,7 @@ module decoder
                         {F7_NORMAL,F3_64_ADDW_SUBW}: begin
                             decode_instr_int.instr_type = ADDW;
                         end
-                        {F7_SRAI_SUB_SRA,F3_64_ADDW_SUBW}: begin
+                        {F7_SRAI_SUB_SRA_NLOG,F3_64_ADDW_SUBW}: begin
                             decode_instr_int.instr_type = SUBW;
                         end
                         {F7_NORMAL,F3_64_SLLW}: begin
@@ -612,7 +627,7 @@ module decoder
                         {F7_NORMAL,F3_64_SRLW_SRAW}: begin
                             decode_instr_int.instr_type = SRLW;
                         end
-                        {F7_SRAI_SUB_SRA,F3_64_SRLW_SRAW}: begin
+                        {F7_SRAI_SUB_SRA_NLOG,F3_64_SRLW_SRAW}: begin
                             decode_instr_int.instr_type = SRAW;
                         end
                         // Mults and Divs
@@ -637,6 +652,18 @@ module decoder
                         {F7_MUL_DIV,F3_REMUW}: begin
                             decode_instr_int.instr_type = REMUW;
                             decode_instr_int.unit = UNIT_DIV;
+                        end
+                        {F7_64_ADDUW_ZEXTH_SLLIUW, F3_ADDUW}: begin
+                            decode_instr_int.instr_type = ADDUW;
+                        end
+                        {F7_64_SHADDUW, F3_SH1ADDUW}: begin
+                            decode_instr_int.instr_type = SH1ADDUW;
+                        end
+                        {F7_64_SHADDUW, F3_SH2ADDUW}: begin
+                            decode_instr_int.instr_type = SH2ADDUW;
+                        end
+                        {F7_64_SHADDUW, F3_SH3ADDUW}: begin
+                            decode_instr_int.instr_type = SH3ADDUW;
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

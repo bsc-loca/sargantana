@@ -48,20 +48,62 @@ function [63:0] trunc_127_64(input [126:0] val_in);
   trunc_127_64 = val_in[63:0];
 endfunction
 
+bus64_t data_rs1_extended;
+
+// Sign/Zero extension
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        ADDUW, SH1ADDUW, SH2ADDUW, SH3ADDUW, ZEXTW, SLLIUW, SLLW, SRLW: begin
+            data_rs1_extended[63:32] = 32'b0;
+            data_rs1_extended[31:0] = data_rs1[31:0];
+        end
+        SRAW: begin
+            data_rs1_extended[63:32] = {32{data_rs1[31]}};
+            data_rs1_extended[31:0] = data_rs1[31:0];
+        end
+        default: begin
+            data_rs1_extended = data_rs1;
+        end
+    endcase
+end
+
+bus64_t data_rs1_shifted;
+
+// Pre-shift
+/*
+ * Check possibility of using the shift module instead of this
+ */
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        SH1ADD, SH1ADDUW: begin
+            data_rs1_shifted = data_rs1_extended << 1;
+        end
+        SH2ADD, SH2ADDUW: begin
+            data_rs1_shifted = data_rs1_extended << 2;
+        end
+        SH3ADD, SH3ADDUW: begin
+            data_rs1_shifted = data_rs1_extended << 3;
+        end
+        default: begin
+            data_rs1_shifted = data_rs1_extended;
+        end
+    endcase
+end
+
 bus64_t alu_add_result;
 bus64_t alu_shift_result;
 bus64_t alu_cmp_result;
 bus64_t alu_logic_result;
 
 alu_add alu_add_inst (
-    .data_rs1_i(data_rs1),
+    .data_rs1_i(data_rs1_shifted),
     .data_rs2_i(data_rs2),
     .instr_type_i(instruction_i.instr.instr_type),
     .result_o(alu_add_result)
 );
 
 alu_shift alu_shift_inst (
-    .data_rs1_i(data_rs1),
+    .data_rs1_i(data_rs1_extended),
     .data_rs2_i(data_rs2),
     .instr_type_i(instruction_i.instr.instr_type),
     .result_o(alu_shift_result)
@@ -85,10 +127,10 @@ alu_logic alu_logic_inst (
 bus64_t result_modules;
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, ADDW, SUBW: begin
+        ADD, SUB, ADDW, SUBW, ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW: begin
             result_modules = alu_add_result;
         end
-        SLL, SLLW, SRL, SRLW, SRA, SRAW: begin
+        SLL, SLLW, SRL, SRLW, SRA, SRAW, SLLIUW: begin
             result_modules = alu_shift_result;
         end
         SLT, SLTU: begin
@@ -107,12 +149,15 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW: begin
             instruction_o.result[63:32] = {32{result_modules[31]}};
             instruction_o.result[31:0] = result_modules[31:0];
+        end
+        ZEXTW: begin
+            instruction_o.result = data_rs1_extended;
         end
         VSETVL, VSETVLI, VSETIVLI: begin
             instruction_o.result = {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_i.instr.vl};

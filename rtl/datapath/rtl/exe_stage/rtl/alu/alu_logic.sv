@@ -2,7 +2,7 @@
  * Project Name   : DRAC
  * File           : alu_add.sv
  * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Raúl Gilabert Gämez
+ * Author(s)      : Raúl Gilabert Gámez
  * Email(s)       : raul.gilabert@bsc.es
  * -----------------------------------------------
  * Revision History
