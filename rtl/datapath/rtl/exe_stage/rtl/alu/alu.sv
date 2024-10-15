@@ -40,6 +40,14 @@ function [63:0] trunc_65_64(input [64:0] val_in);
   trunc_65_64 = val_in[63:0];
 endfunction
 
+function [63:0] trunc_66_64(input [65:0] val_in);
+  trunc_66_64 = val_in[63:0];
+endfunction
+
+function [63:0] trunc_67_64(input [66:0] val_in);
+  trunc_67_64 = val_in[63:0];
+endfunction
+
 function [31:0] trunc_65_32(input [64:0] val_in);
   trunc_65_32 = val_in[31:0];
 endfunction
@@ -76,13 +84,13 @@ bus64_t data_rs1_shifted;
 always_comb begin
     case (instruction_i.instr.instr_type)
         SH1ADD, SH1ADDUW: begin
-            data_rs1_shifted = data_rs1_extended << 1;
+            data_rs1_shifted = trunc_65_64(data_rs1_extended << 1);
         end
         SH2ADD, SH2ADDUW: begin
-            data_rs1_shifted = data_rs1_extended << 2;
+            data_rs1_shifted = trunc_66_64(data_rs1_extended << 2);
         end
         SH3ADD, SH3ADDUW: begin
-            data_rs1_shifted = data_rs1_extended << 3;
+            data_rs1_shifted = trunc_67_64(data_rs1_extended << 3);
         end
         default: begin
             data_rs1_shifted = data_rs1_extended;
