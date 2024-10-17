@@ -24,7 +24,7 @@ bus64_t data_rs2_negated;
 
 always_comb begin
     case (instr_type_i)
-        XNOR, ORN, ANDN: begin
+        XNOR_INST, ORN, ANDN: begin
             data_rs2_negated = ~data_rs2_i;
         end
         default: begin
@@ -42,7 +42,7 @@ always_comb begin
         OR_INST, ORN: begin
             result_o = data_rs1_i | data_rs2_negated;
         end
-        XOR_INST, XNOR: begin
+        XOR_INST, XNOR_INST: begin
             result_o = data_rs1_i ^ data_rs2_negated;
         end
         default: begin

@@ -519,7 +519,7 @@ module decoder
                         end
                         // Negated logic
                         {F7_SRAI_SUB_SRA_NLOG, F3_XNOR}: begin
-                            decode_instr_int.instr_type = XNOR;
+                            decode_instr_int.instr_type = XNOR_INST;
                         end
                         {F7_SRAI_SUB_SRA_NLOG, F3_ORN}: begin
                             decode_instr_int.instr_type = ORN;
