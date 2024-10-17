@@ -144,7 +144,7 @@ always_comb begin
         SLT, SLTU: begin
             result_modules = alu_cmp_result;
         end
-        AND_INST, OR_INST, XOR_INST: begin
+        AND_INST, OR_INST, XOR_INST, XNOR, ORN, ANDN: begin
             result_modules = alu_logic_result;
         end
         default: begin
@@ -157,7 +157,7 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR, ORN, ANDN: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW: begin

@@ -517,6 +517,16 @@ module decoder
                         {F7_NORMAL,F3_AND}: begin
                             decode_instr_int.instr_type = AND_INST;
                         end
+                        // Negated logic
+                        {F7_SRAI_SUB_SRA_NLOG, F3_XNOR}: begin
+                            decode_instr_int.instr_type = XNOR;
+                        end
+                        {F7_SRAI_SUB_SRA_NLOG, F3_ORN}: begin
+                            decode_instr_int.instr_type = ORN;
+                        end
+                        {F7_SRAI_SUB_SRA_NLOG, F3_ANDN}: begin
+                            decode_instr_int.instr_type = ANDN;
+                        end
                         // Mults and Divs
                         {F7_MUL_DIV,F3_MUL}: begin
                             decode_instr_int.instr_type = MUL;
