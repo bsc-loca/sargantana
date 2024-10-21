@@ -504,7 +504,8 @@ typedef enum logic [6:0] {
     F7_64_SRAIW_SUBW_SRAW           = 7'b0100000,
     F7_64_NORMAL                    = 7'b0000000,
     F7_64_ADDUW_ZEXTH_SLLIUW        = 7'b0000100,
-    F7_64_SHADDUW                   = 7'b0010000
+    F7_64_SHADDUW                   = 7'b0010000,
+    F7_64_ROLW_RORW_CLZW_CTZW_CPOPW = 7'b0110000
 } op_func7_alu_64_t; // OP_ALU_W & OP_ALU_I_W
 
 typedef enum logic [4:0] {

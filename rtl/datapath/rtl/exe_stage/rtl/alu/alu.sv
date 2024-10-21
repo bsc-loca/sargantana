@@ -61,7 +61,7 @@ bus64_t data_rs1_extended;
 // Sign/Zero extension
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADDUW, SH1ADDUW, SH2ADDUW, SH3ADDUW, ZEXTW, SLLIUW, SLLW, SRLW: begin
+        ADDUW, SH1ADDUW, SH2ADDUW, SH3ADDUW, ZEXTW, SLLIUW, SLLW, SRLW, RORW, ROLW: begin
             data_rs1_extended[63:32] = 32'b0;
             data_rs1_extended[31:0] = data_rs1[31:0];
         end
@@ -138,7 +138,7 @@ always_comb begin
         ADD, SUB, ADDW, SUBW, ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW: begin
             result_modules = alu_add_result;
         end
-        SLL, SLLW, SRL, SRLW, SRA, SRAW, SLLIUW: begin
+        SLL, SLLW, SRL, SRLW, SRA, SRAW, SLLIUW, ROR, ROL, RORW, ROLW: begin
             result_modules = alu_shift_result;
         end
         SLT, SLTU: begin
@@ -157,10 +157,10 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL: begin
             instruction_o.result = result_modules;
         end
-        ADDW, SUBW, SLLW, SRLW, SRAW: begin
+        ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW: begin
             instruction_o.result[63:32] = {32{result_modules[31]}};
             instruction_o.result[31:0] = result_modules[31:0];
         end

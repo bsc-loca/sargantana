@@ -467,7 +467,7 @@ module decoder
                                 xcpt_illegal_instruction_int = 1'b0;
                             end
                         end
-                        F3_SRLAI: begin
+                        F3_SRLAI: begin // it is alfo F3_RORI
                             case (decode_i.inst.rtype.func7[31:26])
                                 F7_SRAI_SUB_SRA_AUX: begin
                                     decode_instr_int.instr_type = SRA;
@@ -475,7 +475,10 @@ module decoder
                                 F7_NORMAL_AUX: begin
                                     decode_instr_int.instr_type = SRL;
                                 end
-                                default: begin // check illegal instruction
+                                F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT[6:1]: begin
+                                    decode_instr_int.instr_type = ROR;
+                                end
+                               default: begin // check illegal instruction
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             endcase             
@@ -526,6 +529,13 @@ module decoder
                         end
                         {F7_SRAI_SUB_SRA_NLOG, F3_ANDN}: begin
                             decode_instr_int.instr_type = ANDN;
+                        end
+                        // Rotation
+                        {F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT, F3_ROL}: begin
+                            decode_instr_int.instr_type = ROL;
+                        end
+                        {F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT, F3_ROR}: begin
+                            decode_instr_int.instr_type = ROR;
                         end
                         // Mults and Divs
                         {F7_MUL_DIV,F3_MUL}: begin
@@ -601,13 +611,16 @@ module decoder
                                 end
                             endcase
                         end
-                        F3_64_SRLIW_SRAIW: begin
+                        F3_64_SRLIW_SRAIW: begin // It is also F3_RORIW
                             case (decode_i.inst.rtype.func7)
                                 F7_64_SRAIW_SUBW_SRAW: begin
                                     decode_instr_int.instr_type = SRAW;
                                 end
                                 F7_64_NORMAL: begin
                                     decode_instr_int.instr_type = SRLW;
+                                end
+                                F7_64_ROLW_RORW_CLZW_CTZW_CPOPW: begin
+                                    decode_instr_int.instr_type = RORW;
                                 end
                                 default: begin // check illegal instruction
                                     xcpt_illegal_instruction_int = 1'b1;
@@ -674,6 +687,12 @@ module decoder
                         end
                         {F7_64_SHADDUW, F3_SH3ADDUW}: begin
                             decode_instr_int.instr_type = SH3ADDUW;
+                        end
+                        {F7_64_ROLW_RORW_CLZW_CTZW_CPOPW, F3_ROLW}: begin
+                            decode_instr_int.instr_type = ROLW;
+                        end
+                        {F7_64_ROLW_RORW_CLZW_CTZW_CPOPW, F3_RORW}: begin
+                            decode_instr_int.instr_type = RORW;
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
