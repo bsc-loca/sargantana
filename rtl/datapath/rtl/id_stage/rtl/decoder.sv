@@ -593,6 +593,18 @@ module decoder
                         {F7_SHADD, F3_SH3ADD}: begin
                             decode_instr_int.instr_type = SH3ADD;
                         end
+                        {F7_CLMUL_MIN_MAX, F3_MIN}: begin
+                            decode_instr_int.instr_type = MIN;
+                        end
+                        {F7_CLMUL_MIN_MAX, F3_MINU}: begin
+                            decode_instr_int.instr_type = MINU;
+                        end
+                        {F7_CLMUL_MIN_MAX, F3_MAX}: begin
+                            decode_instr_int.instr_type = MAX;
+                        end
+                        {F7_CLMUL_MIN_MAX, F3_MAXU}: begin
+                            decode_instr_int.instr_type = MAXU;
+                        end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end

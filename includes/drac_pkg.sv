@@ -364,7 +364,7 @@ typedef enum logic [8:0] {
    // Zba bit-manip
    ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, SLLIUW, ZEXTW,
    // Zbb bit-manip
-   XNOR_INST, ORN, ANDN, ROL, ROR, ROLW, RORW, ZEXTH, SEXTB, SEXTH
+   XNOR_INST, ORN, ANDN, ROL, ROR, ROLW, RORW, ZEXTH, SEXTB, SEXTH, MIN, MINU, MAX, MAXU
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {

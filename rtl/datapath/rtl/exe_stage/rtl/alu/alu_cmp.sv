@@ -34,7 +34,7 @@ always_comb begin
         SLTU: begin
             result_o = {63'b0, sltu};
         end
-        /*MIN: begin
+        MIN: begin
             result_o = slt ? data_rs1_i : data_rs2_i;
         end
         MINU: begin
@@ -45,7 +45,7 @@ always_comb begin
         end
         MAXU: begin
             result_o = sltu ? data_rs2_i : data_rs1_i;
-        end*/
+        end
         default: begin
             result_o = 64'b0;
         end

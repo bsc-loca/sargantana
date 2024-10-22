@@ -153,7 +153,7 @@ always_comb begin
         SLL, SLLW, SRL, SRLW, SRA, SRAW, SLLIUW, ROR, ROL, RORW, ROLW: begin
             result_modules = alu_shift_result;
         end
-        SLT, SLTU: begin
+        SLT, SLTU, MIN, MINU, MAX, MAXU: begin
             result_modules = alu_cmp_result;
         end
         AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN: begin
@@ -169,7 +169,7 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW: begin
