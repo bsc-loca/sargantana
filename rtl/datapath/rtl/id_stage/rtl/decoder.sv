@@ -459,12 +459,24 @@ module decoder
                             decode_instr_int.instr_type = AND_INST;
                         end
                         F3_SLLI: begin
-                            decode_instr_int.instr_type = SLL;
                             // check for illegal instruction
-                            if (decode_i.inst.rtype.func7[31:26] != F7_NORMAL_AUX) begin
-                                xcpt_illegal_instruction_int = 1'b1;
+                            if (decode_i.inst.rtype.func7[31:26] == F7_NORMAL_AUX) begin
+                                decode_instr_int.instr_type = SLL;
+                            end
+                            else if (decode_i.inst.rtype.func7 == F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT) begin
+                                case (decode_i.inst.rtype.rs2)
+                                    RS2_SEXTB: begin
+                                        decode_instr_int.instr_type = SEXTB;
+                                    end
+                                    RS2_SEXTH: begin
+                                        decode_instr_int.instr_type = SEXTH;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
                             end else begin
-                                xcpt_illegal_instruction_int = 1'b0;
+                                xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
                         F3_SRLAI: begin // it is alfo F3_RORI
@@ -693,6 +705,14 @@ module decoder
                         end
                         {F7_64_ROLW_RORW_CLZW_CTZW_CPOPW, F3_RORW}: begin
                             decode_instr_int.instr_type = RORW;
+                        end
+                        {F7_64_ADDUW_ZEXTH_SLLIUW, F3_ZEXTH}: begin
+                            if (decode_i.inst.rtype.rs2 == 0) begin
+                                decode_instr_int.instr_type = ZEXTH;
+                            end
+                            else begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

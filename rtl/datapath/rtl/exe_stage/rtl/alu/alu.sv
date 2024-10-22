@@ -65,9 +65,21 @@ always_comb begin
             data_rs1_extended[63:32] = 32'b0;
             data_rs1_extended[31:0] = data_rs1[31:0];
         end
+        ZEXTH: begin
+            data_rs1_extended[63:16] = 48'b0;
+            data_rs1_extended[15:0] = data_rs1[15:0];
+        end
         SRAW: begin
             data_rs1_extended[63:32] = {32{data_rs1[31]}};
             data_rs1_extended[31:0] = data_rs1[31:0];
+        end
+        SEXTH: begin
+            data_rs1_extended[63:16] = {48{data_rs1[15]}};
+            data_rs1_extended[15:0] = data_rs1[15:0];
+        end
+        SEXTB: begin
+            data_rs1_extended[63:8] = {56{data_rs1[7]}};
+            data_rs1_extended[7:0] = data_rs1[7:0];
         end
         default: begin
             data_rs1_extended = data_rs1;
@@ -164,7 +176,7 @@ always_comb begin
             instruction_o.result[63:32] = {32{result_modules[31]}};
             instruction_o.result[31:0] = result_modules[31:0];
         end
-        ZEXTW: begin
+        ZEXTW, ZEXTH, SEXTH, SEXTB: begin
             instruction_o.result = data_rs1_extended;
         end
         VSETVL, VSETVLI, VSETIVLI: begin
