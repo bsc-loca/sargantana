@@ -156,7 +156,7 @@ always_comb begin
         SLT, SLTU, MIN, MINU, MAX, MAXU: begin
             result_modules = alu_cmp_result;
         end
-        AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN: begin
+        AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN, ORCB: begin
             result_modules = alu_logic_result;
         end
         default: begin
@@ -169,7 +169,7 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW: begin
@@ -178,6 +178,16 @@ always_comb begin
         end
         ZEXTW, ZEXTH, SEXTH, SEXTB: begin
             instruction_o.result = data_rs1_extended;
+        end
+        REV8: begin
+            instruction_o.result[63:56] = data_rs1[7:0];
+            instruction_o.result[55:48] = data_rs1[15:8];
+            instruction_o.result[47:40] = data_rs1[23:16];
+            instruction_o.result[39:32] = data_rs1[31:24];
+            instruction_o.result[31:24] = data_rs1[39:32];
+            instruction_o.result[23:16] = data_rs1[47:40];
+            instruction_o.result[15:8] = data_rs1[55:48];
+            instruction_o.result[7:0] = data_rs1[63:56];
         end
         VSETVL, VSETVLI, VSETIVLI: begin
             instruction_o.result = {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_i.instr.vl};

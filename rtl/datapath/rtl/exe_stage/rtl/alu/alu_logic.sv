@@ -45,6 +45,11 @@ always_comb begin
         XOR_INST, XNOR_INST: begin
             result_o = data_rs1_i ^ data_rs2_negated;
         end
+        ORCB: begin
+            for (int i = 0; i < XLEN/8; ++i) begin
+                result_o[8*i +: 8] = (data_rs1_i[8*i +: 8] == 8'b0) ? 8'b0 : 8'hFF;
+            end
+        end
         default: begin
             result_o = 64'b0;
         end

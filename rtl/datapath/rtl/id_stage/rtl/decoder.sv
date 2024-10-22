@@ -479,21 +479,35 @@ module decoder
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
-                        F3_SRLAI: begin // it is alfo F3_RORI
-                            case (decode_i.inst.rtype.func7[31:26])
-                                F7_SRAI_SUB_SRA_AUX: begin
+                        F3_SRLAI: begin // it is also for F3_RORI and F3_REV8
+                            case (decode_i.inst.rtype.func7)
+                                {F7_SRAI_SUB_SRA_NLOG[6:1], 1'b0}, {F7_SRAI_SUB_SRA_NLOG[6:1], 1'b1}: begin
                                     decode_instr_int.instr_type = SRA;
                                 end
-                                F7_NORMAL_AUX: begin
+                                {F7_NORMAL[6:1], 1'b0}, {F7_NORMAL[6:1], 1'b1}: begin
                                     decode_instr_int.instr_type = SRL;
                                 end
-                                F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT[6:1]: begin
+                                {F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT[6:1], 1'b0}, {F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT[6:1], 1'b1}: begin
                                     decode_instr_int.instr_type = ROR;
                                 end
-                               default: begin // check illegal instruction
+                                F7_REV8: begin
+                                    if (decode_i.inst.rtype.rs2 == 5'b11000) begin
+                                        decode_instr_int.instr_type = REV8;
+                                    end else begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F7_BSET_ORCB: begin
+                                    if (decode_i.inst.rtype.rs2 == 5'b00111) begin
+                                        decode_instr_int.instr_type = ORCB;
+                                    end else begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                default: begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
-                            endcase             
+                            endcase
                         end
                     endcase
                 end
