@@ -141,12 +141,13 @@ typedef logic [$clog2(VELEMENTS)-1:0] fu_id_t;
 
 localparam NrMaxRules = 16;
 
-typedef struct packed {  
-    int                                   NIOSections;
+typedef struct packed {
+    // Memory Map Config
+    int                                       NIOSections;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOBase;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOEnd;
-  
-    int                                   NMappedSections;
+
+    int                                       NMappedSections;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedBase;
     logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedEnd;
 
@@ -155,6 +156,20 @@ typedef struct packed {
 
     logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferBase;
     logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferEnd;
+
+    // DCache Config
+    int unsigned DCacheNumSets;   // Number of sets
+    int unsigned DCacheNumWays;   // Number of ways
+    int unsigned DCacheLineWidth; // Cacheline width in bits
+    int unsigned DCacheMSHRSets;  // Number of MSHR sets
+    int unsigned DCacheMSHRWays;  // Number of MSHR ways
+    int unsigned DCacheWBUFSize;  // Number of entries in Write Buffer
+    int unsigned DCacheWTNotWB;   // 0: Write-through; 1: Write-back
+
+    // Memory Interface Config
+    int unsigned MemAddrWidth; // Address width in bits
+    int unsigned MemDataWidth; // Data width in bits
+    int unsigned MemIDWidth;   // Request/Response ID width in bits
 } drac_cfg_t;
 
 function automatic logic range_check(addr_t start_region, addr_t end_region, bus64_t address);
@@ -1223,7 +1238,21 @@ localparam drac_cfg_t DracDefaultConfig = '{
     InitBROMEnd: 40'h000000ffff,
 
     DebugProgramBufferBase: 40'h0000010000,
-    DebugProgramBufferEnd:  40'h0000010020
+    DebugProgramBufferEnd:  40'h0000010020,
+
+    // DCache Config
+    DCacheNumSets: 128,
+    DCacheNumWays: 4,
+    DCacheLineWidth: 512,
+    DCacheMSHRSets: 32,
+    DCacheMSHRWays: 2,
+    DCacheWBUFSize: 16,
+    DCacheWTNotWB: 1,
+
+    // Memory Interface Config
+    MemAddrWidth: 40,
+    MemDataWidth: 512,
+    MemIDWidth: 8
 };
 
 localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{
