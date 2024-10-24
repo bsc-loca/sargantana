@@ -135,14 +135,14 @@ always_comb begin
       drac_pkg::FDIV: begin
          op     = fpnew_pkg::DIV;
          op_mod = 0;
-         operands[0] = instruction_i.data_rs1;
-         operands[1] = instruction_i.data_rs2;
+         operands[0] = ((src_fmt == FP32) & (instruction_i.data_rs1[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs1;
+         operands[1] = ((src_fmt == FP32) & (instruction_i.data_rs2[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs2;
          operands[2] = '0;//instruction_i.data_rs3;
       end
       drac_pkg::FSQRT: begin
          op     = fpnew_pkg::SQRT;
          op_mod = 0;
-         operands[0] = instruction_i.data_rs1;
+         operands[0] = ((src_fmt == FP32) & (instruction_i.data_rs1[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs1;
          operands[1] = '0;
          operands[2] = '0;
       end
