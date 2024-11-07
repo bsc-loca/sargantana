@@ -1626,9 +1626,15 @@ assign instruction_simd_o.id = instr_to_out.instr.id;
 always_comb begin
     instruction_scalar_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_scalar_o.ex.origin = 0;
+    instruction_scalar_o.ex.origin2 = 0;
+    instruction_scalar_o.ex.tinst = 0;
+    instruction_scalar_o.ex.gva = 0;
     instruction_scalar_o.ex.valid = 0;
     instruction_simd_o.ex.cause = INSTR_ADDR_MISALIGNED;
     instruction_simd_o.ex.origin = 0;
+    instruction_simd_o.ex.origin2 = 0;
+    instruction_simd_o.ex.tinst = 0;
+    instruction_simd_o.ex.gva = 0;
     instruction_simd_o.ex.valid = 0;
 end
 

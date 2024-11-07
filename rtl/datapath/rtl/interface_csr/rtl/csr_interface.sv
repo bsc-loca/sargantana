@@ -97,6 +97,8 @@ always_comb begin
             MRET,
             WFI,
             SFENCE_VMA,
+            HFENCE_VVMA,
+            HFENCE_GVMA,
             MRTS: begin
                 csr_cmd_int = CSR_CMD_SYS;
                 csr_rw_data_int = 64'b0;
@@ -140,7 +142,7 @@ end
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    (((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    (((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
@@ -148,6 +150,8 @@ end
                                     (instruction_to_commit_i[1].instr_type == EBREAK)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE)) ||
                                     (instruction_to_commit_i[1].instr_type == SFENCE_VMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == HFENCE_VVMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == HFENCE_GVMA)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE_I)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRW)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRS)) ||
@@ -203,6 +207,9 @@ assign req_cpu_csr_o.csr_vxsat = ((retire_inst_o[0] & instruction_to_commit_i[0]
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_xcpt_origin = (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
+assign req_cpu_csr_o.csr_xcpt_origin2 = (~commit_store_or_amo_i)? exception_gl_i.origin2 : exception_mem_commit_i.origin2;
+assign req_cpu_csr_o.csr_xcpt_tinst = (~commit_store_or_amo_i)? exception_gl_i.tinst : exception_mem_commit_i.tinst;
+assign req_cpu_csr_o.csr_gva = (~commit_store_or_amo_i)? exception_gl_i.gva : exception_mem_commit_i.gva;
 assign req_cpu_csr_o.csr_pc = (debug_pc_valid_i) ? debug_pc_i : instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;

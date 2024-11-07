@@ -27,6 +27,7 @@ module if_stage_1
 ) (
     input logic                 clk_i,
     input logic                 rstn_i,
+    input logic                 v_mode_i,
     input addr_t                reset_addr_i,
 
     // Signals from debug
@@ -190,6 +191,9 @@ module if_stage_1
     end
 
     assign fetch_o.ex.origin = pc;
+    assign fetch_o.ex.origin2 = (pc >> 2);
+    assign fetch_o.ex.tinst = 0;
+    assign fetch_o.ex.gva = v_mode_i;
    
     // Pipeline branch prediction to exe stage
     assign fetch_o.bpred.is_branch = branch_predict_is_branch;

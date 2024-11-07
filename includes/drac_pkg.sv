@@ -264,6 +264,9 @@ typedef struct packed {
 typedef struct packed {
     riscv_pkg::exception_cause_t cause; // Cause of exception vector 64 bits
     bus64_t origin; // Addr or PC generating exception
+    bus64_t origin2; // 0
+    bus64_t tinst; // 0
+    logic gva;    // gva
     logic valid;    // There is an eception
 } exception_t;      // Struct contains exceptions
 
@@ -281,6 +284,7 @@ typedef struct packed {
     logic   valid;               // Response valid
     inst_t  data;                // Word of 32 bits from Icache
     logic   instr_page_fault;    // Page Fault from TLB
+    logic   instr_guest_page_fault; // Guest Page Fault from TLB
 } resp_icache_cpu_t;
 
 // Request send to ICache
@@ -341,7 +345,7 @@ typedef enum logic [8:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA, VSETVL, VSETVLI, VSETIVLI,
+   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA, HFENCE_VVMA, HFENCE_GVMA, VSETVL, VSETVLI, VSETIVLI,
    // Old ISA CSR functions
    ERET, MRTS, MRTH, HRTS,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
@@ -1041,6 +1045,9 @@ typedef struct packed {
     bus64_t     csr_xcpt_cause;
     // exception origin
     bus64_t     csr_xcpt_origin;
+    bus64_t     csr_xcpt_origin2;
+    bus64_t     csr_xcpt_tinst;
+    logic       csr_gva;
     // xcpt pc 
     bus64_t     csr_pc;
     logic [4:0] fp_status;       // FP status of the executed instruction
@@ -1083,6 +1090,7 @@ typedef struct packed {
     bus64_t     csr_interrupt_cause;
     // tval
     bus64_t     csr_tval;
+    bus64_t     csr_tval2;
     // Step_mode_enbled
     logic       debug_step;
     // Ebreak in CSR module
@@ -1317,6 +1325,7 @@ parameter ASID_SIZE = 7;
 typedef struct packed {
     logic valid;   
     logic [ASID_SIZE-1:0] asid;
+    logic [ASID_SIZE-2-1:0] vmid;
     logic [VPN_SIZE:0] vpn;
     logic passthrough;
     logic instruction;
@@ -1334,11 +1343,14 @@ typedef struct packed {
     logic miss;
     logic [PPN_SIZE-1:0] ppn; 
     tlb_ex_t xcpt;
+    tlb_ex_t             guest_xcpt;
     logic [7:0] hit_idx;
 } tlb_cache_resp_t;
 
 typedef struct packed {
     logic [63:0] satp;
+    logic [63:0] vsatp;
+    logic [63:0] hgatp;
     logic flush;
     logic [63:0] mstatus;
 } csr_ptw_comm_t;

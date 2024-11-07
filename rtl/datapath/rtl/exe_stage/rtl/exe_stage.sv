@@ -30,6 +30,7 @@
     input logic                         kill_i,
     input logic                         flush_i,
     input logic                         en_ld_st_translation_i, // virtualization mechanism enabled
+    input logic                         en_ld_st_g_translation_i,
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
@@ -67,6 +68,7 @@
     output logic [VMAXELEM_LOG:0]       vleff_vl_o,
 
     input logic [1:0] priv_lvl_i,
+    input logic       v_mode_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
@@ -446,6 +448,7 @@ mem_unit #(
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
     .en_ld_st_translation_i (en_ld_st_translation_i),
+    .en_ld_st_g_translation_i (en_ld_st_g_translation_i),
     .instruction_i          (vagu_mem_instr),
     .flush_i                (flush_i),
     .kill_i                 (1'b0),
@@ -455,6 +458,7 @@ mem_unit #(
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
     .priv_lvl_i(priv_lvl_i),
+    .v_mode_i(v_mode_i),
 //    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),

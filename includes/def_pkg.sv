@@ -38,6 +38,8 @@ package def_pkg;
 `else
     localparam bit RVV = 1'b0; // Is V extension enabled
 `endif
+    
+    localparam bit RVH = 1'b1; // Is H extension enabled
 
     // Transprecision floating-point extensions configuration
     localparam bit XF16    = 1'b0; // Is half-precision float extension (Xf16) enabled
@@ -81,6 +83,7 @@ package def_pkg;
                                      | (0   <<  2)  // C - Compressed extension
                                      | (RVD <<  3)  // D - Double precsision floating-point extension
                                      | (RVF <<  5)  // F - Single precsision floating-point extension
+                                     | (RVH <<  7)  // H - Hypervisor extension
                                      | (1   <<  8)  // I - RV32I/64I/128I base ISA
                                      | (1   << 12)  // M - Integer Multiply/Divide extension
                                      | (0   << 13)  // N - User level interrupts supported
@@ -116,6 +119,35 @@ package def_pkg;
                                                     | riscv_pkg::SSTATUS_VS
                                                     | riscv_pkg::SSTATUS_SUM
                                                     | riscv_pkg::SSTATUS_MXR;
+                                                    
+    localparam logic [63:0] HSTATUS_WRITE_MASK =  riscv_pkg::HSTATUS_VSBE
+                                                | riscv_pkg::HSTATUS_GVA
+                                                | riscv_pkg::HSTATUS_SPV
+                                                | riscv_pkg::HSTATUS_SPVP
+                                                | riscv_pkg::HSTATUS_HU
+                                                | riscv_pkg::HSTATUS_VTVM
+                                                | riscv_pkg::HSTATUS_VTW
+                                                | riscv_pkg::HSTATUS_VTSR;
+
+    localparam logic [63:0] VS_DELEG_INTERRUPTS = riscv_pkg::MIP_VSSIP
+                                                | riscv_pkg::MIP_VSTIP
+                                                | riscv_pkg::MIP_VSEIP;
+                                                
+    localparam logic [63:0] HS_DELEG_INTERRUPTS = riscv_pkg::MIP_VSSIP
+                                                | riscv_pkg::MIP_VSTIP
+                                                | riscv_pkg::MIP_VSEIP;
+    
+    // read mask for SIP and SIE over MIP
+    localparam logic [63:0] SMODE_SIP_SIE_READ_MASK = riscv_pkg::MIP_SSIP
+                                                    | riscv_pkg::MIP_STIP
+                                                    | riscv_pkg::MIP_SEIP
+                                                    | riscv_pkg::MIP_LCOFIP;
+    // read mask for HIP and HIE over MIP
+    localparam logic [63:0] HMODE_HIP_HIE_READ_MASK = riscv_pkg::MIP_VSSIP
+                                                    | riscv_pkg::MIP_VSTIP
+                                                    | riscv_pkg::MIP_VSEIP
+                                                    | riscv_pkg::MIP_SGEIP;
+
     // exception
     typedef struct packed {
          logic [63:0] cause; // cause of exception
@@ -125,6 +157,7 @@ package def_pkg;
     } exception_t;
 
     localparam logic [3:0] MODE_SV39 = 4'h8;
+    localparam logic [3:0] MODE_SV39x4 = 4'h8;
     localparam logic [3:0] MODE_OFF = 4'h0;
 
     // Bits required for representation of physical address space as 4K pages

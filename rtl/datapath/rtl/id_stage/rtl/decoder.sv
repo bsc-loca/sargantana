@@ -2319,6 +2319,14 @@ module decoder
                                             decode_instr_int.instr_type = SFENCE_VMA;
                                             decode_instr_int.stall_csr_fence = 1'b1;
                                         end
+                                        F7_HFENCE_VVMA:begin
+                                            decode_instr_int.instr_type = HFENCE_VVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                        end
+                                        F7_HFENCE_GVMA:begin
+                                            decode_instr_int.instr_type = HFENCE_GVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                        end
                                         default: begin // check illegal instruction
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
@@ -2689,16 +2697,25 @@ module decoder
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = INSTR_ADDR_MISALIGNED;
                 decode_instr_o.ex.origin = jal_id_if_o.jump_addr; // this gives a hint
+                decode_instr_o.ex.origin2 = 'h0;
+                decode_instr_o.ex.tinst  = 'h0;
+                decode_instr_o.ex.gva    = 'h0;
                 decode_instr_o.instr.ex_valid = 1'b1; 
             end else if (xcpt_illegal_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = ILLEGAL_INSTR;
                 decode_instr_o.ex.origin = {32'd0, decode_i.inst};
+                decode_instr_o.ex.origin2 = 'h0;
+                decode_instr_o.ex.tinst  = 'h0;
+                decode_instr_o.ex.gva    = 'h0;
                 decode_instr_o.instr.ex_valid = 1'b1;
             end else begin
                 decode_instr_o.ex.valid  = 'h0;
                 decode_instr_o.ex.cause  = NONE;
                 decode_instr_o.ex.origin = {32'd0, decode_i.inst};
+                decode_instr_o.ex.origin2 = 'h0;
+                decode_instr_o.ex.tinst  = 'h0;
+                decode_instr_o.ex.gva    = 'h0;
                 decode_instr_o.instr.ex_valid = 1'b0;
             end
         end else begin // this means there is an exception

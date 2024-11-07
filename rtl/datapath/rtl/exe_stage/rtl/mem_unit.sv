@@ -32,6 +32,7 @@ module mem_unit
     input logic                  kill_i,                 // Exception detected at Commit
     input logic                  flush_i,                // Delete all load_store_queue entries
     input logic                  en_ld_st_translation_i,
+    input logic                  en_ld_st_g_translation_i,
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
@@ -53,6 +54,7 @@ module mem_unit
     output cache_tlb_comm_t      dtlb_comm_o,
 
     input logic [1:0] priv_lvl_i,
+    input logic       v_mode_i,
     //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
@@ -279,6 +281,7 @@ load_store_queue  #(
     .rstn_i             (rstn_i),
     .instruction_i      (instruction_to_lsq),
     .en_ld_st_translation_i (en_ld_st_translation_i),
+    .en_ld_st_g_translation_i (en_ld_st_g_translation_i),
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
     .next_instr_exe_o   (instruction_to_dcache),
@@ -290,6 +293,7 @@ load_store_queue  #(
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
     .priv_lvl_i(priv_lvl_i),
+    .v_mode_i(v_mode_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 

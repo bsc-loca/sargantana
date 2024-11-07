@@ -141,6 +141,9 @@ assign instruction_o.result_pc  = target;
 always_comb begin
     instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
     instruction_o.ex.origin = 0;
+    instruction_o.ex.origin2 = 0;
+    instruction_o.ex.tinst  = 0;
+    instruction_o.ex.gva    = 0;
     instruction_o.ex.valid  = 0;
     if(instruction_i.instr.valid) begin // Check exceptions in exe stage
         if ((result[1:0] != 0) && (instruction_i.instr.unit == UNIT_BRANCH) &&
@@ -154,6 +157,9 @@ always_comb begin
                 branch_taken ))) begin // invalid address
             instruction_o.ex.cause = INSTR_ADDR_MISALIGNED;
             instruction_o.ex.origin = result;
+            instruction_o.ex.origin2 = 0;
+            instruction_o.ex.tinst  = 0;
+            instruction_o.ex.gva    = 0;
             instruction_o.ex.valid = 1;
         end
     end 

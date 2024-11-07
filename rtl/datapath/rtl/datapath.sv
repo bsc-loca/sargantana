@@ -40,9 +40,11 @@ module datapath
     input logic [1:0]       csr_vs_i,  
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
+    input logic             en_ld_st_g_translation_i,
     input debug_reg_in_t    debug_reg_i,
     input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
+    input logic             csr_v_mode_i,
     input logic             req_icache_ready_i,
     input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
@@ -403,6 +405,7 @@ endfunction
     ) if_stage_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .v_mode_i(csr_v_mode_i),
         .reset_addr_i(reset_addr_i),
         .stall_debug_i(debug_contr_o.parked),
         .stall_i(control_int.stall_if_1),
@@ -884,6 +887,9 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign interrupt_ex.valid = resp_csr_cpu_i.csr_interrupt;
     assign interrupt_ex.cause = exception_cause_t'(resp_csr_cpu_i.csr_interrupt_cause);
     assign interrupt_ex.origin = 64'b0;
+    assign interrupt_ex.origin2 = 64'b0;
+    assign interrupt_ex.tinst = 64'b0;
+    assign interrupt_ex.gva = csr_v_mode_i;
     assign instruction_decode_gl.ex_valid = stage_ir_rr_q.ex.valid | resp_csr_cpu_i.csr_interrupt;
     assign ex_gl_in_int = (!stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt) ? interrupt_ex : stage_ir_rr_q.ex ;
 
@@ -895,6 +901,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == EBREAK)     ||
                         (stage_ir_rr_q.instr.instr_type == FENCE)      ||
                         (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA) ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA) ||
                         (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
                         (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
                         (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
@@ -1218,6 +1226,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .kill_i(flush_int.kill_exe),
 
         .en_ld_st_translation_i(en_ld_st_translation_i),
+        .en_ld_st_g_translation_i(en_ld_st_g_translation_i),
 
         .from_rr_i(reg_to_exe),
         .vl_i(reg_to_exe.instr.vl),
@@ -1232,6 +1241,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .dtlb_comm_i(dtlb_comm_i),
         .dtlb_comm_o(dtlb_comm_o),
         .priv_lvl_i(csr_priv_lvl_i),
+        .v_mode_i(csr_v_mode_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),
@@ -1548,10 +1558,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     // tell cu that there is a fence or fence_i
     assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
                                   (instruction_to_commit[0].instr_type == FENCE)     || 
-                                  (instruction_to_commit[0].instr_type == SFENCE_VMA));
+                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
+                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
+                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA));
     // tell cu there is a fence i to flush the icache
     assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                    (instruction_to_commit[0].instr_type == SFENCE_VMA));
+                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
+                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
+                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA));
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
@@ -1610,6 +1624,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             commit_data[i].xcpt            = commit_xcpt;
             commit_data[i].xcpt_cause      = commit_xcpt_cause;
             commit_data[i].csr_priv_lvl    = csr_priv_lvl_i;
+            //commit_data[i].csr_v_mode      = csr_v_mode_i;
             commit_data[i].csr_rw_data     = req_cpu_csr_o.csr_rw_data;
             commit_data[i].csr_xcpt        = resp_csr_cpu_i.csr_exception;
             commit_data[i].csr_xcpt_cause  = resp_csr_cpu_i.csr_exception_cause;

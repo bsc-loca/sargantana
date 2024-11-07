@@ -638,6 +638,8 @@ typedef enum logic [6:0] {
     F7_ECALL_EBREAK_URET    = 7'b0000000,
     F7_SRET_WFI_ERET_SFENCE = 7'b0001000,
     F7_SFENCE_VM            = 7'b0001001,
+    F7_HFENCE_VVMA          = 7'b0010001,
+    F7_HFENCE_GVMA          = 7'b0110001,
     F7_MRET_MRTS            = 7'b0011000
 } op_func7_system_t; // The first 7 bits of func7
 
@@ -733,9 +735,15 @@ typedef enum logic[XLEN-1:0] {
     ST_AMO_ACCESS_FAULT     = 64'h07,
     USER_ECALL              = 64'h08,
     SUPERVISOR_ECALL        = 64'h09,
+    VIRTUALSUPERVISOR_ECALL = 64'h0A, //Added for H ext?
+    ECALL_MMODE             = 64'h0B,
     INSTR_PAGE_FAULT        = 64'h0C,
     LD_PAGE_FAULT           = 64'h0D,
     ST_AMO_PAGE_FAULT       = 64'h0F,
+    INSTR_GUEST_PAGE_FAULT  = 64'h14, //Added for H ext
+    LD_GUEST_PAGE_FAULT     = 64'h15, //Added for H ext
+    VIRTUAL_INSTRUCTION     = 64'h16, //Added for H ext
+    ST_GUEST_AMO_PAGE_FAULT = 64'h17, //Added for H ext
     DEBUG_REQUEST           = 64'h18,
     NONE                    = 64'hFF
 } exception_cause_t;
@@ -748,6 +756,7 @@ parameter __vector_element = 4'b1000;
 // --------------------
 typedef enum logic[1:0] {
     PRIV_LVL_M = 2'b11,
+    PRIV_LVL_HS = 2'b10,
     PRIV_LVL_S = 2'b01,
     PRIV_LVL_U = 2'b00
 } priv_lvl_t;
@@ -768,7 +777,11 @@ typedef enum logic [1:0] {
 
 typedef struct packed {
     logic         sd;     // signal dirty state - read-only
-    logic [62:36] wpri4;  // writes preserved reads ignored
+    logic [62:40] wpri4;  // writes preserved reads ignored // Took away 4 bits for H ext
+    logic         mpv;    // Added for H ext
+    logic         gva;    // Added for H ext
+    logic         mbe;    // Wasn't needed before H ext, will stay considered as part of wpri4
+    logic         sbe;    // Wasn't needed before H ext, will stay considered as part of wpri4
     xlen_t        sxl;    // variable supervisor mode xlen - hardwired to zero
     xlen_t        uxl;    // variable user mode xlen - hardwired to zero
     logic [8:0]   wpri3;  // writes preserved reads ignored
@@ -793,7 +806,7 @@ typedef struct packed {
     logic         uie;    // user interrupts enable - hardwired to zero
 } status_rv64_t;
 
-typedef struct packed {
+typedef struct packed {   // Wasn't changed for the H ext since is not used
     logic         sd;     // signal dirty - read-only - hardwired zero
     logic [7:0]   wpri3;  // writes preserved reads ignored
     logic         tsr;    // trap sret
@@ -818,33 +831,69 @@ typedef struct packed {
 } status_rv32_t;
 
 typedef struct packed {
+    logic [29:0] wpri4;
+    logic [1:0]  vsxl;
+    logic [8:0]  wpri3;
+    logic        vtsr;
+    logic        vtw;
+    logic        vtvm;
+    logic [1:0]  wpri2;
+    logic [5:0]  vgein;
+    logic [1:0]  wpri1;
+    logic        hu;
+    logic        spvp;
+    logic        spv;
+    logic        gva;
+    logic        vsbe;
+    logic [4:0]  wpri0;
+} hstatus_rv64_t;
+
+typedef struct packed {
     logic [3:0]  mode;
     logic [15:0] asid;
     logic [43:0] ppn;
 } satp_t;
+typedef struct packed {
+    logic [3:0]  mode;
+    logic [1:0]  warl0;
+    logic [13:0] vmid;
+    logic [43:0] ppn;
+} hgatp_t;
 
 localparam int unsigned IRQ_S_SOFT  = 1;
+localparam int unsigned IRQ_VS_SOFT = 2;    //Added for H ext
 localparam int unsigned IRQ_M_SOFT  = 3;
 localparam int unsigned IRQ_S_TIMER = 5;
+localparam int unsigned IRQ_VS_TIMER = 6;   //Added for H ext
 localparam int unsigned IRQ_M_TIMER = 7;
 localparam int unsigned IRQ_S_EXT   = 9;
+localparam int unsigned IRQ_VS_EXT  = 10;   //Added for H ext
 localparam int unsigned IRQ_M_EXT   = 11;
+localparam int unsigned IRQ_S_G_EXT = 12;   //Added for H ext
 localparam int unsigned IRQ_LCOF    = 13;
 
 localparam logic [63:0] MIP_SSIP = 1 << IRQ_S_SOFT;
+localparam logic [63:0] MIP_VSSIP = 1 << IRQ_VS_SOFT;   //Added for H ext
 localparam logic [63:0] MIP_MSIP = 1 << IRQ_M_SOFT;
 localparam logic [63:0] MIP_STIP = 1 << IRQ_S_TIMER;
+localparam logic [63:0] MIP_VSTIP = 1 << IRQ_VS_TIMER;  //Added for H ext
 localparam logic [63:0] MIP_MTIP = 1 << IRQ_M_TIMER;
 localparam logic [63:0] MIP_SEIP = 1 << IRQ_S_EXT;
+localparam logic [63:0] MIP_VSEIP = 1 << IRQ_VS_EXT;    //Added for H ext
 localparam logic [63:0] MIP_MEIP = 1 << IRQ_M_EXT;
+localparam logic [63:0] MIP_SGEIP = 1 << IRQ_S_G_EXT;   //Added for H ext
 localparam logic [63:0] MIP_LCOFIP = 1 << IRQ_LCOF;
 
 localparam logic [63:0] S_SW_INTERRUPT    = (1 << 63) | IRQ_S_SOFT;
+localparam logic [63:0] VS_SW_INTERRUPT   = (1 << 63) | IRQ_VS_SOFT;    //Added for H ext
 localparam logic [63:0] M_SW_INTERRUPT    = (1 << 63) | IRQ_M_SOFT;
 localparam logic [63:0] S_TIMER_INTERRUPT = (1 << 63) | IRQ_S_TIMER;
+localparam logic [63:0] VS_TIMER_INTERRUPT = (1 << 63) | IRQ_VS_TIMER;  //Added for H ext
 localparam logic [63:0] M_TIMER_INTERRUPT = (1 << 63) | IRQ_M_TIMER;
 localparam logic [63:0] S_EXT_INTERRUPT   = (1 << 63) | IRQ_S_EXT;
+localparam logic [63:0] VS_EXT_INTERRUPT  = (1 << 63) | IRQ_VS_EXT;     //Added for H ext
 localparam logic [63:0] M_EXT_INTERRUPT   = (1 << 63) | IRQ_M_EXT;
+localparam logic [63:0] S_G_EXT_INTERRUPT = (1 << 63) | IRQ_S_G_EXT;    //Added for H ext
 localparam logic [63:0] LCOF_INTERRUPT    = (1 << 63) | IRQ_LCOF;
 
 // -----
@@ -877,6 +926,31 @@ typedef enum logic [11:0] {
     CSR_SIP            = 12'h144,
     CSR_SATP           = 12'h180,
     CSR_SCOUNTOVF      = 12'hDA0,
+    // Supervisor Mode CSRs
+    CSR_VSSTATUS       = 12'h200,
+    CSR_VSIE           = 12'h204,
+    CSR_VSTVEC         = 12'h205,
+    CSR_VSSCRATCH      = 12'h240,
+    CSR_VSEPC          = 12'h241,
+    CSR_VSCAUSE        = 12'h242,
+    CSR_VSTVAL         = 12'h243,
+    CSR_VSIP           = 12'h244,
+    CSR_VSATP          = 12'h280,
+    // Hypervisor Mode CSRs
+    CSR_HSTATUS        = 12'h600,
+    CSR_HEDELEG        = 12'h602,
+    CSR_HIDELEG        = 12'h603,
+    CSR_HIE            = 12'h604,
+    CSR_HCOUNTEREN     = 12'h606,
+    CSR_HGEIE          = 12'h607,
+    CSR_HTVAL          = 12'h643,
+    CSR_HIP            = 12'h644,
+    CSR_HVIP           = 12'h645,
+    CSR_HTINST         = 12'h64A,
+    CSR_HENVCFG        = 12'h60A,
+    CSR_HTIMEDELTA     = 12'h605,
+    CSR_HGATP          = 12'h680,
+    CSR_HGEIP          = 12'hE12,
     // Machine Mode CSRs
     CSR_MSTATUS        = 12'h300,
     CSR_MISA           = 12'h301,
@@ -920,6 +994,8 @@ typedef enum logic [11:0] {
     CSR_MCAUSE         = 12'h342,
     CSR_MTVAL          = 12'h343,
     CSR_MIP            = 12'h344,
+    CSR_MTINST         = 12'h34A,
+    CSR_MTVAL2         = 12'h34B,
     CSR_MENVCFG        = 12'h30A,
     CSR_MVENDORID      = 12'hF11,
     CSR_MARCHID        = 12'hF12,
@@ -1136,8 +1212,22 @@ localparam logic [63:0] MSTATUS32_SD   = 64'h80000000;
 localparam logic [64:0] MSTATUS32_WPRI = 64'h7f800044;
 localparam logic [63:0] MSTATUS_UXL    = 64'h0000000300000000;
 localparam logic [63:0] MSTATUS_SXL    = 64'h0000000C00000000;
+localparam logic [63:0] MSTATUS_GVA    = 64'h0000004000000000;
+localparam logic [63:0] MSTATUS_MPV    = 64'h0000008000000000;
 localparam logic [63:0] MSTATUS64_SD   = 64'h8000000000000000;
-localparam logic [63:0] MSTATUS64_WPRI = 64'h7ffffff5ff800044;
+localparam logic [63:0] MSTATUS64_WPRI = 64'h7fffff35ff800044; //Canged from 64'h7ffffff5ff800044; to add H ext bits
+
+localparam logic [63:0] HSTATUS_VSBE   = 64'h00000020;
+localparam logic [63:0] HSTATUS_GVA    = 64'h00000040;
+localparam logic [63:0] HSTATUS_SPV    = 64'h00000080;
+localparam logic [63:0] HSTATUS_SPVP   = 64'h00000100;
+localparam logic [63:0] HSTATUS_HU     = 64'h00000200;
+localparam logic [63:0] HSTATUS_VGEIN  = 64'h0003F000;
+localparam logic [63:0] HSTATUS_VTVM   = 64'h00100000;
+localparam logic [63:0] HSTATUS_VTW    = 64'h00200000;
+localparam logic [63:0] HSTATUS_VTSR   = 64'h00400000;
+localparam logic [63:0] HSTATUS_VSXL   = 64'h0000000300000000;
+localparam logic [63:0] HSTATUS_WPRI   = 64'hFFFFFFFCFF8C0C1F;
 
 // decoded CSR address
 typedef struct packed {
@@ -1179,6 +1269,7 @@ typedef struct packed {
     logic             stopcount;
     logic             stoptime;
     logic [8:6]       cause;
+    logic             v;
     logic             zero0;
     logic             mprven;
     logic             nmip;

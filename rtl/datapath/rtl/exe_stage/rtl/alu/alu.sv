@@ -298,9 +298,12 @@ assign instruction_o.fp_status     = 'h0;
 // Exceptions
 
 always_comb begin
-    instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
-    instruction_o.ex.origin = 0;
-    instruction_o.ex.valid  = 0;
+    instruction_o.ex.cause   = INSTR_ADDR_MISALIGNED;
+    instruction_o.ex.origin  = 0;
+    instruction_o.ex.origin2 = 0;
+    instruction_o.ex.tinst   = 0;
+    instruction_o.ex.gva     = 0;
+    instruction_o.ex.valid   = 0;
 end
 
 endmodule

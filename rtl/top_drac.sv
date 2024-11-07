@@ -53,7 +53,9 @@ module top_drac
     input  logic                req_icache_ready_i,
     output req_cpu_icache_t     req_cpu_icache_o,
     output logic                en_translation_o,
+    output logic                en_g_translation_o,
     output logic [1:0]          priv_lvl_o,
+    output logic                v_mode_o,
     input  resp_icache_cpu_t    resp_icache_cpu_i,
 
 //----------------------------------------------------------------------------------
@@ -126,18 +128,21 @@ module top_drac
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
 logic [1:0] csr_priv_lvl, ld_st_priv_lvl;
+logic csr_v_mode, ld_st_v_mode;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
-logic en_ld_st_translation;
-logic en_translation;
+logic en_ld_st_translation, en_ld_st_g_translation;
+logic en_translation, en_g_translation;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
 mmu_pkg::cache_tlb_comm_t core_dtlb_comm;
 mmu_pkg::tlb_cache_comm_t dtlb_core_comm;
 
 assign en_translation_o = en_translation;
+assign en_g_translation_o = en_g_translation;
 assign priv_lvl_o = csr_priv_lvl;
+assign v_mode_o = csr_v_mode;
 
 addr_t dcache_addr;
 
@@ -172,7 +177,11 @@ req_cpu_csr_t req_datapath_csr_interface;
 
 csr_ptw_comm_t csr_ptw_comm;
 logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
+logic [drac_pkg::PPN_SIZE-1:0] csr_vsatp;
+logic [drac_pkg::PPN_SIZE-1:0] csr_hgatp;
 assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
+assign csr_ptw_comm.vsatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_vsatp}; // PTW expects 64 bits
+assign csr_ptw_comm.hgatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_hgatp}; // PTW expects 64 bits
 
 `ifdef EXTERNAL_HPM_EVENT_NUM
 localparam HPM_EXT_NUM_EVENT = `EXTERNAL_HPM_EVENT_NUM;
@@ -273,6 +282,7 @@ hpm_counters #(
     
     .mcountinhibit_i(mcountinhibit_hpm),
     .priv_lvl_i(csr_priv_lvl),
+    .v_mode_i(csr_v_mode),
 
     // Events
     .events_i(hpm_events_q),
@@ -299,7 +309,7 @@ datapath #(
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .vxrm_i(vxrm),
-    .en_translation_i( en_translation ), 
+    .en_translation_i( en_translation /*maybe ==>*/ | en_g_translation), 
     .req_icache_ready_i(req_icache_ready_i),
     .dtlb_comm_i(dtlb_core_comm),
     .debug_contr_i(debug_contr_i),
@@ -310,10 +320,12 @@ datapath #(
     .req_cpu_csr_o(req_datapath_csr_interface),
     .visa_o(visa_o),
     .csr_priv_lvl_i(ld_st_priv_lvl),
+    .csr_v_mode_i(ld_st_v_mode),
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
+    .en_ld_st_g_translation_i(en_ld_st_g_translation),
     .dtlb_comm_o(core_dtlb_comm),
     .debug_contr_o(debug_contr_o),
     .debug_reg_o(debug_reg_o),
@@ -355,6 +367,9 @@ csr_bsc #(
     .ex_i(req_datapath_csr_interface.csr_exception),                                  // exception produced in the core
     .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                           // cause of the exception
     .ex_origin_i(req_datapath_csr_interface.csr_xcpt_origin),                         // origin of the exception
+    .ex_origin2_i(req_datapath_csr_interface.csr_xcpt_origin2),  //
+    .ex_tinst_i(req_datapath_csr_interface.csr_xcpt_tinst),    //
+    .ex_gva_i(req_datapath_csr_interface.csr_gva),      //
     .pc_i(req_datapath_csr_interface.csr_pc),                                         // pc were the exception is produced
 
     .retire_i(req_datapath_csr_interface.csr_retire),                                 // shows if a instruction is retired from the core.
@@ -396,15 +411,22 @@ csr_bsc #(
     .csr_xcpt_o(resp_csr_interface_datapath.csr_exception),                 // Exeption pproduced by the csr   
     .csr_xcpt_cause_o(resp_csr_interface_datapath.csr_exception_cause),           // Exception cause
     .csr_tval_o(resp_csr_interface_datapath.csr_tval),                 // Value written to the tval registers
+    .csr_tval2_o(resp_csr_interface_datapath.csr_tval2),   //
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
     .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
+    .v_mode_o(csr_v_mode),//
     .ld_st_priv_lvl_o(ld_st_priv_lvl),
+    .ld_st_v_mode_o(ld_st_v_mode),//
     .en_ld_st_translation_o(en_ld_st_translation),
+    .en_ld_st_g_translation_o(en_ld_st_g_translation),    //
     .en_translation_o(en_translation),
+    .en_g_translation_o(en_g_translation),//
 
     .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
+    .vsatp_ppn_o(csr_vsatp),                 // Page table base pointer for the PTW
+    .hgatp_ppn_o(csr_hgatp),                 // Page table base pointer for the PTW
 
     .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
