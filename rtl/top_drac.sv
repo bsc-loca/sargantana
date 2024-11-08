@@ -382,6 +382,7 @@ csr_bsc #(
     .fcsr_rm_o(fcsr_rm),
     .fcsr_fs_o(fcsr_fs),
     .vcsr_vs_o(vcsr_vs),
+    .vreg_modified_i(req_datapath_csr_interface.vreg_modified),
     .vxsat_i(req_datapath_csr_interface.csr_vxsat),
 
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy

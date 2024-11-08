@@ -197,7 +197,8 @@ assign req_cpu_csr_o.csr_xcpt_origin = (~commit_store_or_amo_i)? exception_gl_i.
 assign req_cpu_csr_o.csr_pc = (debug_pc_valid_i) ? debug_pc_i : instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;
-// Notify the CSR if the retiring instructions modify the FP regfile
+// Notify the CSR if the retiring instructions modify the FP or vector regfiles
 assign req_cpu_csr_o.freg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].fregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].fregfile_we));
+assign req_cpu_csr_o.vreg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].vregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].vregfile_we));
 
 endmodule
