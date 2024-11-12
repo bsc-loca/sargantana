@@ -31,6 +31,7 @@
     input logic                         flush_i,
     input logic                         en_ld_st_translation_i, // virtualization mechanism enabled
     input logic                         en_ld_st_g_translation_i,
+    output logic                        csr_hs_ld_st_inst_o,
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
@@ -449,6 +450,7 @@ mem_unit #(
     .rstn_i                 (rstn_i),
     .en_ld_st_translation_i (en_ld_st_translation_i),
     .en_ld_st_g_translation_i (en_ld_st_g_translation_i),
+    .csr_hs_ld_st_inst_o    (csr_hs_ld_st_inst_o),
     .instruction_i          (vagu_mem_instr),
     .flush_i                (flush_i),
     .kill_i                 (1'b0),

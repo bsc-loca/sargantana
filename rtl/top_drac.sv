@@ -134,6 +134,7 @@ logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
 logic en_ld_st_translation, en_ld_st_g_translation;
 logic en_translation, en_g_translation;
+logic csr_hs_ld_st_inst_int;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
 mmu_pkg::cache_tlb_comm_t core_dtlb_comm;
@@ -326,10 +327,12 @@ datapath #(
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .en_ld_st_g_translation_i(en_ld_st_g_translation),
+    .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_int),
     .dtlb_comm_o(core_dtlb_comm),
     .debug_contr_o(debug_contr_o),
     .debug_reg_o(debug_reg_o),
     .debug_csr_halt_ack_o(debug_csr_halt_ack),
+
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -361,6 +364,7 @@ csr_bsc #(
 
     .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                               // read and write address form the core
     .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                                 // specific operation to execute from the core 
+    .csr_hs_ld_st_inst_i(csr_hs_ld_st_inst_int),                                      // instruction is a Hypervisor Load/Store Instruction
     .w_data_core_i(req_datapath_csr_interface.csr_rw_data),                           // write data from the core
     .r_data_core_o(resp_csr_interface_datapath.csr_rw_rdata),                         // read data to the core, address specified with the rw_addr_i
 
@@ -414,7 +418,8 @@ csr_bsc #(
     .csr_tval2_o(resp_csr_interface_datapath.csr_tval2),   //
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
-    .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
+    .mstatus_o(csr_ptw_comm.mstatus),                  //actual mstatus of the core
+    .vsstatus_o(csr_ptw_comm.vsstatus),                 //actual vsstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
     .v_mode_o(csr_v_mode),//
     .ld_st_priv_lvl_o(ld_st_priv_lvl),

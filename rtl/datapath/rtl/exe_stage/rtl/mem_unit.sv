@@ -33,6 +33,7 @@ module mem_unit
     input logic                  flush_i,                // Delete all load_store_queue entries
     input logic                  en_ld_st_translation_i,
     input logic                  en_ld_st_g_translation_i,
+    output logic                 csr_hs_ld_st_inst_o,
 
     input rr_exe_mem_instr_t     instruction_i,          // Interface to add new instuction
     input resp_dcache_cpu_t      resp_dcache_cpu_i,      // Response from dcache
@@ -282,6 +283,7 @@ load_store_queue  #(
     .instruction_i      (instruction_to_lsq),
     .en_ld_st_translation_i (en_ld_st_translation_i),
     .en_ld_st_g_translation_i (en_ld_st_g_translation_i),
+    .csr_hs_ld_st_inst_o (csr_hs_ld_st_inst_o),
     .flush_i            (flush_to_lsq),
     .read_next_i        (read_next_lsq),
     .next_instr_exe_o   (instruction_to_dcache),

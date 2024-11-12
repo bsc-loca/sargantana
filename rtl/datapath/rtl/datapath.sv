@@ -57,6 +57,7 @@ module datapath
     output logic            debug_csr_halt_ack_o,
     output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
+    output logic            csr_hs_ld_st_inst_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
@@ -1227,6 +1228,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
         .en_ld_st_translation_i(en_ld_st_translation_i),
         .en_ld_st_g_translation_i(en_ld_st_g_translation_i),
+        .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_o),
 
         .from_rr_i(reg_to_exe),
         .vl_i(reg_to_exe.instr.vl),

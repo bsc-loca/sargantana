@@ -29,6 +29,7 @@ module load_store_queue
     input rr_exe_mem_instr_t   instruction_i,    // All instruction input signals
     input logic                en_ld_st_translation_i,
     input logic                en_ld_st_g_translation_i,
+    output logic               csr_hs_ld_st_inst_o,
      
     input logic                flush_i,          // Flush all entries
     input logic                read_next_i,      // Read next instruction of the ciruclar buffer
@@ -130,8 +131,12 @@ rr_exe_mem_instr_t translated_instr;
 
 always_comb begin 
     logic is_load_reserved;
+    logic is_hlvx_inst;
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
+    is_hlvx_inst     = instr_to_translate.instr.inst.common.opcode == OP_SYSTEM && 
+                       instr_to_translate.instr.inst.common.func3 == F3_HLV_HSV &&
+                       instr_to_translate.instr.inst.common.rs2 == RS2_HLVX;
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
@@ -153,21 +158,21 @@ always_comb begin
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
     end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Page fault store
         translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
-    end else if (dtlb_comm_i.resp.xcpt.load) begin // Page fault load
+    end else if ((~is_hlvx_inst && dtlb_comm_i.resp.xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.xcpt.fetch)) begin // Page fault load
         translated_instr.ex.cause       = LD_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
     end else if (dtlb_comm_i.resp.guest_xcpt.store & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Guest Page fault store
         translated_instr.ex.cause       = ST_GUEST_AMO_PAGE_FAULT;
@@ -176,7 +181,7 @@ always_comb begin
         translated_instr.ex.tinst   = '0;
         translated_instr.ex.gva         = v_mode_i;
         translated_instr.ex.valid       = 1'b1;
-    end else if (dtlb_comm_i.resp.guest_xcpt.load) begin // Guest Page fault load
+    end else if ((~is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.fetch)) begin // Guest Page fault load
         translated_instr.ex.cause       = LD_GUEST_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = (instr_to_translate.data_rs1 >> 2);
@@ -348,6 +353,8 @@ always_comb begin
     `endif
 end
 
+assign csr_hs_ld_st_inst_o = instr_to_translate.instr.inst.common.opcode == OP_SYSTEM && 
+                             instr_to_translate.instr.inst.common.func3 == F3_HLV_HSV;
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i | en_ld_st_g_translation_i;
 assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && v_mode_i;
 assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && v_mode_i;

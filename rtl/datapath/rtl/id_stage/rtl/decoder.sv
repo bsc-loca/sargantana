@@ -2215,6 +2215,71 @@ module decoder
                     
                 end
                 OP_SYSTEM: begin
+                  if(decode_i.inst.common.func3 == F3_HLV_HSV) begin // Hypervisor Virtual-Machine Load and Store Instructions
+                    decode_instr_int.use_imm = 1'b0;
+                    decode_instr_int.use_rs1 = 1'b1;
+                    decode_instr_int.unit = UNIT_MEM;
+                    if(decode_i.inst.bits[25] == 1'b1) begin
+                      decode_instr_int.mem_type = STORE;
+                      decode_instr_int.regfile_we = 1'b0;
+                      decode_instr_int.use_rs2 = 1'b1;
+                      decode_instr_int.mem_size = {1'b0,decode_i.inst.bits[28:26]};
+                    end else begin
+                      decode_instr_int.mem_type = LOAD;
+                      decode_instr_int.regfile_we = 1'b1;
+                      decode_instr_int.mem_size = {1'b0,decode_i.inst.bits[28:26]} + {1'b0, decode_i.inst.bits[20], 2'b00};
+                    end
+                    case (decode_i.inst.common.func7)
+                      F7_HLV_B_BU: begin
+                        if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
+                          decode_instr_int.instr_type = HLV_B;
+                        end
+                        if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
+                          decode_instr_int.instr_type = HLV_BU;
+                        end
+                      end
+                      F7_HSV_B: begin
+                        decode_instr_int.instr_type = HSV_B;
+                      end
+                      F7_HLV_H_HU_XHU: begin
+                        if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
+                          decode_instr_int.instr_type = HLV_H;
+                        end
+                        if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
+                          decode_instr_int.instr_type = HLV_HU;
+                        end
+                        if(decode_i.inst.common.rs2 == RS2_HLVX) begin
+                          decode_instr_int.instr_type = HLVX_HU;
+                        end
+                      end
+                      F7_HSV_H: begin
+                        decode_instr_int.instr_type = HSV_H;
+                      end
+                      F7_HLV_W_WU_XWU: begin
+                        if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
+                          decode_instr_int.instr_type = HLV_W;
+                        end
+                        if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
+                          decode_instr_int.instr_type = HLV_WU;
+                        end
+                        if(decode_i.inst.common.rs2 == RS2_HLVX) begin
+                          decode_instr_int.instr_type = HLVX_WU;
+                        end
+                      end
+                      F7_HSV_W: begin
+                        decode_instr_int.instr_type = HSV_W;
+                      end
+                      F7_HLV_D: begin
+                        decode_instr_int.instr_type = HLV_D;
+                      end
+                      F7_HSV_D: begin
+                        decode_instr_int.instr_type = HSV_D;
+                      end
+                      default: begin
+                          xcpt_illegal_instruction_int = 1'b1;
+                      end
+                    endcase
+                  end else begin
                     decode_instr_int.use_imm    = 1'b1;
                     decode_instr_int.regfile_we = 1'b1;
                     decode_instr_int.unit = UNIT_SYSTEM;
@@ -2365,6 +2430,7 @@ module decoder
                             xcpt_illegal_instruction_int = 1'b1;
                         end
                     endcase
+                  end
                 end
                 OP_FMADD,
                 OP_FMSUB,

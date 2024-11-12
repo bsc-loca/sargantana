@@ -247,7 +247,8 @@ typedef enum logic [2:0] {
     F3_CSRRC             = 3'b011,
     F3_CSRRWI            = 3'b101,
     F3_CSRRSI            = 3'b110,
-    F3_CSRRCI            = 3'b111
+    F3_CSRRCI            = 3'b111,
+    F3_HLV_HSV           = 3'b100
 } op_func3_system_t;
 
 
@@ -643,6 +644,17 @@ typedef enum logic [6:0] {
     F7_MRET_MRTS            = 7'b0011000
 } op_func7_system_t; // The first 7 bits of func7
 
+typedef enum logic [6:0] {
+    F7_HLV_B_BU             = 7'b0110000,
+    F7_HSV_B                = 7'b0110001,
+    F7_HLV_H_HU_XHU         = 7'b0110010,
+    F7_HSV_H                = 7'b0110011,
+    F7_HLV_W_WU_XWU         = 7'b0110100,
+    F7_HSV_W                = 7'b0110101,
+    F7_HLV_D                = 7'b0110110,
+    F7_HSV_D                = 7'b0110111
+} op_func7_hlv_hsv_t; // The first 7 bits of func7
+
 typedef enum logic [4:0] {
     RS2_ECALL_ERET      = 5'b00000,
     RS2_EBREAK_SFENCEVM = 5'b00001,
@@ -650,6 +662,12 @@ typedef enum logic [4:0] {
     RS2_WFI             = 5'b00101
     //RS2_MRTS            = 5'b00101 //Old ISA
 } op_rs2_system_t; // the next 5 bits after func7
+
+typedef enum logic [4:0] {
+    RS2_HLV_NO_U        = 5'b00000,
+    RS2_HLV_WITH_U      = 5'b00001,
+    RS2_HLVX            = 5'b00011
+} op_rs2_hlv_t; // the next 5 bits after func7
 
 typedef enum logic [6:0] {
     F7_MUL_DIV  = 7'b0000001

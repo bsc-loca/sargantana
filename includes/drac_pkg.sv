@@ -352,6 +352,8 @@ typedef enum logic [8:0] {
    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions
    LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
+   // Hypervisor Virtual-Machine Load and Store Instructions
+   HLV_B, HLV_BU, HLV_H, HLV_HU, HLVX_HU, HLV_W, HLVX_WU, HSV_B, HSV_H, HSV_W, HLV_WU, HLV_D, HSV_D,
    // Atomic Memory Operations
    AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
    AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW, AMO_MAXWU, AMO_MINW, AMO_MINWU,
@@ -1353,6 +1355,7 @@ typedef struct packed {
     logic [63:0] hgatp;
     logic flush;
     logic [63:0] mstatus;
+    logic [63:0] vsstatus;
 } csr_ptw_comm_t;
 
 typedef struct packed {
