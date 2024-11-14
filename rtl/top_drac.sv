@@ -134,6 +134,7 @@ logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
 logic en_ld_st_translation, en_ld_st_g_translation;
 logic en_translation, en_g_translation;
+logic csr_hu;
 logic csr_hs_ld_st_inst_int;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
@@ -327,6 +328,7 @@ datapath #(
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
     .en_ld_st_g_translation_i(en_ld_st_g_translation),
+    .csr_hu_i(csr_hu),
     .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_int),
     .dtlb_comm_o(core_dtlb_comm),
     .debug_contr_o(debug_contr_o),
@@ -428,6 +430,7 @@ csr_bsc #(
     .en_ld_st_g_translation_o(en_ld_st_g_translation),    //
     .en_translation_o(en_translation),
     .en_g_translation_o(en_g_translation),//
+    .csr_hu_o(csr_hu),
 
     .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
     .vsatp_ppn_o(csr_vsatp),                 // Page table base pointer for the PTW
