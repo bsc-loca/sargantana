@@ -46,6 +46,8 @@ module datapath
     input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
     input logic             csr_v_mode_i,
+    input logic [1:0]       csr_ld_st_priv_lvl_i,
+    input logic             csr_ld_st_v_mode_i,
     input logic             req_icache_ready_i,
     input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
@@ -1246,8 +1248,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),
         .dtlb_comm_i(dtlb_comm_i),
         .dtlb_comm_o(dtlb_comm_o),
-        .priv_lvl_i(csr_priv_lvl_i),
-        .v_mode_i(csr_v_mode_i),
+        .priv_lvl_i(csr_ld_st_priv_lvl_i),
+        .v_mode_i(csr_ld_st_v_mode_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),
@@ -1629,8 +1631,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             commit_data[i].vl              = instruction_to_commit[i].vl;
             commit_data[i].xcpt            = commit_xcpt;
             commit_data[i].xcpt_cause      = commit_xcpt_cause;
-            commit_data[i].csr_priv_lvl    = csr_priv_lvl_i;
-            //commit_data[i].csr_v_mode      = csr_v_mode_i;
+            commit_data[i].csr_priv_lvl    = csr_ld_st_priv_lvl_i;
+            //commit_data[i].csr_v_mode      = csr_ld_st_v_mode_i;
             commit_data[i].csr_rw_data     = req_cpu_csr_o.csr_rw_data;
             commit_data[i].csr_xcpt        = resp_csr_cpu_i.csr_exception;
             commit_data[i].csr_xcpt_cause  = resp_csr_cpu_i.csr_exception_cause;
