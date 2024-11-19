@@ -114,6 +114,7 @@ bus64_t alu_add_result;
 bus64_t alu_shift_result;
 bus64_t alu_cmp_result;
 bus64_t alu_logic_result;
+bus64_t alu_count_zeros_result;
 
 alu_add alu_add_inst (
     .data_rs1_i(data_rs1_shifted),
@@ -143,6 +144,11 @@ alu_logic alu_logic_inst (
     .result_o(alu_logic_result)
 );
 
+alu_count_zeros alu_count_zeros_inst (
+    .data_rs1_i(data_rs1),
+    .instr_type_i(instruction_i.instr.instr_type),
+    .result_o(alu_count_zeros_result)
+);
 
 bus64_t result_modules;
 always_comb begin
@@ -159,6 +165,9 @@ always_comb begin
         AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN, ORCB: begin
             result_modules = alu_logic_result;
         end
+        CLZ, CLZW, CTZ, CTZW: begin
+            result_modules = alu_count_zeros_result;
+        end
         default: begin
             result_modules = 64'b0;
         end
@@ -169,10 +178,10 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB, CLZ, CTZ: begin
             instruction_o.result = result_modules;
         end
-        ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW: begin
+        ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW, CLZW, CTZW: begin
             instruction_o.result[63:32] = {32{result_modules[31]}};
             instruction_o.result[31:0] = result_modules[31:0];
         end

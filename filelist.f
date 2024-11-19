@@ -43,6 +43,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_shift.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_logic.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_cmp.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/alu_count_zeros.sv
 ./rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/functional_unit.sv

@@ -465,6 +465,12 @@ module decoder
                             end
                             else if (decode_i.inst.rtype.func7 == F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT) begin
                                 case (decode_i.inst.rtype.rs2)
+                                    RS2_CLZ: begin
+                                        decode_instr_int.instr_type = CLZ;
+                                    end
+                                    RS2_CTZ: begin
+                                        decode_instr_int.instr_type = CTZ;
+                                    end
                                     RS2_SEXTB: begin
                                         decode_instr_int.instr_type = SEXTB;
                                     end
@@ -634,7 +640,7 @@ module decoder
                         F3_64_ADDIW: begin
                            decode_instr_int.instr_type = ADDW;
                         end
-                        F3_64_SLLIW: begin
+                        F3_64_SLLIW: begin // also F3_CLZW_CTZW_CPOPW
                             case (decode_i.inst.rtype.func7)
                                 F7_64_NORMAL: begin
                                     decode_instr_int.instr_type = SLLW;
@@ -643,6 +649,16 @@ module decoder
                                 {F7_64_ADDUW_ZEXTH_SLLIUW[6:1], 1'b0}, {F7_64_ADDUW_ZEXTH_SLLIUW[6:1], 1'b1}: begin
                                     decode_instr_int.instr_type = SLLIUW;
                                     xcpt_illegal_instruction_int = 1'b0;
+                                end
+                                F7_64_ROLW_RORW_CLZW_CTZW_CPOPW: begin
+                                    case (decode_i.inst.rtype.rs2)
+                                        RS2_CLZW: begin
+                                            decode_instr_int.instr_type = CLZW;
+                                        end
+                                        RS2_CTZW: begin
+                                            decode_instr_int.instr_type = CTZW;
+                                        end
+                                    endcase;
                                 end
                                 default: begin
                                     xcpt_illegal_instruction_int = 1'b1;
