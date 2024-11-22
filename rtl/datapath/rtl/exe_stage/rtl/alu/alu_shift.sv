@@ -21,8 +21,16 @@ module alu_shift
     output bus64_t result_o
 );
 
+function [63:0] trunc_127_64(input [126:0] val_in);
+  trunc_127_64 = val_in[63:0];
+endfunction
+
 function [63:0] trunc_65_64(input [64:0] val_in);
   trunc_65_64 = val_in[63:0];
+endfunction
+
+function [5:0] trunc_7_6(input [6:0] val_in);
+  trunc_7_6 = val_in[5:0];
 endfunction
 
 bus64_t res_sll;
@@ -47,7 +55,7 @@ always_comb begin
 end
 
 logic [5:0] rotation_shift;
-logic [5:0] rotation_shift_comp;
+logic [6:0] rotation_shift_comp;
 
 always_comb begin
     case (instr_type_i)
@@ -71,11 +79,11 @@ always_comb begin
     case (instr_type_i)
         ROR, RORW: begin
             shamt_srl = rotation_shift;
-            shamt_sll = rotation_shift_comp;
+            shamt_sll = trunc_7_6(rotation_shift_comp);
         end
         ROL, ROLW: begin
             shamt_sll = rotation_shift;
-            shamt_srl = rotation_shift_comp;
+            shamt_srl = trunc_7_6(rotation_shift_comp);
         end
         default: begin //SLL, SRL, SRA, SLLIUW, SLLW, SRLW, SRAW
             shamt_sll = shamt;
@@ -114,12 +122,12 @@ bus64_t res_right;
 always_comb begin
     case (instr_type_i)
         SLL, SLLW, SLLIUW: begin
-              res_left = 64'b0;
+            res_left = 64'b0;
             res_right = 64'b0;
-           result_o = res_sll;
+            result_o = res_sll;
         end
         SRL, SRLW: begin
-             res_left = 64'b0;
+            res_left = 64'b0;
             res_right = 64'b0;
             result_o = res_srl;
         end
@@ -130,13 +138,13 @@ always_comb begin
         end
         ROR, ROL, RORW, ROLW: begin
             res_left = res_sll & res_sra;
-            res_right = res_srl & (!res_sra);
+            res_right = res_srl & (~res_sra);
             result_o = (res_sll & res_sra) | (res_srl & ~res_sra);
         end
         default: begin
-               res_left = 64'b10;
+            res_left = 64'b10;
             res_right = 64'b11;
-          result_o = 64'b01;
+            result_o = 64'b01;
         end
     endcase
 end
