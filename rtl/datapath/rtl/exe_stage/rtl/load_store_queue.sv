@@ -134,9 +134,7 @@ always_comb begin
     logic is_hlvx_inst;
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
-    is_hlvx_inst     = instr_to_translate.instr.inst.common.opcode == OP_SYSTEM && 
-                       instr_to_translate.instr.inst.common.func3 == F3_HLV_HSV &&
-                       instr_to_translate.instr.inst.common.rs2 == RS2_HLVX;
+    is_hlvx_inst     = (instr_to_translate.instr.instr_type == HLVX_HU) || (instr_to_translate.instr.instr_type ==HLVX_WU);
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
@@ -353,8 +351,11 @@ always_comb begin
     `endif
 end
 
-assign csr_hs_ld_st_inst_o = instr_to_translate.instr.inst.common.opcode == OP_SYSTEM && 
-                             instr_to_translate.instr.inst.common.func3 == F3_HLV_HSV;
+assign csr_hs_ld_st_inst_o = (instr_to_translate.instr.instr_type inside {
+                                              HLV_B, HLV_BU, HLV_H, HLV_HU,
+                                              HLVX_HU, HLV_W, HLVX_WU,
+                                              HSV_B, HSV_H, HSV_W,
+                                              HLV_WU, HLV_D, HSV_D }) ? 1'b1 : 1'b0;
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i | en_ld_st_g_translation_i;
 assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && v_mode_i;
 assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && v_mode_i;
