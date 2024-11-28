@@ -79,7 +79,7 @@ always_comb begin : vsetvl_ctrl
         end
 
         // vtype assignation
-        if ((vtype_i[10:8] != 3'b0) || (vtype_i[6] == 1'b0) || (vtype_i[5] == 1'b1) || 
+        if ((vtype_i[10:8] != 3'b0) || (vtype_i[5] == 1'b1) || 
             ((vtype_i[2:0] > 3'b0) && ((vtype_i[2:0] < 3'b101) || (vtype_i[1:0] <= vtype_i[4:3])))) begin // unsupported tail, or SEW/LMUL configuration (rvv1.0 page 11)
             vtype_d = {1'b1,63'b0};
             vl_d = 'h0;

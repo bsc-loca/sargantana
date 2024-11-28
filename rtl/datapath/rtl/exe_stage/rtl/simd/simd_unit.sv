@@ -362,8 +362,7 @@ endgenerate
 
 //The result of the FUs are concatenated into the result data
 always_comb begin
-    //fu_data_vd = instr_to_out.data_old_vd; // By Default
-    fu_data_vd = {128{1'b1}}; // By Default
+    fu_data_vd = (instr_to_out.instr.vta) ? '1 : instr_to_out.data_old_vd;
     for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
         if (is_vn(instr_to_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
@@ -603,20 +602,32 @@ always_comb begin
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
-                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
-                result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+                end
             end
             SEW_16: begin
-                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
-                result_data_vd = {{(VLEN-16){1'b1}}, instruction_i.data_rs1[15:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-16){1'b1}}, instruction_i.data_rs1[15:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                end
             end
             SEW_32: begin
-                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
-                result_data_vd = {{(VLEN-32){1'b1}}, instruction_i.data_rs1[31:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-32){1'b1}}, instruction_i.data_rs1[31:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                end
             end
             SEW_64: begin
-                //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
-                result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                end
             end
             default: begin
                 result_data_vd = '0; 
@@ -1045,7 +1056,7 @@ always_comb begin
         endcase
     end 
     else if (instr_to_out.instr.instr_type == VRGATHEREI16) begin
-        result_data_vd = instr_to_out.data_old_vd;
+        result_data_vd = 0;
         //Forood: don't know what to do when the SEW < 16 because there are more elements than indexes, at the moment they are left
         // untouched but they may be forced to set to 0
         // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked 
@@ -1171,7 +1182,7 @@ always_comb begin
         endcase
     end
     else if ((instr_to_out.instr.instr_type == VCOMPRESS)) begin
-        result_data_vd = instr_to_out.data_old_vd;
+        result_data_vd = (instr_to_out.instr.vta) ? '1 : instr_to_out.data_old_vd;
 
 
         //this variable is used to track the last occupied element of vd
@@ -1307,8 +1318,7 @@ end
 
 bus_simd_t tail_data_vd;
 always_comb begin
-    //tail_data_vd = '1;
-    tail_data_vd = (instr_to_out.instr.vta) ? '1 : instr_to_out.data_old_vd;
+    tail_data_vd = (instr_to_out.instr.vta || is_vm(instr_to_out)) ? '1 : instr_to_out.data_old_vd;
     case(masked_sew)
         SEW_8: begin
             for (int i = 0; i<(VLEN/8); ++i) begin

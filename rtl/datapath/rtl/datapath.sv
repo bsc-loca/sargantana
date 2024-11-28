@@ -34,7 +34,6 @@ module datapath
     input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
     input logic             req_icache_ready_i,
-    //input sew_t             sew_i,
     input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
@@ -528,7 +527,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
-    assign simd_use_old_vd = (stage_iq_ir_q.instr.vregfile_we & stage_iq_ir_q.instr.use_mask) | stage_iq_ir_q.instr.use_old_vd;
+    assign simd_use_old_vd = stage_iq_ir_q.instr.vregfile_we & (stage_iq_ir_q.instr.use_mask | stage_iq_ir_q.instr.use_old_vd);
 
     // Instruction Queue 
     instruction_queue instruction_queue_inst(
