@@ -477,6 +477,9 @@ module decoder
                                     RS2_SEXTH: begin
                                         decode_instr_int.instr_type = SEXTH;
                                     end
+                                    RS2_CPOP: begin
+                                        decode_instr_int.instr_type = CPOP;
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -657,6 +660,9 @@ module decoder
                                         end
                                         RS2_CTZW: begin
                                             decode_instr_int.instr_type = CTZW;
+                                        end
+                                        RS2_CPOPW: begin
+                                            decode_instr_int.instr_type = CPOPW;
                                         end
                                     endcase;
                                 end
