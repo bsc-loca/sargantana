@@ -89,6 +89,8 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_d[div_unit_sel_i].branch_taken    = 1'b0;
             instruction_d[div_unit_sel_i].result_pc       = data_src1;                 // Store dividend in result_pc
             instruction_d[div_unit_sel_i].mem_type        = instruction_i.instr.mem_type;
+            instruction_d[div_unit_sel_i].vl              = instruction_i.instr.vl;
+            instruction_d[div_unit_sel_i].sew             = instruction_i.instr.sew;
             `ifdef SIM_KONATA_DUMP
             instruction_d[div_unit_sel_i].id              = instruction_i.instr.id;
             `endif
@@ -244,6 +246,8 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.ex              = 'h0;
         instruction_o.result          = 'h0;
         instruction_o.fp_status       = 'h0;
+        instruction_o.vl        = 'h0;
+        instruction_o.sew        = SEW_8;
         if (cycles_counter[0] == 6'd1) begin
             instruction_o.valid           = instruction_q[0].valid;
             instruction_o.pc              = instruction_q[0].pc;
@@ -259,6 +263,8 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.chkp            = instruction_q[0].chkp;
             instruction_o.gl_index        = instruction_q[0].gl_index;
             instruction_o.mem_type        = instruction_q[0].mem_type;
+            instruction_o.vl        = instruction_q[0].vl;
+            instruction_o.sew        = instruction_q[0].sew;
             `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[0].id;
             `endif
@@ -298,6 +304,8 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.chkp            = instruction_q[1].chkp;
             instruction_o.gl_index        = instruction_q[1].gl_index;
             instruction_o.mem_type        = instruction_q[1].mem_type;
+            instruction_o.vl        = instruction_q[1].vl;
+            instruction_o.sew        = instruction_q[1].sew;
             `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[1].id;
             `endif

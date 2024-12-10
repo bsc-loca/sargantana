@@ -270,15 +270,18 @@ hpm_counters #(
     .mhpm_ovf_bits_o(mhpm_ovf_bits)
 );
 
-sew_t sew;
-logic [VMAXELEM_LOG:0] vl;
-logic vnarrow_wide_en;
-logic vill;
+
+//sew_t sew;
+//assign sew = sew_t'(vpu_csr[38:37]);            //SEW extracted from VPU-CSR
+
+//logic [VMAXELEM_LOG:0] vl;
+//logic vnarrow_wide_en;
+//assign vnarrow_wide_en = vpu_csr[13];           //Enable vector instructions that use SEW*2
+//logic vill;
+//assign vill = vpu_csr[42];                      //Illegal configuration of vtype
 vxrm_t vxrm;
-assign sew = sew_t'(vpu_csr[38:37]);            //SEW extracted from VPU-CSR
-assign vl = vpu_csr[14 +: (VMAXELEM_LOG+1)];    //Vector Length extracted from VPU-CSR
-assign vnarrow_wide_en = vpu_csr[13];           //Enable vector instructions that use SEW*2
-assign vill = vpu_csr[42];                      //Illegal configuration of vtype
+
+//ssign vl = vpu_csr[14 +: (VMAXELEM_LOG+1)];    //Vector Length extracted from VPU-CSR
 assign vxrm = vxrm_t'(vpu_csr[30:29]);          //Vector Fixed-Point rounding mode
 
 
@@ -292,10 +295,7 @@ datapath #(
     .resp_icache_cpu_i(resp_icache_cpu_i), 
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
-    .sew_i(sew),//.sew_i(CSR_SEW),
-    .vl_i(vl),
-    .vnarrow_wide_en_i(vnarrow_wide_en),
-    .vill_i(vill),
+    //.sew_i(sew),//.sew_i(CSR_SEW),
     .vxrm_i(vxrm),
     .en_translation_i( en_translation ), 
     .req_icache_ready_i(req_icache_ready_i),

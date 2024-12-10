@@ -123,6 +123,9 @@ assign instruction_0_d.result        = instruction_i.instr.imm;
 assign instruction_0_d.mem_type      = instruction_i.instr.mem_type;
 assign instruction_0_d.ex            = '0;
 assign instruction_0_d.fp_status     = '0;
+assign instruction_0_d.vl            = instruction_i.instr.vl;
+assign instruction_0_d.sew            = instruction_i.instr.sew;
+
 `ifdef SIM_KONATA_DUMP
 assign instruction_0_d.id            = instruction_i.instr.id;
 `endif
@@ -173,6 +176,9 @@ assign instruction_s1.branch_taken  = 1'b0;
 assign instruction_s1.result_pc     = 0;
 assign instruction_s1.result        = result_32;
 assign instruction_s1.ex            = instruction_0_q.ex;
+assign instruction_s1.vl            = instruction_0_q.vl;
+assign instruction_s1.sew            = instruction_0_q.sew;
+
 `ifdef SIM_KONATA_DUMP
 assign instruction_s1.id            = instruction_0_q.id;
 `endif
@@ -251,6 +257,8 @@ assign instruction_s2.branch_taken  = 1'b0;
 assign instruction_s2.result_pc     = 0;
 assign instruction_s2.result        = result_64;
 assign instruction_s2.ex            = instruction_1_q.ex;
+assign instruction_s2.vl            = instruction_1_q.vl;
+assign instruction_s2.sew            = instruction_1_q.sew;
 `ifdef SIM_KONATA_DUMP
 assign instruction_s2.id            = instruction_1_q.id;
 `endif 

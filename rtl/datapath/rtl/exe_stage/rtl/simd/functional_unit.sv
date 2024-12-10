@@ -65,7 +65,7 @@ end
 always_comb begin
     case (sel_out_instr_i.instr.instr_type)
         VWMACC, VWMACCU, VWMACCUS, VWMACCSU: begin
-            case (sel_out_instr_i.sew)
+            case (sel_out_instr_i.instr.sew)
                 SEW_8: begin
                     vaddsub_sew_i = SEW_16;
                 end
@@ -81,7 +81,7 @@ always_comb begin
             endcase
         end
         default: begin
-            vaddsub_sew_i = sel_out_instr_i.sew;
+            vaddsub_sew_i = sel_out_instr_i.instr.sew;
         end
     endcase
 
@@ -146,7 +146,7 @@ vaddsub vaddsub_inst(
 
 vwaddsub vwaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (data_vs1_i[31:0]),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vwaddsub)
@@ -154,7 +154,7 @@ vwaddsub vwaddsub_inst(
 
 vsaaddsub vsaaddsub_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .vxrm_i        (vxrm_i),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
@@ -163,7 +163,7 @@ vsaaddsub vsaaddsub_inst(
 );
 vcomp vcomp_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vcomp)
@@ -171,7 +171,7 @@ vcomp vcomp_inst(
 
 vshift vshift_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data_vs2_i),
     .data_vd_o     (result_vshift)
@@ -181,7 +181,7 @@ vmul vmul_inst(
     .clk_i         (clk_i),
     .rstn_i        (rstn_i),
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (data_vs1_i),
     .data_vs2_i    (data2_vmul_i),
     .data_vd_o     (result_vmul)
@@ -226,7 +226,7 @@ always_comb begin
         end
         VMAND, VMNAND, VMANDN, VMOR, VMNOR, VMORN, VMXNOR,VMXOR: begin
             data_vd_o = '1;
-            case (sel_out_instr_i.sew)
+            case (sel_out_instr_i.instr.sew)
                 SEW_8: begin
                     for (int i = 0; i<(VLEN/8); ++i) begin
                         data_vd_o[i] = (sel_out_instr_i.instr.instr_type == VMAND)  ? (data_vs1_i[i] & data_vs2_i[i]) :
@@ -281,7 +281,7 @@ always_comb begin
             data_vd_o = result_vshift;
         end
         VID: begin
-            case (sel_out_instr_i.sew)
+            case (sel_out_instr_i.instr.sew)
                 SEW_8: begin
                     for (int i = 0; i<8; ++i) begin
                         data_vd_o[(i*8)+:8] = (fu_id_i*8)+i;

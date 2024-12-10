@@ -26,13 +26,13 @@
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
-    input sew_t                         sew_i,                  // SEW from vl CSR
     input logic [VMAXELEM_LOG:0]        vl_i,
     input vxrm_t                        vxrm_i,
 
     input logic [1:0]                   commit_store_or_amo_i, // Signal to execute stores and atomics in commit
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
+    input logic [VMAXELEM_LOG:0]        vl_id_exe_i,
     // OUTPUTS
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
@@ -174,7 +174,7 @@ score_board_simd score_board_simd_inst(
     .flush_i             (flush_i),
     .ready_i             (ready),
     .instr_entry_i       (simd_instr.instr),
-    .sew_i               (simd_instr.sew),
+    .sew_i               (simd_instr.instr.sew),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
@@ -199,12 +199,18 @@ always_comb begin
     arith_instr.chkp                = from_rr_i.chkp;
     arith_instr.gl_index            = from_rr_i.gl_index;
     arith_instr.instr               = from_rr_i.instr;
+    arith_instr.vl                  = (from_rr_i.instr.valid && 
+                                        ((from_rr_i.instr.instr_type == VSETVL)  ||
+                                         (from_rr_i.instr.instr_type == VSETVLI)) && 
+                                            !((from_rr_i.instr.rs1 == 'h0) &&
+                                              (from_rr_i.instr.rd == 'h0))
+                                      ) ? vl_id_exe_i : from_rr_i.instr.vl;
 
     mem_instr.data_rs1            = from_rr_i.data_rs1;
     mem_instr.data_rs2            = from_rr_i.data_rs2;
     mem_instr.data_old_vd         = from_rr_i.data_old_vd;
     mem_instr.data_vm             = from_rr_i.data_vm;
-    mem_instr.sew                 = sew_i;
+    mem_instr.sew                 = from_rr_i.instr.sew;
     mem_instr.prs1                = from_rr_i.prs1;
     mem_instr.rdy1                = from_rr_i.rdy1;
     mem_instr.prs2                = from_rr_i.prs2;
@@ -225,6 +231,7 @@ always_comb begin
     mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
     mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
     mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
+    mem_instr.vl                  = from_rr_i.instr.vl;
     mem_instr.agu_req_tag = '0;
     mem_instr.vmisalign_xcpt = 0;              
     mem_instr.velem_id = '0;  
@@ -254,7 +261,7 @@ always_comb begin
     simd_instr.data_vs2            = from_rr_i.data_vs2;
     simd_instr.data_old_vd         = from_rr_i.data_old_vd;
     simd_instr.data_vm             = from_rr_i.data_vm;
-    simd_instr.sew                 = sew_i;
+
     simd_instr.pvs1                = from_rr_i.pvs1;
     simd_instr.vrdy1               = from_rr_i.vrdy1;
     simd_instr.pvs2                = from_rr_i.pvs2;
@@ -317,16 +324,15 @@ simd_unit simd_unit_inst (
     .clk_i          (clk_i),
     .rstn_i         (rstn_i),
     .flush_i        (flush_i),
-    .vl_i           (vl_i),
     .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_simd_o  (simd_to_simd_wb)
 );
 
-assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 : 
+assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (from_rr_i.instr.vl[VMAXELEM_LOG:0] + 'd7) >> 3 : 
                  ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
-                 vl_i[VMAXELEM_LOG:0];
+                 from_rr_i.instr.vl[VMAXELEM_LOG:0];
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
 assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
                   ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE)) ? 3'b011 : 3'b000;
@@ -419,7 +425,7 @@ mem_unit #(
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
     .priv_lvl_i(priv_lvl_i),
-    .vl_i(vl_i),
+//    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
     .instruction_simd_o     (mem_to_simd_wb),
@@ -612,6 +618,8 @@ assign exe_if_branch_pred_o.is_branch_exe = ((from_rr_i.instr.instr_type == BLT)
                                              (from_rr_i.instr.instr_type == JAL)  |
                                              (from_rr_i.instr.instr_type == JALR)) &
                                              arith_instr.instr.valid;
+assign exe_if_branch_pred_o.vset_index = from_rr_i.instr.vset_index;   
+
                                              
 
 // Data for the Control Unit
@@ -624,6 +632,7 @@ assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
 assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
 assign exe_cu_o.stall = stall_int || stall_fpu_int || stall_simd_int;
+assign exe_cu_o.clear_vset_fence = (from_rr_i.instr.valid && from_rr_i.instr.stall_vset_fence && ~stall_int) ? 1'b1 : 1'b0;
 
 
 //-PMU 

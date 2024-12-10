@@ -21,7 +21,7 @@ module csr_interface
     input  logic            commit_xcpt_i,            // Exception at Commit
     input  bus64_t          result_gl_i,
     input  reg_csr_addr_t   csr_addr_gl_i,
-    input  reg_csr_addr_t   vsetvl_vtype_i,
+    input  logic [VTYPE_LENGTH:0] vsetvl_vtype_i,
     input  logic [VMAXELEM_LOG:0] vleff_vl_i,
     input  gl_instruction_t [1:0] instruction_to_commit_i,  // Instruction to be Committed
     input  logic            stall_exe_i,              // Exe Stage is Stalled
@@ -98,19 +98,21 @@ always_comb begin
             end
             VSETVLI: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
-                csr_rw_data_int = ((instruction_to_commit_i[0].rs1 == 'h0) && (instruction_to_commit_i[0].rd == 'h0)) ? 64'b1 : result_gl_i;
+                csr_rw_data_int = ((instruction_to_commit_i[0].rs1 == 'h0) && (instruction_to_commit_i[0].rd == 'h0)) ? 64'b1 : {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_to_commit_i[0].vl};
                 csr_ena_int = 1'b1;
+                csr_addr_int = vsetvl_vtype_i;
             end
             VSETVL: begin
                 csr_cmd_int = (instruction_to_commit_i[0].rs1 == 'h0) ? CSR_CMD_VSETVLMAX : CSR_CMD_VSETVL;
-                csr_rw_data_int = ((instruction_to_commit_i[0].rs1 == 'h0) && (instruction_to_commit_i[0].rd == 'h0)) ? 64'b1 : result_gl_i;
+                csr_rw_data_int = ((instruction_to_commit_i[0].rs1 == 'h0) && (instruction_to_commit_i[0].rd == 'h0)) ? 64'b1 : {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_to_commit_i[0].vl};
                 csr_ena_int = 1'b1;
                 csr_addr_int = vsetvl_vtype_i;
             end
             VSETIVLI: begin
                 csr_cmd_int = CSR_CMD_VSETVL;
-                csr_rw_data_int = result_gl_i;
+                csr_rw_data_int = {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_to_commit_i[0].vl};
                 csr_ena_int = 1'b1;
+                csr_addr_int = vsetvl_vtype_i;
             end
             VLEFF: begin
                 csr_cmd_int = CSR_CMD_VLEFF;
@@ -132,7 +134,7 @@ end
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    ((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    (((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
@@ -149,6 +151,7 @@ end
                                     (instruction_to_commit_i[1].instr_type == CSRRCI)) ||
                                     (instruction_to_commit_i[1].instr_type == VSETVL)) ||
                                     (instruction_to_commit_i[1].instr_type == VSETVLI)) ||
+                                    (instruction_to_commit_i[1].instr_type == VSETIVLI)) ||
                                     (instruction_to_commit_i[1].mem_type == STORE)) ||
                                     (instruction_to_commit_i[1].mem_type == AMO)) ||
                                     instruction_to_commit_i[1].stall_csr_fence))) ||

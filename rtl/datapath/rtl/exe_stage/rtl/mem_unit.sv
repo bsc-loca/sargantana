@@ -45,7 +45,7 @@ module mem_unit
     output cache_tlb_comm_t      dtlb_comm_o,
 
     input logic [1:0] priv_lvl_i,
-    input logic [VMAXELEM_LOG:0] vl_i,
+    //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
     `ifdef SIM_COMMIT_LOG
@@ -192,15 +192,15 @@ logic [6:0] tag_id_s2_q;
 assign vload_packer_full = (vload_packer_nfree_q == 'h0);
 assign vstore_packer_full = (vstore_packer_nfree_q == 'h0);
 
-assign vl_to_dcache = ((instruction_to_dcache.instr.instr_type == VLM) || (instruction_to_dcache.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
+assign vl_to_dcache = ((instruction_to_dcache.instr.instr_type == VLM) || (instruction_to_dcache.instr.instr_type == VSM)) ? (instruction_to_dcache.vl[VMAXELEM_LOG:0] + 'd7) >> 3 :
                       ((instruction_to_dcache.instr.instr_type == VL1R) || (instruction_to_dcache.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_dcache.sew) :
-                        vl_i[VMAXELEM_LOG:0];
-assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instruction_s1_q.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
+                        instruction_to_dcache.vl[VMAXELEM_LOG:0];
+assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instruction_s1_q.instr.instr_type == VSM)) ? (instruction_s1_q.vl[VMAXELEM_LOG:0] + 'd7) >> 3 :
                       ((instruction_s1_q.instr.instr_type == VL1R) || (instruction_s1_q.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_s1_q.sew) :
-                        vl_i[VMAXELEM_LOG:0];
-assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (vl_i[VMAXELEM_LOG:0] + 'd7) >> 3 :
+                        instruction_s1_q.vl[VMAXELEM_LOG:0];
+assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (instruction_to_wb.vl[VMAXELEM_LOG:0] + 'd7) >> 3 :
                       ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_wb.sew) :
-                        vl_i[VMAXELEM_LOG:0];
+                        instruction_to_wb.vl[VMAXELEM_LOG:0];
 
 // State machine variables
 logic [2:0] state;
@@ -241,6 +241,7 @@ assign instruction_to_lsq.load_mask = instruction_i.load_mask;
 assign instruction_to_lsq.velem_off = instruction_i.velem_off;
 assign instruction_to_lsq.velem_incr = instruction_i.velem_incr;
 assign instruction_to_lsq.neg_stride = instruction_i.neg_stride;
+assign instruction_to_lsq.vl = instruction_i.vl;
 
 assign instruction_to_lsq.ex = 'h0; // Exceptions in earlier stages do not enter the mem unit
 assign instruction_to_lsq.rdy1 = 'h0;
@@ -665,7 +666,8 @@ always_comb begin
         instruction_to_wb.load_mask       = instruction_from_pmrq.load_mask;     
         instruction_to_wb.velem_off       = instruction_from_pmrq.velem_off; 
         instruction_to_wb.velem_incr      = instruction_from_pmrq.velem_incr;  
-        instruction_to_wb.neg_stride      = instruction_from_pmrq.neg_stride;     
+        instruction_to_wb.neg_stride      = instruction_from_pmrq.neg_stride;
+        instruction_to_wb.vl      = instruction_from_pmrq.instr.vl;          
         `ifdef SIM_COMMIT_LOG
         instruction_to_wb.vaddr      = instruction_from_pmrq.vaddr; 
         `endif
@@ -924,13 +926,13 @@ always_comb begin
         end
         `ifdef REGISTER_HPDC_OUTPUT
         if (flush_store) begin
-            if ((instruction_s2_q.velem_incr >= vl_i[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
+            if ((instruction_s2_q.velem_incr >= instruction_s2_q.vl[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
                 vstore_packer_complete = 1'b1;
             end else begin
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s2_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
-                        if ((vstore_packer_nelem_q[i] + instruction_s2_q.velem_incr) >= vl_i[VMAXELEM_LOG:0]) begin
+                        if ((vstore_packer_nelem_q[i] + instruction_s2_q.velem_incr) >= instruction_s2_q.vl[VMAXELEM_LOG:0]) begin
                             vstore_packer_nelem_d[i] = '1;
                             vstore_packer_complete = 1'b1;
                             vstore_packer_free = 1'b1;
@@ -992,6 +994,8 @@ assign instruction_scalar_o.result        = data_to_wb[63:0];
 assign instruction_scalar_o.ex            = instruction_to_wb.ex;
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
+assign instruction_scalar_o.vl            = instruction_to_wb.vl;
+assign instruction_scalar_o.sew            = instruction_to_wb.instr.sew;
 
 // Output Float Instruction
 assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we; //fp_instr;
@@ -1019,6 +1023,7 @@ assign instruction_fp_o.result            = (instruction_to_wb.instr.instr_type 
 assign instruction_fp_o.ex                = instruction_to_wb.ex;
 assign instruction_fp_o.fp_status         = 'h0;
 
+
 // Output SIMD Instruction
 assign instruction_simd_o.valid           = instruction_to_wb.instr.valid & instruction_to_wb.instr.vregfile_we & (vload_packer_complete | instruction_to_wb.ex.valid);
 assign instruction_simd_o.pc              = instruction_to_wb.instr.pc;
@@ -1044,6 +1049,9 @@ assign instruction_simd_o.result_pc       = 0;
 assign instruction_simd_o.vresult         = masked_data_to_wb;
 assign instruction_simd_o.ex              = ((instruction_to_wb.instr.instr_type == VLEFF) && (instruction_to_wb.velem_id != 'h0)) ? 0 : instruction_to_wb.ex;
 assign instruction_simd_o.vs_ovf          = 1'b0;
+assign instruction_simd_o.vl              = instruction_to_wb.vl;
+assign instruction_simd_o.sew             = instruction_to_wb.instr.sew;
+
 
 `ifdef REGISTER_HPDC_OUTPUT
 assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;

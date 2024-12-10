@@ -20,7 +20,6 @@
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
     input logic                   flush_i,                // Flush 
-    input logic [VMAXELEM_LOG:0]  vl_i,                   // Current vector lenght in elements
     input vxrm_t                  vxrm_i,                 // Vector Fixed-Point Rounding Mode
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
@@ -177,13 +176,13 @@ instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 
 always_comb begin
     if (is_vmul(instruction_i)) begin
-        simd_exe_stages = (instruction_i.sew == SEW_64) ? 4'd3 : 4'd2;
+        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 4'd3 : 4'd2;
     end
     else if (is_vmadd(instruction_i)) begin
-        simd_exe_stages = (instruction_i.sew == SEW_64) ? 4'd4 : 4'd3;
+        simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 4'd4 : 4'd3;
     end
     else if (is_vred(instruction_i)) begin
-        case (instruction_i.sew)
+        case (instruction_i.instr.sew)
             SEW_8, SEW_16 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) + 1);
             SEW_32 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3));
             SEW_64 : simd_exe_stages = trunc_4bits($clog2(VLEN >> 3) - 1);
@@ -253,7 +252,7 @@ always_comb begin
 end
 
 always_comb begin
-    if (valid_found && (vl_i != 'h0)) begin
+    if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
         instr_to_out = instr_score_board;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
@@ -264,7 +263,7 @@ end
 
 //We replicate rs1 or imm taking the sew into account
 always_comb begin
-    case (instruction_i.sew)
+    case (instruction_i.instr.sew)
         SEW_8: begin
             for (int i=0; i<(VLEN/8); ++i) begin
                 if (instruction_i.instr.is_opvx) rs1_replicated[(i*8)+:8] = instruction_i.data_rs1[7:0];
@@ -324,7 +323,7 @@ generate
                                         rs1_replicated[(gv_fu*DATA_SIZE) +: DATA_SIZE] : 
                                         instruction_i.data_vs1[(gv_fu*DATA_SIZE) +: DATA_SIZE];
                 vs2_elements[gv_fu] = instruction_i.data_vs2[(gv_fu*DATA_SIZE) +: DATA_SIZE];
-                case (instruction_i.sew)
+                case (instruction_i.instr.sew)
                     SEW_8: begin
                         data_vm[gv_fu] = {{56{1'b0}}, instruction_i.data_vm[(gv_fu*(DATA_SIZE/8)) +: 8]};
                     end
@@ -369,7 +368,7 @@ always_comb begin
         if (is_vn(instr_to_out)) begin
             fu_data_vd[(i*HALF_SIZE) +: HALF_SIZE] = vd_elements[i][HALF_SIZE-1:0];
         end else if ((instr_to_out.instr.instr_type == VMADC) || (instr_to_out.instr.instr_type == VMSBC)) begin
-            case (instr_to_out.sew)
+            case (instr_to_out.instr.sew)
                 SEW_8: begin
                     for (int j = 0; j<(DATA_SIZE/8); ++j) begin
                         fu_data_vd[(i*(DATA_SIZE/8)+j)] = vd_elements[i][j];
@@ -401,22 +400,22 @@ end
 bus64_t data_vpopc_rd;
 vpopc vpopc_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm_i     (instruction_i.data_vm),
     .use_mask_i    (instruction_i.instr.use_mask),
-    .vl_i          (vl_i),
+    .vl_i          (instruction_i.instr.vl),
     .data_vd_o     (data_vpopc_rd)
 );
 
 bus64_t result_vfirst;
 vfirst vfirst_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm       (instruction_i.data_vm),
     .use_mask      (instruction_i.instr.use_mask),
-    .vl_i          (vl_i),
+    .vl_i          (instruction_i.instr.vl),
     .data_rd_o     (result_vfirst)
 );
 
@@ -428,7 +427,7 @@ always_comb begin
     data_rd = 'h0;
     if (instr_to_out.instr.instr_type == VMV_X_S) begin
         //Extract element 0
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 data_rd = {{56{vs2_elements[0][7]}}, vs2_elements[0][7:0]};
             end
@@ -503,7 +502,7 @@ always_comb begin
         //Uses the result of the FUs, which performed a vseq, and counts
         //consecutive '1's
         data_rd = 0;
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if (!fu_data_vd[i]) break;
@@ -530,7 +529,7 @@ always_comb begin
             end
         endcase
     end else if (instr_to_out.instr.instr_type == VPOPC) begin
-        if((vl_i == 0)) begin
+        if((instruction_i.instr.vl == 0)) begin
             data_rd = '0;
         end else begin
             data_rd = data_vpopc_rd;
@@ -560,20 +559,20 @@ vredtree vredtree_inst(
     .clk_i         (clk_i),
     .rstn_i        (rstn_i),
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
-    .vl_i          (vl_i),
+    .sew_i         (instruction_i.instr.sew),
+    .vl_i          (instruction_i.instr.vl),
     .data_1st_i    (instruction_i.data_vs1[63:0]),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
-    .sew_to_out_i  (instr_to_out.sew),
+    .sew_to_out_i  (instr_to_out.instr.sew),
     .red_data_vd_o (red_data_vd)
 );
 
 bus_simd_t data_viota_vd;
 viota viota_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
@@ -583,7 +582,7 @@ viota viota_inst(
 bus64_t result_vmsbf;
 vmsb_i_o_f vmsbf_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
-    .sew_i         (instruction_i.sew),
+    .sew_i         (instruction_i.instr.sew),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_vm       (instruction_i.data_vm),
     .use_mask      (instruction_i.instr.use_mask),
@@ -602,7 +601,7 @@ always_comb begin
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
         result_data_vd = data_viota_vd;        
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 //result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
                 result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
@@ -644,7 +643,7 @@ always_comb begin
                  (instr_to_out.instr.instr_type == VMSLEU) || (instr_to_out.instr.instr_type == VMSLE) ||
                  (instr_to_out.instr.instr_type == VMSGTU) || (instr_to_out.instr.instr_type == VMSGT)) begin
         result_data_vd = '1;
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i=0; i<drac_pkg::VELEMENTS; i=i+1) begin
                     result_data_vd[i*8 +: 8] = fu_data_vd[i*DATA_SIZE +: 8];
@@ -671,7 +670,7 @@ always_comb begin
         endcase
     end else if ((instr_to_out.instr.instr_type == VZEXT_VF2) || (instr_to_out.instr.instr_type == VZEXT_VF4) || (instr_to_out.instr.instr_type == VZEXT_VF8) ||
                 (instr_to_out.instr.instr_type == VSEXT_VF2) || (instr_to_out.instr.instr_type == VSEXT_VF4) || (instr_to_out.instr.instr_type == VSEXT_VF8)) begin
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
                     if ((instr_to_out.instr.instr_type == VSEXT_VF2)) begin
@@ -759,7 +758,7 @@ always_comb begin
         end
 
 
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 if(shift_amount_in_vslide < (VLEN/8)) begin
                     for (int i = 0; i < (VLEN/8) ; ++i) begin
@@ -825,12 +824,12 @@ always_comb begin
         else begin // To avoid an unwanted latch
             shift_amount_in_vslide = '0;
         end
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 if(shift_amount_in_vslide < (VLEN/8)) begin
 
                     for (int i = 0; i < (VLEN/8) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (vl_i)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
 
@@ -843,7 +842,7 @@ always_comb begin
                 if(shift_amount_in_vslide < (VLEN/16)) begin
 
                     for (int i = 0; i < (VLEN/16) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (vl_i)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                         end
 
@@ -856,7 +855,7 @@ always_comb begin
                 if(shift_amount_in_vslide < (VLEN/32)) begin
 
                     for (int i = 0; i < (VLEN/32) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (vl_i)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                         end
 
@@ -869,7 +868,7 @@ always_comb begin
                 if(shift_amount_in_vslide < (VLEN/64)) begin
 
                     for (int i = 0; i < (VLEN/64) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (vl_i)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
 
@@ -883,7 +882,7 @@ always_comb begin
                 if(shift_amount_in_vslide < (VLEN/64)) begin
 
                     for (int i = 0; i < (VLEN/64) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (vl_i)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
 
@@ -900,10 +899,10 @@ always_comb begin
         // I coded them seperatly in order to keep things clean and understandable in case
         result_data_vd = '0;
         
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < ((VLEN/8) - 1) ; ++i) begin
-                   if(i < (vl_i - 1)) begin    
+                   if(i < (instr_to_out.instr.vl - 1)) begin    
                         result_data_vd[(i + 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                     end 
                 end
@@ -911,7 +910,7 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0 ; i < ((VLEN/16) - 1) ; ++i) begin
-                    if(i < (vl_i - 1)) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin
                         result_data_vd[(i + 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                     end
                 end
@@ -919,7 +918,7 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0 ; i < ((VLEN/32) - 1) ; ++i) begin
-                    if(i < (vl_i - 1)) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin
                         result_data_vd[(i + 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                     end
                 end
@@ -927,7 +926,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
-                    if(i < (vl_i - 1)) begin    
+                    if(i < (instr_to_out.instr.vl - 1)) begin    
                         result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                     end
                 end
@@ -935,7 +934,7 @@ always_comb begin
             end
             default: begin
                 for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
-                    if(i < (vl_i - 1)) begin    
+                    if(i < (instr_to_out.instr.vl - 1)) begin    
                         result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                     end
                 end
@@ -948,50 +947,50 @@ always_comb begin
         // I coded them seperatly in order to keep things clean and understandable in case
         // future debugging is needed.
         result_data_vd = '0;
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin                 
                     for (int i = 1 ; i < (VLEN/8)  ; ++i) begin
-                        if (i < vl_i) begin
+                        if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew8(vl_i - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
+                    result_data_vd[trunc_vl_i_sew8(instr_to_out.instr.vl - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
                     
 
             end
             SEW_16: begin
                 for (int i = 1 ; i < (VLEN/16)  ; ++i) begin
-                        if (i < vl_i) begin
+                        if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew16(vl_i - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
+                    result_data_vd[trunc_vl_i_sew16(instr_to_out.instr.vl - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
                     
             end
             SEW_32: begin
                 for (int i = 1 ; i < (VLEN/32)  ; ++i) begin
-                        if (i < vl_i) begin
+                        if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew32(vl_i - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
+                    result_data_vd[trunc_vl_i_sew32(instr_to_out.instr.vl - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
             end
             SEW_64: begin
                 for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
-                        if (i < vl_i) begin
+                        if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew64(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+                    result_data_vd[trunc_vl_i_sew64(instr_to_out.instr.vl - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
             end
 
             default: begin
                 for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
-                        if (i < vl_i) begin
+                        if (i < instr_to_out.instr.vl) begin
                             result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew64(vl_i - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+                    result_data_vd[trunc_vl_i_sew64(instr_to_out.instr.vl - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
                 
             end
         endcase
@@ -999,10 +998,10 @@ always_comb begin
     else if ((instr_to_out.instr.instr_type == VRGATHER) && (~instr_to_out.instr.is_opvx) && (~instr_to_out.instr.is_opvi)) begin
         result_data_vd = 0;
         
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 8) +: 8]) < (VLEN/8)) begin
+                    if((instruction_i.data_vs1[(i * 8) +: 8]) < instruction_i.instr.vlmax) begin
                         //Forood : this line and lines like this that can be seen in the VRGATHER and VRGATHER16 has a problem that needs to be sloved
                         // because the $clog2(VLEN/8) can become greater than 8 bits if the VLEN goes beyond 2048 and a min function must be used
                         result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 8) +: min_unsigned($clog2(VLEN/8), 8)]) * 8 +: 8];
@@ -1015,7 +1014,7 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/16)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/16), 16)]) * 16 +: 16];
                     end
                     else begin
@@ -1025,7 +1024,7 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 32) +: 32]) < (VLEN/32)) begin
+                    if((instruction_i.data_vs1[(i * 32) +: 32]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 32) +: min_unsigned($clog2(VLEN/32), 32)]) * 32 +: 32];
                     end
                     else begin
@@ -1035,7 +1034,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 64) +: 64]) < (VLEN/64)) begin
+                    if((instruction_i.data_vs1[(i * 64) +: 64]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 64) +: min_unsigned($clog2(VLEN/64), 64)]) * 64 +: 64];
                     end
                     else begin
@@ -1052,7 +1051,7 @@ always_comb begin
         // also when sew > 16 there are more indexes than elements, so at the moment only (VLEN/SEW) first elements are checked 
 
 
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
                     if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/8)) begin
@@ -1118,7 +1117,7 @@ always_comb begin
             gather_index = instruction_i.data_rs1;
         end
 
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
                     if((gather_index) < (VLEN/8)) begin
@@ -1178,10 +1177,10 @@ always_comb begin
         //this variable is used to track the last occupied element of vd
         gather_index = 0;
 
-        case (instr_to_out.sew)
+        case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
-                    if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
+                    if((instruction_i.data_vs1[i] == 1'b1) && (i < instr_to_out.instr.vl) ) begin
                         result_data_vd[(gather_index * 8) +: 8] = instruction_i.data_vs2[(i) * 8 +: 8];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
@@ -1189,7 +1188,7 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
-                    if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
+                    if((instruction_i.data_vs1[i] == 1'b1) && (i < instr_to_out.instr.vl) ) begin
                         result_data_vd[(gather_index * 16) +: 16] = instruction_i.data_vs2[(i) * 16 +: 16];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
@@ -1197,7 +1196,7 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
-                    if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
+                    if((instruction_i.data_vs1[i] == 1'b1) && (i < instr_to_out.instr.vl) ) begin
                         result_data_vd[(gather_index * 32) +: 32] = instruction_i.data_vs2[(i) * 32 +: 32];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
@@ -1205,7 +1204,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
+                    if((instruction_i.data_vs1[i] == 1'b1) && (i < instr_to_out.instr.vl) ) begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
@@ -1213,7 +1212,7 @@ always_comb begin
             end
             default: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((instruction_i.data_vs1[i] == 1'b1) && (i < vl_i) ) begin
+                    if((instruction_i.data_vs1[i] == 1'b1) && (i < instr_to_out.instr.vl) ) begin
                         result_data_vd[(gather_index * 64) +: 64] = instruction_i.data_vs2[(i) * 64 +: 64];
                         gather_index = gather_index[62:0] + 1'b1;
                     end
@@ -1233,21 +1232,22 @@ sew_t masked_sew;
 //Apply the mask to the vector result
 //Unaffected elements are filled with the old vd data
 always_comb begin
-    if (is_vw(instr_to_out) && (instr_to_out.sew != SEW_64)) begin
-        case (instr_to_out.sew)
+    if (is_vw(instr_to_out) && (instr_to_out.instr.sew != SEW_64)) begin
+        case (instr_to_out.instr.sew)
             SEW_8: masked_sew = SEW_16;
             SEW_16: masked_sew = SEW_32;
             SEW_32: masked_sew = SEW_64;
             default: masked_sew = SEW_64;
         endcase
     end else begin
-        masked_sew = instr_to_out.sew;
+        masked_sew = instr_to_out.instr.sew;
     end
 
     if (is_vred(instr_to_out) || not_masked_output(instr_to_out)|| ~instr_to_out.instr.use_mask) begin
         masked_data_vd = result_data_vd;
     end else if (is_vm(instr_to_out)) begin
-        masked_data_vd = '1;
+        //masked_data_vd = '1;
+        masked_data_vd = (instr_to_out.instr.vma) ? '1 : instr_to_out.data_old_vd;
         case (masked_sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin
@@ -1307,11 +1307,12 @@ end
 
 bus_simd_t tail_data_vd;
 always_comb begin
-    tail_data_vd = '1;
+    //tail_data_vd = '1;
+    tail_data_vd = (instr_to_out.instr.vta) ? '1 : instr_to_out.data_old_vd;
     case(masked_sew)
         SEW_8: begin
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
+                if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -1326,7 +1327,7 @@ always_comb begin
         end
         SEW_16: begin
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
+                if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -1341,7 +1342,7 @@ always_comb begin
         end
         SEW_32: begin
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
+                if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -1356,7 +1357,7 @@ always_comb begin
         end
         SEW_64: begin
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if ((i < vl_i) || (instr_to_out.instr.instr_type == VMV1R)) begin
+                if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
                     end else if (is_vred(instr_to_out)) begin
@@ -1393,6 +1394,8 @@ assign instruction_scalar_o.branch_taken = 1'b0;
 assign instruction_scalar_o.result_pc = 0;
 assign instruction_scalar_o.fp_status = 0;
 assign instruction_scalar_o.mem_type = NOT_MEM;
+assign instruction_scalar_o.vl = instr_to_out.instr.vl;
+assign instruction_scalar_o.sew = instr_to_out.instr.sew;
 `ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id = instr_to_out.instr.id;
 `endif
@@ -1416,6 +1419,8 @@ assign instruction_simd_o.gl_index = instr_to_out.gl_index;
 assign instruction_simd_o.branch_taken = 1'b0;
 assign instruction_simd_o.result_pc = 0;
 assign instruction_simd_o.vs_ovf = v_sat_ovf != 0;
+assign instruction_simd_o.vl = instr_to_out.instr.vl;
+assign instruction_simd_o.sew = instr_to_out.instr.sew;
 `ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id = instr_to_out.instr.id;
 `endif

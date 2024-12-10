@@ -127,6 +127,8 @@ always_comb begin
         if (instruction_writeback_enable_i[i]) begin
             valid_bit_d[instruction_writeback_i[i]] = 1'b1;
             entries_d[instruction_writeback_i[i]].fp_status = instruction_writeback_data_i[i].fp_status;
+            entries_d[instruction_writeback_i[i]].vl = instruction_writeback_data_i[i].vl;
+            entries_d[instruction_writeback_i[i]].sew = instruction_writeback_data_i[i].sew;
             `ifdef SIM_COMMIT_LOG
                 entries_d[instruction_writeback_i[i]].csr_addr  = instruction_writeback_data_i[i].csr_addr;
                 entries_d[instruction_writeback_i[i]].exception = instruction_writeback_data_i[i].exception;
@@ -141,6 +143,8 @@ always_comb begin
         if (instruction_simd_writeback_enable_i[i]) begin
             valid_bit_d[instruction_simd_writeback_i[i]] = 1'b1;
             entries_d[instruction_simd_writeback_i[i]].vs_ovf  = instruction_simd_writeback_data_i[i].vs_ovf;
+            entries_d[instruction_simd_writeback_i[i]].vl = instruction_simd_writeback_data_i[i].vl;
+            entries_d[instruction_simd_writeback_i[i]].sew = instruction_simd_writeback_data_i[i].sew;
             `ifdef SIM_COMMIT_LOG
                 entries_d[instruction_simd_writeback_i[i]].csr_addr  = instruction_simd_writeback_data_i[i].csr_addr;
                 entries_d[instruction_simd_writeback_i[i]].exception = instruction_simd_writeback_data_i[i].exception;

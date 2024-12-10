@@ -286,6 +286,7 @@ module control_unit
                      step_inst_in_if2                           ||
                      step_inst_in_id                            ||
                      csr_fence_in_pipeline                      ||
+                     ((id_cu_i.valid && id_cu_i.stall_vset_fence) && !exe_cu_i.clear_vset_fence)                     ||
                      step_inst_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
                      on_halt_state)  begin
@@ -341,15 +342,19 @@ module control_unit
         pipeline_flush_o.flush_id       = 1'b0;
         if (exception_enable_q) begin
             pipeline_flush_o.flush_if       = 1'b1;
-            pipeline_flush_o.flush_id       = 1'b1;
+            pipeline_flush_o.flush_id       = 1'b1;  
         end else if (csr_enable_q) begin
             pipeline_flush_o.flush_if       = 1'b1;
-            pipeline_flush_o.flush_id       = 1'b1;
+            pipeline_flush_o.flush_id       = 1'b1;                      
         end else if (wb_cu_i.valid[0] & ~correct_branch_pred_wb_i) begin
                 pipeline_flush_o.flush_if  = 1'b1;
                 pipeline_flush_o.flush_id  = 1'b1;
+        end else if ((((id_cu_i.valid && id_cu_i.stall_vset_fence) && !exe_cu_i.clear_vset_fence) ||
+                      (id_cu_i.full_vset_queue)) && ~ir_cu_i.full_iq) begin
+            pipeline_flush_o.flush_id       = 1'b1;
+            pipeline_flush_o.flush_if       = 1'b0;                           
         end else if ((id_cu_i.stall_csr_fence | 
-                      csr_fence_in_pipeline   |
+                      csr_fence_in_pipeline   |            
                       step_inst_in_id         |
                       step_inst_in_pipeline   |
                       commit_cu_i.stall_csr_fence) && !(csr_cu_i.csr_stall)) begin
@@ -422,7 +427,6 @@ module control_unit
         end
     end
 
-
     // Logic to stall the Front End
     always_comb begin
         pipeline_ctrl_o.stall_if_1  = 1'b0;
@@ -436,6 +440,11 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;
+        end else if (((id_cu_i.valid && id_cu_i.stall_vset_fence) && !exe_cu_i.clear_vset_fence) ||
+                     (id_cu_i.valid && id_cu_i.full_vset_queue)) begin //Hold vset for register values
+            pipeline_ctrl_o.stall_if_1  = 1'b1;
+            pipeline_ctrl_o.stall_if_2  = 1'b1;
+            pipeline_ctrl_o.stall_id    = 1'b1;              
         end else if (miss_icache_i) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
@@ -449,7 +458,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b0;
             pipeline_ctrl_o.stall_id  = 1'b0;
-        end
+        end 
     end
     
     // Logic to stall the Back End
@@ -483,7 +492,7 @@ module control_unit
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
-        end 
+        end
     end
 
     // Enable Update of Free List and Rename from Commit

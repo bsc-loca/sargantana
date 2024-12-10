@@ -34,10 +34,7 @@ module datapath
     input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
     input logic             req_icache_ready_i,
-    input sew_t             sew_i,
-    input logic [VMAXELEM_LOG:0] vl_i,
-    input logic             vnarrow_wide_en_i,
-    input logic             vill_i,
+    //input sew_t             sew_i,
     input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
     // icache/dcache/CSR interface output
@@ -104,7 +101,6 @@ endfunction
     
     logic src_select_id_ir_q;
 
-    logic vl_0_int;
     
     // Rename and free list
     id_ir_stage_t stage_iq_ir_q;
@@ -180,6 +176,7 @@ endfunction
 
     exception_t ex_from_exe_int;
     gl_index_t ex_from_exe_index_int;
+
     // Graduation List
 
     gl_instruction_t instruction_decode_gl;
@@ -197,7 +194,6 @@ endfunction
     gl_wb_data_t [drac_pkg::NUM_SIMD_WB-1:0]   instruction_simd_writeback_gl;
     gl_index_t       [drac_pkg::NUM_SIMD_WB-1:0]   gl_index_simd;
     logic            [drac_pkg::NUM_SIMD_WB-1:0]   gl_valid_simd;
-
     gl_instruction_t [1:0] instruction_gl_commit; 
     
     // Exe
@@ -291,9 +287,10 @@ endfunction
     //Br at WB
     addrPC_t branch_addr_result_wb;
     logic correct_branch_pred_wb;
-
+    logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_int_wb;
     // CSR signals
     logic   csr_ena_int;
+    logic [VTYPE_LENGTH:0] prev_vtype_int;
 
     // Data to write to RR from WB or CSR
     bus64_t [NUM_SCALAR_WB-1:0] data_wb_to_rr;
@@ -315,6 +312,7 @@ endfunction
     phreg_t [drac_pkg::NUM_FP_WB-1:0] fp_write_paddr_exe;
     reg_t   [drac_pkg::NUM_FP_WB-1:0] fp_write_vaddr;
 
+    logic is_vsetvl_to_commit;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// IO ADDRESS SPACE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -331,7 +329,6 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// CONTROL UNIT                                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // Control Unit
     control_unit control_unit_inst(
         .clk_i(clk_i),
@@ -440,17 +437,16 @@ endfunction
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
-    .load_i(!control_int.stall_id),
-    .input_i(stage_if_2_id_d),
-    .output_o(stage_if_2_id_q)
+        .load_i(!control_int.stall_id),
+        .input_i(stage_if_2_id_d),
+        .output_o(stage_if_2_id_q)
     );
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// DECODER                           STAGE                                                      /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    assign vl_0_int = (vl_i == 'h0) ? 1'b1 : 1'b0;
-
+    logic full_vset_queue_int, exception_enable;
+    logic [VMAXELEM_LOG:0] vl_id_exe;
     // ID Stage
     decoder id_decode_inst(
         .clk_i          (clk_i),
@@ -461,20 +457,26 @@ endfunction
         .frm_i          (csr_frm_i),
         .csr_fs_i       (csr_fs_i), 
         .csr_vs_i       (csr_vs_i), 
-        .v_2sew_en_i    (vnarrow_wide_en_i),
-        .sew_i          (sew_i),
-        .vill_i         (vill_i),
-        .vl_0_i         (vl_0_int),
-        .vl_i           (vl_i),
+        .vl_short_o     (vl_id_exe),
+        .vset_rs2_i     (reg_to_exe.data_rs2),
+        .vset_rs1_i     (reg_to_exe.data_rs1),
+        .write_vset_i   (exe_cu_int.clear_vset_fence),
+        .commit_vset_i  (is_vsetvl_to_commit),
+        .recover_commit_exception_i (exception_enable),
+        .recover_last_misspredict_i(~correct_branch_pred_wb),
+        .vset_index_misspredict_i(vset_index_int_wb),
         .debug_mode_en_i(debug_contr_o.halted),
         .decode_instr_o (decoded_instr),
-        .jal_id_if_o    (jal_id_if_int)
+        .jal_id_if_o    (jal_id_if_int),
+        .prev_vtype_o   (prev_vtype_int),
+        .full_vset_queue_o(full_vset_queue_int)
     );
 
     // valid jal in decode
     assign id_cu_int.valid               = decoded_instr.instr.valid;
     assign id_cu_int.valid_jal           = jal_id_if_int.valid;
     assign id_cu_int.stall_csr_fence     = decoded_instr.instr.stall_csr_fence && decoded_instr.instr.valid;
+    assign id_cu_int.stall_vset_fence     = decoded_instr.instr.stall_vset_fence && decoded_instr.instr.valid;
     assign id_cu_int.predicted_as_branch = decoded_instr.instr.bpred.is_branch;
     assign id_cu_int.is_branch           = (decoded_instr.instr.instr_type == BLT)  ||
                                            (decoded_instr.instr.instr_type == BLTU) ||
@@ -484,6 +486,17 @@ endfunction
                                            (decoded_instr.instr.instr_type == BNE)  ||
                                            (decoded_instr.instr.instr_type == JAL) ||
                                            (decoded_instr.instr.instr_type == JALR);
+    assign id_cu_int.full_vset_queue = full_vset_queue_int;                                           
+    
+ // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
+    assign exception_enable = ((commit_cu_int.valid && commit_cu_int.xcpt) || 
+                                                            resp_csr_cpu_i.csr_eret || 
+                                                            resp_csr_cpu_i.csr_exception || 
+                                                            resp_csr_cpu_i.debug_ebreak ||
+                                                            debug_contr_o.halt_ack ||
+                                                            (commit_cu_int.valid && commit_cu_int.ecall_taken));
+
+
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -829,7 +842,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign instruction_decode_gl.fp_status              = '0;
     assign instruction_decode_gl.mem_type               = stage_ir_rr_q.instr.mem_type;
     assign instruction_decode_gl.vs_ovf                 = 1'b0;
-
+    assign instruction_decode_gl.vl                 = stage_ir_rr_q.instr.vl;
+    assign instruction_decode_gl.sew                 = stage_ir_rr_q.instr.sew;
     // selecting the exception source, interrupt or exception from the front-end
     assign interrupt_ex.valid = resp_csr_cpu_i.csr_interrupt;
     assign interrupt_ex.cause = exception_cause_t'(resp_csr_cpu_i.csr_interrupt_cause);
@@ -863,7 +877,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                 (stage_ir_rr_q.instr.instr_type == VLEFF) ||
                                 (stage_ir_rr_q.instr.instr_type == VLSE) ||
                                 (stage_ir_rr_q.instr.instr_type == VLXE))
-                                && (vl_i == 'h0));
+                                && (stage_ir_rr_q.instr.vl == 'h0));
     
 
     graduation_list graduation_list_inst(
@@ -1037,7 +1051,6 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .input_i(selection_rr_exe_d),
         .output_o(stage_rr_exe_q)
     );
-
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// EXECUTION STAGE                                                                              /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1154,11 +1167,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .en_ld_st_translation_i(en_ld_st_translation_i),
 
         .from_rr_i(reg_to_exe),
-        .sew_i(sew_i),
-        .vl_i(vl_i),
+        .vl_i(reg_to_exe.instr.vl),
         .vxrm_i(vxrm_i),
         .vleff_vl_o(vleff_vl_int),
-        
+        .vl_id_exe_i(vl_id_exe),
+
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
@@ -1254,12 +1267,15 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         if(!rstn_i) begin
             branch_addr_result_wb <=  40'h0000000000;
             correct_branch_pred_wb <=  1'b1;
+            vset_index_int_wb <= '0;
         end else if(!control_int.stall_exe) begin
             branch_addr_result_wb <=  exe_if_branch_pred_int.branch_addr_result_exe;
             correct_branch_pred_wb <=  correct_branch_pred;
+            vset_index_int_wb <= exe_if_branch_pred_int.vset_index;
         end else begin 
             branch_addr_result_wb <= branch_addr_result_wb;
             correct_branch_pred_wb <= correct_branch_pred_wb;
+            vset_index_int_wb <= vset_index_int_wb;
         end
     end 
 
@@ -1281,6 +1297,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                instruction_writeback_gl[i].vl = wb_scalar[i].vl;
+                instruction_writeback_gl[i].sew = wb_scalar[i].sew;
                 instruction_writeback_gl[i].vs_ovf = 1'b0;
                 `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
@@ -1292,6 +1310,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                 instruction_writeback_gl[i].exception = wb_scalar[i].ex;
                 instruction_writeback_gl[i].result   = wb_scalar[i].result;
                 instruction_writeback_gl[i].fp_status = wb_scalar[i].fp_status;
+                instruction_writeback_gl[i].vl = wb_scalar[i].vl;
+                instruction_writeback_gl[i].sew = wb_scalar[i].sew;
                 instruction_writeback_gl[i].vs_ovf = 1'b0;
                 `ifdef SIM_COMMIT_LOG
                 instruction_writeback_gl[i].addr    = wb_scalar[i].addr;
@@ -1327,6 +1347,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
             instruction_simd_writeback_gl[i].fp_status = '{default:'0};
             instruction_simd_writeback_gl[i].vs_ovf = wb_simd[i].vs_ovf;
+            instruction_simd_writeback_gl[i].vl = wb_simd[i].vl;
+            instruction_simd_writeback_gl[i].sew = wb_simd[i].sew;
             simd_data_wb_to_exe[i]  = wb_simd[i].vresult;
             simd_write_paddr_exe[i] = wb_simd[i].pvd;
             simd_write_vaddr[i]     = wb_simd[i].vd;
@@ -1347,6 +1369,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             instruction_fp_writeback_gl[i].result    = wb_fp[i].result;
             instruction_fp_writeback_gl[i].fp_status = wb_fp[i].fp_status;
             instruction_fp_writeback_gl[i].vs_ovf    = 1'b0;
+            instruction_fp_writeback_gl[i].vl    = 1'b0;
+            instruction_fp_writeback_gl[i].sew    = SEW_8;
             fp_data_wb_to_exe[i]  = wb_fp[i].result;
             fp_write_paddr_exe[i] = wb_fp[i].fprd;
             fp_write_vaddr[i]     = wb_fp[i].rd;
@@ -1374,7 +1398,13 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                     data_wb_to_rr[i] = debug_reg_i.rf_wdata;
                     write_paddr_rr[i] = debug_reg_i.rf_preg;
                 end else begin
-                    data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata : wb_scalar[i].result;
+                    data_wb_to_rr[i] = (commit_cu_int.write_enable) ? resp_csr_cpu_i.csr_rw_rdata :
+                                                                      (wb_scalar[i].valid & 
+                                                                        ((wb_scalar[i].instr_type == VSETVL)  ||
+                                                                         (wb_scalar[i].instr_type == VSETVLI) ||
+                                                                         (wb_scalar[i].instr_type == VSETIVLI))) ? wb_scalar[i].vl :
+                                                                       wb_scalar[i].result;
+                                                                          
                     write_paddr_rr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].prd : wb_scalar[i].prd;
                 end
             end else begin
@@ -1409,7 +1439,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .commit_xcpt_i              (commit_xcpt),
         .result_gl_i                (result_gl_out_int),
         .csr_addr_gl_i              (csr_addr_gl_out_int),
-        .vsetvl_vtype_i             (vsetvl_vtype_int),
+        .vsetvl_vtype_i             (prev_vtype_int),
         .vleff_vl_i                 (vleff_vl_int),
         .instruction_to_commit_i    (instruction_to_commit),
         .stall_exe_i                (control_int.stall_exe),
@@ -1471,20 +1501,22 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                          (instruction_to_commit[0].instr_type == CSRRC)   ||
                                          (instruction_to_commit[0].instr_type == CSRRWI)  ||
                                          (instruction_to_commit[0].instr_type == CSRRSI)  ||
-                                         (instruction_to_commit[0].instr_type == CSRRCI)  ||
-                                         (instruction_to_commit[0].instr_type == VSETVL)  ||
+                                         (instruction_to_commit[0].instr_type == CSRRCI));
+
+    // tell cu that commit needs to write there is a fence
+    assign is_vsetvl_to_commit = retire_inst_gl[0] & ((instruction_to_commit[0].instr_type == VSETVL)  ||
                                          (instruction_to_commit[0].instr_type == VSETVLI) ||
-                                         (instruction_to_commit[0].instr_type == VSETIVLI));
+                                         (instruction_to_commit[0].instr_type == VSETIVLI));                                       
 
     assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid
-                                        && !((vl_i == 'h0) && ((instruction_to_commit[0].instr_type == VSE) || 
+                                        && !((instruction_to_commit[0].vl == 'h0) && ((instruction_to_commit[0].instr_type == VSE) || 
                                                                (instruction_to_commit[0].instr_type == VSM) ||
                                                                (instruction_to_commit[0].instr_type == VSSE)||
                                                                (instruction_to_commit[0].instr_type == VSXE))));
     assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
                                         (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid && !instruction_to_commit[0].ex_valid
-                                        && !((vl_i == 'h0) && ((instruction_to_commit[1].instr_type == VSE) || 
+                                        && !((instruction_to_commit[1].vl == 'h0) && ((instruction_to_commit[1].instr_type == VSE) || 
                                                                (instruction_to_commit[1].instr_type == VSM) ||
                                                                (instruction_to_commit[1].instr_type == VSSE)||
                                                                (instruction_to_commit[1].instr_type == VSXE))));
@@ -1512,7 +1544,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             commit_data[i].csr_dst         = instruction_to_commit[i].csr_addr;
             commit_data[i].csr_data        = instruction_to_commit[i].result;
             commit_data[i].inst            = instruction_to_commit[i].inst;
-            commit_data[i].sew             = sew_i;
+            commit_data[i].sew             = instruction_to_commit[i].sew;
             commit_data[i].xcpt            = commit_xcpt;
             commit_data[i].xcpt_cause      = commit_xcpt_cause;
             commit_data[i].csr_priv_lvl    = csr_priv_lvl_i;
@@ -1528,6 +1560,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                 if(instruction_to_commit[0].valid) begin
                     if (commit_cu_int.write_enable) begin
                         commit_data[0].data = resp_csr_cpu_i.csr_rw_rdata;
+                    end else if (is_vsetvl_to_commit) begin
+                        commit_data[0].data = instruction_to_commit[0].vl;                        
                     end else if (commit_store_or_amo_int[0] & (commit_cu_int.gl_index == mem_gl_index_int)) begin
                         `ifdef REGISTER_HPDC_OUTPUT
                         commit_data[0].data = instruction_to_commit[0].mem_type == STORE ? store_data : wb_scalar[1].result;
