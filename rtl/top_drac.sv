@@ -61,9 +61,13 @@ module top_drac
 // MMU INTERFACE
 //----------------------------------------------------------------------------------
 
-    output csr_ptw_comm_t       csr_ptw_comm_o,
-    output cache_tlb_comm_t     dtlb_comm_o,
-    input  tlb_cache_comm_t     dtlb_comm_i,
+    // iTLB Interface
+    input  cache_tlb_comm_t icache_itlb_comm_i,
+    output tlb_cache_comm_t itlb_icache_comm_o,
+    
+    // PTW - Memory Interface
+    output mmu_pkg::ptw_dmem_comm_t ptw_dmem_comm_o,
+    input  mmu_pkg::dmem_ptw_comm_t dmem_ptw_comm_i,
 
 //-----------------------------------------------------------------------------------
 // DEBUGGING MODULE SIGNALS
@@ -119,6 +123,8 @@ logic en_ld_st_translation;
 logic en_translation;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
+cache_tlb_comm_t core_dtlb_comm;
+tlb_cache_comm_t dtlb_core_comm;
 
 assign en_translation_o = en_translation;
 assign priv_lvl_o = csr_priv_lvl;
@@ -154,8 +160,9 @@ end
 // Request Datapath to CSR
 req_cpu_csr_t req_datapath_csr_interface;
 
+csr_ptw_comm_t csr_ptw_comm;
 logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
-assign csr_ptw_comm_o.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
+assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 
 `ifdef EXTERNAL_HPM_EVENT_NUM
 localparam HPM_EXT_NUM_EVENT = `EXTERNAL_HPM_EVENT_NUM;
@@ -189,12 +196,6 @@ assign hpm_events_d[18] = pmu_flags.data_depend;
 assign hpm_events_d[19] = pmu_flags.struct_depend;
 assign hpm_events_d[20] = pmu_flags.grad_list_full;
 assign hpm_events_d[21] = pmu_flags.free_list_empty;
-assign hpm_events_d[22] = pmu_interface_i.itlb_access;
-assign hpm_events_d[23] = pmu_interface_i.itlb_miss;
-assign hpm_events_d[24] = pmu_interface_i.dtlb_access;
-assign hpm_events_d[25] = pmu_interface_i.dtlb_miss;
-assign hpm_events_d[26] = pmu_interface_i.ptw_buffer_hit;
-assign hpm_events_d[27] = pmu_interface_i.ptw_buffer_miss;
 assign hpm_events_d[28] = pmu_interface_i.itlb_stall;
 assign hpm_events_d[29] = pmu_interface_i.dcache_stall;
 assign hpm_events_d[30] = pmu_interface_i.dcache_stall_refill;
@@ -287,7 +288,7 @@ datapath #(
     .vxrm_i(vxrm),
     .en_translation_i( en_translation ), 
     .req_icache_ready_i(req_icache_ready_i),
-    .dtlb_comm_i(dtlb_comm_i),
+    .dtlb_comm_i(dtlb_core_comm),
     .debug_contr_i(debug_contr_i),
     .debug_reg_i(debug_reg_i),
     // Output datapath
@@ -300,7 +301,7 @@ datapath #(
     .csr_fs_i(fcsr_fs),
     .csr_vs_i(vcsr_vs),
     .en_ld_st_translation_i(en_ld_st_translation),
-    .dtlb_comm_o(dtlb_comm_o),
+    .dtlb_comm_o(core_dtlb_comm),
     .debug_contr_o(debug_contr_o),
     .debug_reg_o(debug_reg_o),
     .debug_csr_halt_ack_o(debug_csr_halt_ack),
@@ -380,7 +381,7 @@ csr_bsc #(
     .csr_tval_o(resp_csr_interface_datapath.csr_tval),                 // Value written to the tval registers
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
-    .status_o(csr_ptw_comm_o.mstatus),                   //actual mstatus of the core
+    .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
     .ld_st_priv_lvl_o(ld_st_priv_lvl),
     .en_ld_st_translation_o(en_ld_st_translation),
@@ -390,7 +391,7 @@ csr_bsc #(
 
     .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
-    .flush_o(csr_ptw_comm_o.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .flush_o(csr_ptw_comm.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
     .vpu_csr_o(vpu_csr),
 
     .debug_halt_req_i(debug_contr_i.halt_req),
@@ -407,5 +408,32 @@ csr_bsc #(
     .perf_mhpm_ovf_bits_i(mhpm_ovf_bits)
 );
 
+bsc_mmu bsc_mmu_inst (
+    .clk_i,
+    .rstn_i,
+
+    // iTLB Interface
+    .icache_itlb_comm_i,
+    .itlb_icache_comm_o,
+
+    // dTLB Interface
+    .core_dtlb_comm_i(core_dtlb_comm),
+    .dtlb_core_comm_o(dtlb_core_comm),
+
+    // PTW - Memory Interface
+    .ptw_dmem_comm_o,
+    .dmem_ptw_comm_i,
+
+    // CSR Interface
+    .csr_ptw_comm_i(csr_ptw_comm),
+
+    // PMU Events
+    .itlb_access_o(hpm_events_d[22]),
+    .itlb_miss_o(hpm_events_d[23]),
+    .dtlb_access_o(hpm_events_d[24]),
+    .dtlb_miss_o(hpm_events_d[25]),
+    .pmu_ptw_hit_o(hpm_events_d[26]),
+    .pmu_ptw_miss_o(hpm_events_d[27])
+);
 
 endmodule

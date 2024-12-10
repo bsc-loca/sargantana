@@ -4,3 +4,6 @@
 [submodule "rtl/common_cells"]
 	path = rtl/common_cells
 	url = https://github.com/pulp-platform/common_cells.git
+[submodule "rtl/mmu"]
+	path = rtl/mmu
+	url = ../../core-tile/mmu/mmu_bsc.git

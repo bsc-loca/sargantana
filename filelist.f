@@ -12,6 +12,7 @@
 ./includes/def_pkg.sv
 ./includes/drac_pkg.sv
 ./rtl/register.sv
+
 ./rtl/control_unit/rtl/control_unit.sv
 ./rtl/datapath/rtl/interface_csr/rtl/csr_interface.sv
 ./rtl/datapath/rtl/exe_stage/rtl/load_store_queue.sv
@@ -88,6 +89,10 @@
 ./rtl/datapath/rtl/rr_stage/rtl/vregfile.sv
 ./rtl/datapath/rtl/rr_stage/rtl/regfile_fp.sv
 ./rtl/datapath/rtl/wb_stage/rtl/graduation_list.sv
+
 ./rtl/csr/rtl/csr_bsc.sv
 ./rtl/csr/rtl/hpm_counters.sv
+
+-F rtl/mmu/filelist.f
+
 ./rtl/top_drac.sv
