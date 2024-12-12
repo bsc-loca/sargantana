@@ -365,6 +365,7 @@ assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
+assign dtlb_comm_o.req.vmid = '0;
 assign dtlb_comm_o.req.store = instr_to_translate.is_amo_or_store; // TODO: Check this, might not be exactly right...
 
 assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);

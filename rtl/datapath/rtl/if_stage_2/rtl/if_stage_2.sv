@@ -71,6 +71,8 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
     always_comb begin
         if (fetch_i.ex.valid) begin
             fetch_o.ex.cause = fetch_i.ex.cause;
+            fetch_o.ex.origin2 = fetch_i.ex.origin2;
+            fetch_o.ex.tinst = fetch_i.ex.tinst;
             fetch_o.ex.valid = 1'b1;
         end else if (ex_if_page_fault_int) begin
             fetch_o.ex.cause = INSTR_PAGE_FAULT;
