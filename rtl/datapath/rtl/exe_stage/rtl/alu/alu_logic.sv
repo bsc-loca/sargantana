@@ -20,30 +20,17 @@ module alu_logic
     output bus64_t result_o
 );
 
-bus64_t data_rs2_negated;
-
-always_comb begin
-    case (instr_type_i)
-        XNOR_INST, ORN, ANDN: begin
-            data_rs2_negated = ~data_rs2_i;
-        end
-        default: begin
-            data_rs2_negated = data_rs2_i;
-        end
-    endcase
-end
-
 // Operation
 always_comb begin
     case (instr_type_i)
-        AND_INST, ANDN: begin
-            result_o = data_rs1_i & data_rs2_negated;
+        AND_INST, ANDN, BCLR, BEXT: begin
+            result_o = data_rs1_i & data_rs2_i;
         end
-        OR_INST, ORN: begin
-            result_o = data_rs1_i | data_rs2_negated;
+        OR_INST, ORN, BSET: begin
+            result_o = data_rs1_i | data_rs2_i;
         end
-        XOR_INST, XNOR_INST: begin
-            result_o = data_rs1_i ^ data_rs2_negated;
+        XOR_INST, XNOR_INST, BINV: begin
+            result_o = data_rs1_i ^ data_rs2_i;
         end
         ORCB: begin
             for (int i = 0; i < (XLEN/8); ++i) begin

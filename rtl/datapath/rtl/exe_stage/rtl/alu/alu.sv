@@ -110,6 +110,9 @@ always_comb begin
     endcase
 end
 
+bus64_t logic_rs1_i;
+bus64_t logic_rs2_i;
+
 bus64_t alu_add_result;
 bus64_t alu_shift_result;
 bus64_t alu_cmp_result;
@@ -139,8 +142,8 @@ alu_cmp alu_cmp_inst (
 );
 
 alu_logic alu_logic_inst (
-    .data_rs1_i(data_rs1),
-    .data_rs2_i(data_rs2),
+    .data_rs1_i(logic_rs1_i),
+    .data_rs2_i(logic_rs2_i),
     .instr_type_i(instruction_i.instr.instr_type),
     .result_o(alu_logic_result)
 );
@@ -157,6 +160,39 @@ alu_count_pop alu_count_pop_inst (
 );
 
 
+/* For Zbs extension the output from the shift module needs to be connected to
+ * the input of the logic module
+ */
+
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        BSET, BEXT, BINV: begin
+            logic_rs2_i = alu_shift_result;
+        end
+        BCLR: begin
+            logic_rs2_i = ~alu_shift_result;
+        end
+        XNOR_INST, ORN, ANDN: begin
+            logic_rs2_i = ~data_rs2;
+        end
+        default: begin
+            logic_rs2_i = data_rs2;
+        end
+    endcase
+end
+
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        BEXT: begin
+            logic_rs1_i = 64'b1;
+        end
+        default: begin
+            logic_rs1_i = data_rs1;
+        end
+    endcase
+end
+
+
 bus64_t result_modules;
 always_comb begin
     case (instruction_i.instr.instr_type)
@@ -169,7 +205,7 @@ always_comb begin
         SLT, SLTU, MIN, MINU, MAX, MAXU: begin
             result_modules = alu_cmp_result;
         end
-        AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN, ORCB: begin
+        AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN, ORCB, BSET, BCLR, BEXT, BINV: begin
             result_modules = alu_logic_result;
         end
         CLZ, CLZW, CTZ, CTZW: begin
@@ -188,7 +224,7 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB, CLZ, CTZ, CPOP: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB, CLZ, CTZ, CPOP, BSET, BCLR, BEXT, BINV: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW, CLZW, CTZW, CPOPW: begin

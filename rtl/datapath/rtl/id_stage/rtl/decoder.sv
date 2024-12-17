@@ -463,6 +463,9 @@ module decoder
                             if (decode_i.inst.rtype.func7[31:26] == F7_NORMAL_AUX) begin
                                 decode_instr_int.instr_type = SLL;
                             end
+                            else if (decode_i.inst.rtype.func7[31:26] == F7_BINV[6:1]) begin
+                                decode_instr_int.instr_type = BINV;
+                            end
                             else if (decode_i.inst.rtype.func7 == F7_ROL_ROR_CLZ_CTZ_CPOP_SEXT) begin
                                 case (decode_i.inst.rtype.rs2)
                                     RS2_CLZ: begin
@@ -484,7 +487,14 @@ module decoder
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
                                 endcase
-                            end else begin
+                            end
+                            else if (decode_i.inst.rtype.func7[31:26] == F7_BSET_ORCB[6:1]) begin
+                                decode_instr_int.instr_type = BSET;
+                            end
+                            else if (decode_i.inst.rtype.func7[31:26] == F7_BCLR_BEXT[6:1]) begin
+                                decode_instr_int.instr_type = BCLR;
+                            end
+                            else begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         end
@@ -512,6 +522,9 @@ module decoder
                                     end else begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
+                                end
+                                {F7_BCLR_BEXT[6:1], 1'b0}, {F7_BCLR_BEXT[6:1], 1'b1}: begin
+                                    decode_instr_int.instr_type = BEXT;
                                 end
                                 default: begin
                                     xcpt_illegal_instruction_int = 1'b1;
@@ -627,6 +640,18 @@ module decoder
                         end
                         {F7_CLMUL_MIN_MAX, F3_MAXU}: begin
                             decode_instr_int.instr_type = MAXU;
+                        end
+                        {F7_BSET_ORCB, F3_BSET}: begin
+                            decode_instr_int.instr_type = BSET;
+                        end
+                        {F7_BCLR_BEXT, F3_BCLR}: begin
+                            decode_instr_int.instr_type = BCLR;
+                        end
+                        {F7_BCLR_BEXT, F3_BEXT}: begin
+                            decode_instr_int.instr_type = BEXT;
+                        end
+                        {F7_BINV, F3_BINV}: begin
+                            decode_instr_int.instr_type = BINV;
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

@@ -548,7 +548,7 @@ typedef enum logic [2:0] {
 } op_func3_alu_shadd_t;
 
 typedef enum logic [2:0] {
-    F3_BSET = 3'b000
+    F3_BSET = 3'b001
 } op_func3_alu_bset_t;
 
 typedef enum logic [2:0] {

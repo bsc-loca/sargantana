@@ -42,7 +42,7 @@ logic [5:0] shamt;
 // Shift amount
 always_comb begin
     case (instr_type_i)
-        SLL, SRL, SRA, SLLIUW, ROL, ROR: begin
+        SLL, SRL, SRA, SLLIUW, ROL, ROR, BSET, BCLR, BEXT, BINV: begin
             shamt = data_rs2_i[5:0];
         end
         SLLW, SRLW, SRAW, ROLW, RORW: begin
@@ -109,8 +109,21 @@ always_comb begin
     endcase
 end
 
+bus64_t sll_data;
+
+always_comb begin
+    case (instr_type_i)
+        BSET, BCLR, BINV: begin
+            sll_data = {63'b0, 1'b1};
+        end
+        default: begin
+            sll_data = data_rs1_i;
+        end
+    endcase
+end
+
 // Operation
-assign res_sll = data_rs1_i << shamt_sll;
+assign res_sll = sll_data << shamt_sll;
 assign res_srl = data_rs1_i >> shamt_srl;
 assign res_sra = trunc_65_64($signed(sra_data) >>> shamt_sra);
 
@@ -121,7 +134,7 @@ bus64_t res_right;
 // Output
 always_comb begin
     case (instr_type_i)
-        SLL, SLLW, SLLIUW: begin
+        SLL, SLLW, SLLIUW, BSET, BCLR, BINV: begin
             res_left = 64'b0;
             res_right = 64'b0;
             result_o = res_sll;
@@ -131,7 +144,7 @@ always_comb begin
             res_right = 64'b0;
             result_o = res_srl;
         end
-        SRA, SRAW: begin
+        SRA, SRAW, BEXT: begin
             res_left = 64'b0;
             res_right = 64'b0;
             result_o = res_sra;
