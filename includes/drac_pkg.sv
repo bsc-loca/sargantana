@@ -1000,12 +1000,14 @@ typedef struct packed {
     logic stall_wb   ;         // Stop Write Back
     logic branch_miss;         // Stop Write Back -
     logic is_branch  ;         // Stop Write Back
-    logic branch_taken;         // Stop Write Back
-    logic load_store;           // load or store inst in WB
-    logic data_depend;          // stall due to data dependency
-    logic struct_depend;        // stall due to structural risk
-    logic grad_list_full;       // stall due to graduation list full
-    logic free_list_empty;      // stall due to free list empty
+    logic branch_taken;        // Stop Write Back
+    logic load_store;          // load or store inst in WB
+    logic data_depend;         // stall due to data dependency
+    logic struct_depend;       // stall due to structural risk
+    logic grad_list_full;      // stall due to graduation list full
+    logic free_list_empty;     // stall due to free list empty
+    logic exe_load;            // Load send to dCache
+    logic exe_store;           // Store send to dCache
 } to_PMU_t;  // Control signals to PMU counters
 
 // CSR output
@@ -1334,8 +1336,6 @@ typedef struct packed {
 } csr_ptw_comm_t;
 
 typedef struct packed {
-    logic exe_load;
-    logic exe_store;
     logic icache_req;
     logic icache_kill;
     logic icache_miss_l2_hit;

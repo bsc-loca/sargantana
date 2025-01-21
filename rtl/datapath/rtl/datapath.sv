@@ -1241,7 +1241,9 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
         .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
-        .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
+        .pmu_load_after_store_o   (pmu_flags_o.stall_rr),
+        .pmu_exe_load_o           (pmu_flags_o.exe_load),
+        .pmu_exe_store_o          (pmu_flags_o.exe_store)
     );
     always_comb begin 
         // We assign FP over SIMD by default if valid

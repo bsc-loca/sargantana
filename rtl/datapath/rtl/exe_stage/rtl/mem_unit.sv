@@ -53,7 +53,9 @@ module mem_unit
     output bus_simd_t            store_data_o,
     `endif
 
-    output logic                 pmu_load_after_store_o  // Load blocked by ongoing store
+    output logic                 pmu_load_after_store_o,  // Load blocked by ongoing store
+    output logic                 pmu_exe_load_o,
+    output logic                 pmu_exe_store_o
 );
 
 localparam VLEN_LOG = $clog2(VLEN);
@@ -1119,6 +1121,11 @@ assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
     assign store_data_o = (vector_store_first_req) ? vector_store_data : instruction_s1_q.data_rs2;
     `endif
 `endif
+
+// PMU Signals
+
+assign pmu_exe_load_o  = req_cpu_dcache_o.valid & ~req_cpu_dcache_o.is_amo_or_store;
+assign pmu_exe_store_o = req_cpu_dcache_o.valid & req_cpu_dcache_o.is_store;
 
 endmodule
 

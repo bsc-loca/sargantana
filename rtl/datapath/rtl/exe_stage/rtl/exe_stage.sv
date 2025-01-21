@@ -71,7 +71,9 @@
     output logic                        pmu_stall_mem_o,
     output logic                        pmu_exe_ready_o,
     output logic                        pmu_struct_depend_stall_o,
-    output logic                        pmu_load_after_store_o
+    output logic                        pmu_load_after_store_o,
+    output logic                        pmu_exe_load_o,
+    output logic                        pmu_exe_store_o
 );
 
 function [VMAXELEM_LOG:0] trunc_7_vmaxelem_log(input [6:0] val_in);
@@ -462,7 +464,9 @@ mem_unit #(
     .store_data_o(store_data_o),
     `endif
     
-    .pmu_load_after_store_o (pmu_load_after_store_o)
+    .pmu_load_after_store_o (pmu_load_after_store_o),
+    .pmu_exe_load_o(pmu_exe_load_o),
+    .pmu_exe_store_o(pmu_exe_store_o)
 );
 
 fpu_drac_wrapper fpu_drac_wrapper_inst (
