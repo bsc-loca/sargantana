@@ -31,7 +31,7 @@ import riscv_pkg::*;
 `endif
 parameter PHY_ADDR_SIZE = `CONF_SARGANTANA_PHY_ADDR_SIZE;
 
-parameter VIRT_ADDR_SIZE = 39;
+parameter VIRT_ADDR_SIZE = 41;
 parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_SIZE : PHY_ADDR_SIZE;
 
 parameter PHISIC_MEM_LIMIT = (64'h01 << PHY_ADDR_SIZE) - 64'h01; 
@@ -1320,6 +1320,7 @@ typedef enum logic [SEW_WIDTH - 1 : 0] {
 ///////////////////////////////   
 
 parameter VPN_SIZE = 27;
+parameter VPN_MAX_SIZE = 29;
 parameter PPN_SIZE = 44;
 parameter ASID_SIZE = 7;
 
@@ -1328,7 +1329,7 @@ typedef struct packed {
     logic valid;   
     logic [ASID_SIZE-1:0] asid;
     logic [ASID_SIZE-2-1:0] vmid;
-    logic [VPN_SIZE:0] vpn;
+    logic [VPN_MAX_SIZE:0] vpn;
     logic passthrough;
     logic instruction;
     logic store;
