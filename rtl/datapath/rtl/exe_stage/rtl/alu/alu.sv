@@ -61,7 +61,7 @@ bus64_t data_rs1_extended;
 // Sign/Zero extension
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADDUW, SH1ADDUW, SH2ADDUW, SH3ADDUW, ZEXTW, SLLIUW, SLLW, SRLW, RORW, ROLW, CPOPW: begin
+        ADDUW, SH1ADDUW, SH2ADDUW, SH3ADDUW, ZEXTW, SLLIUW, SLLW, SRLW, CPOPW: begin
             data_rs1_extended[63:32] = 32'b0;
             data_rs1_extended[31:0] = data_rs1[31:0];
         end
@@ -80,6 +80,10 @@ always_comb begin
         SEXTB: begin
             data_rs1_extended[63:8] = {56{data_rs1[7]}};
             data_rs1_extended[7:0] = data_rs1[7:0];
+        end
+        RORW, ROLW: begin
+            data_rs1_extended[63:32] = data_rs1[31:0];
+            data_rs1_extended[31:0] = data_rs1[31:0];
         end
         default: begin
             data_rs1_extended = data_rs1;

@@ -21,144 +21,63 @@ module alu_shift
     output bus64_t result_o
 );
 
-function [63:0] trunc_127_64(input [126:0] val_in);
-  trunc_127_64 = val_in[63:0];
-endfunction
-
-function [63:0] trunc_65_64(input [64:0] val_in);
-  trunc_65_64 = val_in[63:0];
-endfunction
-
-function [5:0] trunc_7_6(input [6:0] val_in);
-  trunc_7_6 = val_in[5:0];
-endfunction
-
-bus64_t res_sll;
-bus64_t res_srl;
-bus64_t res_sra;
-
-logic [5:0] shamt;
-
-// Shift amount
-always_comb begin
-    case (instr_type_i)
-        SLL, SRL, SRA, SLLIUW, ROL, ROR, BSET, BCLR, BEXT, BINV: begin
-            shamt = data_rs2_i[5:0];
-        end
-        SLLW, SRLW, SRAW, ROLW, RORW: begin
-            shamt = {1'b0, data_rs2_i[4:0]};
-        end
-        default: begin
-            shamt = 6'b0;
-        end
-    endcase
-end
-
-logic [5:0] rotation_shift;
-logic [6:0] rotation_shift_comp;
+logic[126:0] base_shifting;
 
 always_comb begin
     case (instr_type_i)
-            ROLW, RORW: begin
-                rotation_shift = shamt;
-                rotation_shift_comp = 32 - shamt;
-            end
-            default: begin // ROL, ROR
-                rotation_shift = shamt;
-                rotation_shift_comp = 64 - shamt;
-            end
-    endcase
-end
-
-logic [5:0] shamt_sll;
-logic [5:0] shamt_srl;
-logic [6:0] shamt_sra;
-
-// Select shamt or rotation value
-always_comb begin
-    case (instr_type_i)
+        SRL, SRLW: begin
+            base_shifting[126:64] = '0;
+            base_shifting[63] = data_rs1_i[63];
+            base_shifting[62:0] = data_rs1_i[62:0];
+        end
+        SRA, BEXT, SRAW: begin
+            base_shifting[126:64] = {64{data_rs1_i[63]}};
+            base_shifting[63] = data_rs1_i[63];
+            base_shifting[62:0] = data_rs1_i[62:0];
+        end
         ROR, RORW: begin
-            shamt_srl = rotation_shift;
-            shamt_sll = trunc_7_6(rotation_shift_comp);
+            base_shifting[126:64] = data_rs1_i[62:0];
+            base_shifting[63] = data_rs1_i[63];
+            base_shifting[62:0] = data_rs1_i[62:0];
+        end
+        SLL, SLLW, SLLIUW: begin
+            base_shifting[126:64] = data_rs1_i[63:1];
+            base_shifting[63] = data_rs1_i[0];
+            base_shifting[62:0] = '0;
+        end
+        BSET, BINV, BCLR: begin
+            base_shifting[126:64] = '0;
+            base_shifting[63] = 1'b1;
+            base_shifting[62:0] = '0;
         end
         ROL, ROLW: begin
-            shamt_sll = rotation_shift;
-            shamt_srl = trunc_7_6(rotation_shift_comp);
+            base_shifting[126:64] = data_rs1_i[63:1];
+            base_shifting[63] = data_rs1_i[0];
+            base_shifting[62:0] = data_rs1_i[63:1];
         end
-        default: begin //SLL, SRL, SRA, SLLIUW, SLLW, SRLW, SRAW
-            shamt_sll = shamt;
-            shamt_srl = shamt;
+        default: begin
+            base_shifting = '0;
         end
     endcase
-    shamt_sra = shamt_srl;
 end
-
-logic[64:0] sra_data; // needed for masking rotations
+logic[6:0] amount_shifting;
 
 always_comb begin
     case (instr_type_i)
-        ROL, ROR: begin
-            sra_data = {1'b1, 64'b0};
+        SLL, SLLIUW, ROL, BSET, BCLR, BINV: begin
+            amount_shifting = {1'b0, ~data_rs2_i[5:0]};
         end
-        ROLW, RORW: begin
-            sra_data = {33'h1FFFFFFFF, 32'b0};
+        SRLW, SRAW, RORW: begin
+            amount_shifting = {2'b0, data_rs2_i[4:0]};
+        end
+        SLLW, ROLW: begin
+            amount_shifting = {2'b01, ~data_rs2_i[4:0]};
         end
         default: begin
-            sra_data = {data_rs1_i[63], data_rs1_i};
+            amount_shifting = {1'b0, data_rs2_i[5:0]};
         end
     endcase
 end
 
-bus64_t sll_data;
-
-always_comb begin
-    case (instr_type_i)
-        BSET, BCLR, BINV: begin
-            sll_data = {63'b0, 1'b1};
-        end
-        default: begin
-            sll_data = data_rs1_i;
-        end
-    endcase
-end
-
-// Operation
-assign res_sll = sll_data << shamt_sll;
-assign res_srl = data_rs1_i >> shamt_srl;
-assign res_sra = trunc_65_64($signed(sra_data) >>> shamt_sra);
-
-
-bus64_t res_left;
-bus64_t res_right;
-
-// Output
-always_comb begin
-    case (instr_type_i)
-        SLL, SLLW, SLLIUW, BSET, BCLR, BINV: begin
-            res_left = 64'b0;
-            res_right = 64'b0;
-            result_o = res_sll;
-        end
-        SRL, SRLW: begin
-            res_left = 64'b0;
-            res_right = 64'b0;
-            result_o = res_srl;
-        end
-        SRA, SRAW, BEXT: begin
-            res_left = 64'b0;
-            res_right = 64'b0;
-            result_o = res_sra;
-        end
-        ROR, ROL, RORW, ROLW: begin
-            res_left = res_sll & res_sra;
-            res_right = res_srl & (~res_sra);
-            result_o = (res_sll & res_sra) | (res_srl & ~res_sra);
-        end
-        default: begin
-            res_left = 64'b10;
-            res_right = 64'b11;
-            result_o = 64'b01;
-        end
-    endcase
-end
+assign result_o = base_shifting >> amount_shifting;
 endmodule
