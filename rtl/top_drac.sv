@@ -62,8 +62,8 @@ module top_drac
 //----------------------------------------------------------------------------------
 
     // iTLB Interface
-    input  cache_tlb_comm_t icache_itlb_comm_i,
-    output tlb_cache_comm_t itlb_icache_comm_o,
+    input  mmu_pkg::cache_tlb_comm_t icache_itlb_comm_i,
+    output mmu_pkg::tlb_cache_comm_t itlb_icache_comm_o,
     
     // PTW - Memory Interface
     output mmu_pkg::ptw_dmem_comm_t ptw_dmem_comm_o,
@@ -123,8 +123,8 @@ logic en_ld_st_translation;
 logic en_translation;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
-cache_tlb_comm_t core_dtlb_comm;
-tlb_cache_comm_t dtlb_core_comm;
+mmu_pkg::cache_tlb_comm_t core_dtlb_comm;
+mmu_pkg::tlb_cache_comm_t dtlb_core_comm;
 
 assign en_translation_o = en_translation;
 assign priv_lvl_o = csr_priv_lvl;

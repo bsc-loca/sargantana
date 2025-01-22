@@ -13,7 +13,7 @@
  */
 
 module load_store_queue
-    import drac_pkg::*, riscv_pkg::*;
+    import drac_pkg::*, riscv_pkg::*, mmu_pkg::*;
 #(
     parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
 )(

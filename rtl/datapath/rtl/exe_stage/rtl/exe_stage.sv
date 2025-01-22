@@ -14,6 +14,7 @@
  module exe_stage 
     import drac_pkg::*;
     import riscv_pkg::*;
+    import mmu_pkg::*;
 #(
     parameter drac_pkg::drac_cfg_t DracCfg     = drac_pkg::DracDefaultConfig
 )(

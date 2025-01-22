@@ -1305,12 +1305,6 @@ typedef struct packed {
 } cache_tlb_req_t;
 
 typedef struct packed {
-    cache_tlb_req_t req;
-    logic [1:0] priv_lvl;   
-    logic vm_enable; 
-} cache_tlb_comm_t;
-
-typedef struct packed {
     logic load;
     logic store;
     logic fetch;
@@ -1323,11 +1317,6 @@ typedef struct packed {
     tlb_ex_t xcpt;
     logic [7:0] hit_idx;
 } tlb_cache_resp_t;
-
-typedef struct packed {
-    logic tlb_ready;  
-    tlb_cache_resp_t resp;
-} tlb_cache_comm_t;
 
 typedef struct packed {
     logic [63:0] satp;
