@@ -79,6 +79,7 @@ package def_pkg;
     localparam bit XF8VEC     = XF8     & XFVEC & (FLEN>8);  // FP8 vectors available if vectors and larger fmt enabled
 
     localparam logic [63:0] ISA_CODE = (RVA <<  0)  // A - Atomic Instructions extension
+                                     | (1   <<  1)  // B - Bit Manipulation extension
                                      | (0   <<  2)  // C - Compressed extension
                                      | (RVD <<  3)  // D - Double precsision floating-point extension
                                      | (RVF <<  5)  // F - Single precsision floating-point extension
