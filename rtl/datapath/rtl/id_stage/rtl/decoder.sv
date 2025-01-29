@@ -43,8 +43,6 @@ module decoder
 
 	//Auxilar signals
 	localparam [5:0] F7_NORMAL_AUX = F7_NORMAL >> 1;
-    localparam [5:0] F7_SRAI_SUB_SRA_AUX = F7_SRAI_SUB_SRA_NLOG >> 1;
-
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
     logic xcpt_addr_misaligned_int;

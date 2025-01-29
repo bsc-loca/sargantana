@@ -21,6 +21,10 @@ module alu_shift
     output bus64_t result_o
 );
 
+function [63:0] trunc_127_64(input [126:0] val_in);
+  trunc_127_64 = val_in[63:0];
+endfunction
+
 logic[126:0] base_shifting;
 
 always_comb begin
@@ -31,7 +35,7 @@ always_comb begin
             base_shifting[62:0] = data_rs1_i[62:0];
         end
         SRA, BEXT, SRAW: begin
-            base_shifting[126:64] = {64{data_rs1_i[63]}};
+            base_shifting[126:64] = {63{data_rs1_i[63]}};
             base_shifting[63] = data_rs1_i[63];
             base_shifting[62:0] = data_rs1_i[62:0];
         end
@@ -79,5 +83,5 @@ always_comb begin
     endcase
 end
 
-assign result_o = base_shifting >> amount_shifting;
+assign result_o = trunc_127_64(base_shifting >> amount_shifting);
 endmodule
