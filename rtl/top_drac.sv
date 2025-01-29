@@ -441,7 +441,10 @@ csr_bsc #(
 
     .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
-    .flush_o(csr_ptw_comm.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .flush_o(csr_ptw_comm.flush),                    // a tlb flush is needed
+    .flush_satp_o(csr_ptw_comm.flush_satp),          // invalidate tlb entries controlled by the current satp
+    .flush_vsatp_o(csr_ptw_comm.flush_vsatp),        // invalidate tlb entries controlled by the current vsatp
+    .flush_hgatp_o(csr_ptw_comm.flush_hgatp),        // invalidate tlb entries controlled by the current hgatp
     .vpu_csr_o(vpu_csr),
 
     .debug_halt_req_i(debug_contr_i.halt_req),

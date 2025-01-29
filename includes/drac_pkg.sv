@@ -1355,6 +1355,9 @@ typedef struct packed {
     logic [63:0] vsatp;
     logic [63:0] hgatp;
     logic flush;
+    logic flush_satp;
+    logic flush_vsatp;
+    logic flush_hgatp;
     logic [63:0] mstatus;
     logic [63:0] vsstatus;
 } csr_ptw_comm_t;
