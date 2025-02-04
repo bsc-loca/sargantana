@@ -120,22 +120,25 @@ assign data_vd_o[7:0]   = (is_vmadc)  ? (sew_i == SEW_64) ? {{7{1'b1}}, result[7
                                                     {result[7][8], result[6][8], result[5][8], result[4][8], result[3][8], result[2][8],
                                                      result[1][8], result[0][8]} //sew_8
                         : (is_vmsbc) ? 
-                                                    (sew_i == SEW_64) ? {{7{1'b1}}, ((data_vs1 +  {{63{1'b0}}, (data_vm[0] & use_mask)}) > data_vs2)} :
-                                                    (sew_i == SEW_32) ? {{6{1'b1}}, ((data_vs1[63:32] + {{63{1'b0}}, (data_vm[1] & use_mask)}) > data_vs2[63:32]),
-                                                                                    ((data_vs1[31:0]  + {{63{1'b0}}, (data_vm[0] & use_mask)}) > data_vs2[31:0])} :
-                                                    (sew_i == SEW_16) ? {{4{1'b1}}, ((data_vs1[63:48] + {{63{1'b0}}, (data_vm[3] & use_mask)}) > data_vs2[63:48]),
-                                                                                    ((data_vs1[47:32] + {{63{1'b0}}, (data_vm[2] & use_mask)}) > data_vs2[47:32]),
-                                                                                    ((data_vs1[31:16] + {{63{1'b0}}, (data_vm[1] & use_mask )}) > data_vs2[31:16]),
-                                                                                    ((data_vs1[15:0]  + {{63{1'b0}}, (data_vm[0] & use_mask )}) > data_vs2[15:0])} :
-                                                    {((data_vs1[63:56] + {{63{1'b0}}, (data_vm[7] & use_mask)}) > data_vs2[63:56]),
-                                                     ((data_vs1[55:48] + {{63{1'b0}}, (data_vm[6] & use_mask)}) > data_vs2[55:48]),
-                                                     ((data_vs1[47:40] + {{63{1'b0}}, (data_vm[5] & use_mask)}) > data_vs2[47:40]),
-                                                     ((data_vs1[39:32] + {{63{1'b0}}, (data_vm[4] & use_mask)}) > data_vs2[39:32]),
-                                                     ((data_vs1[31:24] + {{63{1'b0}}, (data_vm[3] & use_mask)}) > data_vs2[31:24]),
-                                                     ((data_vs1[23:16] + {{63{1'b0}}, (data_vm[2] & use_mask)}) > data_vs2[23:16]),
-                                                     ((data_vs1[15:8] + {{63{1'b0}}, (data_vm[1] & use_mask)}) > data_vs2[15:8]),
-                                                     ((data_vs1[7:0] + {{63{1'b0}}, (data_vm[0] & use_mask )}) > data_vs2[7:0])} //sew_8
-                     : result[0][7:0];
+                                                    (sew_i == SEW_64) ? {{7{1'b1}}, (({1'b0, data_vs1} +        {{64{1'b0}}, (data_vm[0] & use_mask)}) > {1'b0, data_vs2})} :
+
+                                                    (sew_i == SEW_32) ? {{6{1'b1}}, (({1'b0, data_vs1[63:32]} + {{32{1'b0}}, (data_vm[1] & use_mask)}) > {1'b0, data_vs2[63:32]}),
+                                                                                    (({1'b0, data_vs1[31:0 ]} + {{32{1'b0}}, (data_vm[0] & use_mask)}) > {1'b0, data_vs2[31:0 ]})} :
+
+                                                    (sew_i == SEW_16) ? {{4{1'b1}}, (({1'b0, data_vs1[63:48]} + {{16{1'b0}}, (data_vm[3] & use_mask)}) > {1'b0, data_vs2[63:48]}),
+                                                                                    (({1'b0, data_vs1[47:32]} + {{16{1'b0}}, (data_vm[2] & use_mask)}) > {1'b0, data_vs2[47:32]}),
+                                                                                    (({1'b0, data_vs1[31:16]} + {{16{1'b0}}, (data_vm[1] & use_mask)}) > {1'b0, data_vs2[31:16]}),
+                                                                                    (({1'b0, data_vs1[15:0 ]} + {{16{1'b0}}, (data_vm[0] & use_mask)}) > {1'b0, data_vs2[15:0 ]})} :
+
+                                                  /*(sew_i == SEW_8 )*/ {           (({1'b0, data_vs1[63:56]} + {{ 8{1'b0}}, (data_vm[7] & use_mask)}) > {1'b0, data_vs2[63:56]}),
+                                                                                    (({1'b0, data_vs1[55:48]} + {{ 8{1'b0}}, (data_vm[6] & use_mask)}) > {1'b0, data_vs2[55:48]}),
+                                                                                    (({1'b0, data_vs1[47:40]} + {{ 8{1'b0}}, (data_vm[5] & use_mask)}) > {1'b0, data_vs2[47:40]}),
+                                                                                    (({1'b0, data_vs1[39:32]} + {{ 8{1'b0}}, (data_vm[4] & use_mask)}) > {1'b0, data_vs2[39:32]}),
+                                                                                    (({1'b0, data_vs1[31:24]} + {{ 8{1'b0}}, (data_vm[3] & use_mask)}) > {1'b0, data_vs2[31:24]}),
+                                                                                    (({1'b0, data_vs1[23:16]} + {{ 8{1'b0}}, (data_vm[2] & use_mask)}) > {1'b0, data_vs2[23:16]}),
+                                                                                    (({1'b0, data_vs1[15:8 ]} + {{ 8{1'b0}}, (data_vm[1] & use_mask)}) > {1'b0, data_vs2[15:8 ]}),
+                                                                                    (({1'b0, data_vs1[7 :0 ]} + {{ 8{1'b0}}, (data_vm[0] & use_mask)}) > {1'b0, data_vs2[7 :0 ]})} :
+                                                                        result[0][7:0];
 assign data_vd_o[15:8]  = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[1][7:0];
 assign data_vd_o[23:16] = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[2][7:0];
 assign data_vd_o[31:24] = (is_vmadc || is_vmsbc) ? {8{1'b1}} : result[3][7:0];
