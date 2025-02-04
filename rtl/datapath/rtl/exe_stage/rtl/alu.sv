@@ -102,8 +102,8 @@ always_comb begin
         AND_INST: begin
             instruction_o.result = data_rs1 & data_rs2;
         end
-        VSETIVLI: begin
-            instruction_o.result = {32'b0, instruction_i.instr.imm[63:32]};
+        VSETVL, VSETVLI, VSETIVLI: begin
+            instruction_o.result = {{(64-VMAXELEM_LOG-1){1'b0}}, instruction_i.instr.vl};
         end
         default: begin
             if (instruction_i.instr.unit == UNIT_SYSTEM)
