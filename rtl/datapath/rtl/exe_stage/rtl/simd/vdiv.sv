@@ -309,7 +309,7 @@ div_2bits div_2bits_simd (
         .remanent_o             (remnant_out),
         .dividend_quotient_o    (dividend_quotient_out),
         .divisor_o              (divisor_out),
-        .sew_i                  (sew_i)
+        .sew_i                  (sew_q)
     );
 
 
