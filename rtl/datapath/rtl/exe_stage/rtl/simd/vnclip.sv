@@ -50,8 +50,8 @@ function [31:0] trunc_33_to_32_bits(input [32:0] val_in);
     trunc_33_to_32_bits = val_in[31:0];
 endfunction
 
-function [15:0] trunc_34_to_16_bits(input [33:0] val_in);
-    trunc_34_to_16_bits = val_in[15:0];
+function [15:0] trunc_32_to_16_bits(input [31:0] val_in);
+    trunc_32_to_16_bits = val_in[15:0];
 endfunction
 
 function [63:0] trunc_65_to_64_bits(input [64:0] val_in);
@@ -62,8 +62,8 @@ function [31:0] trunc_65_to_32_bits(input [64:0] val_in);
     trunc_65_to_32_bits = val_in[31:0];
 endfunction
 
-function [31:0] trunc_66_to_32_bits(input [65:0] val_in);
-    trunc_66_to_32_bits = val_in[31:0];
+function [31:0] trunc_64_to_32_bits(input [63:0] val_in);
+    trunc_64_to_32_bits = val_in[31:0];
 endfunction
 
 function [63:0] trunc_129_to_64_bits(input [128:0] val_in);
@@ -148,8 +148,8 @@ always_comb begin
                     RNE_V: begin
                         if(data_vs1_i[i*16 +: 5] > 0) begin
                             not_negative[i] = (data_vs1_i[i*16 +: 5] - 2) >= 0;
-                            vs2_shifted_result[66*i +: 66] = data_vs2_i[i*16 +: 16] << (16 - (data_vs1_i[i*16 +: 5] - 2));
-                            vs2_truncated_value[i*32 +: 32] = trunc_66_to_32_bits(vs2_shifted_result[66*i +: 66]);
+                            vs2_shifted_result[64*i +: 64] = data_vs2_i[i*32 +: 32] << (32 - (data_vs1_i[i*16 +: 5] - 2));
+                            vs2_truncated_value[i*32 +: 32] = trunc_64_to_32_bits(vs2_shifted_result[64*i +: 64]);
                             to_add[i] = data_vs2_i[i*32 + (data_vs1_i[i*16 +: 5] - 1)] & 
                                         (((vs2_truncated_value[i*32 +: 32] != '0) & not_negative[i])
                                         | (data_vs2_i[(i*32) + data_vs1_i[i*16 +: 5]]));//v[d-1] & (v[d-2:0]≠0 | v[d])
@@ -162,8 +162,8 @@ always_comb begin
                     end
                     ROD_V: begin
                         not_negative[i] = (data_vs1_i[i*16 +: 5] - 1) >= 0;
-                        vs2_shifted_result[65*i +: 65] = data_vs2_i[i*32 +: 32] << (32 - (data_vs1_i[i*16 +: 5] - 1));
-                        vs2_truncated_value[i*32 +: 32] = trunc_65_to_32_bits(vs2_shifted_result[65*i +: 65]);
+                        vs2_shifted_result[64*i +: 64] = data_vs2_i[i*32 +: 32] << (32 - (data_vs1_i[i*16 +: 5] - 1));
+                        vs2_truncated_value[i*32 +: 32] = trunc_64_to_32_bits(vs2_shifted_result[64*i +: 64]);
                         to_add[i] = ((!data_vs2_i[i*32 + data_vs1_i[i*16 +: 5]]) & 
                                     ((vs2_truncated_value[i*32 +: 32] != '0) & not_negative[i])); //!v[d] & v[d-1:0]≠0                      
                     end
@@ -196,8 +196,8 @@ always_comb begin
                     RNE_V: begin
                         if(data_vs1_i[i*8 +: 4] > 0) begin
                             not_negative[i] = (data_vs1_i[i*8 +: 4]-2) >= 0;
-                            vs2_shifted_result[i*34 +: 34] = data_vs2_i[i*16 +: 16] << (16 - (data_vs1_i[i*8 +: 4] - 2));
-                            vs2_truncated_value[i*16 +: 16] = trunc_34_to_16_bits(vs2_shifted_result[i*34 +: 34]);
+                            vs2_shifted_result[i*32 +: 32] = data_vs2_i[i*16 +: 16] << (16 - (data_vs1_i[i*8 +: 4] - 2));
+                            vs2_truncated_value[i*16 +: 16] = trunc_32_to_16_bits(vs2_shifted_result[i*32 +: 32]);
                             to_add[i] = data_vs2_i[i*16 + (data_vs1_i[i*8 +: 4] - 1)] & 
                                         (((vs2_truncated_value[i*16 +: 16] != '0) & not_negative[i])
                                         | (data_vs2_i[i*16 + data_vs1_i[i*8 +: 4]]));//v[d-1] & (v[d-2:0]≠0 | v[d])
@@ -210,8 +210,8 @@ always_comb begin
                     end
                     ROD_V: begin
                         not_negative[i] = (data_vs1_i[i*8 +: 4] - 1) >= 0;
-                        vs2_shifted_result[i*33 +: 33] = data_vs2_i[i*16 +: 16] << (16 - (data_vs1_i[i*8 +: 4] - 1));
-                        vs2_truncated_value[i*16 +: 16] = trunc_33_to_16_bits(vs2_shifted_result[i*33 +: 33]);
+                        vs2_shifted_result[i*32 +: 32] = data_vs2_i[i*16 +: 16] << (16 - (data_vs1_i[i*8 +: 4] - 1));
+                        vs2_truncated_value[i*16 +: 16] = trunc_32_to_16_bits(vs2_shifted_result[i*32 +: 32]);
                         to_add[i] = ((!data_vs2_i[i*16 + data_vs1_i[i*8 +: 4]]) & 
                                     ((vs2_truncated_value[i*16 +: 16] != '0) & not_negative[i])); //!v[d] & v[d-1:0]≠0                      
                     end
