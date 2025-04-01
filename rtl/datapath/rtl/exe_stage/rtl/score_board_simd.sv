@@ -60,6 +60,7 @@ logic is_vdiv;
 
 logic stall_simd;
 
+logic [7:0] vl_int;
 
 // here we save the content of the previous Div/Rem and in case a Rem is happening after a Div with the same operands
 // we can set the result in the next clock since it has been already computed.
@@ -126,6 +127,8 @@ assign is_vred = ((instr_entry_i.instr.instr_type == VREDSUM) ||
                 (instr_entry_i.instr.instr_type == VWREDSUM)  ||
                 (instr_entry_i.instr.instr_type == VWREDSUMU)) ? 1'b1 : 1'b0;
 
+assign vl_int = {{(7-VMAXELEM_LOG){1'b0}}, vl_i};
+
 // This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
 // this happens when the opearands and type matched the previous DIV/REM and the result
 // is ready
@@ -158,7 +161,16 @@ always_comb begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd4 : 6'd3;
     end 
     else if (is_vred) begin
-        simd_exe_stages = trunc_33_to_4bits($clog2(vl_i) + 2);
+        case (vl_int) inside
+            ['d0:'d1]:   simd_exe_stages = 6'd2;
+            ['d2:'d2]:   simd_exe_stages = 6'd3;
+            ['d3:'d4]:   simd_exe_stages = 6'd4;
+            ['d5:'d8]:   simd_exe_stages = 6'd5;
+            ['d9:'d16]:  simd_exe_stages = 6'd6;
+            ['d17:'d32]: simd_exe_stages = 6'd7;
+            ['d33:'d64]: simd_exe_stages = 6'd8;
+            default:     simd_exe_stages = 6'd1;
+        endcase
     end else if(is_vdiv) begin
 
         // Deciding on how many cycles to do the DIV/REM

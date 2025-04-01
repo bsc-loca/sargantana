@@ -157,7 +157,7 @@ always_comb begin
                     end
                     SEW_16: begin
                         //if (((j*16) < (VLEN >> i)) || ((i==1) && (is_vw(gen_intermediate_q[i-1].instr_type)) && ((j*8) < (VLEN >> i)))) begin
-                        if (j < (gen_intermediate_q[i-1].vl >> i)) begin
+                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*16) < (VLEN >> i))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
@@ -214,7 +214,7 @@ always_comb begin
                         end
                     end
                     SEW_32: begin
-                        if (j < (gen_intermediate_q[i-1].vl >> i)) begin
+                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*32) < (VLEN >> i))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
@@ -271,7 +271,7 @@ always_comb begin
                         end
                     end
                     SEW_64: begin
-                        if (j < (gen_intermediate_q[i-1].vl >> i)) begin
+                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*64) < (VLEN >> i))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
@@ -339,9 +339,23 @@ end
 
 sew_t sew_to_out;
 logic [NUM_STAGES_LOG-1:0] stage_to_out;
+logic [7:0] vl_to_out_int;
+assign vl_to_out_int = {{(7-VMAXELEM_LOG){1'b0}}, vl_to_out_i};
 
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
-assign stage_to_out = trunc_stage_to_out($clog2(vl_to_out_i));
+
+always_comb begin
+    case (vl_to_out_int) inside
+        ['d0:'d1]:   stage_to_out = 6'd0;
+        ['d2:'d2]:   stage_to_out = 6'd1;
+        ['d3:'d4]:   stage_to_out = 6'd2;
+        ['d5:'d8]:   stage_to_out = 6'd3;
+        ['d9:'d16]:  stage_to_out = 6'd4;
+        ['d17:'d32]: stage_to_out = 6'd5;
+        ['d33:'d64]: stage_to_out = 6'd6;
+        default:     stage_to_out = 6'd0;
+    endcase
+end
 
 always_comb begin
     red_data_vd_o = '0;

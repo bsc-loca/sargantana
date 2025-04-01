@@ -249,6 +249,8 @@ logic division_pipe_q [DIV_STAGES - 2:0];
 rr_exe_simd_instr_t division_instruction_d;
 rr_exe_simd_instr_t division_instruction_q;
 
+logic [7:0] vl_int;
+assign vl_int = {{(7-VMAXELEM_LOG){1'b0}}, instruction_i.instr.vl};
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -272,7 +274,16 @@ always_comb begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
-        simd_exe_stages = trunc_33_to_4bits($clog2(instruction_i.instr.vl) + 2);
+        case (vl_int) inside
+            ['d0:'d1]:   simd_exe_stages = 6'd2;
+            ['d2:'d2]:   simd_exe_stages = 6'd3;
+            ['d3:'d4]:   simd_exe_stages = 6'd4;
+            ['d5:'d8]:   simd_exe_stages = 6'd5;
+            ['d9:'d16]:  simd_exe_stages = 6'd6;
+            ['d17:'d32]: simd_exe_stages = 6'd7;
+            ['d33:'d64]: simd_exe_stages = 6'd8;
+            default:     simd_exe_stages = 6'd1;
+        endcase
     end else if (is_vdiv(instruction_i)) begin
         
         // Deciding on how many cycles to do the DIV/REM
@@ -353,6 +364,9 @@ end
 always_comb begin
     for (int i = 2; i <= MAX_STAGES; i++) begin
         for (int j = 0; j < MAX_STAGES; j++) begin
+            simd_pipe_d[i][j].valid = 1'b0;
+            simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
+            simd_pipe_d[i][j].vl = '0; 
             if (flush_i) begin
                 simd_pipe_d[i][j].valid = 1'b0;
                 simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
@@ -738,7 +752,7 @@ vredtree vredtree_inst(
     .instr_type_i  (instruction_i.instr.instr_type),
     .sew_i         (instruction_i.instr.sew),
     .vl_i          (instruction_i.instr.vl),
-    .data_vs1_i    (instruction_i.data_vs1[63:0]),
+    .data_vs1_i    (instruction_i.data_vs1),
     .data_vs2_i    (instruction_i.data_vs2),
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
