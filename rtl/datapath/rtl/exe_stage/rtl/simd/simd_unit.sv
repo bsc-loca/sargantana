@@ -435,7 +435,7 @@ always_comb begin
     // a finalized instruction
     if((!valid_found) && (division_pipe_q[DIV_STAGES - 2])) begin
         // instr_score_board = division_pipe_q[DIV_STAGES - 2].simd_instr;
-        instr_score_board = division_instruction_q;
+        instr_score_board.simd_instr = division_instruction_q;
         valid_found = 1'b1;
     end
 end
