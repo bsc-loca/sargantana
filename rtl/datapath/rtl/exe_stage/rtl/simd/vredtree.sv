@@ -71,7 +71,6 @@ typedef struct packed {
     bus_mask_t mask;
     instr_type_t instr_type;
     bus_simd_t data_vs1;
-    logic [VMAXELEM_LOG:0] vl;
     logic [VLEN-1:0] intermediate;
 } node_t;
 
@@ -110,14 +109,13 @@ always_comb begin
             gen_intermediate_d[0].instr_type = instr_type_i;
             gen_intermediate_d[0].intermediate = data_vs2_i;
             gen_intermediate_d[0].data_vs1 = data_vs1_i;
-            gen_intermediate_d[0].vl = vl_i;
         end else begin
             gen_intermediate_d[i].mask = '0;
             gen_intermediate_d[i].intermediate = '0;
             for (int j = 0; j < (VLEN/16); j++) begin
                 case (gen_intermediate_q[i-1].sew) 
                     SEW_8: begin
-                        if (j < (gen_intermediate_q[i-1].vl >> i)) begin
+                        if ((j*8) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*8) +: 8] = '0;
@@ -157,7 +155,7 @@ always_comb begin
                     end
                     SEW_16: begin
                         //if (((j*16) < (VLEN >> i)) || ((i==1) && (is_vw(gen_intermediate_q[i-1].instr_type)) && ((j*8) < (VLEN >> i)))) begin
-                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*16) < (VLEN >> i))) begin
+                        if ((j*16) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
@@ -211,7 +209,7 @@ always_comb begin
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
-                        end else if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*8) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
+                        end else if (((j*8) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
@@ -272,7 +270,7 @@ always_comb begin
                         end
                     end
                     SEW_32: begin
-                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*32) < (VLEN >> i))) begin
+                        if ((j*32) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
@@ -326,7 +324,7 @@ always_comb begin
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
-                        end else if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*16) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
+                        end else if (((j*16) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
@@ -387,7 +385,7 @@ always_comb begin
                         end
                     end
                     SEW_64: begin
-                        if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*64) < (VLEN >> i))) begin
+                        if ((j*64) < (VLEN >> i)) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
@@ -441,7 +439,7 @@ always_comb begin
                                     default: gen_intermediate_d[i].intermediate = '0;
                                 endcase
                             end
-                        end else if ((j < (gen_intermediate_q[i-1].vl >> i)) && ((j*32) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
+                        end else if (((j*32) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
                             if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
                                 gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
@@ -506,28 +504,34 @@ always_comb begin
             gen_intermediate_d[i].sew = gen_intermediate_q[i-1].sew;
             gen_intermediate_d[i].instr_type = gen_intermediate_q[i-1].instr_type;
             gen_intermediate_d[i].data_vs1 = gen_intermediate_q[i-1].data_vs1;
-            gen_intermediate_d[i].vl = gen_intermediate_q[i-1].vl;
         end
     end
 end
 
 sew_t sew_to_out;
 logic [NUM_STAGES_LOG-1:0] stage_to_out;
-logic [7:0] vl_to_out_int;
-assign vl_to_out_int = {{(7-VMAXELEM_LOG){1'b0}}, vl_to_out_i};
 
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
 
 always_comb begin
-    case (vl_to_out_int) inside
-        ['d0:'d1]:   stage_to_out = 6'd0;
-        ['d2:'d2]:   stage_to_out = 6'd1;
-        ['d3:'d4]:   stage_to_out = 6'd2;
-        ['d5:'d8]:   stage_to_out = 6'd3;
-        ['d9:'d16]:  stage_to_out = 6'd4;
-        ['d17:'d32]: stage_to_out = 6'd5;
-        ['d33:'d64]: stage_to_out = 6'd6;
-        default:     stage_to_out = 6'd0;
+    case (sew_to_out)
+        SEW_8:    stage_to_out = 'd4;
+        SEW_16:   if (is_vw(instr_to_out_i)) begin
+                     stage_to_out = 'd4;
+                  end else begin
+                     stage_to_out = 'd3;
+                  end
+        SEW_32:   if (is_vw(instr_to_out_i)) begin
+                     stage_to_out = 'd3;
+                  end else begin
+                     stage_to_out = 'd2;
+                  end
+        SEW_64:   if (is_vw(instr_to_out_i)) begin
+                     stage_to_out = 'd2;
+                  end else begin
+                     stage_to_out = 'd1;
+                  end
+        default:  stage_to_out = 'd0;
     endcase
 end
 

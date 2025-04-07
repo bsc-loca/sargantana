@@ -227,7 +227,6 @@ endfunction
 typedef struct packed {
     logic valid;
     rr_exe_simd_instr_t simd_instr;
-    logic [VMAXELEM_LOG:0] vl;
 } instr_pipe_t;
 instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
 instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
@@ -248,9 +247,6 @@ logic division_pipe_q [DIV_STAGES - 2:0];
 // a global instruction is stored, since there can't be more than 1 in-flight div/rems 
 rr_exe_simd_instr_t division_instruction_d;
 rr_exe_simd_instr_t division_instruction_q;
-
-logic [7:0] vl_int;
-assign vl_int = {{(7-VMAXELEM_LOG){1'b0}}, instruction_i.instr.vl};
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -274,15 +270,12 @@ always_comb begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd4 : 6'd3;
     end
     else if (is_vred(instruction_i)) begin
-        case (vl_int) inside
-            ['d0:'d1]:   simd_exe_stages = 6'd2;
-            ['d2:'d2]:   simd_exe_stages = 6'd3;
-            ['d3:'d4]:   simd_exe_stages = 6'd4;
-            ['d5:'d8]:   simd_exe_stages = 6'd5;
-            ['d9:'d16]:  simd_exe_stages = 6'd6;
-            ['d17:'d32]: simd_exe_stages = 6'd7;
-            ['d33:'d64]: simd_exe_stages = 6'd8;
-            default:     simd_exe_stages = 6'd1;
+        case (instruction_i.instr.sew)
+            SEW_8  : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 2);
+            SEW_16 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) + 1);
+            SEW_32 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
+            SEW_64 : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3) - 1);
+            default : simd_exe_stages = trunc_6bits($clog2(VLEN >> 3));
         endcase
     end else if (is_vdiv(instruction_i)) begin
         
@@ -366,7 +359,6 @@ always_comb begin
         for (int j = 0; j < MAX_STAGES; j++) begin
             simd_pipe_d[i][j].valid = 1'b0;
             simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
-            simd_pipe_d[i][j].vl = '0; 
             if (flush_i) begin
                 simd_pipe_d[i][j].valid = 1'b0;
                 simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
@@ -374,21 +366,17 @@ always_comb begin
                 if (simd_exe_stages == i) begin
                     simd_pipe_d[i][0].valid = instruction_i.instr.valid;
                     simd_pipe_d[i][0].simd_instr = instruction_i;
-                    simd_pipe_d[i][0].vl = instruction_i.instr.vl;
                 end else begin
                     simd_pipe_d[i][0].valid = 1'b0;
                     simd_pipe_d[i][0].simd_instr = '0; // Implicitly sets SEW_8
-                    simd_pipe_d[i][0].vl = '0;
                 end
             end else begin
                 if (j < i) begin
                     simd_pipe_d[i][j].valid = simd_pipe_q[i][j-1].valid;
                     simd_pipe_d[i][j].simd_instr = simd_pipe_q[i][j-1].simd_instr;
-                    simd_pipe_d[i][j].vl = simd_pipe_q[i][j-1].vl;
                 end else begin
                     simd_pipe_d[i][j].valid = 1'b0;
                     simd_pipe_d[i][j].simd_instr = '0;
-                    simd_pipe_d[i][j].vl = '0;
                 end
             end
         end
@@ -420,14 +408,14 @@ always_comb begin
 end
 
 //Select the instruction that completes its correspondent pipeline
-instr_pipe_t instr_score_board;
+rr_exe_simd_instr_t instr_score_board;
 logic valid_found;
 always_comb begin
     instr_score_board = '0;
     valid_found = 1'b0;
     for (int i = 2; (i <= MAX_STAGES) && (!valid_found); i++) begin
         if (simd_pipe_q[i][i-2].valid) begin
-            instr_score_board = simd_pipe_q[i][i-2];
+            instr_score_board = simd_pipe_q[i][i-2].simd_instr;
             valid_found = 1'b1;
         end
     end
@@ -435,21 +423,18 @@ always_comb begin
     // a finalized instruction
     if((!valid_found) && (division_pipe_q[DIV_STAGES - 2])) begin
         // instr_score_board = division_pipe_q[DIV_STAGES - 2].simd_instr;
-        instr_score_board.simd_instr = division_instruction_q;
+        instr_score_board = division_instruction_q;
         valid_found = 1'b1;
     end
 end
 
 always_comb begin
-    if (valid_found && (instr_score_board.simd_instr.instr.vl != 'h0)) begin
-        instr_to_out = instr_score_board.simd_instr;
-        vl_to_out = instr_score_board.simd_instr.instr.vl;
+    if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
+        instr_to_out = instr_score_board;
     end else if (instruction_i.exe_stages == 1) begin
         instr_to_out = instruction_i;
-        vl_to_out = instruction_i.instr.vl;
     end else begin
         instr_to_out = '0;
-        vl_to_out = '0;
     end 
 end
 
@@ -757,7 +742,7 @@ vredtree vredtree_inst(
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
     .instr_to_out_i(instr_to_out.instr.instr_type),
-    .vl_to_out_i   (vl_to_out),
+    .vl_to_out_i   (instr_to_out.instr.vl),
     .sew_to_out_i  (instr_to_out.instr.sew),
     .red_data_vd_o (red_data_vd)
 );
