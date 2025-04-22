@@ -46,7 +46,10 @@
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_shift.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_logic.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_cmp.sv
-./rtl/datapath/rtl/exe_stage/rtl/alu/alu_count_zeros.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/zero_counter/alu_count_zeros.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/zero_counter/alu_count_zeros_BNE.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/zero_counter/alu_count_zeros_NLC.sv
+./rtl/datapath/rtl/exe_stage/rtl/alu/zero_counter/alu_count_zeros_LZC32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_count_pop.sv
 ./rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
