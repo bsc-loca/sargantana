@@ -17,8 +17,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
- 
-module BNE (
+
+module alu_count_zeros_BNE (
     input logic[7:0] data_i,
     output logic q_o,
     output logic[2:0] y_o

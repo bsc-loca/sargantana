@@ -18,7 +18,7 @@
  * under the License.
  */
 
-module NLC (
+module alu_count_zeros_NLC (
     input logic[3:0] data_i,
     output logic a_o,
     output logic[1:0] z_o

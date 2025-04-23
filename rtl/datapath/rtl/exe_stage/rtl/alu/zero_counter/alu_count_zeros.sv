@@ -64,13 +64,13 @@ logic q_low;
 logic[4:0] y_high;
 logic[4:0] y_low;
 
-LZC_32_bits LZC_32_bits_high (
+alu_count_zeros_LZC32 LZC_32_bits_high (
     .data_i(data_to_calc[63:32]),
     .q_o(q_high),
     .y_o(y_high)
 );
 
-LZC_32_bits LZC_32_bits_low (
+alu_count_zeros_LZC32 LZC_32_bits_low (
     .data_i(data_to_calc[31:0]),
     .q_o(q_low),
     .y_o(y_low)

@@ -18,7 +18,7 @@
  * under the License.
  */
 
-module LZC_32_bits (
+module alu_count_zeros_LZC32 (
     input logic[31:0] data_i,
     output logic q_o,
     output logic[4:0] y_o
@@ -30,7 +30,7 @@ logic[1:0] z[7:0];
 genvar i;
 generate
     for (i = 0; i < 8; ++i) begin
-        NLC NLC_inst (
+        alu_count_zeros_NLC NLC_inst (
             .data_i(data_i[4*i +: 4]),
             .a_o(a[7-i]),
             .z_o(z[7-i])
@@ -40,7 +40,7 @@ endgenerate
 
 logic[2:0] y;
 
-BNE BNE_inst (
+alu_count_zeros_BNE BNE_inst (
     .data_i(a),
     .q_o(q_o),
     .y_o(y)
