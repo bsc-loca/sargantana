@@ -1,15 +1,21 @@
-/* -----------------------------------------------
- * Project Name   : DRAC
- * File           : load_store_queue.v
- * Organization   : Barcelona Supercomputing Center
- * Author(s)      : Víctor Soria Pardos
- * Email(s)       : victor.soria@bsc.es
- * -----------------------------------------------
- * Revision History
- *  Revision   | Author      | Description
- *  0.1        | Victor.SP   |
- *  0.2        | Max Doblas  | Adding an Store Buffer  
- * -----------------------------------------------
+/*
+ * Copyright 2025 BSC*
+ * *Barcelona Supercomputing Center (BSC)
+ * 
+ * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+ * 
+ * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
+ * may not use this file except in compliance with the License, or, at your
+ * option, the Apache License version 2.0. You may obtain a copy of the
+ * License at
+ * 
+ * https://solderpad.org/licenses/SHL-2.1/
+ * 
+ * Unless required by applicable law or agreed to in writing, any work
+ * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 
 module load_store_queue
