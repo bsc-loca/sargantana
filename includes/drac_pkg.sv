@@ -164,15 +164,16 @@ typedef struct packed {
     logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferEnd;
 
     // DCache Config
-    int unsigned DCacheNumSets;    // Number of sets
-    int unsigned DCacheNumWays;    // Number of ways
-    int unsigned DCacheLineWidth;  // Cacheline width in bits
-    int unsigned DCacheMSHRSets;   // Number of MSHR sets
-    int unsigned DCacheMSHRWays;   // Number of MSHR ways
-    int unsigned DCacheWBUFSize;   // Number of entries in Write Buffer
-    int unsigned DCacheWTNotWB;    // 0: Write-through; 1: Write-back
-    int unsigned DCacheCoalescing; // 0: Disable Coalescing; 1: Enable Coalescing
-    int unsigned DCacheWBUFTh;     // WBUF Threshold before closing coalescing entry
+    int unsigned DCacheNumSets;         // Number of sets
+    int unsigned DCacheNumWays;         // Number of ways
+    int unsigned DCacheLineWidth;       // Cacheline width in bits
+    int unsigned DCacheMSHRSets;        // Number of MSHR sets
+    int unsigned DCacheMSHRWays;        // Number of MSHR ways
+    int unsigned DCacheWBUFSize;        // Number of entries in Write Buffer
+    int unsigned DCacheWTNotWB;         // 0: Write-through; 1: Write-back
+    int unsigned DCacheCoalescing;      // 0: Disable Coalescing; 1: Enable Coalescing
+    int unsigned DCacheWBUFTh;          // WBUF Threshold before closing coalescing entry
+    int unsigned DCacheRefillFIFODepth; // Size of the refill FIFO (read misses + invalidations)
 
     // Memory Interface Config
     int unsigned MemAddrWidth; // Address width in bits
@@ -1262,6 +1263,7 @@ localparam drac_cfg_t DracDefaultConfig = '{
     DCacheWTNotWB: 1,
     DCacheCoalescing: 0,
     DCacheWBUFTh: 2,
+    DCacheRefillFIFODepth: 2,
 
     // Memory Interface Config
     MemAddrWidth: 40,
