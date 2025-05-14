@@ -4,7 +4,7 @@
   <img src="doc/sargantana_logo.svg" />
 </p>
 
-Sargantana is a 64-bit processor based on RISC-V that implements the RV64G ISA.
+Sargantana is a 64-bit processor based on RISC-V that implements the RV64GB ISA.
 Sargantana features a highly optimized 7-stage pipeline implementing out-of-order write-back, register renaming, and a non-blocking memory pipeline.
 Sargantana achieves a 1.26 GHz frequency in the typical corner, and up to 1.69 GHz in the fast corner using 22nm FD-SOI commercial technology.
 
