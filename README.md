@@ -9,43 +9,34 @@ Sargantana features a highly optimized 7-stage pipeline implementing out-of-orde
 Sargantana achieves a 1.26 GHz frequency in the typical corner, and up to 1.69 GHz in the fast corner using 22nm FD-SOI commercial technology.
 
 
-## Simulating and Emulating on an FPGA
+## Table of Contents
 
-To perform RTL simulations and/or emulating the design, please refer to the [Sargantana_tile](https://gitlab.bsc.es/hwdesign/rtl/core-tile/sargantana_tile) repo.
+- [Sargantana](#sargantana)
+  - [Table of Contents](#table-of-contents)
+  - [1. Simulating and Running on an FPGA](#1-simulating-and-emulating-on-an-fpga)
+  - [2. Design](#2-design)
+  - [3. License](#3-license)
+  - [4. Authors](#4-authors)
+  - [5. Citation](#5-citation)
 
-## Design
+## 1. Simulating and Emulating on an FPGA
+
+To perform RTL simulations and/or emulating the design, please refer to the [core_tile](https://github.com/bsc-loca/core_tile) repo.
+
+## 2. Design
 
 ![Sargantana Pipeline](doc/sargantana_pipeline.svg)
 
-## Verification
+## 3. License
 
-Check this [wiki](https://gitlab.bsc.es/hwdesign/rtl/core-tile/sargantana_tile/-/wikis/How-to-run-the-different-tool-verification-in-Sargantana) in the Sargantana_tile repo.
+This work is licensed under the Solderpad Hardware License v2.1.
 
-### Set Up
+For more information, check the [LICENSE](LICENSE) file.
 
-**Verilator**
+## 4. Authors
 
-Install Verilator using your favourite package manager (or compile it yourself, you can find it in [github](https://github.com/verilator/verilator)). Make sure you have compatible versions of verilator and GCC as seen in the following table:
+The list of authors can be found in the [CONTRIBUTORS.md](CONTRIBUTORS.md) file.
 
-| Verilator | GCC    | Works? |
-|-----------|--------|--------|
-| 5.010     | 13.1.1 | YES    |
-| 4.224     | 13.1.1 | YES    |
-| 4.224     | 7.5.0  | YES    |
-| 4.102     | 9.4.0  | YES    |
+## 5. Citation
 
-If you use a verilator and GCC version combination and is not in the table above, please update it. Specially if it doesn't work.
-
-**RISC-V Compiler**
-
-Install the RISC-V GCC crosscompiler toolchain using your favourite package manager. You can compile it yourself, at your own risk of course ;)
-
-This table shows the RISC-V compiler versions that have been tested and are known to work:
-
-| Version | Works? |
-|---------|--------|
-| 12.2.0  | YES    |
-| 11.1.0  | YES    |
-| 7.2.0   | NO     |
-
-Again, if you have a different version, add it to the table, specially if you have trouble compiling the ISA tests.
+Víctor Soria-Pardos, Max Doblas, Guillem López-Paradís, Gerard Candón, Narcís Rodas, Xavier Carril, Pau Fontova-Musté, Neiel Leyva, Santiago Marco-Sola, and Miquel Moretó. ["Sargantana: A 1 GHz+ in-order RISC-V processor with SIMD vector extensions in 22nm FD-SOI"](https://upcommons.upc.edu/bitstream/handle/2117/384912/sargantana_preprint.pdf?sequence=1). 25th Euromicro, 2022.
