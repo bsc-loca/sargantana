@@ -1,16 +1,16 @@
 /*
  * Copyright 2025 BSC*
  * *Barcelona Supercomputing Center (BSC)
- * 
+ *
  * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
- * 
+ *
  * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
  * may not use this file except in compliance with the License, or, at your
  * option, the Apache License version 2.0. You may obtain a copy of the
  * License at
- * 
+ *
  * https://solderpad.org/licenses/SHL-2.1/
- * 
+ *
  * Unless required by applicable law or agreed to in writing, any work
  * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -462,6 +462,11 @@ typedef enum logic [5:0] {
     F6_VFREDOSUM    = 6'b000011,    // Vector floating-point reduction ordered sum
     F6_VFWREDUSUM   = 6'b110001,    // Vector widening floating-point reduction unordered sum
     F6_VFWREDOSUM   = 6'b110011     // Vector widening floating-point reduction ordered sum
+    // Widening and narrowing instructions
+    F6_VFUNARY0     = 6'b010010,
+    F6_VFSLIDE1UP       = 6'b001110,
+    F6_VFSLIDE1DOWN     = 6'b001111,
+    F6_VRWFUNARY0       = 6'b010000,
 } op_func6_vector_opf_t;
 
 typedef enum logic [4:0] {
@@ -479,6 +484,17 @@ typedef enum logic [4:0] {
     VS1_VMSOF   = 5'b00010,
     VS1_VFIRST  = 5'b10001
 } op_vwxunary0_vs1_vector_t;
+
+
+
+typedef enum logic [4:0] {
+    VS2_S_F     = 5'b00000
+} op_vrfunary0_vs2_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_F_S     = 5'b00000
+} op_vwfunary0_vs1_vector_t;
+
 
 typedef enum logic [4:0] {
     VS1_VID     = 5'b10001,

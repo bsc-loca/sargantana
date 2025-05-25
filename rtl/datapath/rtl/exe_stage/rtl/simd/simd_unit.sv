@@ -44,6 +44,8 @@ bus64_t [drac_pkg::VELEMENTS-1:0] vd_elements;
 bus_simd_t rs1_replicated;
 bus_simd_t fu_data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
+bus64_t fp_result;  //Forood: the naming convention may be wrong so check please.
+                    // also it was possible to reuse data_rd but I wasen't sure I won't break anything
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 rr_exe_simd_instr_t instr_to_out_integer;
@@ -1565,7 +1567,154 @@ always_comb begin
             end
             
         endcase
-    end else begin
+    end
+
+    // Forood: I used direct implementation of VMV_S_X for this with minor chages
+    else if (instr_to_out.instr.instr_type == VFMV_S_F) begin
+        case (instr_to_out.instr.sew)
+////////////////////TODO: this chunk is illegal as far as I understood and must be handeled////////
+
+            SEW_8: begin
+                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+            end
+            SEW_16: begin
+                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+            end
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+            SEW_32: begin
+                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+            end
+            SEW_64: begin
+                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+            end
+            default: begin
+                result_data_vd = '0; 
+            end
+        endcase
+    end 
+    
+    // else if (instr_to_out.instr.instr_type == VMV_F_S) begin
+    //     //Forood: I believe the FP must be 32 bits so I'm truncating anything more than 32 bits
+    //     case (instr_to_out.sew)
+    //         SEW_8: begin
+    //             fp_result = {{56'b0}, vs2_elements[0][7:0]};
+    //         end
+    //         SEW_16: begin
+    //             fp_result = {{48'b0}, vs2_elements[0][15:0]};
+    //         end
+    //         SEW_32: begin
+    //             fp_result = {{32'b0}, vs2_elements[0][31:0]};
+    //         end
+    //         SEW_64: begin
+    //             fp_result = {{32'b0}, vs2_elements[0][31:0]};
+    //         end
+    //         default: begin
+    //             fp_result = {{32'b0}, vs2_elements[0][31:0]};
+    //         end
+    //     endcase
+    // end
+    else if (instr_to_out.instr.instr_type == VFSLIDE1UP) begin
+
+        result_data_vd = '0;
+        
+        case (instr_to_out.instr.sew)
+            SEW_8: begin
+                for (int i = 0 ; i < ((VLEN/8) - 1) ; ++i) begin
+                   if(i < (instr_to_out.instr.vl - 1)) begin    
+                        result_data_vd[(i + 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
+                    end 
+                end
+                result_data_vd[0 +: 8] = instruction_i.data_rs1[7:0];
+            end
+            SEW_16: begin
+                for (int i = 0 ; i < ((VLEN/16) - 1) ; ++i) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin
+                        result_data_vd[(i + 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
+                    end
+                end
+                result_data_vd[0 +: 16] = instruction_i.data_rs1[15:0];
+            end
+            SEW_32: begin
+                for (int i = 0 ; i < ((VLEN/32) - 1) ; ++i) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin
+                        result_data_vd[(i + 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
+                    end
+                end
+                result_data_vd[0 +: 32] = instruction_i.data_rs1[31:0];
+            end
+            SEW_64: begin
+                for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin    
+                        result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                    end
+                end
+                result_data_vd[0 +: 64] =  instruction_i.data_rs1[63:0];
+            end
+            default: begin
+                for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
+                    if(i < (instr_to_out.instr.vl - 1)) begin    
+                        result_data_vd[(i + 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                    end
+                end
+                result_data_vd[0 +: 64] = instruction_i.data_rs1[63:0];
+            end
+        endcase
+    end
+
+    else if (instr_to_out.instr.instr_type == VFSLIDE1DOWN) begin
+
+        result_data_vd = '0;
+        case (instr_to_out.instr.sew)
+            SEW_8: begin                 
+                    for (int i = 1 ; i < (VLEN/8)  ; ++i) begin
+                        if (i < instr_to_out.instr.vl) begin
+                            result_data_vd[(i - 1) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
+                        end
+                    end
+                    result_data_vd[trunc_vl_i_sew8(instr_to_out.instr.vl - 1) * 8 +: 8] = instruction_i.data_rs1[7:0];
+                    
+
+            end
+            SEW_16: begin
+                for (int i = 1 ; i < (VLEN/16)  ; ++i) begin
+                        if (i < instr_to_out.instr.vl) begin
+                            result_data_vd[(i - 1) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
+                        end
+                    end
+                    result_data_vd[trunc_vl_i_sew16(instr_to_out.instr.vl - 1) * 16 +: 16] = instruction_i.data_rs1[15:0];
+                    
+            end
+            SEW_32: begin
+                for (int i = 1 ; i < (VLEN/32)  ; ++i) begin
+                        if (i < instr_to_out.instr.vl) begin
+                            result_data_vd[(i - 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
+                        end
+                    end
+                    result_data_vd[trunc_vl_i_sew32(instr_to_out.instr.vl - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
+            end
+            SEW_64: begin
+                for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
+                        if (i < instr_to_out.instr.vl) begin
+                            result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                        end
+                    end
+                    result_data_vd[trunc_vl_i_sew64(instr_to_out.instr.vl - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+            end
+
+            default: begin
+                for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
+                        if (i < instr_to_out.instr.vl) begin
+                            result_data_vd[(i - 1) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
+                        end
+                    end
+                    result_data_vd[trunc_vl_i_sew64(instr_to_out.instr.vl - 1) * 64 +: 64] = instruction_i.data_rs1[63:0];
+                
+            end
+        endcase
+    end
+
+    else begin
         result_data_vd = fu_data_vd;
     end
 end

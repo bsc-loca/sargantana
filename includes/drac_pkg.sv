@@ -400,6 +400,8 @@ typedef enum logic [8:0] {
    VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
    // Vectorial FP reduction instructions
    VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
+   
+   VFMV_V_F, VFMV_F_S, VFMV_S_F, VFSLIDE1UP, VFSLIDE1DOWN,
    // Vectorial memory operations
    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
