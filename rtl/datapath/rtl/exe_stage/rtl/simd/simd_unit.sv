@@ -1572,21 +1572,33 @@ always_comb begin
     // Forood: I used direct implementation of VMV_S_X for this with minor chages
     else if (instr_to_out.instr.instr_type == VFMV_S_F) begin
         case (instr_to_out.instr.sew)
-////////////////////TODO: this chunk is illegal as far as I understood and must be handeled////////
-
             SEW_8: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
+                end
             end
             SEW_16: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-16){1'b1}}, instruction_i.data_rs1[15:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                end
             end
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
             SEW_32: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-32){1'b1}}, instruction_i.data_rs1[31:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                end
             end
             SEW_64: begin
-                result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                if (instr_to_out.instr.vta) begin
+                    result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
+                end else begin
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                end
             end
             default: begin
                 result_data_vd = '0; 
