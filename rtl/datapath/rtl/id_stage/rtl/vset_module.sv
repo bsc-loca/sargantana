@@ -91,7 +91,7 @@ always_comb begin : vsetvl_ctrl
             vtype_d = {1'b1,63'b0};
             vl_d = 'h0;
         end else begin
-            vtype_d = {'0, vtype_i};
+            vtype_d = {52'b0, vtype_i};
         end
 
                 

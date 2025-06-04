@@ -97,6 +97,9 @@ always_comb begin
     result_rounded_vd_o = '0;
     vs2_truncated_value = '0;
     to_add = 'h0;
+    not_negative = '0;
+    vs2_shifted_result = '0;
+    shift_result_to_truncate = '0;
     case (sew_i)
         SEW_32: begin
             case (vxrm_i)
