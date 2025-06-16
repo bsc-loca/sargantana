@@ -27,7 +27,7 @@ module regfile
     parameter int NUM_READ_PORTS = 2,
     parameter int NUM_WRITEBACK_PORTS = 1,
     parameter int NUM_REGISTERS = 32,
-    parameter int HARDWIRED_ZERO = 1,
+    parameter logic HARDWIRED_ZERO = 1'b1,
     parameter type reg_type = logic,
     parameter type data_type = logic
 )
@@ -88,7 +88,7 @@ always_ff @(posedge clk_i)  begin
         end
     end else begin
         for (int i = 0; i < NUM_WRITEBACK_PORTS; i++) begin
-            if (write_enable_i[i] && (!HARDWIRED_ZERO || (write_addr_i[i] > 0))) begin
+            if (write_enable_i[i] && (~HARDWIRED_ZERO || (write_addr_i[i] > 0))) begin
                 registers[write_addr_i[i]] <= write_data_i[i];
             end
         end
