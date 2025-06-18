@@ -534,7 +534,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
-    assign simd_use_old_vd = stage_iq_ir_q.instr.vregfile_we & (stage_iq_ir_q.instr.use_mask | stage_iq_ir_q.instr.use_old_vd);
+    assign simd_use_old_vd = stage_no_stall_rr_q.instr.vregfile_we & (stage_no_stall_rr_q.instr.use_mask | stage_no_stall_rr_q.instr.use_old_vd);
 
     // Instruction Queue 
     instruction_queue instruction_queue_inst(
