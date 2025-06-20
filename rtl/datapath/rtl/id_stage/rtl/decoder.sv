@@ -177,12 +177,7 @@ module decoder
 
         decode_instr_int.ex_valid = '0;
 
-        case (sew)
-            SEW_8: emul_mask = {{(VREGFILE_WIDTH-2){1'b0}},decode_i.inst.vltype.width[13:12]};
-            SEW_16: emul_mask = (decode_i.inst.vltype.width[13:12] == 2'b11) ? 'b00010 : 'b00001;
-            SEW_32: emul_mask = 'b00001;
-            default: emul_mask = 'b00000; 
-        endcase
+        emul_mask = ((5'b00111 >> sew) >> (~decode_i.inst.vltype.width[13:12])) >> ((~vlmul_int) + 3'b1);
 
         if (!decode_i.ex.valid && decode_i.valid ) begin
             case (decode_i.inst.common.opcode)
