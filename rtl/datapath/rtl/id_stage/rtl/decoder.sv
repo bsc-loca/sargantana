@@ -1126,7 +1126,7 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VRGATHEREI16;
-                                        if((vl > 'h08) || ((sew == SEW_8) && (decode_instr_int.vs1[0]))) begin // vs1 can not be odd with SEW8 due to EMUL>1
+                                        if((vl > (VLEN/16)) || ((sew == SEW_8) && (decode_instr_int.vs1[0]) && (~vlmul_int[2]))) begin // vs1 can not be odd with SEW8 if EMUL>1
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                         else begin
