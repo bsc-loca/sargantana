@@ -1696,6 +1696,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .exe_id(stage_rr_exe_q.instr.id),
         .exe_stall(control_int.stall_exe),
         .exe_flush(flush_int.flush_exe),
+        .exe_kill(flush_int.kill_exe),
         .exe_unit(reg_to_exe.instr.unit),
 
         .wb1_valid(wb_scalar[0].valid),
