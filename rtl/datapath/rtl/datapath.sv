@@ -28,6 +28,9 @@ module datapath
     input logic             clk_i,
     input logic             rstn_i,
     input addr_t            reset_addr_i,
+    `ifdef SIM_COMMIT_LOG
+    input logic [63:0]          core_id_i,
+    `endif
     // icache/dcache/CSR interface input
     input resp_icache_cpu_t resp_icache_cpu_i,
     input resp_dcache_cpu_t resp_dcache_cpu_i,
@@ -1583,6 +1586,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
             commit_valid[i] = retire_inst_gl[i];
 
+            commit_data[i].core            = core_id_i;
             commit_data[i].pc              = (instruction_to_commit[i].valid) ? instruction_to_commit[i].pc : 64'b0;
             commit_data[i].dst             = instruction_to_commit[i].rd;
             commit_data[i].fdst            = instruction_to_commit[i].rd;

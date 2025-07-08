@@ -1382,6 +1382,7 @@ typedef struct packed {
 
 `ifdef SIM_COMMIT_LOG
 typedef struct packed {
+    longint unsigned core;
     longint unsigned pc;
     longint unsigned inst;
     longint unsigned dst;
