@@ -1006,6 +1006,7 @@ assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
 assign instruction_scalar_o.vl            = instruction_to_wb.vl;
 assign instruction_scalar_o.sew            = instruction_to_wb.instr.sew;
+assign instruction_scalar_o.lmul          = instruction_to_wb.instr.lmul;
 
 // Output Float Instruction
 assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we; //fp_instr;
@@ -1061,6 +1062,7 @@ assign instruction_simd_o.ex              = ((instruction_to_wb.instr.instr_type
 assign instruction_simd_o.vs_ovf          = 1'b0;
 assign instruction_simd_o.vl              = instruction_to_wb.vl;
 assign instruction_simd_o.sew             = instruction_to_wb.instr.sew;
+assign instruction_simd_o.lmul            = instruction_to_wb.instr.lmul;
 
 
 `ifdef REGISTER_HPDC_OUTPUT

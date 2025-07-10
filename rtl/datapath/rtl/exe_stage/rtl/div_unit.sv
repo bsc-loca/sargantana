@@ -255,6 +255,7 @@ assign data_src2 = instruction_i.data_rs2;
         instruction_o.result          = 'h0;
         instruction_o.fp_status       = 'h0;
         instruction_o.vl        = 'h0;
+        instruction_o.lmul       = 'h0;
         instruction_o.sew        = SEW_8;
         if (cycles_counter[0] == 6'd1) begin
             instruction_o.valid           = instruction_q[0].valid;
@@ -272,6 +273,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.gl_index        = instruction_q[0].gl_index;
             instruction_o.mem_type        = instruction_q[0].mem_type;
             instruction_o.vl        = instruction_q[0].vl;
+            instruction_o.lmul       = instruction_q[0].lmul;
             instruction_o.sew        = instruction_q[0].sew;
             `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[0].id;
@@ -313,6 +315,7 @@ assign data_src2 = instruction_i.data_rs2;
             instruction_o.gl_index        = instruction_q[1].gl_index;
             instruction_o.mem_type        = instruction_q[1].mem_type;
             instruction_o.vl        = instruction_q[1].vl;
+            instruction_o.lmul       = instruction_q[1].lmul;
             instruction_o.sew        = instruction_q[1].sew;
             `ifdef SIM_KONATA_DUMP
             instruction_o.id              = instruction_q[1].id;

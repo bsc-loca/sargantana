@@ -118,6 +118,7 @@ module decoder
         decode_instr_int.is_opvi = 1'b0;
         decode_instr_int.sew = sew;
         decode_instr_int.vl = vl;
+        decode_instr_int.lmul = vlmul_int;
         decode_instr_int.vta = vta_int;
         decode_instr_int.vma = vma_int;
         decode_instr_int.vlmax = vlmax_int;

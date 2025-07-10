@@ -123,6 +123,7 @@ assign instruction_o.gl_index        = instruction_i.gl_index;
 assign instruction_o.mem_type        = instruction_i.instr.mem_type;
 assign instruction_o.vl              = instruction_i.instr.vl;
 assign instruction_o.sew             = instruction_i.instr.sew;
+assign instruction_o.lmul            = instruction_i.instr.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_o.id            = instruction_i.instr.id;
 `endif

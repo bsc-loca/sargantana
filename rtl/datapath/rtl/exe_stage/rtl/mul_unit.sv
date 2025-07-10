@@ -132,6 +132,7 @@ assign instruction_0_d.ex            = '0;
 assign instruction_0_d.fp_status     = '0;
 assign instruction_0_d.vl            = instruction_i.instr.vl;
 assign instruction_0_d.sew            = instruction_i.instr.sew;
+assign instruction_0_d.lmul          = instruction_i.instr.lmul;
 
 `ifdef SIM_KONATA_DUMP
 assign instruction_0_d.id            = instruction_i.instr.id;
@@ -185,6 +186,7 @@ assign instruction_s1.result        = result_32;
 assign instruction_s1.ex            = instruction_0_q.ex;
 assign instruction_s1.vl            = instruction_0_q.vl;
 assign instruction_s1.sew            = instruction_0_q.sew;
+assign instruction_s1.lmul          = instruction_0_q.lmul;
 
 `ifdef SIM_KONATA_DUMP
 assign instruction_s1.id            = instruction_0_q.id;
@@ -266,6 +268,7 @@ assign instruction_s2.result        = result_64;
 assign instruction_s2.ex            = instruction_1_q.ex;
 assign instruction_s2.vl            = instruction_1_q.vl;
 assign instruction_s2.sew            = instruction_1_q.sew;
+assign instruction_s2.lmul          = instruction_1_q.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_s2.id            = instruction_1_q.id;
 `endif 
