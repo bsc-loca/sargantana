@@ -203,6 +203,9 @@ always_comb begin
     end else if (write_enable && instruction_i.ex_valid && !exception_q.valid && !ex_from_exe_i.valid) begin
         exception_d = ex_i;
         exception_index_d = tail;
+    end else if (write_enable && !exception_q.valid && !ex_from_exe_i.valid) begin
+        exception_d = ex_i; // No exception, keep exception origin data for illegal instructions raised by CSR
+        exception_index_d = exception_index_q;
     end else begin
         exception_d = exception_q;
         exception_index_d = exception_index_q;

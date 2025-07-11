@@ -2693,12 +2693,12 @@ module decoder
             end else if (xcpt_illegal_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = ILLEGAL_INSTR;
-                decode_instr_o.ex.origin = 'h0;
+                decode_instr_o.ex.origin = {32'd0, decode_i.inst};
                 decode_instr_o.instr.ex_valid = 1'b1;
             end else begin
                 decode_instr_o.ex.valid  = 'h0;
                 decode_instr_o.ex.cause  = NONE;
-                decode_instr_o.ex.origin = 'h0;
+                decode_instr_o.ex.origin = {32'd0, decode_i.inst};
                 decode_instr_o.instr.ex_valid = 1'b0;
             end
         end else begin // this means there is an exception
