@@ -310,6 +310,7 @@ typedef enum logic [2:0] {
 
 typedef enum logic [5:0] {
     F6_VADD         = 6'b000000,
+    F6_VANDN        = 6'b000001,
     F6_VSUB         = 6'b000010,
     F6_VRSUB        = 6'b000011,
     F6_VADC         = 6'b010000,
@@ -323,6 +324,8 @@ typedef enum logic [5:0] {
     F6_VAND         = 6'b001001,
     F6_VOR          = 6'b001010,
     F6_VXOR         = 6'b001011,
+    F6_VROR         = 6'b010100,
+    F6_VROL         = 6'b010101,
     F6_VMERGE_VMV   = 6'b010111,
     F6_VMSEQ        = 6'b011000,
     F6_VMSNE        = 6'b011001,
@@ -344,6 +347,7 @@ typedef enum logic [5:0] {
     F6_VSSRA        = 6'b101011,
     F6_VNSRL        = 6'b101100,
     F6_VNSRA        = 6'b101101,
+    F6_VWSLL        = 6'b110101,
     F6_VNCLIPU      = 6'b101110,
     F6_VNCLIP       = 6'b101111,
     F6_VWREDSUMU    = 6'b110000,
@@ -370,6 +374,7 @@ typedef enum logic [5:0] {
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why?? //Todo: check to delete
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
+    F6_BITMANIP_VXUNARY0 = 6'b010010,
     F6_VMAND     = 6'b011001,
     F6_VMNAND    = 6'b011101,
     F6_VMANDNOT  = 6'b011000,
@@ -379,7 +384,7 @@ typedef enum logic [5:0] {
     F6_VMXOR     = 6'b011011,
     F6_VMXNOR    = 6'b011111,
     F6_VMUNARY0  = 6'b010100,  //This encoding changes on v1.0 of specs. For now we keep it like this
-    F6_VXUNARY0  = 6'b010010,
+    //F6_VXUNARY0  = 6'b010010,
     F6_VMULHU    = 6'b100100,
     F6_VMUL      = 6'b100101,
     F6_VMULHSU   = 6'b100110,
@@ -504,6 +509,7 @@ typedef enum logic [4:0] {
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
+<<<<<<< HEAD
     VS1_VFCVT_XU_F           = 5'b00000,
     VS1_VFCVT_X_F            = 5'b00001,
     VS1_VFCVT_F_XU           = 5'b00010,
@@ -526,6 +532,15 @@ typedef enum logic [4:0] {
     VS1_VFNCVT_RTZ_XU_F     = 5'b10110,
     VS1_VFNCVT_RTZ_X_F      = 5'b10111
 } op_vfunary0_vs1_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_VBREV8 = 5'b01000,
+    VS1_VREV8  = 5'b01001,
+    VS1_VBREV  = 5'b01010,
+    VS1_VCLZ   = 5'b01100,
+    VS1_VCTZ   = 5'b01101,
+    VS1_VCPOP  = 5'b01110
+} op_bitmanip_vs1_vector_t;
 
 typedef enum logic [4:0] {
     VS2_VMV_S_X = 5'b00000

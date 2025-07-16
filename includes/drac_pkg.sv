@@ -408,6 +408,8 @@ typedef enum logic [8:0] {
    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
    VCNT,
+   // Vectorial bit-manipulation
+   VANDN, VBREV, VBREV8, VREV8, VCLZ, VCTZ, VCPOP, VROL, VROR, VWSLL,
    // Zba bit-manip
    ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, SLLIUW, ZEXTW,
    // Zbb bit-manip

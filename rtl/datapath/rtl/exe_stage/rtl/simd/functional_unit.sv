@@ -45,6 +45,9 @@ bus64_t result_vdiv_vrem;
 bus64_t result_vsmul;
 
 bus128_t full_result_vmul;
+bus64_t result_vcpop;
+bus64_t result_vczeros;
+bus64_t result_vbrev;
 
 bus64_t data1_vaddsub_i;
 bus64_t data2_vaddsub_i;
@@ -150,6 +153,22 @@ always_comb begin
     endcase
 end
 
+/*
+ * For VCTZ the input needs to be reversed. The hardware from VBREV can be
+ * reused
+ */
+bus64_t count_zeros_input;
+always_comb begin
+    case (instruction_i.instr.instr_type)
+        VCTZ: begin
+            count_zeros_input = result_vbrev;
+        end
+        default: begin
+            count_zeros_input = data_vs2_i;
+        end
+    endcase
+end
+
 vaddsub vaddsub_inst(
     .instr_type_i  (sel_out_instr_i.instr.instr_type),
     .sew_i         (vaddsub_sew_i),
@@ -238,6 +257,23 @@ vnclip vnclip_int(
     .data_vd_o     (result_vnclip)
 );
 
+vcpop vcpop_inst(
+    .sew_i         (instruction_i.instr.sew),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_vcpop)
+);
+
+vczeros vczeros_inst(
+    .sew_i         (instruction_i.instr.sew),
+    .data_vs2_i    (count_zeros_input),
+    .data_vd_o     (result_vczeros)
+);
+vbrev vbrev_inst(
+    .sew_i         (instruction_i.instr.sew),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_vbrev)
+);
+
 always_comb begin
     sat_ovf_o = '0;
     data_vd_o = '0;
@@ -286,6 +322,9 @@ always_comb begin
         end
         VXOR: begin
             data_vd_o = data_vs1_i ^ data_vs2_i;
+        end
+        VANDN: begin
+            data_vd_o = ~data_vs1_i & data_vs2_i;
         end
         VMAND, VMNAND, VMANDN, VMOR, VMNOR, VMORN, VMXNOR,VMXOR: begin
             data_vd_o = '1;
@@ -343,7 +382,7 @@ always_comb begin
                 end
             endcase
         end
-        VSLL, VSRA, VSRL, VNSRL, VNSRA, VSSRL, VSSRA: begin
+        VSLL, VSRA, VSRL, VNSRL, VNSRA, VSSRL, VSSRA, VROL, VROR, VWSLL: begin
             data_vd_o = result_vshift;
         end
         VID: begin
@@ -379,6 +418,48 @@ always_comb begin
         end
         VDIV, VDIVU, VREM, VREMU: begin
             data_vd_o = result_vdiv_vrem;
+        end
+        VBREV: begin
+            data_vd_o = result_vbrev;
+        end
+        VBREV8: begin
+            for (int i = 0; i<8; ++i) begin
+                for (int j = 0; j<8; ++j) begin
+                    data_vd_o[(i*8)+j] = data_vs2_i[(i*8)+7-j];
+                end
+            end
+        end
+        VREV8: begin
+            case (sel_out_instr_i.instr.sew)
+                SEW_8: begin
+                    data_vd_o = data_vs2_i;
+                end
+                SEW_16: begin
+                    for (int i = 0; i < 4; ++i) begin
+                        for (int j = 0; j < 2; ++j) begin
+                            data_vd_o[(i*16)+j*8 +: 8] = data_vs2_i[(i*16)+8-(j*8) +: 8];
+                        end
+                    end
+                end
+                SEW_32: begin
+                    for (int i = 0; i < 2; ++i) begin
+                        for (int j = 0; j < 4; ++j) begin
+                            data_vd_o[(i*32)+j*8 +: 8] = data_vs2_i[(i*32)+24-(j*8) +: 8];
+                        end
+                    end
+                end
+                SEW_64: begin
+                    for (int j = 0; j < 8; ++j) begin
+                        data_vd_o[j*8 +: 8] = data_vs2_i[56-(j*8) +: 8];
+                    end
+                end
+            endcase
+        end
+        VCPOP: begin
+            data_vd_o = result_vcpop;
+        end
+        VCLZ, VCTZ: begin
+            data_vd_o = result_vczeros;
         end
         default: begin
             data_vd_o = 64'b0;

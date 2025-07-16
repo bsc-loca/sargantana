@@ -194,8 +194,8 @@ function logic is_vw(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VFWCVT_RTZ_X_F)  ||
              (instr.instr.instr_type == VFWCVT_F_XU)     ||
              (instr.instr.instr_type == VFWCVT_F_X)      ||
-             (instr.instr.instr_type == VFWCVT_F_F)) ? 1'b1 : 1'b0;
-
+             (instr.instr.instr_type == VFWCVT_F_F)      ||
+             (instr.instr.instr_type == VWSLL)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vn(input rr_exe_simd_instr_t instr);
