@@ -287,6 +287,9 @@ datapath #(
     .clk_i(clk_i),
     .rstn_i(tile_rstn),
     .reset_addr_i(reset_addr_i),
+    `ifdef SIM_COMMIT_LOG
+    .core_id_i(core_id_i),
+    `endif
     // Input datapath
     .resp_icache_cpu_i(resp_icache_cpu_i), 
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 

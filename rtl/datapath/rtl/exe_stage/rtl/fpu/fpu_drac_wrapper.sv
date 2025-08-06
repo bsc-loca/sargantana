@@ -308,6 +308,7 @@ assign instruction_scalar_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_scalar_o.gl_index        = finish_fp_op_int.gl_index;
 assign instruction_scalar_o.vl        = '0;
 assign instruction_scalar_o.sew        = finish_fp_op_int.instr.sew;
+assign instruction_scalar_o.lmul      = finish_fp_op_int.instr.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif

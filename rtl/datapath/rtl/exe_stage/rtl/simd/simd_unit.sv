@@ -1591,6 +1591,7 @@ assign instruction_scalar_o.fp_status = 0;
 assign instruction_scalar_o.mem_type = NOT_MEM;
 assign instruction_scalar_o.vl = instr_to_out.instr.vl;
 assign instruction_scalar_o.sew = instr_to_out.instr.sew;
+assign instruction_scalar_o.lmul = instr_to_out.instr.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_scalar_o.id = instr_to_out.instr.id;
 `endif
@@ -1616,6 +1617,7 @@ assign instruction_simd_o.result_pc = 0;
 assign instruction_simd_o.vs_ovf = v_sat_ovf != 0;
 assign instruction_simd_o.vl = instr_to_out.instr.vl;
 assign instruction_simd_o.sew = instr_to_out.instr.sew;
+assign instruction_simd_o.lmul = instr_to_out.instr.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_simd_o.id = instr_to_out.instr.id;
 `endif

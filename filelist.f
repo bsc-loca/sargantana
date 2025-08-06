@@ -82,10 +82,6 @@
 ./rtl/datapath/rtl/if_stage_1/rtl/branch_predictor.sv
 ./rtl/datapath/rtl/if_stage_1/rtl/if_stage_1.sv
 ./rtl/datapath/rtl/datapath.sv
-./rtl/datapath/rtl/ir_stage/rtl/simd_rename_table.sv
-./rtl/datapath/rtl/ir_stage/rtl/fp_rename_table.sv
-./rtl/datapath/rtl/ir_stage/rtl/simd_free_list.sv
-./rtl/datapath/rtl/ir_stage/rtl/fp_free_list.sv
 ./rtl/datapath/rtl/ir_stage/rtl/free_list.sv
 ./rtl/datapath/rtl/ir_stage/rtl/instruction_queue.sv
 ./rtl/datapath/rtl/ir_stage/rtl/rename_table.sv
@@ -95,8 +91,6 @@
 ./rtl/datapath/rtl/id_stage/rtl/vset_module.sv
 ./rtl/datapath/rtl/id_stage/rtl/vset_queue.sv
 ./rtl/datapath/rtl/rr_stage/rtl/regfile.sv
-./rtl/datapath/rtl/rr_stage/rtl/vregfile.sv
-./rtl/datapath/rtl/rr_stage/rtl/regfile_fp.sv
 ./rtl/datapath/rtl/wb_stage/rtl/graduation_list.sv
 
 ./rtl/csr/rtl/csr_bsc.sv

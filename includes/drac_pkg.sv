@@ -475,6 +475,7 @@ typedef struct packed {
     logic  is_opvx;                     // Instruction uses rs1 instead of vs1
     logic  is_opvi;                     // Instruciton uses imm instead of vs1
     sew_t  sew;                         // Instruction SEW
+    logic [2:0] lmul;                   // Instruction LMUL
     logic [VMAXELEM_LOG:0] vl;      
     logic  vma;
     logic  vta;    
@@ -767,6 +768,7 @@ typedef struct packed {
     reg_csr_addr_t csr_addr;            // CSR Address
     logic [VMAXELEM_LOG:0] vl;
     sew_t           sew;                         // Instruction SEW
+    logic [2:0] lmul;                   // Instruction LMUL
     `ifdef SIM_COMMIT_LOG
     riscv_pkg::instruction_t inst;
     bus64_t id;
@@ -801,6 +803,7 @@ typedef struct packed {
     reg_csr_addr_t csr_addr;            // CSR Address        
     logic [VMAXELEM_LOG:0] vl;
     sew_t           sew;                         // Instruction SEW
+    logic [2:0] lmul;                   // Instruction LMUL
     `ifdef SIM_KONATA_DUMP
     bus64_t id;
     `endif
@@ -1213,6 +1216,7 @@ typedef struct packed {
     phreg_t         fprd;                   // Physical register destination to write
     phreg_t         old_fprd;               // Old Physical register destination
     sew_t           sew;                         // Instruction SEW
+    logic [2:0]     lmul;                   // Instruction LMUL
     `ifdef SIM_COMMIT_LOG
     riscv_pkg::instruction_t inst;
     `endif
@@ -1236,6 +1240,7 @@ typedef struct packed {
     logic vs_ovf;
     logic [VMAXELEM_LOG:0] vl;
     sew_t           sew;                         // Instruction SEW
+    logic [2:0]     lmul;                       // Instruction LMUL
 } gl_wb_data_t;
 
 localparam drac_cfg_t DracDefaultConfig = '{
@@ -1382,6 +1387,7 @@ typedef struct packed {
 
 `ifdef SIM_COMMIT_LOG
 typedef struct packed {
+    longint unsigned core;
     longint unsigned pc;
     longint unsigned inst;
     longint unsigned dst;
@@ -1395,6 +1401,8 @@ typedef struct packed {
     longint unsigned csr_dst;
     longint unsigned csr_data;
     longint unsigned sew;
+    longint unsigned lmul;
+    longint unsigned vl;
     longint unsigned xcpt;
     longint unsigned xcpt_cause;
     longint unsigned csr_priv_lvl;

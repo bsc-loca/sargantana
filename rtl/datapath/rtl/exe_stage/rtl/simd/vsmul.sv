@@ -58,6 +58,11 @@ logic [7:0][7:0] data_shifted;
  * when getting a 2*SEW value from a SEW*SEW we have 2 sign bits and we only need 1
 */
 always_comb begin
+    data_shifted = '0;
+    data_shifted_8 = '0;
+    data_shifted_16 = '0;
+    data_shifted_32 = '0;
+    data_shifted_64 = '0;
     case (sew_i)
         SEW_8: begin
             for (int i = 0; i < 8; ++i) begin

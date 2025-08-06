@@ -290,6 +290,7 @@ assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
 assign instruction_o.vl              = instruction_i.vl;
 assign instruction_o.sew             = instruction_i.instr.sew;
+assign instruction_o.lmul            = instruction_i.instr.lmul;
 `ifdef SIM_KONATA_DUMP
 assign instruction_o.id              = instruction_i.instr.id;
 `endif
