@@ -2604,6 +2604,9 @@ module decoder
                                             decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.instr_type = VFMV_S_F;
                                         end
+                                        else begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     end
         
                                     F6_VFSLIDE1UP: begin
