@@ -466,7 +466,7 @@ typedef enum logic [5:0] {
     F6_VFUNARY0     = 6'b010010,
     F6_VFSLIDE1UP       = 6'b001110,
     F6_VFSLIDE1DOWN     = 6'b001111,
-    F6_VRWFUNARY0       = 6'b010000,
+    F6_VRWFUNARY0       = 6'b010000
 } op_func6_vector_opf_t;
 
 typedef enum logic [4:0] {
