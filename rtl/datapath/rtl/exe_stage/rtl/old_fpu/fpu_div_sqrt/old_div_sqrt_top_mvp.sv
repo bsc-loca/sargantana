@@ -18,8 +18,8 @@
 //                                                                            //
 //                                                                            //
 // Create Date:    03/03/2018                                                 //
-// Design Name:    div_sqrt_top_mvp                                           //
-// Module Name:    div_sqrt_top_mvp.sv                                        //
+// Design Name:    old_div_sqrt_top_mvp                                           //
+// Module Name:    old_div_sqrt_top_mvp.sv                                        //
 // Project Name:   The shared divisor and square root                         //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -32,9 +32,9 @@
 //                 control for special cases                                  //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module div_sqrt_top_mvp
+module old_div_sqrt_top_mvp
 
   (//Input
    input logic                            Clk_CI,
@@ -94,7 +94,7 @@ module div_sqrt_top_mvp
    logic FP16ALT_S;
 
 
- preprocess_mvp  preprocess_U0
+ old_preprocess_mvp  preprocess_U0
  (
    .Clk_CI                (Clk_CI             ),
    .Rst_RBI               (Rst_RBI            ),
@@ -123,7 +123,7 @@ module div_sqrt_top_mvp
    .Special_case_dly_SBO  (Special_case_dly_SB)
    );
 
- nrbd_nrsc_mvp   nrbd_nrsc_U0
+ old_nrbd_nrsc_mvp   nrbd_nrsc_U0
   (
    .Clk_CI                (Clk_CI             ),
    .Rst_RBI               (Rst_RBI            ),
@@ -153,7 +153,7 @@ module div_sqrt_top_mvp
     );
 
 
- norm_div_sqrt_mvp  fpu_norm_U0
+ old_norm_div_sqrt_mvp  fpu_norm_U0
   (
    .Mant_in_DI            (Mant_z_D           ),
    .Exp_in_DI             (Exp_z_D            ),

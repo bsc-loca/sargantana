@@ -19,7 +19,7 @@
 //                                                                            //
 // Create Date:    09/03/2018                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    norm_div_sqrt_mvp.sv                                       //
+// Module Name:    old_norm_div_sqrt_mvp.sv                                       //
 // Project Name:                                                              //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -41,9 +41,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module norm_div_sqrt_mvp
+module old_norm_div_sqrt_mvp
   (//Inputs
    input logic [C_MANT_FP64+4:0]                Mant_in_DI,  // Include the needed 4-bit for rounding and hidden bit
    input logic signed [C_EXP_FP64+1:0]          Exp_in_DI,
@@ -467,4 +467,4 @@ module norm_div_sqrt_mvp
 assign In_Exact_S = (~Full_precision_SI) | Mant_rounded_S;
 assign Fflags_SO = {NV_OP_S,Div_Zero_S,Exp_OF_S,Exp_UF_S,In_Exact_S}; //{NV,DZ,OF,UF,NX}
 
-endmodule // norm_div_sqrt_mvp
+endmodule // old_norm_div_sqrt_mvp

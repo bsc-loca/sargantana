@@ -13,7 +13,7 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-package fpnew_pkg;
+package old_fpnew_pkg;
 
   // ---------
   // FP TYPES

@@ -13,19 +13,19 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpnew_classifier #(
-  parameter fpnew_pkg::fp_format_e   FpFormat = fpnew_pkg::fp_format_e'(0),
+module old_fpnew_classifier #(
+  parameter old_fpnew_pkg::fp_format_e   FpFormat = old_fpnew_pkg::fp_format_e'(0),
   parameter int unsigned             NumOperands = 1,
   // Do not change
-  localparam int unsigned WIDTH = fpnew_pkg::fp_width(FpFormat)
+  localparam int unsigned WIDTH = old_fpnew_pkg::fp_width(FpFormat)
 ) (
   input  logic                [NumOperands-1:0][WIDTH-1:0] operands_i,
   input  logic                [NumOperands-1:0]            is_boxed_i,
-  output fpnew_pkg::fp_info_t [NumOperands-1:0]            info_o
+  output old_fpnew_pkg::fp_info_t [NumOperands-1:0]            info_o
 );
 
-  localparam int unsigned EXP_BITS = fpnew_pkg::exp_bits(FpFormat);
-  localparam int unsigned MAN_BITS = fpnew_pkg::man_bits(FpFormat);
+  localparam int unsigned EXP_BITS = old_fpnew_pkg::exp_bits(FpFormat);
+  localparam int unsigned MAN_BITS = old_fpnew_pkg::man_bits(FpFormat);
 
   // Type definition
   typedef struct packed {

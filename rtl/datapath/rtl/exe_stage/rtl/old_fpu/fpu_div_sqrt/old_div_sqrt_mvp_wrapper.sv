@@ -18,11 +18,11 @@
 //                                                                            //
 // Create Date:    20/04/2018                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    div_sqrt_mvp_wrapper.sv                                    //
+// Module Name:    old_div_sqrt_mvp_wrapper.sv                                    //
 // Project Name:   The shared divisor and square root                         //
 // Language:       SystemVerilog                                              //
 //                                                                            //
-// Description:    The wrapper of  div_sqrt_top_mvp                           //
+// Description:    The wrapper of  old_div_sqrt_top_mvp                           //
 //                                                                            //
 //                                                                            //
 //                                                                            //
@@ -36,9 +36,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module div_sqrt_mvp_wrapper
+module old_div_sqrt_mvp_wrapper
 #(
    parameter   PrePipeline_depth_S             =        0,  // If you want to add a flip/flop stage before preprocess, set it to 1.
    parameter   PostPipeline_depth_S            =        2  // The output delay stages
@@ -90,7 +90,7 @@ module div_sqrt_mvp_wrapper
     if(PrePipeline_depth_S==1)
       begin
 
-         div_sqrt_top_mvp  div_top_U0  //for RTL
+         old_div_sqrt_top_mvp  div_top_U0  //for RTL
 
           (//Input
            .Clk_CI                 (Clk_CI),
@@ -139,7 +139,7 @@ module div_sqrt_mvp_wrapper
 
      else
       begin
-          div_sqrt_top_mvp  div_top_U0  //for RTL
+          old_div_sqrt_top_mvp  div_top_U0  //for RTL
           (//Input
            .Clk_CI                 (Clk_CI),
            .Rst_RBI                (Rst_RBI),

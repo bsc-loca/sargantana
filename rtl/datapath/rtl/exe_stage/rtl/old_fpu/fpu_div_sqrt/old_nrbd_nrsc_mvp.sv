@@ -18,7 +18,7 @@
 //                                                                            //
 // Create Date:    10/04/2018                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    nrbd_nrsc_mvp.sv                                           //
+// Module Name:    old_nrbd_nrsc_mvp.sv                                           //
 // Project Name:   Private FPU                                                //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -31,9 +31,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module nrbd_nrsc_mvp
+module old_nrbd_nrsc_mvp
 
   (//Input
    input logic                                 Clk_CI,
@@ -69,7 +69,7 @@ module nrbd_nrsc_mvp
     logic                                     Div_start_dly_S,Sqrt_start_dly_S;
 
 
-control_mvp         control_U0
+old_control_mvp         control_U0
 (  .Clk_CI                                   (Clk_CI                          ),
    .Rst_RBI                                  (Rst_RBI                         ),
    .Div_start_SI                             (Div_start_SI                    ),

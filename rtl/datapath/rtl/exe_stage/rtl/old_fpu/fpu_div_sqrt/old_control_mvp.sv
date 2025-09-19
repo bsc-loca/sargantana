@@ -19,7 +19,7 @@
 //                                                                            //
 // Create Date:    04/03/2018                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    control_mvp.sv                                             //
+// Module Name:    old_control_mvp.sv                                             //
 // Project Name:   Private FPU                                                //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -38,9 +38,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module control_mvp
+module old_control_mvp
 
   (//Input
    input logic                                        Clk_CI,
@@ -2350,7 +2350,7 @@ module control_mvp
           assign  Div_enable_SI[i] = Div_enable_SO;
           assign  Div_start_dly_SI[i] = Div_start_dly_S;
           assign  Sqrt_enable_SI[i] = Sqrt_enable_SO;
-          iteration_div_sqrt_mvp #(C_MANT_FP64+6) iteration_div_sqrt
+          old_iteration_div_sqrt_mvp #(C_MANT_FP64+6) iteration_div_sqrt
           (
           .A_DI                                    (Iteration_cell_a_D[i]            ),
           .B_DI                                    (Iteration_cell_b_D[i]            ),

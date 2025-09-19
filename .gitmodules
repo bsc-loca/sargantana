@@ -7,3 +7,6 @@
 [submodule "rtl/mmu"]
 	path = rtl/mmu
 	url = ../../core-tile/mmu/mmu_bsc.git
+[submodule "rtl/datapath/rtl/exe_stage/rtl/fpu"]
+	path = rtl/datapath/rtl/exe_stage/rtl/fpu
+	url = https://github.com/openhwgroup/cvfpu.git

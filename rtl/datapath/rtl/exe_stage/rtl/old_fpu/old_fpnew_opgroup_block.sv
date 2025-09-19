@@ -13,23 +13,23 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpnew_opgroup_block #(
-  parameter fpnew_pkg::opgroup_e        OpGroup       = fpnew_pkg::ADDMUL,
+module old_fpnew_opgroup_block #(
+  parameter old_fpnew_pkg::opgroup_e        OpGroup       = old_fpnew_pkg::ADDMUL,
   // FPU configuration
   parameter int unsigned                Width         = 32,
   parameter logic                       EnableVectors = 1'b1,
   parameter logic                       PulpDivsqrt   = 1'b1,
-  parameter fpnew_pkg::fmt_logic_t      FpFmtMask     = '1,
-  parameter fpnew_pkg::ifmt_logic_t     IntFmtMask    = '1,
-  parameter fpnew_pkg::fmt_unsigned_t   FmtPipeRegs   = '{default: 0},
-  parameter fpnew_pkg::fmt_unit_types_t FmtUnitTypes  = '{default: fpnew_pkg::PARALLEL},
-  parameter fpnew_pkg::pipe_config_t    PIPE_CONFIG    = fpnew_pkg::BEFORE_INPUTS,
+  parameter old_fpnew_pkg::fmt_logic_t      FpFmtMask     = '1,
+  parameter old_fpnew_pkg::ifmt_logic_t     IntFmtMask    = '1,
+  parameter old_fpnew_pkg::fmt_unsigned_t   FmtPipeRegs   = '{default: 0},
+  parameter old_fpnew_pkg::fmt_unit_types_t FmtUnitTypes  = '{default: old_fpnew_pkg::PARALLEL},
+  parameter old_fpnew_pkg::pipe_config_t    PIPE_CONFIG    = old_fpnew_pkg::BEFORE_INPUTS,
   parameter type                        TAG_TYPE       = logic,
   parameter int unsigned                TrueSIMDClass = 0,
   // Do not change
-  localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS,
-  localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
-  localparam int unsigned NUM_LANES    = fpnew_pkg::max_num_lanes(Width, FpFmtMask, EnableVectors),
+  localparam int unsigned NUM_FORMATS  = old_fpnew_pkg::NUM_FP_FORMATS,
+  localparam int unsigned NUM_OPERANDS = old_fpnew_pkg::num_operands(OpGroup),
+  localparam int unsigned NUM_LANES    = old_fpnew_pkg::max_num_lanes(Width, FpFmtMask, EnableVectors),
   localparam type         MaskType     = logic [NUM_LANES-1:0]
 ) (
   input logic                                     clk_i,
@@ -37,12 +37,12 @@ module fpnew_opgroup_block #(
   // Input signals
   input logic [NUM_OPERANDS-1:0][Width-1:0]       operands_i,
   input logic [NUM_FORMATS-1:0][NUM_OPERANDS-1:0] is_boxed_i,
-  input fpnew_pkg::roundmode_e                    rnd_mode_i,
-  input fpnew_pkg::operation_e                    op_i,
+  input old_fpnew_pkg::roundmode_e                    rnd_mode_i,
+  input old_fpnew_pkg::operation_e                    op_i,
   input logic                                     op_mod_i,
-  input fpnew_pkg::fp_format_e                    src_fmt_i,
-  input fpnew_pkg::fp_format_e                    dst_fmt_i,
-  input fpnew_pkg::int_format_e                   int_fmt_i,
+  input old_fpnew_pkg::fp_format_e                    src_fmt_i,
+  input old_fpnew_pkg::fp_format_e                    dst_fmt_i,
+  input old_fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
   input TAG_TYPE                                   tag_i,
   input MaskType                                  simd_mask_i,
@@ -52,7 +52,7 @@ module fpnew_opgroup_block #(
   input  logic                                    flush_i,
   // Output signals
   output logic [Width-1:0]                        result_o,
-  output fpnew_pkg::status_t                      status_o,
+  output old_fpnew_pkg::status_t                      status_o,
   output logic                                    extension_bit_o,
   output TAG_TYPE                                  tag_o,
   // Output handshake
@@ -67,7 +67,7 @@ module fpnew_opgroup_block #(
   // ----------------
   typedef struct packed {
     logic [Width-1:0]   result;
-    fpnew_pkg::status_t status;
+    old_fpnew_pkg::status_t status;
     logic               ext_bit;
     TAG_TYPE             tag;
   } output_t;
@@ -86,25 +86,25 @@ module fpnew_opgroup_block #(
   // -------------------------
   for (genvar fmt = 0; fmt < int'(NUM_FORMATS); fmt++) begin : gen_parallel_slices
     // Some constants for this format
-    localparam logic ANY_MERGED = fpnew_pkg::any_enabled_multi(FmtUnitTypes, FpFmtMask);
+    localparam logic ANY_MERGED = old_fpnew_pkg::any_enabled_multi(FmtUnitTypes, FpFmtMask);
     localparam logic IS_FIRST_MERGED =
-        fpnew_pkg::is_first_enabled_multi(fpnew_pkg::fp_format_e'(fmt), FmtUnitTypes, FpFmtMask);
+        old_fpnew_pkg::is_first_enabled_multi(old_fpnew_pkg::fp_format_e'(fmt), FmtUnitTypes, FpFmtMask);
 
     // Generate slice only if format enabled
-    if (FpFmtMask[fmt] && (FmtUnitTypes[fmt] == fpnew_pkg::PARALLEL)) begin : active_format
+    if (FpFmtMask[fmt] && (FmtUnitTypes[fmt] == old_fpnew_pkg::PARALLEL)) begin : active_format
 
       logic in_valid;
 
       assign in_valid = in_valid_i & (dst_fmt_i == fmt); // enable selected format
 
       // Forward masks related to the right SIMD lane
-      localparam int unsigned INTERNAL_LANES = fpnew_pkg::num_lanes(Width, fpnew_pkg::fp_format_e'(fmt), EnableVectors);
+      localparam int unsigned INTERNAL_LANES = old_fpnew_pkg::num_lanes(Width, old_fpnew_pkg::fp_format_e'(fmt), EnableVectors);
       logic [INTERNAL_LANES-1:0] mask_slice;
       always_comb for (int b = 0; b < INTERNAL_LANES; b++) mask_slice[b] = simd_mask_i[(NUM_LANES/INTERNAL_LANES)*b];
 
-      fpnew_opgroup_fmt_slice #(
+      old_fpnew_opgroup_fmt_slice #(
         .OpGroup       ( OpGroup                      ),
-        .FpFormat      ( fpnew_pkg::fp_format_e'(fmt) ),
+        .FpFormat      ( old_fpnew_pkg::fp_format_e'(fmt) ),
         .Width         ( Width                        ),
         .EnableVectors ( EnableVectors                ),
         .NUM_PIPE_REGS   ( FmtPipeRegs[fmt]             ),
@@ -137,44 +137,44 @@ module fpnew_opgroup_block #(
     // If the format wants to use merged ops, tie off the dangling ones not used here
     end else if (FpFmtMask[fmt] && ANY_MERGED && !IS_FIRST_MERGED) begin : merged_unused
 
-      localparam FMT = fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
+      localparam FMT = old_fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
       // Ready is split up into formats
       assign fmt_in_ready[fmt]  = fmt_in_ready[int'(FMT)];
 
       assign fmt_out_valid[fmt] = 1'b0; // don't emit values
       assign fmt_busy[fmt]      = 1'b0; // never busy
       // Outputs are don't care
-      assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
-      assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
-      assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TAG_TYPE'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].result  = '{default: old_fpnew_pkg::DONT_CARE};
+      assign fmt_outputs[fmt].status  = '{default: old_fpnew_pkg::DONT_CARE};
+      assign fmt_outputs[fmt].ext_bit = old_fpnew_pkg::DONT_CARE;
+      assign fmt_outputs[fmt].tag     = TAG_TYPE'(old_fpnew_pkg::DONT_CARE);
 
     // Tie off disabled formats
-    end else if (!FpFmtMask[fmt] || (FmtUnitTypes[fmt] == fpnew_pkg::DISABLED)) begin : disable_fmt
+    end else if (!FpFmtMask[fmt] || (FmtUnitTypes[fmt] == old_fpnew_pkg::DISABLED)) begin : disable_fmt
       assign fmt_in_ready[fmt]  = 1'b0; // don't accept operations
       assign fmt_out_valid[fmt] = 1'b0; // don't emit values
       assign fmt_busy[fmt]      = 1'b0; // never busy
       // Outputs are don't care
-      assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
-      assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
-      assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TAG_TYPE'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].result  = '{default: old_fpnew_pkg::DONT_CARE};
+      assign fmt_outputs[fmt].status  = '{default: old_fpnew_pkg::DONT_CARE};
+      assign fmt_outputs[fmt].ext_bit = old_fpnew_pkg::DONT_CARE;
+      assign fmt_outputs[fmt].tag     = TAG_TYPE'(old_fpnew_pkg::DONT_CARE);
     end
   end
 
   // ----------------------
   // Generate Merged Slice
   // ----------------------
-  if (fpnew_pkg::any_enabled_multi(FmtUnitTypes, FpFmtMask)) begin : gen_merged_slice
+  if (old_fpnew_pkg::any_enabled_multi(FmtUnitTypes, FpFmtMask)) begin : gen_merged_slice
 
-    localparam FMT = fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
-    localparam NUM_REG = fpnew_pkg::get_num_regs_multi(FmtPipeRegs, FmtUnitTypes, FpFmtMask);
+    localparam FMT = old_fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
+    localparam NUM_REG = old_fpnew_pkg::get_num_regs_multi(FmtPipeRegs, FmtUnitTypes, FpFmtMask);
 
     logic in_valid;
 
-    assign in_valid = in_valid_i  && (fpnew_pkg::is_enabled_multi(dst_fmt_i,FmtUnitTypes));
+    assign in_valid = in_valid_i  && (old_fpnew_pkg::is_enabled_multi(dst_fmt_i,FmtUnitTypes));
 
-    fpnew_opgroup_multifmt_slice #(
+    old_fpnew_opgroup_multifmt_slice #(
       .OpGroup       ( OpGroup          ),
       .Width         ( Width            ),
       .FP_FMT_CONFIG   ( FpFmtMask        ),

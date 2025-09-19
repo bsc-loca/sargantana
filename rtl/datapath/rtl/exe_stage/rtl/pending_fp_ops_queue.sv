@@ -32,11 +32,11 @@ module pending_fp_ops_queue
     input logic                     result_valid_i,         // Result valid
     input reg_t                     result_tag_i,           // Instruction that finishes
     input bus64_t                   result_data_i,          // Result asociated data
-    input fpnew_pkg::status_t        result_fp_status_i,
+    input old_fpnew_pkg::status_t        result_fp_status_i,
     input logic                     advance_head_i,         // Advance head pointer one position
 
     output rr_exe_fpu_instr_t       finish_instr_fp_o,      // Next Instruction to Write Back
-    output fpnew_pkg::status_t       finish_fp_status_o,    // Next fp_status to Write Back
+    output old_fpnew_pkg::status_t       finish_fp_status_o,    // Next fp_status to Write Back
     
     output reg_t                    tag_o,                  // Tag given to the incoming instruction
     output logic                    full_o                  // fifo full
@@ -78,7 +78,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 // FIFO Memory structure
 rr_exe_fpu_instr_t  instruction_table           [PFPQ_NUM_ENTRIES-1:0];
-fpnew_pkg::status_t instruction_table_status    [PFPQ_NUM_ENTRIES-1:0];
+old_fpnew_pkg::status_t instruction_table_status    [PFPQ_NUM_ENTRIES-1:0];
 reg_t               tag_table                   [PFPQ_NUM_ENTRIES-1:0];
 logic               control_bits_table          [PFPQ_NUM_ENTRIES-1:0];
 logic               valid_table                 [PFPQ_NUM_ENTRIES-1:0];

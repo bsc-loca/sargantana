@@ -18,7 +18,7 @@
 //                                                                            //
 // Create Date:    12/01/2017                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    iteration_div_sqrt_mvp                                     //
+// Module Name:    old_iteration_div_sqrt_mvp                                     //
 // Project Name:   Private FPU                                                //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -29,7 +29,7 @@
 //                  For div_sqrt_mvp                                          //
 ////////////////////////////////////////////////////////////////////////////////
 
-module iteration_div_sqrt_mvp
+module old_iteration_div_sqrt_mvp
 #(
    parameter   WIDTH=25
 )

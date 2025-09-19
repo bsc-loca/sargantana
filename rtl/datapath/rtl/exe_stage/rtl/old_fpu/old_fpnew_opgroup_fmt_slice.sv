@@ -13,20 +13,20 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpnew_opgroup_fmt_slice #(
-  parameter fpnew_pkg::opgroup_e     OpGroup       = fpnew_pkg::ADDMUL,
-  parameter fpnew_pkg::fp_format_e   FpFormat      = fpnew_pkg::fp_format_e'(0),
+module old_fpnew_opgroup_fmt_slice #(
+  parameter old_fpnew_pkg::opgroup_e     OpGroup       = old_fpnew_pkg::ADDMUL,
+  parameter old_fpnew_pkg::fp_format_e   FpFormat      = old_fpnew_pkg::fp_format_e'(0),
   // FPU configuration
   parameter int unsigned             Width         = 32,
   parameter logic                    EnableVectors = 1'b1,
   parameter int unsigned             NUM_PIPE_REGS   = 0,
-  parameter fpnew_pkg::pipe_config_t PIPE_CONFIG    = fpnew_pkg::BEFORE_INPUTS,
+  parameter old_fpnew_pkg::pipe_config_t PIPE_CONFIG    = old_fpnew_pkg::BEFORE_INPUTS,
   parameter logic                    ExtRegEna     = 1'b0,
   parameter type                     TAG_TYPE       = logic,
   parameter int unsigned             TrueSIMDClass = 0,
   // Do not change
-  localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
-  localparam int unsigned NUM_LANES    = fpnew_pkg::num_lanes(Width, FpFormat, EnableVectors),
+  localparam int unsigned NUM_OPERANDS = old_fpnew_pkg::num_operands(OpGroup),
+  localparam int unsigned NUM_LANES    = old_fpnew_pkg::num_lanes(Width, FpFormat, EnableVectors),
   localparam type         MaskType     = logic [NUM_LANES-1:0],
   localparam int unsigned EXT_REG_ENA_WIDTH = ((NUM_PIPE_REGS == 0) ? 1 : NUM_PIPE_REGS)
 ) (
@@ -35,8 +35,8 @@ module fpnew_opgroup_fmt_slice #(
   // Input signals
   input logic [NUM_OPERANDS-1:0][Width-1:0] operands_i,
   input logic [NUM_OPERANDS-1:0]            is_boxed_i,
-  input fpnew_pkg::roundmode_e              rnd_mode_i,
-  input fpnew_pkg::operation_e              op_i,
+  input old_fpnew_pkg::roundmode_e              rnd_mode_i,
+  input old_fpnew_pkg::operation_e              op_i,
   input logic                               op_mod_i,
   input logic                               vectorial_op_i,
   input TAG_TYPE                             tag_i,
@@ -47,7 +47,7 @@ module fpnew_opgroup_fmt_slice #(
   input  logic                              flush_i,
   // Output signals
   output logic [Width-1:0]                  result_o,
-  output fpnew_pkg::status_t                status_o,
+  output old_fpnew_pkg::status_t                status_o,
   output logic                              extension_bit_o,
   output TAG_TYPE                            tag_o,
   // Output handshake
@@ -59,7 +59,7 @@ module fpnew_opgroup_fmt_slice #(
   input  logic [EXT_REG_ENA_WIDTH-1:0]         reg_ena_i
 );
 
-  localparam int unsigned FP_WIDTH  = fpnew_pkg::fp_width(FpFormat);
+  localparam int unsigned FP_WIDTH  = old_fpnew_pkg::fp_width(FpFormat);
   localparam int unsigned SIMD_WIDTH = unsigned'(Width/NUM_LANES);
 
 
@@ -69,9 +69,9 @@ module fpnew_opgroup_fmt_slice #(
   logic [NUM_LANES*FP_WIDTH-1:0] slice_result;
   logic [Width-1:0]              slice_regular_result, slice_class_result, slice_vec_class_result;
 
-  fpnew_pkg::status_t    [NUM_LANES-1:0] lane_status;
+  old_fpnew_pkg::status_t    [NUM_LANES-1:0] lane_status;
   logic                  [NUM_LANES-1:0] lane_ext_bit; // only the first one is actually used
-  fpnew_pkg::classmask_e [NUM_LANES-1:0] lane_class_mask;
+  old_fpnew_pkg::classmask_e [NUM_LANES-1:0] lane_class_mask;
   TAG_TYPE                [NUM_LANES-1:0] lane_tags; // only the first one is actually used
   logic                  [NUM_LANES-1:0] lane_masks;
   logic                  [NUM_LANES-1:0] lane_vectorial, lane_busy, lane_is_class; // dito
@@ -97,7 +97,7 @@ module fpnew_opgroup_fmt_slice #(
 
       logic [NUM_OPERANDS-1:0][FP_WIDTH-1:0] local_operands; // lane-local operands
       logic [FP_WIDTH-1:0]                   op_result;      // lane-local results
-      fpnew_pkg::status_t                    op_status;
+      old_fpnew_pkg::status_t                    op_status;
 
       assign in_valid = in_valid_i & ((lane == 0) | vectorial_op); // upper lanes only for vectors
       // Slice out the operands for this lane
@@ -108,8 +108,8 @@ module fpnew_opgroup_fmt_slice #(
       end
 
       // Instantiate the operation from the selected opgroup
-      if (OpGroup == fpnew_pkg::ADDMUL) begin : lane_instance
-        fpnew_fma #(
+      if (OpGroup == old_fpnew_pkg::ADDMUL) begin : lane_instance
+        old_fpnew_fma #(
           .FpFormat    ( FpFormat    ),
           .NUM_PIPE_REGS ( NUM_PIPE_REGS ),
           .PIPE_CONFIG  ( PIPE_CONFIG  ),
@@ -141,8 +141,8 @@ module fpnew_opgroup_fmt_slice #(
           .reg_ena_i
         );
         assign lane_is_class[lane]   = 1'b0;
-        assign lane_class_mask[lane] = fpnew_pkg::NEGINF;
-      end else if (OpGroup == fpnew_pkg::DIVSQRT) begin : lane_instance
+        assign lane_class_mask[lane] = old_fpnew_pkg::NEGINF;
+      end else if (OpGroup == old_fpnew_pkg::DIVSQRT) begin : lane_instance
         // fpnew_divsqrt #(
         //   .FpFormat   (FpFormat),
         //   .NUM_PIPE_REGS(NUM_PIPE_REGS),
@@ -173,8 +173,8 @@ module fpnew_opgroup_fmt_slice #(
         //   .reg_ena_i
         // );
         // assign lane_is_class[lane] = 1'b0;
-      end else if (OpGroup == fpnew_pkg::NONCOMP) begin : lane_instance
-        fpnew_noncomp #(
+      end else if (OpGroup == old_fpnew_pkg::NONCOMP) begin : lane_instance
+        old_fpnew_noncomp #(
           .FpFormat   (FpFormat),
           .NUM_PIPE_REGS(NUM_PIPE_REGS),
           .PIPE_CONFIG (PIPE_CONFIG),
@@ -235,25 +235,25 @@ module fpnew_opgroup_fmt_slice #(
       assign slice_vec_class_result[lane*SIMD_WIDTH +: 10] = lane_class_mask[lane];
       assign slice_vec_class_result[(lane+1)*SIMD_WIDTH-1 -: SIMD_WIDTH-10] = '0;
     end else if (((lane+1)*8) <= Width) begin : vectorial_class // vectorial class blocks are 8bits in size
-      assign local_sign = (((((lane_class_mask[lane] == fpnew_pkg::NEGINF) ||
-                              (lane_class_mask[lane] == fpnew_pkg::NEGNORM)) ||
-                              (lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM)) ||
-                              (lane_class_mask[lane] == fpnew_pkg::NEGZERO)));
+      assign local_sign = (((((lane_class_mask[lane] == old_fpnew_pkg::NEGINF) ||
+                              (lane_class_mask[lane] == old_fpnew_pkg::NEGNORM)) ||
+                              (lane_class_mask[lane] == old_fpnew_pkg::NEGSUBNORM)) ||
+                              (lane_class_mask[lane] == old_fpnew_pkg::NEGZERO)));
 
       // Write the current block segment
       assign slice_vec_class_result[(lane+1)*8-1:lane*8] = {
         local_sign,  // BIT 7
         ~local_sign, // BIT 6
-        (lane_class_mask[lane] == fpnew_pkg::QNAN), // BIT 5
-        (lane_class_mask[lane] == fpnew_pkg::SNAN), // BIT 4
-        ((lane_class_mask[lane] == fpnew_pkg::POSZERO)
-            || (lane_class_mask[lane] == fpnew_pkg::NEGZERO)), // BIT 3
-        ((lane_class_mask[lane] == fpnew_pkg::POSSUBNORM)
-            || (lane_class_mask[lane] == fpnew_pkg::NEGSUBNORM)), // BIT 2
-        ((lane_class_mask[lane] == fpnew_pkg::POSNORM)
-            || (lane_class_mask[lane] == fpnew_pkg::NEGNORM)), // BIT 1
-        ((lane_class_mask[lane] == fpnew_pkg::POSINF)
-            || (lane_class_mask[lane] == fpnew_pkg::NEGINF)) // BIT 0
+        (lane_class_mask[lane] == old_fpnew_pkg::QNAN), // BIT 5
+        (lane_class_mask[lane] == old_fpnew_pkg::SNAN), // BIT 4
+        ((lane_class_mask[lane] == old_fpnew_pkg::POSZERO)
+            || (lane_class_mask[lane] == old_fpnew_pkg::NEGZERO)), // BIT 3
+        ((lane_class_mask[lane] == old_fpnew_pkg::POSSUBNORM)
+            || (lane_class_mask[lane] == old_fpnew_pkg::NEGSUBNORM)), // BIT 2
+        ((lane_class_mask[lane] == old_fpnew_pkg::POSNORM)
+            || (lane_class_mask[lane] == old_fpnew_pkg::NEGNORM)), // BIT 1
+        ((lane_class_mask[lane] == old_fpnew_pkg::POSINF)
+            || (lane_class_mask[lane] == old_fpnew_pkg::NEGINF)) // BIT 0
       };
     end
   end
@@ -291,7 +291,7 @@ module fpnew_opgroup_fmt_slice #(
   // Collapse the lane status
   always_comb begin : output_processing
     // Collapse the status
-    automatic fpnew_pkg::status_t temp_status;
+    automatic old_fpnew_pkg::status_t temp_status;
     temp_status = '0;
     for (int i = 0; i < int'(NUM_LANES); i++)
       temp_status |= lane_status[i] & {5{lane_masks[i]}};

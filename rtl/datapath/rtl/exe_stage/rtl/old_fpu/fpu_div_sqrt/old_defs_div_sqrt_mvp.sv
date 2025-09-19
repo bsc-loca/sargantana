@@ -8,10 +8,10 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 //
-// This file contains all div_sqrt_top_mvp parameters
+// This file contains all old_div_sqrt_top_mvp parameters
 // Authors    : Lei Li  (lile@iis.ee.ethz.ch)
 
-package defs_div_sqrt_mvp;
+package old_defs_div_sqrt_mvp;
 
    // op command
    localparam C_RM                  = 3;
@@ -80,4 +80,4 @@ package defs_div_sqrt_mvp;
    localparam C_MANT_ZERO_FP16ALT    = 7'h0;
    localparam C_QNAN_FP16ALT         = 16'h7FC0;
 
-endpackage : defs_div_sqrt_mvp
+endpackage : old_defs_div_sqrt_mvp

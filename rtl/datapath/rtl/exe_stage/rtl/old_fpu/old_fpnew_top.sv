@@ -13,17 +13,17 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpnew_top #(
+module old_fpnew_top #(
   // FPU configuration
-  parameter fpnew_pkg::fpu_features_t       Features       = fpnew_pkg::RV64D_Xsflt,
-  parameter fpnew_pkg::fpu_implementation_t Implementation = fpnew_pkg::DEFAULT_NOREGS,
+  parameter old_fpnew_pkg::fpu_features_t       Features       = old_fpnew_pkg::RV64D_Xsflt,
+  parameter old_fpnew_pkg::fpu_implementation_t Implementation = old_fpnew_pkg::DEFAULT_NOREGS,
   // PulpDivSqrt = 0 enables T-head-based DivSqrt unit. Supported only for FP32-only instances of Fpnew
   parameter logic                           PulpDivsqrt    = 1'b1,
   parameter type                            TAG_TYPE        = logic[4:0],
   parameter int unsigned                    TrueSIMDClass  = 0,
   parameter int unsigned                    EnableSIMDMask = 0,
   // Do not change
-  localparam int unsigned NumLanes     = fpnew_pkg::max_num_lanes(Features.Width, Features.FpFmtMask, Features.EnableVectors),
+  localparam int unsigned NumLanes     = old_fpnew_pkg::max_num_lanes(Features.Width, Features.FpFmtMask, Features.EnableVectors),
   localparam type         MaskType     = logic [NumLanes-1:0],
   localparam int unsigned WIDTH        = Features.Width,
   localparam int unsigned NUM_OPERANDS = 3
@@ -32,12 +32,12 @@ module fpnew_top #(
   input logic                               rst_ni,
   // Input signals
   input logic [NUM_OPERANDS-1:0][WIDTH-1:0] operands_i,
-  input fpnew_pkg::roundmode_e              rnd_mode_i,
-  input fpnew_pkg::operation_e              op_i,
+  input old_fpnew_pkg::roundmode_e              rnd_mode_i,
+  input old_fpnew_pkg::operation_e              op_i,
   input logic                               op_mod_i,
-  input fpnew_pkg::fp_format_e              src_fmt_i,
-  input fpnew_pkg::fp_format_e              dst_fmt_i,
-  input fpnew_pkg::int_format_e             int_fmt_i,
+  input old_fpnew_pkg::fp_format_e              src_fmt_i,
+  input old_fpnew_pkg::fp_format_e              dst_fmt_i,
+  input old_fpnew_pkg::int_format_e             int_fmt_i,
   input logic                               vectorial_op_i,
   input TAG_TYPE                             tag_i,
   input MaskType                            simd_mask_i,
@@ -47,7 +47,7 @@ module fpnew_top #(
   input  logic                              flush_i,
   // Output signals
   output logic [WIDTH-1:0]                  result_o,
-  output fpnew_pkg::status_t                status_o,
+  output old_fpnew_pkg::status_t                status_o,
   output TAG_TYPE                            tag_o,
   // Output handshake
   output logic                              out_valid_o,
@@ -56,15 +56,15 @@ module fpnew_top #(
   output logic                              busy_o
 );
 
-  localparam int unsigned NUM_OPGROUPS = fpnew_pkg::NUM_OPGROUPS;
-  localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS;
+  localparam int unsigned NUM_OPGROUPS = old_fpnew_pkg::NUM_OPGROUPS;
+  localparam int unsigned NUM_FORMATS  = old_fpnew_pkg::NUM_FP_FORMATS;
 
   // ----------------
   // Type Definition
   // ----------------
   typedef struct packed {
     logic [WIDTH-1:0]   result;
-    fpnew_pkg::status_t status;
+    old_fpnew_pkg::status_t status;
     TAG_TYPE             tag;
   } output_t;
 
@@ -77,11 +77,11 @@ module fpnew_top #(
   // -----------
   // Input Side
   // -----------
-  assign in_ready_o = in_valid_i & opgrp_in_ready[fpnew_pkg::get_opgroup(op_i)];
+  assign in_ready_o = in_valid_i & opgrp_in_ready[old_fpnew_pkg::get_opgroup(op_i)];
 
   // NaN-boxing check
   for (genvar fmt = 0; fmt < int'(NUM_FORMATS); fmt++) begin : gen_nanbox_check
-    localparam int unsigned FP_WIDTH = fpnew_pkg::fp_width(fpnew_pkg::fp_format_e'(fmt));
+    localparam int unsigned FP_WIDTH = old_fpnew_pkg::fp_width(old_fpnew_pkg::fp_format_e'(fmt));
     // NaN boxing is only generated if it's enabled and needed
     if (Features.EnableNanBox && (FP_WIDTH < WIDTH)) begin : check
       for (genvar op = 0; op < int'(NUM_OPERANDS); op++) begin : operands
@@ -102,12 +102,12 @@ module fpnew_top #(
   // Generate Operation Blocks
   // -------------------------
   for (genvar opgrp = 0; opgrp < int'(NUM_OPGROUPS); opgrp++) begin : gen_operation_groups
-    localparam int unsigned NUM_OPS = fpnew_pkg::num_operands(fpnew_pkg::opgroup_e'(opgrp));
+    localparam int unsigned NUM_OPS = old_fpnew_pkg::num_operands(old_fpnew_pkg::opgroup_e'(opgrp));
 
     logic in_valid;
     logic [NUM_FORMATS-1:0][NUM_OPS-1:0] input_boxed;
 
-    assign in_valid = in_valid_i & (fpnew_pkg::get_opgroup(op_i) == fpnew_pkg::opgroup_e'(opgrp));
+    assign in_valid = in_valid_i & (old_fpnew_pkg::get_opgroup(op_i) == old_fpnew_pkg::opgroup_e'(opgrp));
 
     // slice out input boxing
     always_comb begin : slice_inputs
@@ -115,8 +115,8 @@ module fpnew_top #(
         input_boxed[fmt] = is_boxed[fmt][NUM_OPS-1:0];
     end
 
-    fpnew_opgroup_block #(
-      .OpGroup       ( fpnew_pkg::opgroup_e'(opgrp)    ),
+    old_fpnew_opgroup_block #(
+      .OpGroup       ( old_fpnew_pkg::opgroup_e'(opgrp)    ),
       .Width         ( WIDTH                           ),
       .EnableVectors ( Features.EnableVectors          ),
       .PulpDivsqrt   ( PulpDivsqrt                     ),

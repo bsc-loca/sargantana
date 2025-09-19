@@ -15,16 +15,16 @@
 
 `include "registers.svh"
 
-module fpnew_divsqrt_multi #(
-  parameter fpnew_pkg::fmt_logic_t   FP_FMT_CONFIG  = '1,
+module old_fpnew_divsqrt_multi #(
+  parameter old_fpnew_pkg::fmt_logic_t   FP_FMT_CONFIG  = '1,
   // FPU configuration
   parameter int unsigned             NUM_PIPE_REGS = 0,
-  parameter fpnew_pkg::pipe_config_t PIPE_CONFIG  = fpnew_pkg::AFTER_OUTPUTS,
+  parameter old_fpnew_pkg::pipe_config_t PIPE_CONFIG  = old_fpnew_pkg::AFTER_OUTPUTS,
   parameter type                     TAG_TYPE     = logic,
   parameter type                     AUX_TYPE     = logic,
   // Do not change
-  localparam int unsigned WIDTH       = fpnew_pkg::max_fp_width(FP_FMT_CONFIG),
-  localparam int unsigned NUM_FORMATS = fpnew_pkg::NUM_FP_FORMATS,
+  localparam int unsigned WIDTH       = old_fpnew_pkg::max_fp_width(FP_FMT_CONFIG),
+  localparam int unsigned NUM_FORMATS = old_fpnew_pkg::NUM_FP_FORMATS,
   localparam int unsigned EXT_REG_ENA_WIDTH = ((NUM_PIPE_REGS == 0) ? 1 : NUM_PIPE_REGS)
 ) (
   input  logic                        clk_i,
@@ -32,9 +32,9 @@ module fpnew_divsqrt_multi #(
   // Input signals
   input  logic [1:0][WIDTH-1:0]       operands_i, // 2 operands
   input  logic [NUM_FORMATS-1:0][1:0] is_boxed_i, // 2 operands
-  input  fpnew_pkg::roundmode_e       rnd_mode_i,
-  input  fpnew_pkg::operation_e       op_i,
-  input  fpnew_pkg::fp_format_e       dst_fmt_i,
+  input  old_fpnew_pkg::roundmode_e       rnd_mode_i,
+  input  old_fpnew_pkg::operation_e       op_i,
+  input  old_fpnew_pkg::fp_format_e       dst_fmt_i,
   input  TAG_TYPE                      tag_i,
   input  logic                        mask_i,
   input  AUX_TYPE                      aux_i,
@@ -49,7 +49,7 @@ module fpnew_divsqrt_multi #(
   input  logic                        flush_i,
   // Output signals
   output logic [WIDTH-1:0]            result_o,
-  output fpnew_pkg::status_t          status_o,
+  output old_fpnew_pkg::status_t          status_o,
   output logic                        extension_bit_o,
   output TAG_TYPE                      tag_o,
   output logic                        mask_o,
@@ -67,14 +67,14 @@ module fpnew_divsqrt_multi #(
   // Constants
   // ----------
   // Pipelines
-  localparam NUM_INP_REGS = (PIPE_CONFIG == fpnew_pkg::BEFORE_INPUTS)
+  localparam NUM_INP_REGS = (PIPE_CONFIG == old_fpnew_pkg::BEFORE_INPUTS)
                             ? NUM_PIPE_REGS
-                            : (PIPE_CONFIG == fpnew_pkg::DISTRIBUTED
+                            : (PIPE_CONFIG == old_fpnew_pkg::DISTRIBUTED
                                ? (NUM_PIPE_REGS / 2) // Last to get distributed regs
                                : 0); // no regs here otherwise
-  localparam NUM_OUT_REGS = (PIPE_CONFIG == fpnew_pkg::AFTER_OUTPUTS || PIPE_CONFIG == fpnew_pkg::INSIDE_UNIT)
+  localparam NUM_OUT_REGS = (PIPE_CONFIG == old_fpnew_pkg::AFTER_OUTPUTS || PIPE_CONFIG == old_fpnew_pkg::INSIDE_UNIT)
                             ? NUM_PIPE_REGS
-                            : (PIPE_CONFIG == fpnew_pkg::DISTRIBUTED
+                            : (PIPE_CONFIG == old_fpnew_pkg::DISTRIBUTED
                                ? ((NUM_PIPE_REGS + 1) / 2) // First to get distributed regs
                                : 0); // no regs here otherwise
 
@@ -83,17 +83,17 @@ module fpnew_divsqrt_multi #(
   // ---------------
   // Selected pipeline output signals as non-arrays
   logic [1:0][WIDTH-1:0] operands_q;
-  fpnew_pkg::roundmode_e rnd_mode_q;
-  fpnew_pkg::operation_e op_q;
-  fpnew_pkg::fp_format_e dst_fmt_q;
+  old_fpnew_pkg::roundmode_e rnd_mode_q;
+  old_fpnew_pkg::operation_e op_q;
+  old_fpnew_pkg::fp_format_e dst_fmt_q;
   logic                  in_valid_q;
 
   // verilator lint_off BLKANDNBLK
   // Input pipeline signals, index i holds signal after i register stages
   logic                  [NUM_INP_REGS:0][1:0][WIDTH-1:0]       inp_pipe_operands_q;
-  fpnew_pkg::roundmode_e [NUM_INP_REGS:0]                       inp_pipe_rnd_mode_q;
-  fpnew_pkg::operation_e [NUM_INP_REGS:0]                       inp_pipe_op_q;
-  fpnew_pkg::fp_format_e [NUM_INP_REGS:0]                       inp_pipe_dst_fmt_q;
+  old_fpnew_pkg::roundmode_e [NUM_INP_REGS:0]                       inp_pipe_rnd_mode_q;
+  old_fpnew_pkg::operation_e [NUM_INP_REGS:0]                       inp_pipe_op_q;
+  old_fpnew_pkg::fp_format_e [NUM_INP_REGS:0]                       inp_pipe_dst_fmt_q;
   TAG_TYPE                [NUM_INP_REGS:0]                       inp_pipe_tag_q;
   logic                  [NUM_INP_REGS:0]                       inp_pipe_mask_q;
   AUX_TYPE                [NUM_INP_REGS:0]                       inp_pipe_aux_q;
@@ -129,9 +129,9 @@ module fpnew_divsqrt_multi #(
     assign reg_ena = (inp_pipe_ready[i] & inp_pipe_valid_q[i]) | reg_ena_i[i];
     // Generate the pipeline registers within the stages, use enable-registers
     `FFL(inp_pipe_operands_q[i+1], inp_pipe_operands_q[i], reg_ena, '0)
-    `FFL(inp_pipe_rnd_mode_q[i+1], inp_pipe_rnd_mode_q[i], reg_ena, fpnew_pkg::RNE)
-    `FFL(inp_pipe_op_q[i+1],       inp_pipe_op_q[i],       reg_ena, fpnew_pkg::FMADD)
-    `FFL(inp_pipe_dst_fmt_q[i+1],  inp_pipe_dst_fmt_q[i],  reg_ena, fpnew_pkg::fp_format_e'(0))
+    `FFL(inp_pipe_rnd_mode_q[i+1], inp_pipe_rnd_mode_q[i], reg_ena, old_fpnew_pkg::RNE)
+    `FFL(inp_pipe_op_q[i+1],       inp_pipe_op_q[i],       reg_ena, old_fpnew_pkg::FMADD)
+    `FFL(inp_pipe_dst_fmt_q[i+1],  inp_pipe_dst_fmt_q[i],  reg_ena, old_fpnew_pkg::fp_format_e'(0))
     `FFL(inp_pipe_tag_q[i+1],      inp_pipe_tag_q[i],      reg_ena, TAG_TYPE'('0))
     `FFL(inp_pipe_mask_q[i+1],     inp_pipe_mask_q[i],     reg_ena, '0)
     `FFL(inp_pipe_aux_q[i+1],      inp_pipe_aux_q[i],      reg_ena, AUX_TYPE'('0))
@@ -154,15 +154,15 @@ module fpnew_divsqrt_multi #(
   // Translate fpnew formats into divsqrt formats
   always_comb begin : translate_fmt
     unique case (dst_fmt_q)
-      fpnew_pkg::FP32:    divsqrt_fmt = 2'b00;
-      fpnew_pkg::FP64:    divsqrt_fmt = 2'b01;
-      fpnew_pkg::FP16:    divsqrt_fmt = 2'b10;
-      fpnew_pkg::FP16ALT: divsqrt_fmt = 2'b11;
+      old_fpnew_pkg::FP32:    divsqrt_fmt = 2'b00;
+      old_fpnew_pkg::FP64:    divsqrt_fmt = 2'b01;
+      old_fpnew_pkg::FP16:    divsqrt_fmt = 2'b10;
+      old_fpnew_pkg::FP16ALT: divsqrt_fmt = 2'b11;
       default:            divsqrt_fmt = 2'b10; // maps also FP8 to FP16
     endcase
 
     // Only if FP8 is enabled
-    input_is_fp8 = FP_FMT_CONFIG[fpnew_pkg::FP8] & (dst_fmt_q == fpnew_pkg::FP8);
+    input_is_fp8 = FP_FMT_CONFIG[old_fpnew_pkg::FP8] & (dst_fmt_q == old_fpnew_pkg::FP8);
 
     // If FP8 is supported, map it to an FP16 value
     divsqrt_operands[0] = input_is_fp8 ? operands_q[0] << 8 : operands_q[0];
@@ -185,8 +185,8 @@ module fpnew_divsqrt_multi #(
   fsm_state_e state_q, state_d;
 
   // Valids are gated by the FSM ready. Invalid input ops run a sqrt to not lose illegal instr.
-  assign div_valid   = in_valid_q & (op_q == fpnew_pkg::DIV) & in_ready & ~flush_i;
-  assign sqrt_valid  = in_valid_q & (op_q != fpnew_pkg::DIV) & in_ready & ~flush_i;
+  assign div_valid   = in_valid_q & (op_q == old_fpnew_pkg::DIV) & in_ready & ~flush_i;
+  assign sqrt_valid  = in_valid_q & (op_q != old_fpnew_pkg::DIV) & in_ready & ~flush_i;
   assign op_starting = div_valid | sqrt_valid;
 
   // Hold additional information while the operation is in progress
@@ -287,10 +287,10 @@ module fpnew_divsqrt_multi #(
   // -----------------
   logic [63:0]        unit_result;
   logic [WIDTH-1:0]   adjusted_result, held_result_q;
-  fpnew_pkg::status_t unit_status, held_status_q;
+  old_fpnew_pkg::status_t unit_status, held_status_q;
   logic               hold_en;
 
-  div_sqrt_top_mvp i_divsqrt_lei (
+  old_div_sqrt_top_mvp i_divsqrt_lei (
    .Clk_CI           ( clk_i               ),
    .Rst_RBI          ( rst_ni              ),
    .Div_start_SI     ( div_valid           ),
@@ -321,7 +321,7 @@ module fpnew_divsqrt_multi #(
   // Output Select
   // --------------
   logic [WIDTH-1:0]   result_d;
-  fpnew_pkg::status_t status_d;
+  old_fpnew_pkg::status_t status_d;
   // Prioritize hold register data
   assign result_d = unit_done_q ? held_result_q : adjusted_result;
   assign status_d = unit_done_q ? held_status_q : unit_status;
@@ -332,7 +332,7 @@ module fpnew_divsqrt_multi #(
   // Output pipeline signals, index i holds signal after i register stages
   // verilator lint_off BLKANDNBLK
   logic               [NUM_OUT_REGS:0][WIDTH-1:0] out_pipe_result_q;
-  fpnew_pkg::status_t [NUM_OUT_REGS:0]            out_pipe_status_q;
+  old_fpnew_pkg::status_t [NUM_OUT_REGS:0]            out_pipe_status_q;
   TAG_TYPE             [NUM_OUT_REGS:0]            out_pipe_tag_q;
   logic               [NUM_OUT_REGS:0]            out_pipe_mask_q;
   AUX_TYPE             [NUM_OUT_REGS:0]            out_pipe_aux_q;

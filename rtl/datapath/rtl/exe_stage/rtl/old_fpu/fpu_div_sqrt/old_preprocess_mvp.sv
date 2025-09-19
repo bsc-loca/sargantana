@@ -18,7 +18,7 @@
 //                                                                            //
 // Create Date:    01/03/2018                                                 //
 // Design Name:    FPU                                                        //
-// Module Name:    preprocess_mvp.sv                                          //
+// Module Name:    old_preprocess_mvp.sv                                          //
 // Project Name:   Private FPU                                                //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -32,9 +32,9 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import defs_div_sqrt_mvp::*;
+import old_defs_div_sqrt_mvp::*;
 
-module preprocess_mvp
+module old_preprocess_mvp
   (
    input logic                   Clk_CI,
    input logic                   Rst_RBI,

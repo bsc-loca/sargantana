@@ -13,7 +13,7 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-module fpnew_rounding #(
+module old_fpnew_rounding #(
   parameter int unsigned AbsWidth=2 // Width of the abolute value, without sign bit
 ) (
   // Input value
@@ -21,7 +21,7 @@ module fpnew_rounding #(
   input logic                  sign_i,
   // Rounding information
   input logic [1:0]            round_sticky_bits_i,     // round and sticky bits {RS}
-  input fpnew_pkg::roundmode_e rnd_mode_i,
+  input old_fpnew_pkg::roundmode_e rnd_mode_i,
   input logic                  effective_subtraction_i, // sign of inputs affects rounding of zeroes
   // Output value
   output logic [AbsWidth-1:0]  abs_rounded_o,           // absolute value without sign
@@ -44,20 +44,20 @@ module fpnew_rounding #(
   //  others   |          | *invalid*
   always_comb begin : rounding_decision
     unique case (rnd_mode_i)
-      fpnew_pkg::RNE: // Decide accoring to round/sticky bits
+      old_fpnew_pkg::RNE: // Decide accoring to round/sticky bits
         unique case (round_sticky_bits_i)
           2'b00,
           2'b01: round_up = 1'b0;           // < ulp/2 away, round down
           2'b10: round_up = abs_value_i[0]; // = ulp/2 away, round towards even result
           2'b11: round_up = 1'b1;           // > ulp/2 away, round up
-          default: round_up = fpnew_pkg::DONT_CARE;
+          default: round_up = old_fpnew_pkg::DONT_CARE;
         endcase
-      fpnew_pkg::RTZ: round_up = 1'b0; // always round down
-      fpnew_pkg::RDN: round_up = (| round_sticky_bits_i) ? sign_i  : 1'b0; // to 0 if +, away if -
-      fpnew_pkg::RUP: round_up = (| round_sticky_bits_i) ? ~sign_i : 1'b0; // to 0 if -, away if +
-      fpnew_pkg::RMM: round_up = round_sticky_bits_i[1]; // round down if < ulp/2 away, else up
-      fpnew_pkg::ROD: round_up = ~abs_value_i[0] & (| round_sticky_bits_i);
-      default: round_up = fpnew_pkg::DONT_CARE; // propagate x
+      old_fpnew_pkg::RTZ: round_up = 1'b0; // always round down
+      old_fpnew_pkg::RDN: round_up = (| round_sticky_bits_i) ? sign_i  : 1'b0; // to 0 if +, away if -
+      old_fpnew_pkg::RUP: round_up = (| round_sticky_bits_i) ? ~sign_i : 1'b0; // to 0 if -, away if +
+      old_fpnew_pkg::RMM: round_up = round_sticky_bits_i[1]; // round down if < ulp/2 away, else up
+      old_fpnew_pkg::ROD: round_up = ~abs_value_i[0] & (| round_sticky_bits_i);
+      default: round_up = old_fpnew_pkg::DONT_CARE; // propagate x
     endcase
   end
 
@@ -70,7 +70,7 @@ module fpnew_rounding #(
   // In case of effective subtraction (thus signs of addition operands must have differed) and a
   // true zero result, the result sign is '-' in case of RDN and '+' for other modes.
   assign sign_o = (exact_zero_o && effective_subtraction_i)
-                  ? (rnd_mode_i == fpnew_pkg::RDN)
+                  ? (rnd_mode_i == old_fpnew_pkg::RDN)
                   : sign_i;
 
 endmodule
