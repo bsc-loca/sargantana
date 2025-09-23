@@ -2164,6 +2164,417 @@ module decoder
                                     end
                                 endcase
                             end
+
+                            F3_OPFVV: begin
+                                decode_instr_int.use_vs1     = 1'b1;
+                                decode_instr_int.use_vs2     = 1'b1;
+
+                                if ((csr_fs_i == 2'b00) || (sew == SEW_8) || (sew == SEW_16)) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+
+                                unique case (frm_i) inside // FRM on vector is always from CSR
+                                    FRM_INV_1,
+                                    FRM_INV_2,
+                                    FRM_DYN: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    default: begin
+                                        //xcpt_illegal_instruction_int = 1'b0;
+                                        decode_instr_int.frm = op_frm_fp_t'(frm_i);
+                                    end
+                                endcase
+
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VFADD: begin
+                                        decode_instr_int.instr_type = VFADD;
+                                    end
+                                    F6_VFSUB: begin
+                                        decode_instr_int.instr_type = VFSUB;
+                                    end
+                                    F6_VFMUL: begin
+                                        decode_instr_int.instr_type = VFMUL;
+                                    end
+                                    F6_VFMADD: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMADD;
+                                    end
+                                    F6_VFMSUB: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMSUB;
+                                    end
+                                    F6_VFMACC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMACC;
+                                    end
+                                    F6_VFMSAC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMSAC;
+                                    end
+                                    F6_VFNMADD: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMADD;
+                                    end
+                                    F6_VFNMSUB: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMSUB;
+                                    end
+                                    F6_VFNMACC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMACC;
+                                    end
+                                    F6_VFNMSAC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMSAC;
+                                    end
+                                    F6_VFMIN: begin
+                                        decode_instr_int.instr_type = VFMIN;
+                                    end
+                                    F6_VFMAX: begin
+                                        decode_instr_int.instr_type = VFMAX;
+                                    end
+                                    F6_VFSGNJ: begin
+                                        decode_instr_int.instr_type = VFSGNJ;
+                                    end
+                                    F6_VFSGNJN: begin
+                                        decode_instr_int.instr_type = VFSGNJN;
+                                    end
+                                    F6_VFSGNJX: begin
+                                        decode_instr_int.instr_type = VFSGNJX;
+                                    end
+                                    F6_VMFEQ: begin
+                                        decode_instr_int.instr_type = VMFEQ;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFLE: begin
+                                        decode_instr_int.instr_type = VMFLE;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFLT: begin
+                                        decode_instr_int.instr_type = VMFLT;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFNE: begin
+                                        decode_instr_int.instr_type = VMFNE;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VFWADD: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWADD;
+                                        end
+                                    end
+                                    F6_VFWSUB: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWSUB;
+                                        end
+                                    end
+                                    F6_VFWMUL: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWMUL;
+                                        end
+                                    end
+                                    F6_VFWMACC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWMACC;
+                                        end
+                                    end
+                                    F6_VFWNMACC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWNMACC;
+                                        end
+                                    end
+                                    F6_VFWMSAC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWMSAC;
+                                        end
+                                    end
+                                    F6_VFWNMSAC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWNMSAC;
+                                        end
+                                    end
+                                    F6_VFWADDW: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            ((decode_instr_int.vd[0] | decode_instr_int.vs2[0]) && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWADDW;
+                                        end
+                                    end
+                                    F6_VFWSUBW: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            ((decode_instr_int.vd[0] | decode_instr_int.vs2[0]) && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWSUBW;
+                                        end
+                                    end
+                                    F6_VFUNARY1: begin
+                                        case (decode_instr_int.vs1)
+                                            VS1_VFCLASS: begin
+                                                decode_instr_int.instr_type = VFCLASS;
+                                            end
+                                            default: begin
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            end
+                                        endcase
+                                    end
+                                    F6_VFREDUSUM: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFREDUSUM;
+                                    end
+                                    F6_VFREDMAX: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFREDMAX;
+                                    end
+                                    F6_VFREDMIN: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFREDMIN;
+                                    end
+                                    F6_VFREDOSUM: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFREDOSUM;
+                                    end
+                                    F6_VFWREDUSUM: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFWREDUSUM;
+                                    end
+                                    F6_VFWREDOSUM: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFWREDOSUM;
+                                    end
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+
+                            F3_OPFVF: begin
+                                decode_instr_int.is_opvf     = 1'b1;
+                                decode_instr_int.use_fs1     = 1'b1;
+                                decode_instr_int.use_vs2     = 1'b1;
+
+                                if ((csr_fs_i == 2'b00) || (sew == SEW_8) || (sew == SEW_16)) begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+
+                                unique case (frm_i) inside // FRM on vector is always from CSR
+                                    FRM_INV_1,
+                                    FRM_INV_2,
+                                    FRM_DYN: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    default: begin
+                                        //xcpt_illegal_instruction_int = 1'b0;
+                                        decode_instr_int.frm = op_frm_fp_t'(frm_i);
+                                    end
+                                endcase
+
+                                case (decode_i.inst.vtype.func6)
+                                    F6_VFADD: begin
+                                        decode_instr_int.instr_type = VFADD;
+                                    end
+                                    F6_VFSUB: begin
+                                        decode_instr_int.instr_type = VFSUB;
+                                    end
+                                    F6_VFRSUB: begin
+                                        decode_instr_int.instr_type = VFRSUB;
+                                    end
+                                    F6_VFMUL: begin
+                                        decode_instr_int.instr_type = VFMUL;
+                                    end
+                                    F6_VFMADD: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMADD;
+                                    end
+                                    F6_VFMSUB: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMSUB;
+                                    end
+                                    F6_VFMACC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMACC;
+                                    end
+                                    F6_VFMSAC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFMSAC;
+                                    end
+                                    F6_VFNMADD: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMADD;
+                                    end
+                                    F6_VFNMSUB: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMSUB;
+                                    end
+                                    F6_VFNMACC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMACC;
+                                    end
+                                    F6_VFNMSAC: begin
+                                        decode_instr_int.use_old_vd = 1'b1;
+                                        decode_instr_int.instr_type = VFNMSAC;
+                                    end
+                                    F6_VFMIN: begin
+                                        decode_instr_int.instr_type = VFMIN;
+                                    end
+                                    F6_VFMAX: begin
+                                        decode_instr_int.instr_type = VFMAX;
+                                    end
+                                    F6_VFSGNJ: begin
+                                        decode_instr_int.instr_type = VFSGNJ;
+                                    end
+                                    F6_VFSGNJN: begin
+                                        decode_instr_int.instr_type = VFSGNJN;
+                                    end
+                                    F6_VFSGNJX: begin
+                                        decode_instr_int.instr_type = VFSGNJX;
+                                    end
+                                    F6_VFMERGE_VFMV:  begin
+                                        if (decode_i.inst.vtype.vm) begin // VFMV
+                                            if (decode_i.inst.vtype.vs2 == 5'b0) begin // vs2 != v0 is reserved
+                                                decode_instr_int.use_vs2 = 1'b0;
+                                                decode_instr_int.instr_type = VFMV;
+                                            end else begin
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            end
+                                        end else begin
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VFMERGE;
+                                        end
+                                    end
+                                    F6_VMFEQ: begin
+                                        decode_instr_int.instr_type = VMFEQ;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFLE: begin
+                                        decode_instr_int.instr_type = VMFLE;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFLT: begin
+                                        decode_instr_int.instr_type = VMFLT;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFNE: begin
+                                        decode_instr_int.instr_type = VMFNE;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFGT: begin
+                                        decode_instr_int.instr_type = VMFGT;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VMFGE: begin
+                                        decode_instr_int.instr_type = VMFGE;
+                                        decode_instr_int.use_old_vd = 1'b0;
+                                    end
+                                    F6_VFWADD: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWADD;
+                                        end
+                                    end
+                                    F6_VFWSUB: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWSUB;
+                                        end
+                                    end
+                                    F6_VFWMUL: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWMUL;
+                                        end
+                                    end
+                                    F6_VFWMACC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWMACC;
+                                        end
+                                    end
+                                    F6_VFWNMACC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWNMACC;
+                                        end
+                                    end
+                                    F6_VFWMSAC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWMSAC;
+                                        end
+                                    end
+                                    F6_VFWNMSAC: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            (decode_instr_int.vd[0] && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.use_old_vd = 1'b1;
+                                            decode_instr_int.instr_type = VFWNMSAC;
+                                        end
+                                    end
+                                    F6_VFWADDW: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            ((decode_instr_int.vd[0] | decode_instr_int.vs2[0]) && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWADDW;
+                                        end
+                                    end
+                                    F6_VFWSUBW: begin
+                                        if ((!v_2sew_en_int) || wide_overlap_2 ||
+                                            ((decode_instr_int.vd[0] | decode_instr_int.vs2[0]) && (~vlmul_int[2]))) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VFWSUBW;
+                                        end
+                                    end
+
+                                    default: begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                endcase
+                            end
+
                             F3_OPCFG: begin
                                 decode_instr_int.regfile_we = 1'b1;
                                 decode_instr_int.vregfile_we = 1'b0;

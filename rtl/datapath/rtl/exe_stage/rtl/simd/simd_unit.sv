@@ -152,23 +152,34 @@ function logic is_vmadd_vsmul(input rr_exe_simd_instr_t instr);
 endfunction
 
 function logic is_vw(input rr_exe_simd_instr_t instr);
-    is_vw = ((instr.instr.instr_type == VWADD)    ||
-             (instr.instr.instr_type == VWADDU)   ||
-             (instr.instr.instr_type == VWSUB)    ||
-             (instr.instr.instr_type == VWSUBU)   ||
-             (instr.instr.instr_type == VWADDW)   ||
-             (instr.instr.instr_type == VWADDUW)  ||
-             (instr.instr.instr_type == VWSUBW)   ||
-             (instr.instr.instr_type == VWSUBUW)  ||
-             (instr.instr.instr_type == VWREDSUM) ||
-             (instr.instr.instr_type == VWREDSUMU)||
-             (instr.instr.instr_type == VWMUL)    ||
-             (instr.instr.instr_type == VWMULU)   ||
-             (instr.instr.instr_type == VWMULSU)  ||
-             (instr.instr.instr_type == VWMACC)   ||
-             (instr.instr.instr_type == VWMACCU)  ||
-             (instr.instr.instr_type == VWMACCSU) ||
-             (instr.instr.instr_type == VWMACCUS)) ? 1'b1 : 1'b0;
+    is_vw = ((instr.instr.instr_type == VWADD)      ||
+             (instr.instr.instr_type == VWADDU)     ||
+             (instr.instr.instr_type == VWSUB)      ||
+             (instr.instr.instr_type == VWSUBU)     ||
+             (instr.instr.instr_type == VWADDW)     ||
+             (instr.instr.instr_type == VWADDUW)    ||
+             (instr.instr.instr_type == VWSUBW)     ||
+             (instr.instr.instr_type == VWSUBUW)    ||
+             (instr.instr.instr_type == VWREDSUM)   ||
+             (instr.instr.instr_type == VWREDSUMU)  ||
+             (instr.instr.instr_type == VWMUL)      ||
+             (instr.instr.instr_type == VWMULU)     ||
+             (instr.instr.instr_type == VWMULSU)    ||
+             (instr.instr.instr_type == VWMACC)     ||
+             (instr.instr.instr_type == VWMACCU)    ||
+             (instr.instr.instr_type == VWMACCSU)   ||
+             (instr.instr.instr_type == VWMACCUS)   ||
+             (instr.instr.instr_type == VFWADD)     ||
+             (instr.instr.instr_type == VFWSUB)     ||
+             (instr.instr.instr_type == VFWMUL)     ||
+             (instr.instr.instr_type == VFWMACC)    ||
+             (instr.instr.instr_type == VFWNMACC)   ||
+             (instr.instr.instr_type == VFWMSAC)    ||
+             (instr.instr.instr_type == VFWNMSAC)   ||
+             (instr.instr.instr_type == VFWADDW)    ||
+             (instr.instr.instr_type == VFWSUBW)    ||
+             (instr.instr.instr_type == VFWREDUSUM) ||
+             (instr.instr.instr_type == VFWREDOSUM) ) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vn(input rr_exe_simd_instr_t instr);
@@ -209,6 +220,27 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
 endfunction
 
+function logic is_vf_addmul(input rr_exe_simd_instr_t instr);
+    is_vf_addmul =   ((instr.instr.instr_type == VFADD)     ||
+                     (instr.instr.instr_type == VFSUB)      ||
+                     (instr.instr.instr_type == VFRSUB)     ||
+                     (instr.instr.instr_type == VFWADD)     ||
+                     (instr.instr.instr_type == VFWSUB)     ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_divsqrt(input rr_exe_simd_instr_t instr);
+    is_vf_divsqrt =  ((instr.instr.instr_type == VFDIV)     ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_noncomp(input rr_exe_simd_instr_t instr);
+    is_vf_noncomp =  ((instr.instr.instr_type == VFMIN)     ||
+                      (instr.instr.instr_type == VFMAX)     ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_conv(input rr_exe_simd_instr_t instr);
+    is_vf_conv =     ((instr.instr.instr_type == FCVT_F2I)  ) ? 1'b1 : 1'b0;
+endfunction
+ 
 function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
@@ -297,6 +329,7 @@ always_comb begin
 
         end
 
+
         // when a new DIV/REM is issued, it's operands are saved
         // for comparision with future DIV/REM
         if(instruction_i.instr.valid) begin
@@ -313,9 +346,16 @@ always_comb begin
             previous_div_is_opvx_d      = previous_div_is_opvx_q;            
             previous_div_instr_type_d   = previous_div_instr_type_q;  
         end                    
-    end 
-    
-    else begin
+    // vector floating-point instructions
+    end else if (is_vf_addmul (instruction_i)) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[0];
+    end else if (is_vf_divsqrt(instruction_i)) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[1];
+    end else if (is_vf_noncomp(instruction_i)) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[2];
+    end else if (is_vf_conv   (instruction_i)) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[3];
+    end else begin
         simd_exe_stages = 6'd1;
     end
 end
@@ -773,6 +813,24 @@ vmsb_i_o_f vmsbf_inst(
     .data_vd_o     (result_vmsbf)
 );
 
+// Main vectorial FPU instantiation
+bus_simd_t          fpnew_result;
+fpnew_pkg::status_t fpnew_status;
+
+vfpu_drac_wrapper vectorial_fpu (
+    .clk_i,
+    .rstn_i,
+    .flush_i,
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .instr_valid_i (instruction_i.instr.valid),
+    .frm_i         (instruction_i.instr.frm),
+    .sew_i         (instruction_i.instr.sew),
+    .data_vs1_i    (instruction_i.data_vs1),
+    .data_vs2_i    (instruction_i.data_vs2),
+    .data_vm_i     (instruction_i.data_vm),
+    .data_vd_o     (fpnew_result),
+    .status_o      (fpnew_status)
+);
 
 bus_simd_t result_data_vd;
 bus64_t shift_amount_in_vslide;
@@ -1416,9 +1474,9 @@ always_comb begin
             end
             
         endcase
-    end
-
-    else begin
+    end else if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin
+        result_data_vd = fpnew_result;
+    end else begin
         result_data_vd = fu_data_vd;
     end
 end
@@ -1568,6 +1626,16 @@ always_comb begin
     endcase
 end
 
+// select combinationally the output status
+fpnew_pkg::status_t flags_merged;
+always_comb begin
+    if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin
+        flags_merged = fpnew_status;
+    end else begin
+        flags_merged = '0;
+    end
+end
+
 //Produce the scalar and vector wb structs
 assign instruction_scalar_o.valid = instr_to_out.instr.valid & 
                                     (instr_to_out.instr.unit == UNIT_SIMD) & 
@@ -1587,7 +1655,7 @@ assign instruction_scalar_o.chkp = instr_to_out.chkp;
 assign instruction_scalar_o.gl_index = instr_to_out.gl_index;
 assign instruction_scalar_o.branch_taken = 1'b0;
 assign instruction_scalar_o.result_pc = 0;
-assign instruction_scalar_o.fp_status = 0;
+assign instruction_scalar_o.fp_status = flags_merged;
 assign instruction_scalar_o.mem_type = NOT_MEM;
 assign instruction_scalar_o.vl = instr_to_out.instr.vl;
 assign instruction_scalar_o.sew = instr_to_out.instr.sew;

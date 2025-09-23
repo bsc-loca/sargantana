@@ -66,6 +66,8 @@ logic is_vred;
 logic is_vmadd_vsmul;
 logic is_vdiv;
 
+logic is_vf_addmul, is_vf_divsqrt, is_vf_noncomp, is_vf_conv; // seperate depending on CVFPU's divisible units 
+
 logic stall_simd;
 
 // here we save the content of the previous Div/Rem and in case a Rem is happening after a Div with the same operands
@@ -133,6 +135,19 @@ assign is_vred = ((instr_entry_i.instr.instr_type == VREDSUM) ||
                 (instr_entry_i.instr.instr_type == VWREDSUM)  ||
                 (instr_entry_i.instr.instr_type == VWREDSUMU)) ? 1'b1 : 1'b0;
 
+assign is_vf_addmul =   ((instr_entry_i.instr.instr_type == VFADD)      ||
+                         (instr_entry_i.instr.instr_type == VFSUB)      ||
+                         (instr_entry_i.instr.instr_type == VFRSUB)     ||
+                         (instr_entry_i.instr.instr_type == VFWADD)     ||
+                         (instr_entry_i.instr.instr_type == VFWSUB)     ) ? 1'b1 : 1'b0;
+
+assign is_vf_divsqrt =  ((instr_entry_i.instr.instr_type == VFDIV)      ) ? 1'b1 : 1'b0;
+ 
+assign is_vf_noncomp =  ((instr_entry_i.instr.instr_type == VFMIN)      ||
+                         (instr_entry_i.instr.instr_type == VFMAX)      ) ? 1'b1 : 1'b0;
+
+assign is_vf_conv =     ((instr_entry_i.instr.instr_type == FCVT_F2I)   ) ? 1'b1 : 1'b0;
+ 
 // This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
 // this happens when the opearands and type matched the previous DIV/REM and the result
 // is ready
@@ -203,6 +218,16 @@ always_comb begin
             previous_div_is_opvx_d      = previous_div_is_opvx_q;            
             previous_div_instr_type_d   = previous_div_instr_type_q;   
         end                     
+    // We'll extract the delays directly from the vector FPNEW unit
+    // configuration. For easier future modifications on timing. 
+    end else if (is_vf_addmul) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[0];
+    end else if (is_vf_divsqrt) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[1];
+    end else if (is_vf_noncomp) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[2];
+    end else if (is_vf_conv) begin
+        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[3];
     end else begin
         simd_exe_stages = 6'd1;
     end

@@ -353,6 +353,7 @@ typedef enum logic [5:0] {
     F6_VRGATHER     = 6'b001100
 } op_func6_vector_opi_t;
 
+
 typedef enum logic [5:0] {
     F6_VREDSUM   = 6'b000000, 
     F6_VREDAND   = 6'b000001,
@@ -411,12 +412,54 @@ typedef enum logic [5:0] {
     F6_VREM      = 6'b100011
 } op_func6_vector_opm_t;
 
+// vector floating-point decoding F6 fields
 typedef enum logic [5:0] {
-    F6_VFADD = 6'b000000,
-    F6_VFSUB = 6'b000010,
-    F6_VFMIN = 6'b000100,
-    F6_VFMAX = 6'b000110,
-    F6_VFMV  = 6'b001101
+    // Arithmetic vector FP operations
+    F6_VFADD        = 6'b000000,    // Floating-point add
+    F6_VFSUB        = 6'b000010,    // Floating-point subtract
+    F6_VFRSUB       = 6'b100111,    // Floating-point reverse subtract
+    F6_VFMIN        = 6'b000100,    // Floating-point minimum
+    F6_VFMAX        = 6'b000110,    // Floating-point maximum
+    F6_VFMV         = 6'b001101,    // Floating-point move
+    F6_VFSGNJ       = 6'b001000,    // Floating-point sign-injection (copy sign from second operand)
+    F6_VFSGNJN      = 6'b001001,    // Floating-point sign-injection negated
+    F6_VFSGNJX      = 6'b001010,    // Floating-point sign-injection XOR (sign of result = XOR of signs)
+    F6_VFMERGE_VFMV = 6'b010111,    // Merge vector floating-point move based on mask
+    F6_VFUNARY1     = 6'b010011,    // Unary floating-point operation (e.g., sqrt, abs, neg)
+    F6_VMFEQ        = 6'b011000,    // Vector floating-point compare equal
+    F6_VMFLE        = 6'b011001,    // Vector floating-point compare less or equal
+    F6_VMFLT        = 6'b011011,    // Vector floating-point compare less than
+    F6_VMFNE        = 6'b011100,    // Vector floating-point compare not equal
+    F6_VMFGT        = 6'b011101,    // Vector floating-point compare greater than
+    F6_VMFGE        = 6'b011111,    // Vector floating-point compare greater or equal
+    F6_VFMUL        = 6'b100100,    // Floating-point multiply
+    F6_VFMADD       = 6'b101000,    // Floating-point fused multiply-add
+    F6_VFNMADD      = 6'b101001,    // Floating-point fused negative multiply-add
+    F6_VFMSUB       = 6'b101010,    // Floating-point fused multiply-subtract
+    F6_VFNMSUB      = 6'b101011,    // Floating-point fused negative multiply-subtract
+    F6_VFMACC       = 6'b101100,    // Floating-point multiply-accumulate
+    F6_VFNMACC      = 6'b101101,    // Floating-point negative multiply-accumulate
+    F6_VFMSAC       = 6'b101110,    // Floating-point multiply-subtract-accumulate
+    F6_VFNMSAC      = 6'b101111,    // Floating-point negative multiply-subtract-accumulate
+
+    // Widening Floating-Point Instructions
+    F6_VFWADD       = 6'b110000,    // Vector widening floating-point add
+    F6_VFWSUB       = 6'b110010,    // Vector widening floating-point subtract
+    F6_VFWADDW      = 6'b110100,    // Vector widening floating-point add (w-form)
+    F6_VFWSUBW      = 6'b110110,    // Vector widening floating-point subtract (w-form)
+    F6_VFWMUL       = 6'b111000,    // Vector widening floating-point multiply
+    F6_VFWMACC      = 6'b111100,    // Vector widening floating-point multiply-accumulate
+    F6_VFWNMACC     = 6'b111101,    // Vector widening floating-point negative multiply-accumulate
+    F6_VFWMSAC      = 6'b111110,    // Vector widening floating-point multiply-subtract-accumulate
+    F6_VFWNMSAC     = 6'b111111,    // Vector widening floating-point negative multiply-subtract-accumulate
+
+    // Vector Floating-Point Reduction Instructions
+    F6_VFREDUSUM    = 6'b000001,    // Vector floating-point reduction unordered sum
+    F6_VFREDMAX     = 6'b000111,    // Vector floating-point reduction maximum
+    F6_VFREDMIN     = 6'b000101,    // Vector floating-point reduction minimum
+    F6_VFREDOSUM    = 6'b000011,    // Vector floating-point reduction ordered sum
+    F6_VFWREDUSUM   = 6'b110001,    // Vector widening floating-point reduction unordered sum
+    F6_VFWREDOSUM   = 6'b110011     // Vector widening floating-point reduction ordered sum
 } op_func6_vector_opf_t;
 
 typedef enum logic [4:0] {
@@ -445,6 +488,13 @@ typedef enum logic [4:0] {
 typedef enum logic [4:0] {
     VS2_VMV_S_X = 5'b00000
 } op_vrxunary0_vs2_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_VFSQRT    = 5'b00000,
+    VS1_VFRSQRT7  = 5'b00100,
+    VS1_VFREC7    = 5'b00101,
+    VS1_VFCLASS   = 5'b10000
+} op_vfunary1_vs1_vector_t;
 
 typedef enum logic [1:0] {
     MOP_UNIT_STRIDE         = 2'b00,

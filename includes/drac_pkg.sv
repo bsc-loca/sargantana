@@ -337,7 +337,6 @@ typedef enum logic [1:0]{
     SIMD_RF        // Select simd regfile
 } regfile_sel_t;
 
-
 typedef enum logic [8:0] { 
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
@@ -380,7 +379,7 @@ typedef enum logic [8:0] {
    // Floating-Point Classify Instruction
    FCLASS,
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
-   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
+   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VMFEQ, VMFNE, VMFLT, VMFGE, VMFLE, VMFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
    // Vectorial Instructions
    VADD, VSUB, VRSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VSADD, VSADDU, VSSUB, VSSUBU, VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW, VSLL, VSRA, VSRL, VNSRL, VNSRA, VMERGE, VMV, VMV1R, VEXT, VMV_X_S, VMV_S_X, VMUL, VMULH, VMULHU, VMULHSU,
    VMADD, VNMSUB, VMACC, VNMSAC, VADC, VMADC, VSBC, VMSBC, VWMUL, VWMULU, VWMULSU, VWMACC, VWMACCU, VWMACCUS, VWMACCSU, VAADD, VAADDU, VASUB, VASUBU, VSSRL, VSSRA, VNCLIP, VNCLIPU, VSMUL,
@@ -395,7 +394,12 @@ typedef enum logic [8:0] {
    //Vectorial Division Instructions
    VDIVU, VDIV, VREMU, VREM,
    // Vectorial FP instructions
-   VFADD, VFMV,
+   VFMV, VFMERGE, VFCLASS,
+   // Vectorial FP other instructions // redpanda   // 20250709
+   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC,
+   VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
+   // Vectorial FP reduction instructions
+   VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
    // Vectorial memory operations
    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
@@ -487,6 +491,7 @@ typedef struct packed {
     logic  use_vs2;                     // Instruction uses vregister source 2
     logic  is_opvx;                     // Instruction uses rs1 instead of vs1
     logic  is_opvi;                     // Instruciton uses imm instead of vs1
+    logic  is_opvf;                     // Instruction uses fs1 instead of vs1
     sew_t  sew;                         // Instruction SEW
     logic [2:0] lmul;                   // Instruction LMUL
     logic [VMAXELEM_LOG:0] vl;      
@@ -1312,6 +1317,32 @@ localparam fpnew_pkg::fpu_implementation_t EPI_INIT = '{
                 '{default: fpnew_pkg::MERGED}},  // CONV
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
+
+// --------------------------------------------------------------------
+// ------------------ floating-point simd definitions -----------------
+// --------------------------------------------------------------------
+
+localparam fpnew_pkg::fpu_features_t SARG_RV64DV = '{
+    Width:         128,         // 128 bits on Sargantana's SIMD unit
+    EnableVectors: 1'b1,        // enable vector support
+    EnableNanBox:  1'b1,
+    FpFmtMask:     5'b11000,    // [FP128, FP64, FP32, BF16, FP16]
+    IntFmtMask:    4'b0011
+};
+
+localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
+    PipeRegs:   '{'{default: 5}, // ADDMUL
+                '{default: 5},   // DIVSQRT
+                '{default: 5},   // NONCOMP
+                '{default: 5}},  // CONV
+    UnitTypes:  '{'{default: fpnew_pkg::MERGED}, // ADDMUL
+                '{default: fpnew_pkg::MERGED},   // DIVSQRT
+                '{default: fpnew_pkg::PARALLEL}, // NONCOMP
+                '{default: fpnew_pkg::MERGED}},  // CONV
+    PipeConfig: fpnew_pkg::DISTRIBUTED
+};
+
+// --------------------------------------------------------------------
 
 localparam int unsigned SEW_WIDTH = 3;
 typedef enum logic [SEW_WIDTH - 1 : 0] {
