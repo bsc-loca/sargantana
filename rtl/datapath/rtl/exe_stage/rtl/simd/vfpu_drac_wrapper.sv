@@ -90,8 +90,14 @@ fpnew_pkg::operation_e  vector_operation; // to be setted in decode always_comb
 logic                   vector_operation_modifier;
 fpnew_pkg::fp_format_e  vector_src_format;
 fpnew_pkg::fp_format_e  vector_dst_format;
+simd_bus_t              [1:0] widened_operands; // the order will be thhe next {data_vs2, data_vs1}
 
 always_comb begin
+    for (int i = 0; i < VLEN/64; i++) begin
+        widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1_i[i*32 +: 32]);
+        widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2_i[i*32 +: 32]);
+    end
+
     case (instr_type_i)
         VFADD: begin
             vector_operands[0]          = '0; // ignored in ADD mode 
@@ -146,37 +152,21 @@ always_comb begin
         end
         VFWADD: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs1_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[1]          = widened_operands[1]; // data_vs2
+            vector_operands[2]          = widened_operands[0]; // data_vs1
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b0;
-            case (sew_i)
-                SEW_32: begin
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
-                end
-                default: begin // in FP64 will be illegal instruction 
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
-                end
-            endcase
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
         VFWSUB: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs2_i; // vs2 - vs1, vs2 - f
-            vector_operands[2]          = data_vs1_i;
+            vector_operands[1]          = widened_operands[1]; // vs2 - vs1, vs2 - f
+            vector_operands[2]          = widened_operands[0];
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1;
-            case (sew_i)
-                SEW_32: begin
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
-                end
-                default: begin // in FP64 will be illegal instruction 
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
-                end
-            endcase
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
         default: begin
             vector_operands             = '0;
@@ -196,7 +186,7 @@ fpnew_top #(
     .flush_i        (flush_i),
     // inputs
     .operands_i     (vector_operands),
-    .rnd_mode_i     (frm_i),
+    .rnd_mode_i     (fpnew_pkg::roundmode_e'(frm_i)),
     .op_i           (vector_operation),
     .op_mod_i       (vector_operation_modifier),
     .src_fmt_i      (vector_src_format),

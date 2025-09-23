@@ -1342,6 +1342,44 @@ localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
+// convert from single precision bus to double precision bus
+function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
+    logic        sign;
+    logic [7:0]  exp32;
+    logic [22:0] frac32;
+
+    logic [10:0] exp64;
+    logic [51:0] frac64;
+
+    begin
+        sign   = f32[31];
+        exp32  = f32[30:23];
+        frac32 = f32[22:0];
+
+        if (exp32 == 8'h00) begin
+            exp64  = 11'h000;
+            frac64 = {frac32, {29{1'b0}}};  // left-align mantissa
+        end
+        else if (exp32 == 8'hFF) begin
+            exp64  = 11'h7FF;
+            frac64 = {frac32, {29{1'b0}}};
+        end
+        else begin
+            exp64  = (exp32 - 8'd127) + 11'd1023;
+            frac64 = {frac32, {29{1'b0}}};
+        end
+
+        // canonicalize both QNAN and SNAN
+        if (is_qnan_f32(f32)) begin
+            fp32_to_fp64 = FP64_QNAN;
+        end else if (is_snan_f32(f32)) begin
+            fp32_to_fp64 = FP64_SNAN;
+        end else begin
+            fp32_to_fp64 = {sign, exp64, frac64};
+        end
+    end
+endfunction
+
 // --------------------------------------------------------------------
 
 localparam int unsigned SEW_WIDTH = 3;
