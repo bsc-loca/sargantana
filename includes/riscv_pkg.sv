@@ -433,6 +433,8 @@ typedef enum logic [5:0] {
     F6_VMFGT        = 6'b011101,    // Vector floating-point compare greater than
     F6_VMFGE        = 6'b011111,    // Vector floating-point compare greater or equal
     F6_VFMUL        = 6'b100100,    // Floating-point multiply
+    F6_VFDIV        = 6'b100000,    // Floating-point division
+    F6_VFRDIV       = 6'b100001,    // Floating-point reverse division
     F6_VFMADD       = 6'b101000,    // Floating-point fused multiply-add
     F6_VFNMADD      = 6'b101001,    // Floating-point fused negative multiply-add
     F6_VFMSUB       = 6'b101010,    // Floating-point fused multiply-subtract

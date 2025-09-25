@@ -2339,6 +2339,9 @@ module decoder
                                             VS1_VFCLASS: begin
                                                 decode_instr_int.instr_type = VFCLASS;
                                             end
+                                            VS1_VFSQRT: begin
+                                                decode_instr_int.instr_type = VFSQRT;
+                                            end
                                             default: begin
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             end
@@ -2407,6 +2410,12 @@ module decoder
                                     end
                                     F6_VFMUL: begin
                                         decode_instr_int.instr_type = VFMUL;
+                                    end
+                                    F6_VFDIV: begin
+                                        decode_instr_int.instr_type = VFDIV;
+                                    end
+                                    F6_VFRDIV: begin
+                                        decode_instr_int.instr_type = VFRDIV;
                                     end
                                     F6_VFMADD: begin
                                         decode_instr_int.use_old_vd = 1'b1;

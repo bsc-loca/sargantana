@@ -827,6 +827,7 @@ vfpu_drac_wrapper vectorial_fpu (
     .sew_i         (instruction_i.instr.sew),
     .data_vs1_i    (instruction_i.data_vs1),
     .data_vs2_i    (instruction_i.data_vs2),
+    .data_old_vd_i (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
     .data_vd_o     (fpnew_result),
     .status_o      (fpnew_status)

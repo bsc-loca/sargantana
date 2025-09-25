@@ -23,6 +23,7 @@ module vfpu_drac_wrapper #(
     input  sew_t                    sew_i,          // sew (FP32 or FP64)
     input  bus_simd_t               data_vs1_i,     // data vector source 1
     input  bus_simd_t               data_vs2_i,     // data vector source 2
+    input  bus_simd_t               data_old_vd_i,  // old data of destination vector 
     input  MaskType                 data_vm_i,      // data vector mask input
     // outputs
     output bus_simd_t               data_vd_o,      // raw result, to be masked and filtered
@@ -99,6 +100,7 @@ always_comb begin
     end
 
     case (instr_type_i)
+        // Vector Single-Width Floating-Point Add/Subtract Instructions
         VFADD: begin
             vector_operands[0]          = '0; // ignored in ADD mode 
             vector_operands[1]          = data_vs1_i;
@@ -150,6 +152,8 @@ always_comb begin
                 end
             endcase
         end
+
+        // Vector Widening Floating-Point Add/Subtract Instructions
         VFWADD: begin
             vector_operands[0]          = '0;
             vector_operands[1]          = widened_operands[1]; // data_vs2
@@ -186,6 +190,300 @@ always_comb begin
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
             vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
+
+        // Vector Single-Width Floating-Point Multiply/Divide Instructions
+        VFMUL: begin
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::MUL);
+            vector_operation_modifier   = 1'b0; // mul operation
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFDIV: begin
+            // vd[i] = vs2[i] / vs1[i]
+            vector_operands[0]          = data_vs2_i;
+            vector_operands[1]          = data_vs1_i;
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::DIV);
+            vector_operation_modifier   = 1'b0; // div operation
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFRDIV: begin // scalar-vector, vd[i] = f[rs1]/vs2[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::DIV);
+            vector_operation_modifier   = 1'b0; // div operation
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+
+        // Vector Widening Floating-Point Multiply
+        VFWMUL: begin
+            // vd[i] = vs1[i] * vs2[i]
+            vector_operands[0]          = widened_operands[0];
+            vector_operands[1]          = widened_operands[1];
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::MUL);
+            vector_operation_modifier   = 1'b0; // mul operation
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+
+        // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+        VFMACC: begin
+            // vd[i] = +(vs1[i] * vs2[i]) + vd[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFNMACC: begin
+            // vd[i] = -(vs1[i] * vs2[i]) - vd[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFMSAC: begin
+            // vd[i] = +(vs1[i] * vs2[i]) - vd[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFNMSAC: begin
+            // -(vs1[i] * vs2[i]) - vd[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_vs2_i;
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFMADD: begin
+            // +(vs1[i] * vd[i]) + vs2[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_old_vd_i;
+            vector_operands[2]          = data_vs2_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFNMADD: begin
+            // -(vs1[i] * vd[i]) - vs2[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_old_vd_i;
+            vector_operands[2]          = data_vs2_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFMSUB: begin
+            // vd[i] = +(vs1[i] * vd[i]) - vs2[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_old_vd_i;
+            vector_operands[2]          = data_vs2_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+        VFNMSUB: begin
+            // vd[i] = -(vs1[i] * vd[i]) + vs2[i]
+            vector_operands[0]          = data_vs1_i;
+            vector_operands[1]          = data_old_vd_i;
+            vector_operands[2]          = data_vs2_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+
+        // Vector Widening Floating-Point Fused Multiply-Add Instructions
+        VFWMACC: begin
+            // vd[i] = +(vs1[i] * vs2[i]) + vd[i]
+            vector_operands[0]          = widened_operands[0];
+            vector_operands[1]          = widened_operands[1];
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+        VFWNMACC: begin
+            // vd[i] = -(vs1[i] * vs2[i]) - vd[i]
+            vector_operands[0]          = widened_operands[0];
+            vector_operands[1]          = widened_operands[1];
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+        VFWMSAC: begin
+            // vd[i] = +(vs1[i] * vs2[i]) - vd[i]
+            vector_operands[0]          = widened_operands[0];
+            vector_operands[1]          = widened_operands[1];
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
+            vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+        VFWNMSAC: begin
+            // vd[i] = -(vs1[i] * vs2[i]) + vd[i]
+            vector_operands[0]          = widened_operands[0];
+            vector_operands[1]          = widened_operands[1];
+            vector_operands[2]          = data_old_vd_i;
+            // fused multiply-add operation
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
+            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+
+        // Vector Floating-Point Square-Root Instruction
+        VFSQRT: begin
+            vector_operands[0]          = data_vs2_i;
+            vector_operands[1]          = '0;
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::SQRT);
+            vector_operation_modifier   = 1'b0;
+            case (sew_i)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+
         default: begin
             vector_operands             = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
