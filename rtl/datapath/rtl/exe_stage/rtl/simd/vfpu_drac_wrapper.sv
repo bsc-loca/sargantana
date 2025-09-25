@@ -90,7 +90,7 @@ fpnew_pkg::operation_e  vector_operation; // to be setted in decode always_comb
 logic                   vector_operation_modifier;
 fpnew_pkg::fp_format_e  vector_src_format;
 fpnew_pkg::fp_format_e  vector_dst_format;
-simd_bus_t              [1:0] widened_operands; // the order will be thhe next {data_vs2, data_vs1}
+bus_simd_t              widened_operands [1:0]; // the order will be thhe next {data_vs2, data_vs1}
 
 always_comb begin
     for (int i = 0; i < VLEN/64; i++) begin
@@ -163,6 +163,24 @@ always_comb begin
             vector_operands[0]          = '0;
             vector_operands[1]          = widened_operands[1]; // vs2 - vs1, vs2 - f
             vector_operands[2]          = widened_operands[0];
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
+            vector_operation_modifier   = 1'b1;
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+        VFWADDW: begin
+            vector_operands[0]          = '0;
+            vector_operands[1]          = data_vs1_i; // data_vs1 already on widened format
+            vector_operands[2]          = widened_operands[1]; // data_vs2 to be widened
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
+            vector_operation_modifier   = 1'b0; // ADD operation
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+        end
+        VFWSUBW: begin
+            vector_operands[0]          = '0;
+            vector_operands[1]          = widened_operands[1]; // narrow_to_wide(vs2) - vs1
+            vector_operands[2]          = data_vs1_i;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1;
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);

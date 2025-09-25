@@ -1342,6 +1342,140 @@ localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
+// floating-point definitions
+parameter logic [31:0] FP32_ONE = 32'h3F800000;
+parameter logic [31:0] FP32_ZERO = 32'h00000000;
+parameter logic [63:0] FP64_ONE = 64'h3FF0000000000000;
+parameter logic [63:0] FP64_ZERO = 64'h0000000000000000;
+
+parameter logic [31:0] FP32_QNAN = 32'h7FC00000;
+parameter logic [63:0] FP64_QNAN = 64'h7FF8000000000000;
+parameter logic [31:0] FP32_SNAN = 32'h7FA00000;
+parameter logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
+
+
+// FP64
+function automatic logic is_nan_f64(input logic [63:0] fp64);
+    is_nan_f64 = (&fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+function automatic logic is_qnan_f64(input logic [63:0] fp64);
+    is_qnan_f64 = is_nan_f64(fp64) && (fp64[51] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f64(input logic [63:0] fp64);
+    is_snan_f64 = is_nan_f64(fp64) && (fp64[51] == 1'b0);
+endfunction
+
+function automatic logic is_pos_f64(input logic [63:0] fp64);
+    is_pos_f64 = fp64[63] == 1'b0;
+endfunction
+
+function automatic logic is_neg_f64(input logic [63:0] fp64);
+    is_neg_f64 = fp64[63] == 1'b1;
+endfunction
+
+function automatic logic is_inf_f64(input logic [63:0] fp64);
+    is_inf_f64 = (&fp64[62:52]) && !(|fp64[51:0]);
+endfunction
+
+function automatic logic is_neg_inf_f64(input logic [63:0] fp64);
+    is_neg_inf_f64 = is_neg_f64(fp64) && is_inf_f64(fp64);
+endfunction
+
+function automatic logic is_pos_inf_f64(input logic [63:0] fp64);
+    is_pos_inf_f64 = is_pos_f64(fp64) && is_inf_f64(fp64);
+endfunction
+
+function automatic logic is_zero_f64(input logic [63:0] fp64);
+    is_zero_f64 = (fp64[62:52] == 11'd0) && (fp64[51:0] == 52'd0);
+endfunction
+
+function automatic logic is_neg_zero_f64(input logic [63:0] fp64);
+    is_neg_zero_f64 = is_neg_f64(fp64) && !(|fp64[62:0]);
+endfunction
+
+function automatic logic is_pos_zero_f64(input logic [63:0] fp64);
+    is_pos_zero_f64 = is_pos_f64(fp64) && !(|fp64[62:0]);
+endfunction
+
+function automatic logic is_neg_norm_f64(input logic [63:0] fp64);
+    is_neg_norm_f64 = is_neg_f64(fp64) && (|fp64[62:52]) && !(&fp64[62:52]);
+endfunction
+
+function automatic logic is_pos_norm_f64(input logic [63:0] fp64);
+    is_pos_norm_f64 = is_pos_f64(fp64) && (|fp64[62:52]) && !(&fp64[62:52]);
+endfunction
+
+function automatic logic is_neg_subnorm_f64(input logic [63:0] fp64);
+    is_neg_subnorm_f64 = is_neg_f64(fp64) && !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+function automatic logic is_pos_subnorm_f64(input logic [63:0] fp64);
+    is_pos_subnorm_f64 = is_pos_f64(fp64) && !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+// FP32
+function automatic logic is_nan_f32(input logic [31:0] fp32);
+    is_nan_f32 = (&fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_qnan_f32(input logic [31:0] fp32);
+    is_qnan_f32 = is_nan_f32(fp32) && (fp32[22] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f32(input logic [31:0] fp32);
+    is_snan_f32 = is_nan_f32(fp32) && (fp32[22] == 1'b0);
+endfunction
+
+function automatic logic is_pos_f32(input logic [31:0] fp32);
+    is_pos_f32 = fp32[31] == 1'b0;
+endfunction
+
+function automatic logic is_neg_f32(input logic [31:0] fp32);
+    is_neg_f32 = fp32[31] == 1'b1;
+endfunction
+
+function automatic logic is_inf_f32(input logic [31:0] fp32);
+    is_inf_f32 = (&fp32[30:23]) && !(|fp32[22:0]);
+endfunction
+
+function automatic logic is_neg_inf_f32(input logic [31:0] fp32);
+    is_neg_inf_f32 = is_neg_f32(fp32) && is_inf_f32(fp32);
+endfunction
+
+function automatic logic is_pos_inf_f32(input logic [31:0] fp32);
+    is_pos_inf_f32 = is_pos_f32(fp32) && is_inf_f32(fp32);
+endfunction
+
+function automatic logic is_zero_f32(input logic [31:0] fp32);
+    is_zero_f32 = (fp32[30:23] == 8'h00) && (fp32[22:0] == 23'd0);
+endfunction
+
+function automatic logic is_neg_zero_f32(input logic [31:0] fp32);
+    is_neg_zero_f32 = is_neg_f32(fp32) && !(|fp32[30:0]);
+endfunction
+
+function automatic logic is_pos_zero_f32(input logic [31:0] fp32);
+    is_pos_zero_f32 = is_pos_f32(fp32) && !(|fp32[30:0]);
+endfunction
+
+function automatic logic is_neg_norm_f32(input logic [31:0] fp32);
+    is_neg_norm_f32 = is_neg_f32(fp32) && (|fp32[30:23]) && !(&fp32[30:23]);
+endfunction
+
+function automatic logic is_pos_norm_f32(input logic [31:0] fp32);
+    is_pos_norm_f32 = is_pos_f32(fp32) && (|fp32[30:23]) && !(&fp32[30:23]);
+endfunction
+
+function automatic logic is_neg_subnorm_f32(input logic [31:0] fp32);
+    is_neg_subnorm_f32 = is_neg_f32(fp32) && !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_pos_subnorm_f32(input logic [31:0] fp32);
+    is_pos_subnorm_f32 = is_pos_f32(fp32) && !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
 // convert from single precision bus to double precision bus
 function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
     logic        sign;
