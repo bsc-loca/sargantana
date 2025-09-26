@@ -86,7 +86,7 @@ localparam logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
  * CPKCD         1           Cast-and-pack op[0] and op[1] to entries 6,7 of vector op[2]
  */
 
-logic                   [SARG_RV64DV.Width-1:0][2:0] vector_operands;
+logic                   [2:0][SARG_RV64DV.Width-1:0] vector_operands;
 fpnew_pkg::operation_e  vector_operation; // to be setted in decode always_comb
 logic                   vector_operation_modifier;
 fpnew_pkg::fp_format_e  vector_src_format;
