@@ -738,6 +738,7 @@ typedef struct packed {
     
     phreg_t prd;                         // Physical register destination
     phvreg_t pvd;                       // Physical register destination 
+    phreg_t fprd;                         // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
     phvreg_t old_pvd;                   // Old Physical register destination
     logic vrdy_old_vd;                  // Ready register old vd

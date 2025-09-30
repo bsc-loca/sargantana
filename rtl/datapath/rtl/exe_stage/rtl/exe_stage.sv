@@ -118,6 +118,7 @@ rr_exe_fpu_instr_t   fp_instr;
 exe_wb_scalar_instr_t fp_to_scalar_wb;
 exe_wb_fp_instr_t     mem_to_fp_wb;
 exe_wb_fp_instr_t     fp_to_wb;
+exe_wb_fp_instr_t     simd_to_fp_wb;
 
 logic stall_mem;
 logic stall_vagu;
@@ -293,6 +294,7 @@ always_comb begin
     simd_instr.vrdy_old_vd         = from_rr_i.vrdy_old_vd;
     simd_instr.prd                 = from_rr_i.prd;
     simd_instr.pvd                 = from_rr_i.pvd;
+    simd_instr.fprd                = from_rr_i.fprd;
     simd_instr.old_prd             = from_rr_i.old_prd;
     simd_instr.old_pvd             = from_rr_i.old_pvd;
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
@@ -516,7 +518,7 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
    .flush_i                 (flush_i),
-   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & simd_instr.instr.regfile_we), // TODO: (gerard) check it
+   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & (simd_instr.instr.regfile_we | simd_instr.instr.fregfile_we)), // TODO: (gerard) check it
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
    .instruction_scalar_o    (fp_to_scalar_wb),
@@ -554,7 +556,10 @@ always_comb begin
     simd_to_simd_wb_o = (simd_to_simd_wb.valid) ? simd_to_simd_wb : 'h0;
 
     // FP write-back struct
-    if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
+    if (simd_to_fp_wb.valid) begin
+        fp_to_wb_o = simd_to_fp_wb;
+        fp_to_scalar_wb_o = 'h0;
+    end else if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
         fp_to_scalar_wb_o = fp_to_scalar_wb;
     end else begin

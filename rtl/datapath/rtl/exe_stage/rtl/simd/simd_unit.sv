@@ -30,6 +30,7 @@ module simd_unit
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
     output logic                  stall_prev_o
+    output exe_wb_fp_instr_t      instruction_fp_o        // Out instruction
 );
 
 // MAX_STAGES has been defined as parameter in drac_pkg
@@ -659,7 +660,7 @@ bus64_t ext_element;
 always_comb begin
     ext_element = 'h0;
     data_rd = 'h0;
-    if (instr_to_out.instr.instr_type == VMV_X_S) begin
+    if ((instr_to_out.instr.instr_type == VMV_X_S) || (instr_to_out.instr.instr_type == VFMV_F_S)) begin
         //Extract element 0
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -2011,6 +2012,29 @@ always_comb begin
         `endif
     end
 end
+
+assign instruction_fp_o.valid = instr_to_out.instr.valid &
+                                (instr_to_out.instr.unit == UNIT_SIMD) & 
+                                instr_to_out.instr.fregfile_we;
+assign instruction_fp_o.pc    = instr_to_out.instr.pc;
+assign instruction_fp_o.bpred = instr_to_out.instr.bpred;
+assign instruction_fp_o.rs1   = instr_to_out.instr.rs1;
+assign instruction_fp_o.rd    = instr_to_out.instr.rd;
+assign instruction_fp_o.regfile_we = instr_to_out.instr.fregfile_we;
+assign instruction_fp_o.instr_type = instr_to_out.instr.instr_type;
+assign instruction_fp_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
+assign instruction_fp_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_fp_o.fprd            = instr_to_out.fprd;
+assign instruction_fp_o.checkpoint_done = instr_to_out.checkpoint_done;
+assign instruction_fp_o.chkp            = instr_to_out.chkp;
+assign instruction_fp_o.gl_index        = instr_to_out.gl_index;
+assign instruction_fp_o.branch_taken    = 1'b0;
+assign instruction_fp_o.result_pc       = 0;
+assign instruction_fp_o.fp_status       = fpnew_pkg::status_t'('0); //finish_fp_status_int;
+assign instruction_fp_o.ex              = '0;
+`ifdef SIM_KONATA_DUMP
+   assign instruction_fp_o.id           = instr_to_out.instr.id;
+`endif 
 
 //Exceptions
 always_comb begin

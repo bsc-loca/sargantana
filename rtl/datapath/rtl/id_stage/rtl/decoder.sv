@@ -2381,6 +2381,16 @@ module decoder
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VFWREDOSUM;
                                     end
+                                    F6_VRWFUNARY0: begin
+                                        if (decode_i.inst.vtype.vs1 == VS1_F_S) begin
+                                            decode_instr_int.vregfile_we = 1'b0;
+                                            decode_instr_int.fregfile_we = 1'b1;
+                                            decode_instr_int.use_vs2 = 1'b1;
+                                            decode_instr_int.instr_type = VFMV_F_S;
+                                        end else begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
