@@ -1,3 +1,22 @@
+/*
+ * Copyright 2025 BSC*
+ * *Barcelona Supercomputing Center (BSC)
+ * 
+ * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+ * 
+ * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
+ * may not use this file except in compliance with the License, or, at your
+ * option, the Apache License version 2.0. You may obtain a copy of the
+ * License at
+ * 
+ * https://solderpad.org/licenses/SHL-2.1/
+ * 
+ * Unless required by applicable law or agreed to in writing, any work
+ * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 
 import drac_pkg::*; 
 import fpnew_pkg::*; 
@@ -13,23 +32,18 @@ module vfpu_drac_wrapper #(
     localparam int unsigned WIDTH        = Features.Width,
     localparam int unsigned NUM_OPERANDS = 3
 ) (
-    input  logic    clk_i,
-    input  logic    rstn_i,
-    input  logic    flush_i,
+    input  logic                    clk_i,              // Input clock
+    input  logic                    rstn_i,             // Input reset
+    input  logic                    flush_i,            // do a pipeline flush of CVFPU and vfp pending queue 
     // inputs
-    input  instr_type_t             instr_type_i,   // instruction type
-    input  logic                    instr_valid_i,  // instruction type
-    input  op_frm_fp_t              frm_i,          // rouding mode
-    input  sew_t                    sew_i,          // sew (FP32 or FP64)
-    input  bus_simd_t               data_vs1_i,     // data vector source 1
-    input  bus_simd_t               data_vs2_i,     // data vector source 2
-    input  bus_simd_t               data_old_vd_i,  // old data of destination vector 
-    input  MaskType                 data_vm_i,      // data vector mask input
+    input  rr_exe_simd_instr_t      instruction_i,      // input instruction
+    input  logic                    out_ready_i,
     // outputs
-    output bus_simd_t               data_vd_o,      // raw result, to be masked and filtered
-    output fpnew_pkg::status_t      status_o        // resultant status flags
+    output rr_exe_simd_instr_t      instruction_o,      // output instruction, already formatted
+    output bus_simd_t               data_vd_o,
+    output logic                    in_ready_o,
+    output fpnew_pkg::status_t      status_o
 );
-
 
 localparam logic [31:0] FP32_ONE  = 32'h3F800000;
 localparam logic [31:0] FP32_ZERO = 32'h00000000;
@@ -93,21 +107,39 @@ fpnew_pkg::fp_format_e  vector_src_format;
 fpnew_pkg::fp_format_e  vector_dst_format;
 bus_simd_t              widened_operands [1:0]; // the order will be thhe next {data_vs2, data_vs1}
 
+instr_type_t    instr_type  ;
+logic           instr_valid ;
+op_frm_fp_t     frm         ;
+sew_t           sew         ;
+bus_simd_t      data_vs1    ;
+bus_simd_t      data_vs2    ;
+bus_simd_t      data_old_vd ;
+MaskType        data_vm     ;
+
+assign instr_type      = instruction_i.instr.instr_type ;
+assign instr_valid     = instruction_i.instr.valid      ; 
+assign frm             = instruction_i.instr.frm        ; 
+assign sew             = instruction_i.instr.sew        ;
+assign data_vs1        = instruction_i.data_vs1         ;
+assign data_vs2        = instruction_i.data_vs2         ;
+assign data_old_vd     = instruction_i.data_old_vd      ;
+assign data_vm         = instruction_i.data_vm          ;
+
 always_comb begin
     for (int i = 0; i < VLEN/64; i++) begin
-        widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1_i[i*32 +: 32]);
-        widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2_i[i*32 +: 32]);
+        widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1[i*32 +: 32]);
+        widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2[i*32 +: 32]);
     end
 
-    case (instr_type_i)
+    case (instr_type)
         // Vector Single-Width Floating-Point Add/Subtract Instructions
         VFADD: begin
             vector_operands[0]          = '0; // ignored in ADD mode 
-            vector_operands[1]          = data_vs1_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[1]          = data_vs1;
+            vector_operands[2]          = data_vs2;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b0;
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -120,11 +152,11 @@ always_comb begin
         end
         VFSUB: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs2_i; // VS2 - VS1 or VS2 - f (if vfsub.vf)
-            vector_operands[2]          = data_vs1_i;
+            vector_operands[1]          = data_vs2; // VS2 - VS1 or VS2 - f (if vfsub.vf)
+            vector_operands[2]          = data_vs1;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1; // SUB mode
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -137,11 +169,11 @@ always_comb begin
         end
         VFRSUB: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs1_i; // reverse order (f - VS2)
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[1]          = data_vs1; // reverse order (f - VS2)
+            vector_operands[2]          = data_vs2;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1;
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -174,7 +206,7 @@ always_comb begin
         end
         VFWADDW: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs1_i; // data_vs1 already on widened format
+            vector_operands[1]          = data_vs1; // data_vs1 already on widened format
             vector_operands[2]          = widened_operands[1]; // data_vs2 to be widened
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b0; // ADD operation
@@ -184,7 +216,7 @@ always_comb begin
         VFWSUBW: begin
             vector_operands[0]          = '0;
             vector_operands[1]          = widened_operands[1]; // narrow_to_wide(vs2) - vs1
-            vector_operands[2]          = data_vs1_i;
+            vector_operands[2]          = data_vs1;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1;
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
@@ -193,12 +225,12 @@ always_comb begin
 
         // Vector Single-Width Floating-Point Multiply/Divide Instructions
         VFMUL: begin
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::MUL);
             vector_operation_modifier   = 1'b0; // mul operation
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -211,12 +243,12 @@ always_comb begin
         end
         VFDIV: begin
             // vd[i] = vs2[i] / vs1[i]
-            vector_operands[0]          = data_vs2_i;
-            vector_operands[1]          = data_vs1_i;
+            vector_operands[0]          = data_vs2;
+            vector_operands[1]          = data_vs1;
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::DIV);
             vector_operation_modifier   = 1'b0; // div operation
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -228,12 +260,12 @@ always_comb begin
             endcase
         end
         VFRDIV: begin // scalar-vector, vd[i] = f[rs1]/vs2[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::DIV);
             vector_operation_modifier   = 1'b0; // div operation
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -253,7 +285,7 @@ always_comb begin
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::MUL);
             vector_operation_modifier   = 1'b0; // mul operation
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -268,13 +300,13 @@ always_comb begin
         // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
         VFMACC: begin
             // vd[i] = +(vs1[i] * vs2[i]) + vd[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -287,13 +319,13 @@ always_comb begin
         end
         VFNMACC: begin
             // vd[i] = -(vs1[i] * vs2[i]) - vd[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -306,13 +338,13 @@ always_comb begin
         end
         VFMSAC: begin
             // vd[i] = +(vs1[i] * vs2[i]) - vd[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -325,13 +357,13 @@ always_comb begin
         end
         VFNMSAC: begin
             // -(vs1[i] * vs2[i]) - vd[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_vs2_i;
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_vs2;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -344,13 +376,13 @@ always_comb begin
         end
         VFMADD: begin
             // +(vs1[i] * vd[i]) + vs2[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_old_vd_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_old_vd;
+            vector_operands[2]          = data_vs2;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -363,13 +395,13 @@ always_comb begin
         end
         VFNMADD: begin
             // -(vs1[i] * vd[i]) - vs2[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_old_vd_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_old_vd;
+            vector_operands[2]          = data_vs2;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -382,13 +414,13 @@ always_comb begin
         end
         VFMSUB: begin
             // vd[i] = +(vs1[i] * vd[i]) - vs2[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_old_vd_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_old_vd;
+            vector_operands[2]          = data_vs2;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -401,13 +433,13 @@ always_comb begin
         end
         VFNMSUB: begin
             // vd[i] = -(vs1[i] * vd[i]) + vs2[i]
-            vector_operands[0]          = data_vs1_i;
-            vector_operands[1]          = data_old_vd_i;
-            vector_operands[2]          = data_vs2_i;
+            vector_operands[0]          = data_vs1;
+            vector_operands[1]          = data_old_vd;
+            vector_operands[2]          = data_vs2;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -424,7 +456,7 @@ always_comb begin
             // vd[i] = +(vs1[i] * vs2[i]) + vd[i]
             vector_operands[0]          = widened_operands[0];
             vector_operands[1]          = widened_operands[1];
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b0; // (op[0] * op[1]) + op[2]
@@ -435,7 +467,7 @@ always_comb begin
             // vd[i] = -(vs1[i] * vs2[i]) - vd[i]
             vector_operands[0]          = widened_operands[0];
             vector_operands[1]          = widened_operands[1];
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
@@ -446,7 +478,7 @@ always_comb begin
             // vd[i] = +(vs1[i] * vs2[i]) - vd[i]
             vector_operands[0]          = widened_operands[0];
             vector_operands[1]          = widened_operands[1];
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FMADD);
             vector_operation_modifier   = 1'b1; // (op[0] * op[1]) - op[2]
@@ -457,7 +489,7 @@ always_comb begin
             // vd[i] = -(vs1[i] * vs2[i]) + vd[i]
             vector_operands[0]          = widened_operands[0];
             vector_operands[1]          = widened_operands[1];
-            vector_operands[2]          = data_old_vd_i;
+            vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
             vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
@@ -467,12 +499,12 @@ always_comb begin
 
         // Vector Floating-Point Square-Root Instruction
         VFSQRT: begin
-            vector_operands[0]          = data_vs2_i;
+            vector_operands[0]          = data_vs2;
             vector_operands[1]          = '0;
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::SQRT);
             vector_operation_modifier   = 1'b0;
-            case (sew_i)
+            case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
                     vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
@@ -492,6 +524,35 @@ always_comb begin
     endcase
 end
 
+reg_t               fpnew_new_tag, fpnew_out_tag;
+bus_simd_t          fpnew_status;
+rr_exe_simd_instr_t finish_vfp_instr;
+fpnew_pkg::status_t finish_vfp_status;
+logic               stall_pending_vfp;
+logic               enable_vfp_op;
+
+assign enable_vfp_op = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD) & !stall_pending_vfp;
+assign pending_queue_valid = enable_vfp_op & out_ready_i;
+assign advance_head = finish_vfp_instr.instr.valid; // ¡¡lacks stall_wb_i!!
+
+// assign stall_o = (!ready_fpu | stall_pending_fp_ops); --> at simd_unit will be better
+
+pending_vfp_ops_queue pending_vfp_ops_queue_inst (
+    .clk_i,                                     // Clock Singal
+    .rstn_i,                                    // Negated Reset Signal
+    .flush_i,                                   // Flush all entries
+    .valid_i            (pending_queue_valid),  // Valid instruction 
+    .instruction_i,                             // All instruction input signals
+    .result_valid_i     (fpnew_out_valid),      // Result valid
+    .result_tag_i       (fpnew_out_tag),        // Instruction that finishes
+    .result_fp_status_i (fpnew_status),
+    .advance_head_i     (advance_head),         // Advance head pointer one position
+    .finish_instr_fp_o  (finish_vfp_instr),     // Next Instruction to Write Back FP
+    .finish_fp_status_o (finish_vfp_status),    // FP_STATUS
+    .tag_o              (fpnew_new_tag),        // Tag given to the incoming instruction
+    .full_o             (stall_pending_vfp)     // fifo full
+);
+
 // instanciation of main FPNEW module
 fpnew_top #(
     .Features       (SARG_RV64DV),
@@ -502,25 +563,25 @@ fpnew_top #(
     .flush_i        (flush_i),
     // inputs
     .operands_i     (vector_operands),
-    .rnd_mode_i     (fpnew_pkg::roundmode_e'(frm_i)),
+    .rnd_mode_i     (fpnew_pkg::roundmode_e'(frm)),
     .op_i           (vector_operation),
     .op_mod_i       (vector_operation_modifier),
     .src_fmt_i      (vector_src_format),
     .dst_fmt_i      (vector_dst_format),
-    .int_fmt_i      (fpnew_pkg::int_format_e'(INT32)), // no INT use
-    .vectorial_op_i (1'b1),
-    .tag_i          ('0), // no tag, control over simd scoreboard
-    .simd_mask_i    (data_vm_i), // MaskType logic [NumLanes-1:0]
+    .int_fmt_i      (fpnew_pkg::int_format_e'(INT32)),  // no INT use
+    .vectorial_op_i (1'b1),                             // only vector mode enabled
+    .tag_i          (fpnew_new_tag),
+    .simd_mask_i    (data_vm),                        // MaskType logic [NumLanes-1:0]
     // ouputs
     .result_o       (data_vd_o),
-    .status_o       (status_o),
-    .tag_o          (), // no tag nor handshake needed
-    .busy_o         (),
-    // handshake signals, unused
-    .in_valid_i     (instr_valid_i),
-    .out_ready_i    (1'b1),
-    .in_ready_o     (),
-    .out_valid_o    ()
+    .status_o       (fpnew_status),
+    .tag_o          (fpnew_out_tag),
+    .busy_o         (/* unused */),
+    // handshake signals
+    .in_valid_i     (instr_valid),
+    .in_ready_o     (in_ready_o),
+    .out_ready_i    (out_ready_i), // this will be controllable from arbitration
+    .out_valid_o    (fpnew_out_valid)
 );
 
 endmodule

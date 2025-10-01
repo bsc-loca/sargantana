@@ -1415,6 +1415,10 @@ function automatic logic is_pos_subnorm_f64(input logic [63:0] fp64);
     is_pos_subnorm_f64 = is_pos_f64(fp64) && !(|fp64[62:52]) && (|fp64[51:0]);
 endfunction
 
+function automatic logic is_subnorm_f64(input logic [63:0] fp64);
+    is_subnorm_f64 = !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
 // FP32
 function automatic logic is_nan_f32(input logic [31:0] fp32);
     is_nan_f32 = (&fp32[30:23]) && (|fp32[22:0]);
@@ -1474,6 +1478,10 @@ endfunction
 
 function automatic logic is_pos_subnorm_f32(input logic [31:0] fp32);
     is_pos_subnorm_f32 = is_pos_f32(fp32) && !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_subnorm_f32(input logic [31:0] fp32);
+    is_subnorm_f32 = !(|fp32[30:23]) && (|fp32[22:0]);
 endfunction
 
 // convert from single precision bus to double precision bus

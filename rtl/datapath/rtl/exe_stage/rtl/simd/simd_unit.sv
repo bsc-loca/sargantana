@@ -18,8 +18,7 @@
  * under the License.
  */
 
-
- module simd_unit
+module simd_unit
     import drac_pkg::*;
     import riscv_pkg::*;
 (
@@ -29,7 +28,8 @@
     input vxrm_t                  vxrm_i,                 // Vector Fixed-Point Rounding Mode
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
-    output exe_wb_simd_instr_t    instruction_simd_o      // Out instruction
+    output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
+    output logic                  stall_prev_o
 );
 
 localparam MAX_STAGES = $clog2(VLEN/8) + 2; // The vector reduction tree module will have the maximum stages
@@ -346,15 +346,6 @@ always_comb begin
             previous_div_is_opvx_d      = previous_div_is_opvx_q;            
             previous_div_instr_type_d   = previous_div_instr_type_q;  
         end                    
-    // vector floating-point instructions
-    end else if (is_vf_addmul (instruction_i)) begin
-        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[0];
-    end else if (is_vf_divsqrt(instruction_i)) begin
-        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[1];
-    end else if (is_vf_noncomp(instruction_i)) begin
-        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[2];
-    end else if (is_vf_conv   (instruction_i)) begin
-        simd_exe_stages = drac_pkg::SARG_SIMD_INIT.PipeRegs[3];
     end else begin
         simd_exe_stages = 6'd1;
     end
@@ -816,21 +807,25 @@ vmsb_i_o_f vmsbf_inst(
 // Main vectorial FPU instantiation
 bus_simd_t          fpnew_result;
 fpnew_pkg::status_t fpnew_status;
+rr_exe_simd_instr_t fpnew_out_instruction;
 
-vfpu_drac_wrapper vectorial_fpu (
+logic   is_collision;
+logic   fpnew_out_ready;
+assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out.instr.valid &
+                                                           (instr_to_out.instr.unit == UNIT_SIMD) &
+                                                            instr_to_out.instr.vregfile_we);
+assign  stall_prev_o = is_collision | fpnew_out_ready;
+
+vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
     .rstn_i,
     .flush_i,
-    .instr_type_i  (instruction_i.instr.instr_type),
-    .instr_valid_i (instruction_i.instr.valid),
-    .frm_i         (instruction_i.instr.frm),
-    .sew_i         (instruction_i.instr.sew),
-    .data_vs1_i    (instruction_i.data_vs1),
-    .data_vs2_i    (instruction_i.data_vs2),
-    .data_old_vd_i (instruction_i.data_old_vd),
-    .data_vm_i     (instruction_i.data_vm),
-    .data_vd_o     (fpnew_result),
-    .status_o      (fpnew_status)
+    .instruction_i,
+    .out_ready_i        (~is_collision), // if there's no collision let vfpu out the instruction
+    .in_ready_o         (fpnew_out_ready),
+    .instruction_o      (fpnew_out_instruction),
+    .data_vd_o          (fpnew_result),
+    .status_o           (fpnew_status)
 );
 
 bus_simd_t result_data_vd;
@@ -1011,7 +1006,6 @@ always_comb begin
         else begin // To avoid creating a latch
             shift_amount_in_vslide = '0;
         end
-
 
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -1475,8 +1469,6 @@ always_comb begin
             end
             
         endcase
-    end else if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin
-        result_data_vd = fpnew_result;
     end else begin
         result_data_vd = fu_data_vd;
     end

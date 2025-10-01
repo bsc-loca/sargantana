@@ -123,6 +123,7 @@ logic stall_vagu;
 logic stall_int;
 logic stall_simd;
 logic stall_simd_int;
+logic fpnew_stall_simd;
 logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
@@ -354,7 +355,8 @@ simd_unit simd_unit_inst (
     .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
-    .instruction_simd_o  (simd_to_simd_wb)
+    .instruction_simd_o  (simd_to_simd_wb),
+    .stall_prev_o   (fpnew_stall_simd)
 );
 `else
 assign simd_to_scalar_wb.valid = 1'b0;
@@ -583,7 +585,7 @@ always_comb begin
             stall_int = (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_SIMD) begin
-            stall_simd_int = stall_simd;
+            stall_simd_int = stall_simd | fpnew_stall_simd;
             stall_int = (~ready);
         end
     end
