@@ -126,6 +126,12 @@ assign data_old_vd     = instruction_i.data_old_vd      ;
 assign data_vm         = instruction_i.data_vm          ;
 
 always_comb begin
+    vector_operands             = '0;
+    vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
+    vector_operation_modifier   = '0;
+    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+
     for (int i = 0; i < VLEN/64; i++) begin
         widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1[i*32 +: 32]);
         widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2[i*32 +: 32]);
@@ -530,6 +536,9 @@ rr_exe_simd_instr_t finish_vfp_instr;
 fpnew_pkg::status_t finish_vfp_status;
 logic               stall_pending_vfp;
 logic               enable_vfp_op;
+logic               fpnew_out_valid;
+logic               advance_head;
+logic               pending_queue_valid;             
 
 assign enable_vfp_op = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD) & !stall_pending_vfp;
 assign pending_queue_valid = enable_vfp_op & out_ready_i;
