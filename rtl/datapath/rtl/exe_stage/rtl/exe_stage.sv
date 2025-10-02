@@ -196,6 +196,7 @@ score_board_simd score_board_simd_inst(
     .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
     .vl_i                (simd_instr.instr.vl),
+    .stall_from_vfp      (),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
@@ -305,7 +306,7 @@ always_comb begin
         fp_instr.instr.valid      = 1'b0;
         simd_instr.instr.valid    = 1'b0;
     end else begin
-        simd_instr.instr.valid = (stall_simd_int || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
+        simd_instr.instr.valid = (stall_simd || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
     end
 
     if (~ready || kill_i) begin

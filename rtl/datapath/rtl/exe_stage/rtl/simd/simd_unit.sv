@@ -240,7 +240,7 @@ endfunction
 function logic is_vf_conv(input rr_exe_simd_instr_t instr);
     is_vf_conv =     ((instr.instr.instr_type == FCVT_F2I)  ) ? 1'b1 : 1'b0;
 endfunction
- 
+
 function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
@@ -285,6 +285,9 @@ logic division_pipe_q [DIV_STAGES - 2:0];
 // a global instruction is stored, since there can't be more than 1 in-flight div/rems 
 rr_exe_simd_instr_t division_instruction_d;
 rr_exe_simd_instr_t division_instruction_q;
+
+logic is_fpnew_turn;
+
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -810,11 +813,12 @@ fpnew_pkg::status_t fpnew_status;
 rr_exe_simd_instr_t fpnew_out_instruction;
 
 logic   is_collision;
-logic   fpnew_out_ready;
+logic   fpnew_in_ready;
 assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out.instr.valid &
                                                            (instr_to_out.instr.unit == UNIT_SIMD) &
-                                                            instr_to_out.instr.vregfile_we);
-assign  stall_prev_o = is_collision | fpnew_out_ready;
+                                                            instr_to_out.instr.vregfile_we &
+                                                            !is_vf_addmul(instruction_i) & !is_vf_divsqrt(instruction_i) & !is_vf_noncomp(instruction_i) & !is_vf_conv(instruction_i));
+assign  stall_prev_o = is_collision | (!fpnew_in_ready & instruction_i.instr.valid & (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)));
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
@@ -822,7 +826,7 @@ vfpu_drac_wrapper vectorial_fpu_inst (
     .flush_i,
     .instruction_i,
     .out_ready_i        (~is_collision), // if there's no collision let vfpu out the instruction
-    .in_ready_o         (fpnew_out_ready),
+    .in_ready_o         (fpnew_in_ready),
     .instruction_o      (fpnew_out_instruction),
     .data_vd_o          (fpnew_result),
     .status_o           (fpnew_status)
@@ -834,7 +838,9 @@ bus64_t gather_index;
 always_comb begin
     shift_amount_in_vslide = 'h0;
     gather_index = 'h0;
-    if (is_vred(instr_to_out)) begin
+    if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin // if it's fpnew
+        result_data_vd = fpnew_result;
+    end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
         result_data_vd = data_viota_vd;        
@@ -1629,59 +1635,126 @@ always_comb begin
     end
 end
 
-//Produce the scalar and vector wb structs
-assign instruction_scalar_o.valid = instr_to_out.instr.valid & 
-                                    (instr_to_out.instr.unit == UNIT_SIMD) & 
-                                    instr_to_out.instr.regfile_we;
-assign instruction_scalar_o.pc    = instr_to_out.instr.pc;
-assign instruction_scalar_o.bpred = instr_to_out.instr.bpred;
-assign instruction_scalar_o.rs1   = instr_to_out.instr.rs1;
-assign instruction_scalar_o.rd    = instr_to_out.instr.rd;
-assign instruction_scalar_o.result = data_rd;
-assign instruction_scalar_o.regfile_we = instr_to_out.instr.regfile_we;
-assign instruction_scalar_o.instr_type = instr_to_out.instr.instr_type;
-assign instruction_scalar_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
-assign instruction_scalar_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_scalar_o.prd = instr_to_out.prd;
-assign instruction_scalar_o.checkpoint_done = instr_to_out.checkpoint_done;
-assign instruction_scalar_o.chkp = instr_to_out.chkp;
-assign instruction_scalar_o.gl_index = instr_to_out.gl_index;
-assign instruction_scalar_o.branch_taken = 1'b0;
-assign instruction_scalar_o.result_pc = 0;
-assign instruction_scalar_o.fp_status = flags_merged;
-assign instruction_scalar_o.mem_type = NOT_MEM;
-assign instruction_scalar_o.vl = instr_to_out.instr.vl;
-assign instruction_scalar_o.sew = instr_to_out.instr.sew;
-assign instruction_scalar_o.lmul = instr_to_out.instr.lmul;
-`ifdef SIM_KONATA_DUMP
-assign instruction_scalar_o.id = instr_to_out.instr.id;
-`endif
+// give turn to fpnew output when there is no collision and
+// when there is an active isntruction waiting at the output
+assign is_fpnew_turn = !is_collision &
+                       fpnew_out_instruction.instr.valid &
+                       (fpnew_out_instruction.instr.unit == UNIT_SIMD) &
+                       fpnew_out_instruction.instr.regfile_we &
+                       (is_vf_addmul(fpnew_out_instruction) || is_vf_divsqrt(fpnew_out_instruction) || is_vf_noncomp(fpnew_out_instruction) || is_vf_conv(fpnew_out_instruction));
 
-assign instruction_simd_o.valid = instr_to_out.instr.valid & 
-                                  (instr_to_out.instr.unit == UNIT_SIMD) & 
-                                  instr_to_out.instr.vregfile_we;
-assign instruction_simd_o.pc    = instr_to_out.instr.pc;
-assign instruction_simd_o.bpred = instr_to_out.instr.bpred;
-assign instruction_simd_o.rs1   = instr_to_out.instr.rs1;
-assign instruction_simd_o.vd    = instr_to_out.instr.vd;
-assign instruction_simd_o.vresult = tail_data_vd;
-assign instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we;
-assign instruction_simd_o.instr_type = instr_to_out.instr.instr_type;
-assign instruction_simd_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
-assign instruction_simd_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
-assign instruction_simd_o.pvd = instr_to_out.pvd;
-assign instruction_simd_o.checkpoint_done = instr_to_out.checkpoint_done;
-assign instruction_simd_o.chkp = instr_to_out.chkp;
-assign instruction_simd_o.gl_index = instr_to_out.gl_index;
-assign instruction_simd_o.branch_taken = 1'b0;
-assign instruction_simd_o.result_pc = 0;
-assign instruction_simd_o.vs_ovf = v_sat_ovf != 0;
-assign instruction_simd_o.vl = instr_to_out.instr.vl;
-assign instruction_simd_o.sew = instr_to_out.instr.sew;
-assign instruction_simd_o.lmul = instr_to_out.instr.lmul;
-`ifdef SIM_KONATA_DUMP
-assign instruction_simd_o.id = instr_to_out.instr.id;
-`endif
+always_comb begin
+    if (is_fpnew_turn) begin
+        //Produce the scalar and vector wb structs
+        instruction_scalar_o.valid              = fpnew_out_instruction.instr.valid & 
+                                                  (fpnew_out_instruction.instr.unit == UNIT_SIMD) & 
+                                                  fpnew_out_instruction.instr.regfile_we;
+        instruction_scalar_o.pc                 = fpnew_out_instruction.instr.pc;
+        instruction_scalar_o.bpred              = fpnew_out_instruction.instr.bpred;
+        instruction_scalar_o.rs1                = fpnew_out_instruction.instr.rs1;
+        instruction_scalar_o.rd                 = fpnew_out_instruction.instr.rd;
+        instruction_scalar_o.result             = data_rd;
+        instruction_scalar_o.regfile_we         = fpnew_out_instruction.instr.regfile_we;
+        instruction_scalar_o.instr_type         = fpnew_out_instruction.instr.instr_type;
+        instruction_scalar_o.stall_csr_fence    = fpnew_out_instruction.instr.stall_csr_fence;
+        instruction_scalar_o.csr_addr           = fpnew_out_instruction.instr.imm[CSR_ADDR_SIZE-1:0];
+        instruction_scalar_o.prd                = fpnew_out_instruction.prd;
+        instruction_scalar_o.checkpoint_done    = fpnew_out_instruction.checkpoint_done;
+        instruction_scalar_o.chkp               = fpnew_out_instruction.chkp;
+        instruction_scalar_o.gl_index           = fpnew_out_instruction.gl_index;
+        instruction_scalar_o.branch_taken       = 1'b0;
+        instruction_scalar_o.result_pc          = 0;
+        instruction_scalar_o.fp_status          = flags_merged;
+        instruction_scalar_o.mem_type           = NOT_MEM;
+        instruction_scalar_o.vl                 = fpnew_out_instruction.instr.vl;
+        instruction_scalar_o.sew                = fpnew_out_instruction.instr.sew;
+        instruction_scalar_o.lmul               = fpnew_out_instruction.instr.lmul;
+        `ifdef SIM_KONATA_DUMP
+        instruction_scalar_o.id                 = fpnew_out_instruction.instr.id;
+        `endif
+
+        instruction_simd_o.valid                = fpnew_out_instruction.instr.valid & 
+                                                  (fpnew_out_instruction.instr.unit == UNIT_SIMD) & 
+                                                  fpnew_out_instruction.instr.vregfile_we;
+        instruction_simd_o.pc                   = fpnew_out_instruction.instr.pc;
+        instruction_simd_o.bpred                = fpnew_out_instruction.instr.bpred;
+        instruction_simd_o.rs1                  = fpnew_out_instruction.instr.rs1;
+        instruction_simd_o.vd                   = fpnew_out_instruction.instr.vd;
+        instruction_simd_o.vresult              = tail_data_vd;
+        instruction_simd_o.vregfile_we          = fpnew_out_instruction.instr.vregfile_we;
+        instruction_simd_o.instr_type           = fpnew_out_instruction.instr.instr_type;
+        instruction_simd_o.stall_csr_fence      = fpnew_out_instruction.instr.stall_csr_fence;
+        instruction_simd_o.csr_addr             = fpnew_out_instruction.instr.imm[CSR_ADDR_SIZE-1:0];
+        instruction_simd_o.pvd                  = fpnew_out_instruction.pvd;
+        instruction_simd_o.checkpoint_done      = fpnew_out_instruction.checkpoint_done;
+        instruction_simd_o.chkp                 = fpnew_out_instruction.chkp;
+        instruction_simd_o.gl_index             = fpnew_out_instruction.gl_index;
+        instruction_simd_o.branch_taken         = 1'b0;
+        instruction_simd_o.result_pc            = 0;
+        instruction_simd_o.vs_ovf               = v_sat_ovf != 0;
+        instruction_simd_o.vl                   = fpnew_out_instruction.instr.vl;
+        instruction_simd_o.sew                  = fpnew_out_instruction.instr.sew;
+        instruction_simd_o.lmul                 = fpnew_out_instruction.instr.lmul;
+        `ifdef SIM_KONATA_DUMP
+        instruction_simd_o.id                   = fpnew_out_instruction.instr.id;
+        `endif
+
+    end else begin
+        //Produce the scalar and vector wb structs
+        instruction_scalar_o.valid = instr_to_out.instr.valid & 
+                                     (instr_to_out.instr.unit == UNIT_SIMD) & 
+                                     instr_to_out.instr.regfile_we;
+        instruction_scalar_o.pc    = instr_to_out.instr.pc;
+        instruction_scalar_o.bpred = instr_to_out.instr.bpred;
+        instruction_scalar_o.rs1   = instr_to_out.instr.rs1;
+        instruction_scalar_o.rd    = instr_to_out.instr.rd;
+        instruction_scalar_o.result = data_rd;
+        instruction_scalar_o.regfile_we = instr_to_out.instr.regfile_we;
+        instruction_scalar_o.instr_type = instr_to_out.instr.instr_type;
+        instruction_scalar_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
+        instruction_scalar_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
+        instruction_scalar_o.prd = instr_to_out.prd;
+        instruction_scalar_o.checkpoint_done = instr_to_out.checkpoint_done;
+        instruction_scalar_o.chkp = instr_to_out.chkp;
+        instruction_scalar_o.gl_index = instr_to_out.gl_index;
+        instruction_scalar_o.branch_taken = 1'b0;
+        instruction_scalar_o.result_pc = 0;
+        instruction_scalar_o.fp_status = flags_merged;
+        instruction_scalar_o.mem_type = NOT_MEM;
+        instruction_scalar_o.vl = instr_to_out.instr.vl;
+        instruction_scalar_o.sew = instr_to_out.instr.sew;
+        instruction_scalar_o.lmul = instr_to_out.instr.lmul;
+        `ifdef SIM_KONATA_DUMP
+        instruction_scalar_o.id = instr_to_out.instr.id;
+        `endif
+
+        instruction_simd_o.valid = instr_to_out.instr.valid & 
+                                   (instr_to_out.instr.unit == UNIT_SIMD) & 
+                                   instr_to_out.instr.vregfile_we;
+        instruction_simd_o.pc    = instr_to_out.instr.pc;
+        instruction_simd_o.bpred = instr_to_out.instr.bpred;
+        instruction_simd_o.rs1   = instr_to_out.instr.rs1;
+        instruction_simd_o.vd    = instr_to_out.instr.vd;
+        instruction_simd_o.vresult = tail_data_vd;
+        instruction_simd_o.vregfile_we = instr_to_out.instr.vregfile_we;
+        instruction_simd_o.instr_type = instr_to_out.instr.instr_type;
+        instruction_simd_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
+        instruction_simd_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
+        instruction_simd_o.pvd = instr_to_out.pvd;
+        instruction_simd_o.checkpoint_done = instr_to_out.checkpoint_done;
+        instruction_simd_o.chkp = instr_to_out.chkp;
+        instruction_simd_o.gl_index = instr_to_out.gl_index;
+        instruction_simd_o.branch_taken = 1'b0;
+        instruction_simd_o.result_pc = 0;
+        instruction_simd_o.vs_ovf = v_sat_ovf != 0;
+        instruction_simd_o.vl = instr_to_out.instr.vl;
+        instruction_simd_o.sew = instr_to_out.instr.sew;
+        instruction_simd_o.lmul = instr_to_out.instr.lmul;
+        `ifdef SIM_KONATA_DUMP
+        instruction_simd_o.id = instr_to_out.instr.id;
+        `endif
+    end
+end
 
 //Exceptions
 always_comb begin

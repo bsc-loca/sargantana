@@ -31,6 +31,7 @@
      //input  instr_entry_t           instr_entry_i,      
      input  sew_t                          sew_i,              // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
      input  logic [VMAXELEM_LOG:0]  vl_i,           // Vector Lenght
+     input  logic                   stall_from_vfp,
  
      // OUTPUTS
      output logic [5:0]             simd_exe_stages_o, 
@@ -203,7 +204,7 @@ always_comb begin
         
         // when a new DIV/REM is issued, it's operands are saved
         // for comparision with future DIV/REM
-        if((~stall_simd) && ready_i) begin
+        if(~(stall_from_vfp) && (~stall_simd) && ready_i) begin
             previous_div_rs1_d          = instr_entry_i.data_rs1;                 
             previous_div_vs1_d          = instr_entry_i.data_vs1;                
             previous_div_vs2_d          = instr_entry_i.data_vs2;                
@@ -278,7 +279,6 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     end
 end
 
-
 // Each cycle, each instruction go forward 1 slot
 always_comb begin
     for (int i = 2; i <= MAX_STAGES; i++) begin
@@ -290,7 +290,7 @@ always_comb begin
                 `endif
             end else if (j==0) begin
                 if (simd_exe_stages == (trunc_stages(i))) begin
-                    simd_pipe_d[i][0].valid = ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
+                    simd_pipe_d[i][0].valid = (!is_vf_addmul && !is_vf_divsqrt & !is_vf_noncomp & !is_vf_conv) & ~stall_from_vfp & ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
                     `ifdef VERILATOR
                     simd_pipe_d[i][0].simd_instr_type = instr_entry_i.instr.instr_type;
                     `endif
@@ -313,7 +313,7 @@ always_comb begin
     for (int j = 0; j < (DIV_STAGES - 1); j++) begin
         if (j==0) begin
             if(is_vdiv && (simd_exe_stages == 6'd32)) begin
-                division_pipe_d[0].valid = ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
+                division_pipe_d[0].valid = ~stall_from_vfp & ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
                 `ifdef VERILATOR
                 division_pipe_d[0].simd_instr_type = instr_entry_i.instr.instr_type;
                 `endif

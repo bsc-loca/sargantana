@@ -55,6 +55,18 @@ localparam logic [63:0] FP64_QNAN = 64'h7FF8000000000000;
 localparam logic [31:0] FP32_SNAN = 32'h7FA00000;
 localparam logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
 
+// replicating code of simd_unit
+function logic is_vfpnew(input rr_exe_simd_instr_t instr);
+    is_vfpnew =   ((instr.instr.instr_type == VFADD)      ||
+                   (instr.instr.instr_type == VFSUB)      ||
+                   (instr.instr.instr_type == VFRSUB)     ||
+                   (instr.instr.instr_type == VFWADD)     ||
+                   (instr.instr.instr_type == VFWSUB)     ||
+                   (instr.instr.instr_type == VFDIV)      ||
+                   (instr.instr.instr_type == VFMIN)      ||
+                   (instr.instr.instr_type == VFMAX)      ||
+                   (instr.instr.instr_type == FCVT_F2I)   ) ? 1'b1 : 1'b0;
+endfunction
 
 /* Main floting-point parallel FPNEW unit
  *
@@ -117,7 +129,7 @@ bus_simd_t      data_old_vd ;
 MaskType        data_vm     ;
 
 assign instr_type      = instruction_i.instr.instr_type ;
-assign instr_valid     = instruction_i.instr.valid      ; 
+assign instr_valid     = instruction_i.instr.valid & is_vfpnew(instruction_i); 
 assign frm             = instruction_i.instr.frm        ; 
 assign sew             = instruction_i.instr.sew        ;
 assign data_vs1        = instruction_i.data_vs1         ;
