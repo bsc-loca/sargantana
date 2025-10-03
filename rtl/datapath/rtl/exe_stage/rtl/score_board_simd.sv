@@ -140,7 +140,8 @@ assign is_vf_addmul =   ((instr_entry_i.instr.instr_type == VFADD)      ||
                          (instr_entry_i.instr.instr_type == VFSUB)      ||
                          (instr_entry_i.instr.instr_type == VFRSUB)     ||
                          (instr_entry_i.instr.instr_type == VFWADD)     ||
-                         (instr_entry_i.instr.instr_type == VFWSUB)     ) ? 1'b1 : 1'b0;
+                         (instr_entry_i.instr.instr_type == VFWSUB)     ||
+                         (instr_entry_i.instr.instr_type == VFMUL)      ) ? 1'b1 : 1'b0;
 
 assign is_vf_divsqrt =  ((instr_entry_i.instr.instr_type == VFDIV)      ) ? 1'b1 : 1'b0;
  

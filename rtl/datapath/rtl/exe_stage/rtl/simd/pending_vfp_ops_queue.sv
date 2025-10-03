@@ -30,12 +30,14 @@ module pending_vfp_ops_queue
     input rr_exe_simd_instr_t       instruction_i,          // All instruction input signals
 
     input logic                     result_valid_i,         // Result valid
+    input bus_simd_t                result_data_i,          // result data input
     input reg_t                     result_tag_i,           // Instruction that finishes
     input fpnew_pkg::status_t       result_fp_status_i,
     input logic                     advance_head_i,         // Advance head pointer one position
 
     output rr_exe_simd_instr_t      finish_instr_fp_o,      // Next Instruction to Write Back
     output fpnew_pkg::status_t      finish_fp_status_o,     // Next fp_status to Write Back
+    output bus_simd_t               finish_result_o,        // result data simd
     
     output reg_t                    tag_o,                  // Tag given to the incoming instruction
     output logic                    full_o                  // fifo full
@@ -77,6 +79,7 @@ assign advance_head_enable = advance_head_i & (num > 0);
 
 // FIFO Memory structure
 rr_exe_simd_instr_t     instruction_table           [PFPQ_NUM_ENTRIES-1:0];
+bus_simd_t              instruction_table_result     [PFPQ_NUM_ENTRIES-1:0];
 fpnew_pkg::status_t     instruction_table_status    [PFPQ_NUM_ENTRIES-1:0];
 reg_t                   tag_table                   [PFPQ_NUM_ENTRIES-1:0];
 logic                   control_bits_table          [PFPQ_NUM_ENTRIES-1:0];
@@ -110,7 +113,7 @@ begin
             for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
                 if ((tag_table[j] == result_tag_i) && valid_table[j]) begin
                     control_bits_table[j] <= 1'b1;
-                    // instruction_table[j].data_rs3 <= result_data_i;
+                    instruction_table_result[j] <= result_data_i;
                     // the result will be available in the wrapper
                     // doesn't make sense to include result in the rr_exe_simd structure
                     instruction_table_status[j]   <= result_fp_status_i;
@@ -162,8 +165,8 @@ begin
 end
 
 assign finish_instr_fp_o = ((num > 0) & control_bits_table[head]) ? instruction_table[head] : 'h0;
-
-assign finish_fp_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
+assign finish_result_o = ((num > 0) & control_bits_table[head]) ? instruction_table_result[head] : 'h0;
+assign finish_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
 
 assign full_o  = ((num >= PFPQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 

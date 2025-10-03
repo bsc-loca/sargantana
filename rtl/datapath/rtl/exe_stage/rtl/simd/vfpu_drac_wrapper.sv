@@ -41,7 +41,7 @@ module vfpu_drac_wrapper #(
     // outputs
     output rr_exe_simd_instr_t      instruction_o,      // output instruction, already formatted
     output bus_simd_t               data_vd_o,
-    output logic                    in_ready_o,
+    output logic                    stall_o,
     output fpnew_pkg::status_t      status_o
 );
 
@@ -62,7 +62,8 @@ function logic is_vfpnew(input rr_exe_simd_instr_t instr);
                    (instr.instr.instr_type == VFRSUB)     ||
                    (instr.instr.instr_type == VFWADD)     ||
                    (instr.instr.instr_type == VFWSUB)     ||
-                   (instr.instr.instr_type == VFDIV)      ||
+                   (instr.instr.instr_type == VFMUL)      ||
+                   (instr.instr.instr_type == VFDIV)      ||   
                    (instr.instr.instr_type == VFMIN)      ||
                    (instr.instr.instr_type == VFMAX)      ||
                    (instr.instr.instr_type == FCVT_F2I)   ) ? 1'b1 : 1'b0;
@@ -543,41 +544,55 @@ always_comb begin
 end
 
 reg_t               fpnew_new_tag, fpnew_out_tag;
-bus_simd_t          fpnew_status;
+bus_simd_t          fpnew_result;
+bus_simd_t          finish_vfp_result;
+fpnew_pkg::status_t fpnew_status;
 rr_exe_simd_instr_t finish_vfp_instr;
 fpnew_pkg::status_t finish_vfp_status;
 logic               stall_pending_vfp;
 logic               enable_vfp_op;
 logic               fpnew_out_valid;
 logic               advance_head;
-logic               pending_queue_valid;             
+logic               pending_queue_valid;
+logic               in_ready;
+logic               fpnew_stall;
 
-assign enable_vfp_op = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_SIMD) & !stall_pending_vfp;
-assign pending_queue_valid = enable_vfp_op & out_ready_i;
-assign advance_head = finish_vfp_instr.instr.valid; // ¡¡lacks stall_wb_i!!
+assign enable_vfp_op = instruction_i.instr.valid & is_vfpnew(instruction_i) & !stall_pending_vfp;
+assign pending_queue_valid = enable_vfp_op & in_ready;
+assign advance_head = finish_vfp_instr.instr.valid & out_ready_i;
+assign stall_o = (instruction_i.instr.valid & is_vfpnew(instruction_i) & (!in_ready | stall_pending_vfp));
 
-// assign stall_o = (!ready_fpu | stall_pending_fp_ops); --> at simd_unit will be better
+assign instruction_o = finish_vfp_instr;
+assign status_o = finish_vfp_status;
+assign data_vd_o = finish_vfp_result;
 
 pending_vfp_ops_queue pending_vfp_ops_queue_inst (
-    .clk_i,                                     // Clock Singal
-    .rstn_i,                                    // Negated Reset Signal
-    .flush_i,                                   // Flush all entries
-    .valid_i            (pending_queue_valid),  // Valid instruction 
-    .instruction_i,                             // All instruction input signals
-    .result_valid_i     (fpnew_out_valid),      // Result valid
-    .result_tag_i       (fpnew_out_tag),        // Instruction that finishes
+    .clk_i,
+    .rstn_i,
+    .flush_i,
+
+    .valid_i            (pending_queue_valid),
+    .instruction_i,
+
+    .result_valid_i     (fpnew_out_valid),
+    .result_tag_i       (fpnew_out_tag),
     .result_fp_status_i (fpnew_status),
-    .advance_head_i     (advance_head),         // Advance head pointer one position
-    .finish_instr_fp_o  (finish_vfp_instr),     // Next Instruction to Write Back FP
-    .finish_fp_status_o (finish_vfp_status),    // FP_STATUS
-    .tag_o              (fpnew_new_tag),        // Tag given to the incoming instruction
-    .full_o             (stall_pending_vfp)     // fifo full
+    .result_data_i      (fpnew_result),
+
+    .advance_head_i     (advance_head),
+    .finish_instr_fp_o  (finish_vfp_instr),
+    .finish_fp_status_o (finish_vfp_status),
+    .finish_result_o    (finish_vfp_result),
+    .tag_o              (fpnew_new_tag),
+
+    .full_o             (stall_pending_vfp)
 );
 
 // instanciation of main FPNEW module
 fpnew_top #(
     .Features       (SARG_RV64DV),
-    .Implementation (SARG_SIMD_INIT)
+    .Implementation (SARG_SIMD_INIT),
+    .TagType        (logic[4:0])
 ) vector_fpnew (
     .clk_i          (clk_i),
     .rst_ni         (rstn_i),
@@ -594,14 +609,14 @@ fpnew_top #(
     .tag_i          (fpnew_new_tag),
     .simd_mask_i    (data_vm),                        // MaskType logic [NumLanes-1:0]
     // ouputs
-    .result_o       (data_vd_o),
+    .result_o       (fpnew_result),
     .status_o       (fpnew_status),
     .tag_o          (fpnew_out_tag),
     .busy_o         (/* unused */),
     // handshake signals
     .in_valid_i     (instr_valid),
-    .in_ready_o     (in_ready_o),
-    .out_ready_i    (out_ready_i), // this will be controllable from arbitration
+    .in_ready_o     (in_ready),
+    .out_ready_i    (1'b1), // always held in "pending queue"
     .out_valid_o    (fpnew_out_valid)
 );
 

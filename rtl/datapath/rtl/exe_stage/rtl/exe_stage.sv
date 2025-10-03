@@ -46,6 +46,7 @@
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
     input logic [VMAXELEM_LOG:0]        vl_id_exe_i,
+    
     // OUTPUTS
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,

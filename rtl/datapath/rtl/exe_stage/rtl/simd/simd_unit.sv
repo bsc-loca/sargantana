@@ -225,6 +225,7 @@ function logic is_vf_addmul(input rr_exe_simd_instr_t instr);
                      (instr.instr.instr_type == VFSUB)      ||
                      (instr.instr.instr_type == VFRSUB)     ||
                      (instr.instr.instr_type == VFWADD)     ||
+                     (instr.instr.instr_type == VFMUL)      ||
                      (instr.instr.instr_type == VFWSUB)     ) ? 1'b1 : 1'b0;
 endfunction
 
@@ -287,7 +288,6 @@ rr_exe_simd_instr_t division_instruction_d;
 rr_exe_simd_instr_t division_instruction_q;
 
 logic is_fpnew_turn;
-
 
 // Cycle instruction management for those instructions that takes more than 1 cycle
 /*
@@ -813,12 +813,15 @@ fpnew_pkg::status_t fpnew_status;
 rr_exe_simd_instr_t fpnew_out_instruction;
 
 logic   is_collision;
-logic   fpnew_in_ready;
+logic   fpnew_stall;
 assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out.instr.valid &
                                                            (instr_to_out.instr.unit == UNIT_SIMD) &
                                                             instr_to_out.instr.vregfile_we &
-                                                            !is_vf_addmul(instruction_i) & !is_vf_divsqrt(instruction_i) & !is_vf_noncomp(instruction_i) & !is_vf_conv(instruction_i));
-assign  stall_prev_o = is_collision | (!fpnew_in_ready & instruction_i.instr.valid & (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)));
+                                                            !is_vf_addmul(instr_to_out) &
+                                                            !is_vf_divsqrt(instr_to_out) &
+                                                            !is_vf_noncomp(instr_to_out) &
+                                                            !is_vf_conv(instr_to_out));
+assign  stall_prev_o = is_collision | fpnew_stall;
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
@@ -826,7 +829,7 @@ vfpu_drac_wrapper vectorial_fpu_inst (
     .flush_i,
     .instruction_i,
     .out_ready_i        (~is_collision), // if there's no collision let vfpu out the instruction
-    .in_ready_o         (fpnew_in_ready),
+    .stall_o            (fpnew_stall),
     .instruction_o      (fpnew_out_instruction),
     .data_vd_o          (fpnew_result),
     .status_o           (fpnew_status)
@@ -1628,7 +1631,7 @@ end
 // select combinationally the output status
 fpnew_pkg::status_t flags_merged;
 always_comb begin
-    if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin
+    if (is_vf_addmul(fpnew_out_instruction) || is_vf_divsqrt(fpnew_out_instruction) || is_vf_noncomp(fpnew_out_instruction) || is_vf_conv(fpnew_out_instruction)) begin
         flags_merged = fpnew_status;
     end else begin
         flags_merged = '0;
@@ -1637,11 +1640,10 @@ end
 
 // give turn to fpnew output when there is no collision and
 // when there is an active isntruction waiting at the output
-assign is_fpnew_turn = !is_collision &
-                       fpnew_out_instruction.instr.valid &
-                       (fpnew_out_instruction.instr.unit == UNIT_SIMD) &
-                       fpnew_out_instruction.instr.regfile_we &
-                       (is_vf_addmul(fpnew_out_instruction) || is_vf_divsqrt(fpnew_out_instruction) || is_vf_noncomp(fpnew_out_instruction) || is_vf_conv(fpnew_out_instruction));
+assign is_fpnew_turn = ((~is_collision) &&
+                       (fpnew_out_instruction.instr.valid) &&
+                       (fpnew_out_instruction.instr.unit == UNIT_SIMD) &&
+                       (fpnew_out_instruction.instr.vregfile_we));
 
 always_comb begin
     if (is_fpnew_turn) begin
