@@ -1090,6 +1090,11 @@ typedef enum logic [11:0] {
     CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
     CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
     CSR_SPI_CONFIG = 12'h7F2  // SPI Configuration CSR
+
+    `ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+    ,
+    CSR_DYN_MEM_LATENCY = 12'h801
+    `endif
     
 } csr_reg_t;
 
