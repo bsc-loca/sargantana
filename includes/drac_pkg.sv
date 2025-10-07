@@ -1266,7 +1266,7 @@ localparam drac_cfg_t DracDefaultConfig = '{
     DCacheMSHRWays: 2,
     DCacheWBUFSize: 16,
     DCacheWTNotWB: 1,
-    DCacheCoalescing: 0,
+    DCacheCoalescing: 1,
     DCacheWBUFTh: 2,
     DCacheRefillFIFODepth: 2,
 
