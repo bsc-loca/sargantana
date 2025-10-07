@@ -55,19 +55,6 @@ localparam logic [63:0] FP64_QNAN = 64'h7FF8000000000000;
 localparam logic [31:0] FP32_SNAN = 32'h7FA00000;
 localparam logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
 
-// replicating code of simd_unit
-function logic is_vfpnew(input rr_exe_simd_instr_t instr);
-    is_vfpnew =   ((instr.instr.instr_type == VFADD)      ||
-                   (instr.instr.instr_type == VFSUB)      ||
-                   (instr.instr.instr_type == VFRSUB)     ||
-                   (instr.instr.instr_type == VFWADD)     ||
-                   (instr.instr.instr_type == VFWSUB)     ||
-                   (instr.instr.instr_type == VFMUL)      ||
-                   (instr.instr.instr_type == VFDIV)      ||   
-                   (instr.instr.instr_type == VFMIN)      ||
-                   (instr.instr.instr_type == VFMAX)      ||
-                   (instr.instr.instr_type == FCVT_F2I)   ) ? 1'b1 : 1'b0;
-endfunction
 
 /* Main floting-point parallel FPNEW unit
  *
@@ -126,17 +113,24 @@ op_frm_fp_t     frm         ;
 sew_t           sew         ;
 bus_simd_t      data_vs1    ;
 bus_simd_t      data_vs2    ;
+bus_simd_t      rs1_repl    ;
+bus64_t         data_rs1    ; // scalar operand
 bus_simd_t      data_old_vd ;
 MaskType        data_vm     ;
+logic           is_opvf     ; // uses the scalar operand
 
-assign instr_type      = instruction_i.instr.instr_type ;
-assign instr_valid     = instruction_i.instr.valid & is_vfpnew(instruction_i); 
-assign frm             = instruction_i.instr.frm        ; 
-assign sew             = instruction_i.instr.sew        ;
-assign data_vs1        = instruction_i.data_vs1         ;
-assign data_vs2        = instruction_i.data_vs2         ;
-assign data_old_vd     = instruction_i.data_old_vd      ;
-assign data_vm         = instruction_i.data_vm          ;
+assign instr_type      = instruction_i.instr.instr_type                                                     ;
+assign instr_valid     = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type)    ; 
+assign frm             = instruction_i.instr.frm                                                            ; 
+assign sew             = instruction_i.instr.sew                                                            ;
+assign is_opvf         = instruction_i.instr.is_opvf                                                        ;
+assign data_rs1        = instruction_i.data_rs1                                                             ;
+assign data_old_vd     = instruction_i.data_old_vd                                                          ;
+assign data_vm         = {NumLanes{1'b1}}                                                                   ;
+assign data_vs1        = is_opvf ? rs1_repl : instruction_i.data_vs1                                        ;
+assign data_vs2        = instruction_i.data_vs2                                                             ;
+
+assign rs1_repl = (sew == SEW_64) ? {(VLEN/64){data_rs1}} : {(VLEN/32){data_rs1[31:0]}};
 
 always_comb begin
     vector_operands             = '0;
@@ -225,8 +219,8 @@ always_comb begin
         end
         VFWADDW: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = data_vs1; // data_vs1 already on widened format
-            vector_operands[2]          = widened_operands[1]; // data_vs2 to be widened
+            vector_operands[1]          = widened_operands[0]; // data_vs2 to be widened
+            vector_operands[2]          = data_vs2; // data_vs1 already on widened format
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b0; // ADD operation
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
@@ -234,8 +228,8 @@ always_comb begin
         end
         VFWSUBW: begin
             vector_operands[0]          = '0;
-            vector_operands[1]          = widened_operands[1]; // narrow_to_wide(vs2) - vs1
-            vector_operands[2]          = data_vs1;
+            vector_operands[1]          = data_vs2;
+            vector_operands[2]          = widened_operands[0]; // narrow_to_wide(vs2) - vs1
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
             vector_operation_modifier   = 1'b1;
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
@@ -557,10 +551,10 @@ logic               pending_queue_valid;
 logic               in_ready;
 logic               fpnew_stall;
 
-assign enable_vfp_op = instruction_i.instr.valid & is_vfpnew(instruction_i) & !stall_pending_vfp;
+assign enable_vfp_op = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !stall_pending_vfp;
 assign pending_queue_valid = enable_vfp_op & in_ready;
 assign advance_head = finish_vfp_instr.instr.valid & out_ready_i;
-assign stall_o = (instruction_i.instr.valid & is_vfpnew(instruction_i) & (!in_ready | stall_pending_vfp));
+assign stall_o = (instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & (!in_ready | stall_pending_vfp));
 
 assign instruction_o = finish_vfp_instr;
 assign status_o = finish_vfp_status;

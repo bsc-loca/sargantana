@@ -396,7 +396,7 @@ typedef enum logic [8:0] {
    // Vectorial FP instructions
    VFMV, VFMERGE, VFCLASS,
    // Vectorial FP other instructions
-   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFRDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC, VFSQRT,
+   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFRDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC, VFSQRT, VFSQRT7, VFREC7,
    VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
    // Vectorial FP reduction instructions
    VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
@@ -1341,6 +1341,54 @@ localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
                 '{default: fpnew_pkg::MERGED}},  // CONV
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
+
+function logic is_vf_addmul(input instr_type_t instr);
+    is_vf_addmul = ((instr == VFADD)      ||
+                    (instr == VFSUB)      ||
+                    (instr == VFRSUB)     ||
+                    (instr == VFWADD)     ||
+                    (instr == VFWSUB)     ||
+                    (instr == VFWADDW)    ||
+                    (instr == VFWSUBW)    ||
+                    (instr == VFMUL)      ||
+                    (instr == VFDIV)      ||
+                    (instr == VFWMUL)     ||
+                    (instr == VFMACC)     ||
+                    (instr == VFNMACC)    ||
+                    (instr == VFMSAC)     ||
+                    (instr == VFNMSAC)    ||
+                    (instr == VFMADD)     ||
+                    (instr == VFNMADD)    ||
+                    (instr == VFMSUB)     ||
+                    (instr == VFNMSUB)    ||
+                    (instr == VFWMACC)    ||
+                    (instr == VFWNMACC)   ||
+                    (instr == VFWMSAC)    ||
+                    (instr == VFWNMSAC)   ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_divsqrt(input instr_type_t instr);
+    is_vf_divsqrt = ((instr == VFDIV)     ||
+                     (instr == VFSQRT)    ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_noncomp(input instr_type_t instr);
+    is_vf_noncomp =  ((instr == VFMIN)     ||
+                      (instr == VFMAX)     ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vf_conv(input instr_type_t instr);
+    is_vf_conv =     ((instr == FCVT_F2I)  ) ? 1'b1 : 1'b0;
+endfunction
+
+function logic is_vfpnew(input instr_type_t instr);
+    is_vfpnew = is_vf_addmul(instr) || is_vf_divsqrt(instr) || is_vf_noncomp(instr) || is_vf_conv(instr);
+endfunction
+
+function logic is_vf_approx (input instr_type_t instr);
+    is_vf_approx = ((instr == VFSQRT7)    ||
+                    (instr == VFREC7)     ) ? 1'b1 : 1'b0;
+endfunction
 
 // floating-point definitions
 parameter logic [31:0] FP32_ONE = 32'h3F800000;

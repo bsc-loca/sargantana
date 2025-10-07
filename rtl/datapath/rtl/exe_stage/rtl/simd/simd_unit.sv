@@ -45,7 +45,13 @@ bus_simd_t fu_data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
+rr_exe_simd_instr_t instr_to_out_integer;
 logic [VMAXELEM_LOG:0] vl_to_out;
+
+// floating point variables' declaration
+bus_simd_t          fpnew_result;
+fpnew_pkg::status_t fpnew_status;
+rr_exe_simd_instr_t fpnew_out_instruction;
 
 function [3:0] trunc_4bits(input [31:0] val_in);
     trunc_4bits = val_in[3:0];
@@ -220,28 +226,6 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vf_addmul(input rr_exe_simd_instr_t instr);
-    is_vf_addmul =   ((instr.instr.instr_type == VFADD)     ||
-                     (instr.instr.instr_type == VFSUB)      ||
-                     (instr.instr.instr_type == VFRSUB)     ||
-                     (instr.instr.instr_type == VFWADD)     ||
-                     (instr.instr.instr_type == VFMUL)      ||
-                     (instr.instr.instr_type == VFWSUB)     ) ? 1'b1 : 1'b0;
-endfunction
-
-function logic is_vf_divsqrt(input rr_exe_simd_instr_t instr);
-    is_vf_divsqrt =  ((instr.instr.instr_type == VFDIV)     ) ? 1'b1 : 1'b0;
-endfunction
-
-function logic is_vf_noncomp(input rr_exe_simd_instr_t instr);
-    is_vf_noncomp =  ((instr.instr.instr_type == VFMIN)     ||
-                      (instr.instr.instr_type == VFMAX)     ) ? 1'b1 : 1'b0;
-endfunction
-
-function logic is_vf_conv(input rr_exe_simd_instr_t instr);
-    is_vf_conv =     ((instr.instr.instr_type == FCVT_F2I)  ) ? 1'b1 : 1'b0;
-endfunction
-
 function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
@@ -404,7 +388,7 @@ always_comb begin
                 simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
             end else if (j==0) begin
                 if (simd_exe_stages == i) begin
-                    simd_pipe_d[i][0].valid = instruction_i.instr.valid;
+                    simd_pipe_d[i][0].valid = instruction_i.instr.valid & (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type));
                     simd_pipe_d[i][0].simd_instr = instruction_i;
                 end else begin
                     simd_pipe_d[i][0].valid = 1'b0;
@@ -470,12 +454,20 @@ end
 
 always_comb begin
     if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
-        instr_to_out = instr_score_board;
-    end else if (instruction_i.exe_stages == 1) begin
-        instr_to_out = instruction_i;
+        instr_to_out_integer = instr_score_board;
+    end else if (instruction_i.exe_stages == 1 && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type))) begin
+        instr_to_out_integer = instruction_i;
     end else begin
-        instr_to_out = '0;
+        instr_to_out_integer = '0;
     end 
+end
+
+always_comb begin
+    if (is_fpnew_turn) begin 
+        instr_to_out = fpnew_out_instruction;
+    end else begin
+        instr_to_out = instr_to_out_integer;
+    end
 end
 
 //We replicate rs1 or imm taking the sew into account
@@ -489,19 +481,19 @@ always_comb begin
         end
         SEW_16: begin
             for (int i=0; i<(VLEN/16); ++i) begin
-                if (instruction_i.instr.is_opvx) rs1_replicated[(i*16)+:16] = instruction_i.data_rs1[15:0];
+                if (instruction_i.instr.is_opvx || instruction_i.instr.is_opvf) rs1_replicated[(i*16)+:16] = instruction_i.data_rs1[15:0];
                 else rs1_replicated[(i*16)+:16] = instruction_i.instr.imm[15:0];
             end
         end
         SEW_32: begin
             for (int i=0; i<(VLEN/32); ++i) begin
-                if (instruction_i.instr.is_opvx) rs1_replicated[(i*32)+:32] = instruction_i.data_rs1[31:0];
+                if (instruction_i.instr.is_opvx || instruction_i.instr.is_opvf) rs1_replicated[(i*32)+:32] = instruction_i.data_rs1[31:0];
                 else rs1_replicated[(i*32)+:32] = instruction_i.instr.imm[31:0];
             end
         end
         SEW_64: begin
             for (int i=0; i<(VLEN/64); ++i) begin
-                if (instruction_i.instr.is_opvx) rs1_replicated[(i*64)+:64] = instruction_i.data_rs1[63:0];
+                if (instruction_i.instr.is_opvx || instruction_i.instr.is_opvf) rs1_replicated[(i*64)+:64] = instruction_i.data_rs1[63:0];
                 else rs1_replicated[(i*64)+:64] = instruction_i.instr.imm[63:0];
             end
         end
@@ -808,20 +800,14 @@ vmsb_i_o_f vmsbf_inst(
 );
 
 // Main vectorial FPU instantiation
-bus_simd_t          fpnew_result;
-fpnew_pkg::status_t fpnew_status;
-rr_exe_simd_instr_t fpnew_out_instruction;
 
 logic   is_collision;
 logic   fpnew_stall;
-assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out.instr.valid &
-                                                           (instr_to_out.instr.unit == UNIT_SIMD) &
-                                                            instr_to_out.instr.vregfile_we &
-                                                            !is_vf_addmul(instr_to_out) &
-                                                            !is_vf_divsqrt(instr_to_out) &
-                                                            !is_vf_noncomp(instr_to_out) &
-                                                            !is_vf_conv(instr_to_out));
+assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out_integer.instr.valid &
+                                                           (instr_to_out_integer.instr.unit == UNIT_SIMD) &
+                                                            instr_to_out_integer.instr.vregfile_we);
 assign  stall_prev_o = is_collision | fpnew_stall;
+
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
@@ -841,7 +827,7 @@ bus64_t gather_index;
 always_comb begin
     shift_amount_in_vslide = 'h0;
     gather_index = 'h0;
-    if (is_vf_addmul(instruction_i) || is_vf_divsqrt(instruction_i) || is_vf_noncomp(instruction_i) || is_vf_conv(instruction_i)) begin // if it's fpnew
+    if (is_fpnew_turn) begin // if it's fpnew
         result_data_vd = fpnew_result;
     end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
@@ -1631,7 +1617,7 @@ end
 // select combinationally the output status
 fpnew_pkg::status_t flags_merged;
 always_comb begin
-    if (is_vf_addmul(fpnew_out_instruction) || is_vf_divsqrt(fpnew_out_instruction) || is_vf_noncomp(fpnew_out_instruction) || is_vf_conv(fpnew_out_instruction)) begin
+    if (is_fpnew_turn) begin
         flags_merged = fpnew_status;
     end else begin
         flags_merged = '0;

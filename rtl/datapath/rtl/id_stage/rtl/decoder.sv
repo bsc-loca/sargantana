@@ -121,6 +121,7 @@ module decoder
         decode_instr_int.use_old_vd = 1'b0;
         decode_instr_int.is_opvx = 1'b0;
         decode_instr_int.is_opvi = 1'b0;
+        decode_instr_int.is_opvf = 1'b0;
         decode_instr_int.sew = sew;
         decode_instr_int.vl = vl;
         decode_instr_int.lmul = vlmul_int;
@@ -2194,6 +2195,9 @@ module decoder
                                     end
                                     F6_VFMUL: begin
                                         decode_instr_int.instr_type = VFMUL;
+                                    end
+                                    F6_VFDIV: begin
+                                        decode_instr_int.instr_type = VFDIV;
                                     end
                                     F6_VFMADD: begin
                                         decode_instr_int.use_old_vd = 1'b1;
