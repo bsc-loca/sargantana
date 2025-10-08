@@ -297,17 +297,8 @@ always_comb begin
             vector_operands[1]          = widened_operands[1];
             vector_operands[2]          = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::MUL);
-            vector_operation_modifier   = 1'b0; // mul operation
-            case (sew)
-                SEW_32: begin
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
-                end
-                default: begin // FP64 mode
-                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
-                end
-            endcase
+            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
 
         // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
@@ -337,7 +328,7 @@ always_comb begin
             vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
-            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
+            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) + op[2]
             case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
@@ -369,13 +360,13 @@ always_comb begin
             endcase
         end
         VFNMSAC: begin
-            // -(vs1[i] * vs2[i]) - vd[i]
+            // -(vs1[i] * vs2[i]) + vd[i]
             vector_operands[0]          = data_vs1;
             vector_operands[1]          = data_vs2;
             vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
-            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
+            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
             case (sew)
                 SEW_32: begin
                     vector_src_format = fpnew_pkg::fp_format_e'(FP32);
@@ -483,7 +474,7 @@ always_comb begin
             vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
-            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
+            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
             vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
@@ -505,7 +496,7 @@ always_comb begin
             vector_operands[2]          = data_old_vd;
             // fused multiply-add operation
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::FNMSUB);
-            vector_operation_modifier   = 1'b1; // -(op[0] * op[1]) - op[2]
+            vector_operation_modifier   = 1'b0; // -(op[0] * op[1]) + op[2]
             vector_src_format = fpnew_pkg::fp_format_e'(FP64);
             vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
         end
