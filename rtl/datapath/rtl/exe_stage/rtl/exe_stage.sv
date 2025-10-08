@@ -197,7 +197,7 @@ score_board_simd score_board_simd_inst(
     .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
     .vl_i                (simd_instr.instr.vl),
-    .stall_from_vfp      (),
+    .stall_from_vfp      (fpnew_stall_simd),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
