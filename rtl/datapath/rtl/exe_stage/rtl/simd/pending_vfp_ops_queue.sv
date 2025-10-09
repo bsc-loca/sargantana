@@ -91,6 +91,7 @@ begin
         for (integer j = 0; j < PFPQ_NUM_ENTRIES; j++) begin
             valid_table[j] <= 1'b0;
             instruction_table[j] <= '0;
+            instruction_table_result[j] <= '0;
             instruction_table_status[j] <= '0;
             tag_table[j] <= '0;
             control_bits_table[j] <= '0;
@@ -166,7 +167,7 @@ end
 
 assign finish_instr_fp_o = ((num > 0) & control_bits_table[head]) ? instruction_table[head] : 'h0;
 assign finish_result_o = ((num > 0) & control_bits_table[head]) ? instruction_table_result[head] : 'h0;
-assign finish_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
+assign finish_fp_status_o = ((num > 0) & control_bits_table[head]) ? instruction_table_status[head] : 'h0;
 
 assign full_o  = ((num >= PFPQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 

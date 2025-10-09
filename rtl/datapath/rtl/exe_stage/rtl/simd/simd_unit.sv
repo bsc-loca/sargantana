@@ -455,7 +455,7 @@ end
 always_comb begin
     if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
         instr_to_out_integer = instr_score_board;
-    end else if (instruction_i.exe_stages == 1 && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type))) begin
+    end else if ((instruction_i.exe_stages == 1) && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type))) begin
         instr_to_out_integer = instruction_i;
     end else begin
         instr_to_out_integer = '0;

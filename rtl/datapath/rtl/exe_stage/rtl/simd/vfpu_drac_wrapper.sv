@@ -28,7 +28,7 @@ module vfpu_drac_wrapper #(
     parameter fpu_implementation_t Implementation = SARG_SIMD_INIT,
     parameter int unsigned NumLanes = fpnew_pkg::max_num_lanes(Features.Width, Features.FpFmtMask, Features.EnableVectors),
     parameter type         MaskType = logic [NumLanes-1:0],
-    // Do not change
+    // Do not change - Intel Spyglass tells unused
     localparam int unsigned WIDTH        = Features.Width,
     localparam int unsigned NUM_OPERANDS = 3
 ) (
@@ -44,17 +44,6 @@ module vfpu_drac_wrapper #(
     output logic                    stall_o,
     output fpnew_pkg::status_t      status_o
 );
-
-localparam logic [31:0] FP32_ONE  = 32'h3F800000;
-localparam logic [31:0] FP32_ZERO = 32'h00000000;
-localparam logic [63:0] FP64_ONE  = 64'h3FF0000000000000;
-localparam logic [63:0] FP64_ZERO = 64'h0000000000000000;
-
-localparam logic [31:0] FP32_QNAN = 32'h7FC00000;
-localparam logic [63:0] FP64_QNAN = 64'h7FF8000000000000;
-localparam logic [31:0] FP32_SNAN = 32'h7FA00000;
-localparam logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
-
 
 /* Main floting-point parallel FPNEW unit
  *
@@ -139,7 +128,7 @@ always_comb begin
     vector_src_format = fpnew_pkg::fp_format_e'(FP64);
     vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
 
-    for (int i = 0; i < VLEN/64; i++) begin
+    for (int i = 0; i < (VLEN/64); i++) begin
         widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1[i*32 +: 32]);
         widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2[i*32 +: 32]);
     end
@@ -540,7 +529,6 @@ logic               fpnew_out_valid;
 logic               advance_head;
 logic               pending_queue_valid;
 logic               in_ready;
-logic               fpnew_stall;
 
 assign enable_vfp_op = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !stall_pending_vfp;
 assign pending_queue_valid = enable_vfp_op & in_ready;

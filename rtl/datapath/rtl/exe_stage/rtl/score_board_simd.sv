@@ -313,7 +313,7 @@ end
 always_comb begin
     stall_simd = 1'b0;
     for (int i = 2; (i <= MAX_STAGES) && (!stall_simd); i++) begin
-        if ( ($unsigned(trunc_stages(i)) > $unsigned(simd_exe_stages)) && (simd_pipe_q[i][trunc_stages(i)-simd_exe_stages-1].valid) ) begin
+        if ( (trunc_stages(i) > $unsigned(simd_exe_stages)) && (simd_pipe_q[i][trunc_stages(i)-simd_exe_stages-1].valid) ) begin
             stall_simd = 1'b1;
         end
     end

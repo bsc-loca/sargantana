@@ -4,14 +4,13 @@
 
 ./rtl/common_cells/include/common_cells/registers.svh
 ./rtl/common_cells/include/common_cells/assertions.svh
-./rtl/common_cells/src/cf_math_pkg.sv
+./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/cf_math_pkg.sv
 ./rtl/common_cells/src/lzc.sv
 ./rtl/common_cells/src/fifo_v3.sv
 ./rtl/common_cells/src/rr_arb_tree.sv
 ./rtl/common_cells/src/exp_backoff.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/cb_filter_pkg.sv
-./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/cf_math_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/ecc_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_pkg.sv
 ./includes/riscv_pkg.sv
