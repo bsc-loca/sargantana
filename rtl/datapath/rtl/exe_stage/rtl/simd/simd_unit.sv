@@ -184,16 +184,32 @@ function logic is_vw(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VFWMSAC)    ||
              (instr.instr.instr_type == VFWNMSAC)   ||
              (instr.instr.instr_type == VFWADDW)    ||
-             (instr.instr.instr_type == VFWSUBW)    ||
-             (instr.instr.instr_type == VFWREDUSUM) ||
-             (instr.instr.instr_type == VFWREDOSUM) ) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VFWSUBW)          ||
+             (instr.instr.instr_type == VFWREDUSUM)      ||
+             (instr.instr.instr_type == VFWREDOSUM)      ||
+             (instr.instr.instr_type == VFWCVT_XU_F)     ||
+             (instr.instr.instr_type == VFWCVT_X_F)      ||
+             (instr.instr.instr_type == VFWCVT_RTZ_XU_F) ||
+             (instr.instr.instr_type == VFWCVT_RTZ_X_F)  ||
+             (instr.instr.instr_type == VFWCVT_F_XU)     ||
+             (instr.instr.instr_type == VFWCVT_F_X)      ||
+             (instr.instr.instr_type == VFWCVT_F_F)) ? 1'b1 : 1'b0;
+
 endfunction
 
 function logic is_vn(input rr_exe_simd_instr_t instr);
     is_vn = ((instr.instr.instr_type == VNCLIPU)  ||
              (instr.instr.instr_type == VNCLIP)  ||
              (instr.instr.instr_type == VNSRL)    ||
-             (instr.instr.instr_type == VNSRA)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VNSRA) ||
+             (instr.instr.instr_type == VFNCVT_XU_F) ||
+             (instr.instr.instr_type == VFNCVT_X_F) ||
+             (instr.instr.instr_type == VFNCVT_RTZ_XU_F) ||
+             (instr.instr.instr_type == VFNCVT_RTZ_X_F) ||
+             (instr.instr.instr_type == VFNCVT_F_XU) ||
+             (instr.instr.instr_type == VFNCVT_F_X) ||
+             (instr.instr.instr_type == VFNCVT_F_F) ||
+             (instr.instr.instr_type == VFNCVT_ROD_F_F)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vww(input rr_exe_simd_instr_t instr);
@@ -224,7 +240,12 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSIF)  ||
              (instr.instr.instr_type == VMSOF)  ||
              (instr.instr.instr_type == VMADC)  ||             
-             (instr.instr.instr_type == VMSBC)) ? 1'b1 : 1'b0;
+             (instr.instr.instr_type == VMFNE)  ||
+             (instr.instr.instr_type == VMFLT)  ||
+             (instr.instr.instr_type == VMFEQ)  ||
+             (instr.instr.instr_type == VMFLE)  ||
+             (instr.instr.instr_type == VMFGT)  ||
+             (instr.instr.instr_type == VMFGE)) ? 1'b1 : 1'b0;
 endfunction
 
 function bus64_t min_unsigned (input bus64_t a, b);

@@ -504,6 +504,30 @@ typedef enum logic [4:0] {
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
+    VS1_VFCVT_XU_F           = 5'b00000,
+    VS1_VFCVT_X_F            = 5'b00001,
+    VS1_VFCVT_F_XU           = 5'b00010,
+    VS1_VFCVT_F_X            = 5'b00011,
+    VS1_VFCVT_RTZ_XU_F       = 5'b00110,
+    VS1_VFCVT_RTZ_X_F        = 5'b00111,
+    VS1_VFWCVT_XU_F         = 5'b01000,
+    VS1_VFWCVT_X_F          = 5'b01001,
+    VS1_VFWCVT_F_XU         = 5'b01010,
+    VS1_VFWCVT_F_X          = 5'b01011,
+    VS1_VFWCVT_F_F          = 5'b01100,
+    VS1_VFWCVT_RTZ_XU_F     = 5'b01110,
+    VS1_VFWCVT_RTZ_X_F      = 5'b01111,
+    VS1_VFNCVT_XU_F         = 5'b10000,
+    VS1_VFNCVT_F_XU         = 5'b10010,
+    VS1_VFNCVT_X_F          = 5'b10001,
+    VS1_VFNCVT_F_X          = 5'b10011,
+    VS1_VFNCVT_F_F          = 5'b10100,
+    VS1_VFNCVT_ROD_F_F      = 5'b10101,
+    VS1_VFNCVT_RTZ_XU_F     = 5'b10110,
+    VS1_VFNCVT_RTZ_X_F      = 5'b10111
+} op_vfunary0_vs1_vector_t;
+
+typedef enum logic [4:0] {
     VS2_VMV_S_X = 5'b00000
 } op_vrxunary0_vs2_vector_t;
 

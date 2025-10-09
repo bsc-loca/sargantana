@@ -2357,6 +2357,82 @@ module decoder
                                             end
                                         endcase
                                     end
+                                    F6_VFUNARY0: begin
+                                        case (decode_i.inst.vtype.vs1)
+                                            VS1_VFNCVT_F_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_F_F;
+
+                                                if (sew == SEW_16)
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                            end
+                                            VS1_VFNCVT_F_X: begin
+                                                decode_instr_int.instr_type = VFNCVT_F_X;
+                                            end
+                                            VS1_VFNCVT_F_XU: begin
+                                                decode_instr_int.instr_type = VFNCVT_F_XU;
+                                            end
+                                            VS1_VFNCVT_X_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_X_F;
+                                            end
+                                            VS1_VFNCVT_RTZ_X_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_RTZ_X_F;
+                                            end
+                                            VS1_VFNCVT_RTZ_XU_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_RTZ_XU_F;
+                                            end
+                                            VS1_VFNCVT_XU_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_XU_F;
+                                            end
+                                            VS1_VFNCVT_ROD_F_F: begin
+                                                decode_instr_int.instr_type = VFNCVT_ROD_F_F;
+                                            end
+                                            VS1_VFWCVT_RTZ_X_F: begin
+                                                decode_instr_int.instr_type = VFWCVT_RTZ_X_F;
+                                            end
+                                            VS1_VFWCVT_F_F: begin
+                                                decode_instr_int.instr_type = VFWCVT_F_F;
+
+                                                if (sew == SEW_16)
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                            end
+                                            VS1_VFWCVT_F_X: begin
+                                                decode_instr_int.instr_type = VFWCVT_F_X;
+                                            end
+                                            VS1_VFWCVT_F_XU: begin
+                                                decode_instr_int.instr_type = VFWCVT_F_XU;
+                                            end
+                                            VS1_VFWCVT_X_F: begin
+                                                decode_instr_int.instr_type = VFWCVT_X_F;
+                                            end
+                                            VS1_VFWCVT_XU_F: begin
+                                                decode_instr_int.instr_type = VFWCVT_XU_F;
+                                            end
+                                            VS1_VFWCVT_RTZ_XU_F: begin
+                                                decode_instr_int.instr_type = VFWCVT_RTZ_XU_F;
+                                            end
+                                            VS1_VFCVT_XU_F: begin
+                                                decode_instr_int.instr_type = VFCVT_XU_F;
+                                            end
+                                            VS1_VFCVT_X_F: begin
+                                                decode_instr_int.instr_type = VFCVT_X_F;
+                                            end
+                                            VS1_VFCVT_F_XU: begin
+                                                decode_instr_int.instr_type = VFCVT_F_XU;
+                                            end
+                                            VS1_VFCVT_F_X: begin
+                                                decode_instr_int.instr_type = VFCVT_F_X;
+                                            end
+                                            VS1_VFCVT_RTZ_XU_F: begin
+                                                decode_instr_int.instr_type = VFCVT_RTZ_XU_F;
+                                            end
+                                            VS1_VFCVT_RTZ_X_F: begin
+                                                decode_instr_int.instr_type = VFCVT_RTZ_X_F;
+                                            end
+                                            default: begin
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            end
+                                        endcase
+                                    end
                                     F6_VFREDUSUM: begin
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VFREDUSUM;

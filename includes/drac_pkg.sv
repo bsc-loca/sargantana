@@ -400,8 +400,10 @@ typedef enum logic [8:0] {
    VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
    // Vectorial FP reduction instructions
    VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
-   
    VFMV_V_F, VFMV_F_S, VFMV_S_F, VFSLIDE1UP, VFSLIDE1DOWN,
+   // Vectorial FP conversion instructions
+   VFNCVT_F_F, VFNCVT_RTZ_X_F, VFNCVT_RTZ_XU_F, VFWCVT_F_F, VFWCVT_RTZ_X_F, VFWCVT_X_F, VFNCVT_X_F, VFNCVT_ROD_F_F, VFNCVT_XU_F, VFNCVT_F_X,
+   VFNCVT_F_XU, VFWCVT_F_X, VFWCVT_F_XU, VFCVT_XU_F, VFCVT_X_F, VFCVT_F_XU, VFCVT_F_X, VFCVT_RTZ_XU_F, VFCVT_RTZ_X_F, VFWCVT_XU_F, VFWCVT_RTZ_XU_F,
    // Vectorial memory operations
    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
@@ -1397,14 +1399,45 @@ function logic is_vf_divsqrt(input instr_type_t instr);
 endfunction
 
 function logic is_vf_noncomp(input instr_type_t instr);
-    is_vf_noncomp =  ((instr == VFMIN)     ||
-                      (instr == VFMAX)     ||
-                      (instr == VFCLASS)   ) ? 1'b1 : 1'b0;
+    is_vf_noncomp =  ((instr == VFMIN)                              ||
+                      (instr == VFMAX)                              ||
+                      (instr == VFSGNJ)    ||
+                      (instr == VFSGNJN)   ||
+                      (instr == VFSGNJX)   ||
+                      (instr == VMFEQ)     ||
+                      (instr == VMFNE)     ||
+                      (instr == VMFLT)     ||
+                      (instr == VMFLE)     ||
+                      (instr == VMFGT)     ||
+                      (instr == VMFGE)     ||
+                      (instr == VFCLASS)   ||
+                      (instr == VFMV)) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vf_conv(input instr_type_t instr);
-    is_vf_conv =     ((instr == FCVT_F2I)  ) ? 1'b1 : 1'b0;
-endfunction
+    is_vf_conv =     ((instr == FCVT_F2I)       ||
+                    (instr == VFCVT_XU_F)       ||
+                    (instr == VFCVT_X_F)        ||
+                    (instr == VFCVT_RTZ_XU_F)   ||
+                    (instr == VFCVT_RTZ_X_F)    ||
+                    (instr == VFCVT_F_XU)       ||
+                    (instr == VFCVT_F_X)        ||
+                    (instr == VFWCVT_XU_F)      ||
+                    (instr == VFWCVT_X_F)       ||
+                    (instr == VFWCVT_RTZ_XU_F)  ||
+                    (instr == VFWCVT_RTZ_X_F)   ||
+                    (instr == VFWCVT_F_XU)      ||
+                    (instr == VFWCVT_F_X)       ||
+                    (instr == VFWCVT_F_F)       ||
+                    (instr == VFNCVT_XU_F)      ||
+                    (instr == VFNCVT_X_F)       ||
+                    (instr == VFNCVT_RTZ_XU_F)  ||
+                    (instr == VFNCVT_RTZ_X_F)   ||
+                    (instr == VFNCVT_F_XU)      ||
+                    (instr == VFNCVT_F_X)       ||
+                    (instr == VFNCVT_F_F)       ||
+                    (instr == VFNCVT_ROD_F_F)) ? 1'b1 : 1'b0;
+endfunction 
 
 function logic is_vfpnew(input instr_type_t instr);
     is_vfpnew = is_vf_addmul(instr) || is_vf_divsqrt(instr) || is_vf_noncomp(instr) || is_vf_conv(instr);
