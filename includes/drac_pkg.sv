@@ -1374,7 +1374,8 @@ endfunction
 
 function logic is_vf_noncomp(input instr_type_t instr);
     is_vf_noncomp =  ((instr == VFMIN)     ||
-                      (instr == VFMAX)     ) ? 1'b1 : 1'b0;
+                      (instr == VFMAX)     ||
+                      (instr == VFCLASS)   ) ? 1'b1 : 1'b0;
 endfunction
 
 function logic is_vf_conv(input instr_type_t instr);

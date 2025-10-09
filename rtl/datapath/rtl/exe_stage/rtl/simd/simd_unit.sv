@@ -839,6 +839,10 @@ vfpu_drac_wrapper vectorial_fpu_inst (
 bus_simd_t result_data_vd;
 bus64_t shift_amount_in_vslide;
 bus64_t gather_index;
+
+bus_simd_t replication_rs1_bus;
+assign replication_rs1_bus = (instr_to_out.instr.sew == SEW_64) ? {(VLEN/64){instr_to_out.data_rs1}} : {(VLEN/32){instr_to_out.data_rs1[31:0]}};
+
 always_comb begin
     shift_amount_in_vslide = 'h0;
     gather_index = 'h0;
@@ -846,10 +850,12 @@ always_comb begin
         result_data_vd = fpnew_result;
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
         result_data_vd = data_vf7_vd;
+    end else if (instr_to_out.instr.instr_type == VFMERGE || instr_to_out.instr.instr_type == VFMV) begin
+        result_data_vd = replication_rs1_bus;
     end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
-        result_data_vd = data_viota_vd;        
+        result_data_vd = data_viota_vd;
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -1530,7 +1536,7 @@ always_comb begin
             end
         endcase
     end else begin
-        masked_data_vd = (instr_to_out.instr.instr_type == VMERGE) ? instr_to_out.data_vs2 : instr_to_out.data_old_vd;
+        masked_data_vd = (instr_to_out.instr.instr_type == VMERGE || instr_to_out.instr.instr_type == VFMERGE) ? instr_to_out.data_vs2 : instr_to_out.data_old_vd;
         case (masked_sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin

@@ -509,6 +509,24 @@ always_comb begin
             endcase
         end
 
+        VFCLASS: begin
+            vector_operands[0]          = data_vs2;
+            vector_operands[1]          = '0;
+            vector_operands[2]          = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::CLASSIFY);
+            vector_operation_modifier   = 1'b0;
+            case (sew)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                default: begin // FP64 mode
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                end
+            endcase
+        end
+
         default: begin
             vector_operands             = '0;
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
@@ -565,7 +583,8 @@ pending_vfp_ops_queue pending_vfp_ops_queue_inst (
 fpnew_top #(
     .Features       (SARG_RV64DV),
     .Implementation (SARG_SIMD_INIT),
-    .TagType        (logic[4:0])
+    .TagType        (logic[4:0]),
+    .TrueSIMDClass  (1'b1)
 ) vector_fpnew (
     .clk_i          (clk_i),
     .rst_ni         (rstn_i),
