@@ -121,55 +121,68 @@ assign src_mant  = fp64_mode ? src_i[51:0] : {29'b0, src_i[22:0]};
 // ============================================================================
 
 // modified this section to make it sync to drac_pkg FP comparsion functions
-logic src_is_zero       = fp64_mode ? is_zero_f64(src_i)    : is_zero_f32(src_i);
-logic src_is_inf        = fp64_mode ? is_inf_f64(src_i)     : is_inf_f32(src_i);
-logic src_is_nan        = fp64_mode ? is_nan_f64(src_i)     : is_nan_f32(src_i);
-logic src_is_snan       = fp64_mode ? is_snan_f64(src_i)    : is_snan_f32(src_i);
-logic src_is_subnormal  = fp64_mode ? is_subnorm_f64(src_i) : is_subnorm_f32(src_i);
+logic src_is_zero      ;
+logic src_is_inf       ;
+logic src_is_nan       ;
+logic src_is_snan      ;
+logic src_is_subnormal ;
+
+assign src_is_zero      = fp64_mode ? drac_pkg::is_zero_f64    (src_i[63:0]) : drac_pkg::is_zero_f32    (src_i[31:0]);
+assign src_is_inf       = fp64_mode ? drac_pkg::is_inf_f64     (src_i[63:0]) : drac_pkg::is_inf_f32     (src_i[31:0]);
+assign src_is_nan       = fp64_mode ? drac_pkg::is_nan_f64     (src_i[63:0]) : drac_pkg::is_nan_f32     (src_i[31:0]);
+assign src_is_snan      = fp64_mode ? drac_pkg::is_snan_f64    (src_i[63:0]) : drac_pkg::is_snan_f32    (src_i[31:0]);
+assign src_is_subnormal = fp64_mode ? drac_pkg::is_subnorm_f64 (src_i[63:0]) : drac_pkg::is_subnorm_f32 (src_i[31:0]);
 
 // ============================================================================
 // Normalization Pattern Detection (Same for both FP32 and FP64)
 // ============================================================================
 
-logic vfrec7_sig_1xxx = src_is_subnormal && (fp64_mode ? src_mant[51] : src_mant[22]);
-logic vfrec7_sig_01xx = src_is_subnormal && (fp64_mode ? !src_mant[51] && src_mant[50] : !src_mant[22] && src_mant[21]);
-logic vfrec7_direct_inf = src_is_subnormal && (fp64_mode ? !src_mant[51] && !src_mant[50] : !src_mant[22] && !src_mant[21]);
+logic vfrec7_sig_1xxx   ;
+logic vfrec7_sig_01xx   ;
+logic vfrec7_direct_inf ;
+logic [4:0] lzc_count   ;
 
-logic [4:0] lzc_count = vfrec7_sig_1xxx ? 5'd0 : 
-                       vfrec7_sig_01xx ? 5'd1 : 
-                       5'd0;
+assign vfrec7_sig_1xxx   = src_is_subnormal && (fp64_mode ? src_mant[51] : src_mant[22]);
+assign vfrec7_sig_01xx   = src_is_subnormal && (fp64_mode ? !src_mant[51] && src_mant[50] : !src_mant[22] && src_mant[21]);
+assign vfrec7_direct_inf = src_is_subnormal && (fp64_mode ? !src_mant[51] && !src_mant[50] : !src_mant[22] && !src_mant[21]);
+assign lzc_count         = vfrec7_sig_1xxx ? 5'd0 : vfrec7_sig_01xx ? 5'd1 : 5'd0;
 
 // ============================================================================
 // Normalization
 // ============================================================================
 
-logic [12:0] normalized_exp = (src_is_subnormal && !operation_i && (vfrec7_sig_1xxx || vfrec7_sig_01xx)) ? 
-                            (13'd1 - {8'b0, lzc_count}) : 
-                            (fp64_mode ? {2'b0, src_exp} : {5'b0, src_exp});
 
-logic [51:0] normalized_mant = (src_is_subnormal && !operation_i && vfrec7_sig_1xxx) ? (src_mant << 1) : 
-                              (src_is_subnormal && !operation_i && vfrec7_sig_01xx) ? (src_mant << 2) : 
-                              src_mant;
+logic [12:0] normalized_exp  ;
+logic [51:0] normalized_mant ;
+
+assign normalized_exp   = (src_is_subnormal && !operation_i && (vfrec7_sig_1xxx || vfrec7_sig_01xx)) ? 
+                          (13'd1 - {8'b0, lzc_count}) : 
+                          (fp64_mode ? {2'b0, src_exp} : {5'b0, src_exp});
+assign normalized_mant  = (src_is_subnormal && !operation_i && vfrec7_sig_1xxx) ? (src_mant << 1) : 
+                          (src_is_subnormal && !operation_i && vfrec7_sig_01xx) ? (src_mant << 2) : src_mant;
 
 // ============================================================================
 // Table Lookup
 // ============================================================================
 
-logic [6:0] rec_lookup_addr   = fp64_mode ? normalized_mant[51:45] : normalized_mant[22:16];
-logic [5:0] rsqrt_lookup_addr = fp64_mode ? normalized_mant[51:46] : normalized_mant[22:17];
-logic [6:0] table_result = operation_i ? 
-                          (!normalized_exp[0] ? LUT_VFRSQRT7_ODD_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7] : 
-                                                LUT_VFRSQRT7_EVEN_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7]) :
-                          LUT_VFREC7_TABLE[(895 - rec_lookup_addr * 7) -: 7];
+logic [6:0] rec_lookup_addr   ;
+logic [5:0] rsqrt_lookup_addr ;
+logic [6:0] table_result      ;
+
+assign rec_lookup_addr   = fp64_mode ? normalized_mant[51:45] : normalized_mant[22:16];
+assign rsqrt_lookup_addr = fp64_mode ? normalized_mant[51:46] : normalized_mant[22:17];
+assign table_result      = operation_i ? (!normalized_exp[0] ? LUT_VFRSQRT7_ODD_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7] : 
+                                                               LUT_VFRSQRT7_EVEN_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7]) :
+                                                               LUT_VFREC7_TABLE[(895 - rec_lookup_addr * 7) -: 7];
 
 // ============================================================================
 // Result Computation
 // ============================================================================
 
-bus64_t computed_result;
-logic [4:0]  computed_exceptions;
-logic [12:0] result_exp;
-logic [51:0] result_mant;
+bus64_t      computed_result     ;
+logic [4:0]  computed_exceptions ;
+logic [12:0] result_exp          ;
+logic [51:0] result_mant         ;
 
 always @(*) begin
     computed_exceptions = 5'b0;
@@ -284,17 +297,17 @@ end
 
 // this is the default use on Yuda's module, but can be done combinationally
 // inside one execution cycle on Sargantana's vfpu_drac_wrapper module
-bus64_t result_reg;
-logic        valid_o_reg;
-logic [4:0]  exception_flags_reg;
+bus64_t     result_reg          ;
+logic       valid_o_reg         ;
+logic [4:0] exception_flags_reg ;
 
 always @(posedge clk_i or negedge rstn_i) begin
     if (!rstn_i) begin
         result_reg          <= 64'h0;
-        valid_o_reg       <= 1'b0;
+        valid_o_reg         <= 1'b0;
         exception_flags_reg <= 5'b0;
     end else begin
-        valid_o_reg       <= valid_i;
+        valid_o_reg         <= valid_i;
         result_reg          <= computed_result;
         exception_flags_reg <= computed_exceptions;
     end
@@ -302,6 +315,7 @@ end
 
 assign res_o = result_reg;
 assign valid_o = valid_o_reg;
+
 always_comb begin
     case (exception_flags_reg)
         NV_FLAG:

@@ -203,5 +203,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/opene906/E906_RTL_FACTORY/gen_rtl/fpu/rtl/pa_fpu_frbus.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/opene906/E906_RTL_FACTORY/gen_rtl/fpu/rtl/pa_fpu_src_type.v
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_mf.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfpu_drac_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/pending_vfp_ops_queue.sv

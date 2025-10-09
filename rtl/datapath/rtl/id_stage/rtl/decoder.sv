@@ -2346,6 +2346,12 @@ module decoder
                                             VS1_VFSQRT: begin
                                                 decode_instr_int.instr_type = VFSQRT;
                                             end
+                                            VS1_VFRSQRT7: begin
+                                                decode_instr_int.instr_type = VFRSQRT7;
+                                            end
+                                            VS1_VFREC7: begin
+                                                decode_instr_int.instr_type = VFREC7;
+                                            end
                                             default: begin
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             end

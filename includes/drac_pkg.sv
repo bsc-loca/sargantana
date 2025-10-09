@@ -396,7 +396,7 @@ typedef enum logic [8:0] {
    // Vectorial FP instructions
    VFMV, VFMERGE, VFCLASS,
    // Vectorial FP other instructions
-   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFRDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC, VFSQRT, VFSQRT7, VFREC7,
+   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFRDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC, VFSQRT, VFRSQRT7, VFREC7,
    VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
    // Vectorial FP reduction instructions
    VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
@@ -1386,7 +1386,7 @@ function logic is_vfpnew(input instr_type_t instr);
 endfunction
 
 function logic is_vf_approx (input instr_type_t instr);
-    is_vf_approx = ((instr == VFSQRT7)    ||
+    is_vf_approx = ((instr == VFRSQRT7)   ||
                     (instr == VFREC7)     ) ? 1'b1 : 1'b0;
 endfunction
 

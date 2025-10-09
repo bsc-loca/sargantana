@@ -40,13 +40,27 @@ module vf7_wrapper (
     output fpnew_pkg::status_t  status_o 
 );
 
+fpnew_pkg::status_t statusvec [VLEN/32-1:0];
+logic               validvec  [VLEN/32-1:0];
+bus64_t             resultvec [VLEN/32-1:0];
+
 generate
-for (genvar i = 0; i < VLEN/64; i++) begin : GEN_VF7
+for (genvar i = 0; i < VLEN/32; i++) begin : GEN_VF7
     bus64_t source_operand;
     bus64_t result;
-    fpnew_pkg::status_t status;
 
-    assign source_operand = src_i[i*64 +: 64];
+    always_comb begin
+        source_operand = '0;
+        result = '0;
+        if (sew_i == SEW_64) begin
+            if (i < VLEN/64) begin
+                source_operand = src_i[i*64 +: 64];
+                // continous assignment here allowed
+            end 
+        end else begin
+            source_operand = src_i[i*32 +: 32];
+        end
+    end
 
     vf7_mf sqrt7_frec7 (
         .clk_i,
@@ -55,19 +69,60 @@ for (genvar i = 0; i < VLEN/64; i++) begin : GEN_VF7
         .sew_i,
         .operation_i,   // 0: VFREC7, 1: VFRSQRT7
         .src_i          (source_operand),
-        .res_o          (result),
-        .valid_o, 
-        .status_o       (status)
+        .res_o          (resultvec[i]),
+        .valid_o        (validvec[i]), 
+        .status_o       (statusvec[i])
     );
-    
-    assign res_o[i*64 +: 64] = result;
-    assign status_o.NV |= status.NV; // the output status may ladder the individual status
-    assign status_o.DZ |= status.DZ;
-    assign status_o.OF |= status.OF;
-    assign status_o.UF |= status.UF;
-    assign status_o.NX |= status.NX;
 end
 endgenerate
+
+fpnew_pkg::status_t accstatus [1:0];
+logic               accvalid  [1:0];
+
+// Questa complaining if the ladder is not well separated from the generate block
+always_comb begin
+    status_o = '0;
+    valid_o = 1'b0;
+
+    accstatus[0] = '0;
+    accvalid [0] = '0;
+    accstatus[1] = '0;
+    accvalid [1] = '0;
+
+    for (int i = 0; i < VLEN/64; i++) begin
+        accstatus[0].NV |= statusvec[i].NV;
+        accstatus[0].DZ |= statusvec[i].DZ;
+        accstatus[0].OF |= statusvec[i].OF;
+        accstatus[0].UF |= statusvec[i].UF;
+        accstatus[0].NX |= statusvec[i].NX;
+        accvalid [0]    |= validvec[i];
+    end
+    for (int i = VLEN/64; i < VLEN/32; i++) begin
+        accstatus[1].NV |= statusvec[i].NV;
+        accstatus[1].DZ |= statusvec[i].DZ;
+        accstatus[1].OF |= statusvec[i].OF;
+        accstatus[1].UF |= statusvec[i].UF;
+        accstatus[1].NX |= statusvec[i].NX;
+        accvalid [1]    |= validvec[i];
+    end
+
+    status_o.NV = (sew_i == SEW_64) ? accstatus[0].NV : accstatus[0].NV | accstatus[1].NV;
+    status_o.DZ = (sew_i == SEW_64) ? accstatus[0].DZ : accstatus[0].DZ | accstatus[1].DZ;
+    status_o.OF = (sew_i == SEW_64) ? accstatus[0].OF : accstatus[0].OF | accstatus[1].OF;
+    status_o.UF = (sew_i == SEW_64) ? accstatus[0].UF : accstatus[0].UF | accstatus[1].UF;
+    status_o.NX = (sew_i == SEW_64) ? accstatus[0].NX : accstatus[0].NX | accstatus[1].NX;
+    valid_o     = (sew_i == SEW_64) ? accvalid[0] : accvalid[0] | accvalid[1];
+
+    if (sew_i == SEW_64) begin
+        for (int i = 0; i < VLEN/64; i++) begin
+            res_o[i*64 +: 64] = resultvec[i];
+        end
+    end else begin // SEW_32
+        for (int i = 0; i < VLEN/32; i++) begin
+            res_o[i*32 +: 32] = resultvec[i][31:0];
+        end
+    end
+end
 
 endmodule
 

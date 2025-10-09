@@ -799,6 +799,22 @@ vmsb_i_o_f vmsbf_inst(
     .data_vd_o     (result_vmsbf)
 );
 
+bus_simd_t data_vf7_vd;
+fpnew_pkg::status_t status_vf7;
+
+vf7_wrapper vf7_wrapper_inst (
+    .clk_i,
+    .rstn_i,
+    .valid_i     ( is_vf_approx(instruction_i.instr.instr_type) ),
+    .sew_i       ( instruction_i.instr.sew                      ),
+    .operation_i ( instruction_i.instr.instr_type == VFRSQRT7   ), // 0: VFREC7, 1: VFRSQRT7
+    .src_i       ( instruction_i.data_vs2                       ),
+    .res_o       ( data_vf7_vd                                  ),
+    .valid_o     (                                              ), // to be asumed it will be the same cycle, carefull when enabling VF7_MF_OUTREG
+    .status_o    ( status_vf7                                   )
+);
+
+
 // Main vectorial FPU instantiation
 
 logic   is_collision;
@@ -807,7 +823,6 @@ assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out_integer
                                                            (instr_to_out_integer.instr.unit == UNIT_SIMD) &
                                                             instr_to_out_integer.instr.vregfile_we);
 assign  stall_prev_o = is_collision | fpnew_stall;
-
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
@@ -829,6 +844,8 @@ always_comb begin
     gather_index = 'h0;
     if (is_fpnew_turn) begin // if it's fpnew
         result_data_vd = fpnew_result;
+    end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
+        result_data_vd = data_vf7_vd;
     end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
@@ -1619,6 +1636,8 @@ fpnew_pkg::status_t flags_merged;
 always_comb begin
     if (is_fpnew_turn) begin
         flags_merged = fpnew_status;
+    end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin
+        flags_merged = status_vf7;
     end else begin
         flags_merged = '0;
     end
