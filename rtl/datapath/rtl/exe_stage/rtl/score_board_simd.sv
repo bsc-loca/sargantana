@@ -38,9 +38,7 @@
      output logic                   stall_simd_o        // Stall pipeline
  );
 
-localparam int MAX_STAGES = $clog2(VLEN/8) + 2;  // Number of stages based on the minimum SEW
 localparam int DIV_STAGES = 32;                 // number of clocks a DIV/REM instruction takes
-
 
 typedef struct packed {
     logic valid;
@@ -49,8 +47,8 @@ typedef struct packed {
     `endif
 } instr_pipe_t;
 
-instr_pipe_t simd_pipe_d [MAX_STAGES:2][MAX_STAGES-2:0];
-instr_pipe_t simd_pipe_q [MAX_STAGES:2][MAX_STAGES-2:0];
+instr_pipe_t simd_pipe_d [drac_pkg::MAX_STAGES:2][drac_pkg::MAX_STAGES-2:0];
+instr_pipe_t simd_pipe_q [drac_pkg::MAX_STAGES:2][drac_pkg::MAX_STAGES-2:0];
 
 // This pipeline is taking care of in-flight DIV/REM instructions
 // it's seperated from other instructions as DIV/REM is way more time consuming
@@ -173,6 +171,26 @@ always_comb begin
             SEW_64 : simd_exe_stages = trunc_stages($clog2(VLEN >> 3) - 1);
             default : simd_exe_stages = trunc_stages($clog2(VLEN >> 3));
         endcase
+    end else if (is_vf_redu(instr_entry_i.instr.instr_type)) begin
+        if (instr_entry_i.instr.instr_type == VFWREDUSUM) begin
+            simd_exe_stages = STAGES_TREE64_W;
+        end else begin
+            case (sew_i)
+                SEW_32  : simd_exe_stages = STAGES_TREE32 ;
+                SEW_64  : simd_exe_stages = STAGES_TREE64 ;
+                default : simd_exe_stages = STAGES_TREE32 ;
+            endcase
+        end
+    end else if (is_vf_redo(instr_entry_i.instr.instr_type)) begin
+        if (instr_entry_i.instr.instr_type == VFWREDOSUM) begin
+            simd_exe_stages = STAGES_VFREDO64_W; 
+        end else begin
+            case (sew_i)
+                SEW_32  : simd_exe_stages = STAGES_VFREDO32 ;
+                SEW_64  : simd_exe_stages = STAGES_VFREDO64 ;
+                default : simd_exe_stages = STAGES_VFREDO32 ;
+            endcase
+        end
     end else if(is_vdiv) begin
 
         // Deciding on how many cycles to do the DIV/REM
@@ -219,8 +237,8 @@ end
 
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
-        for (int i=2; i <= MAX_STAGES; i++) begin
-            for (int j = 0; j < (MAX_STAGES-1); j++) begin
+        for (int i=2; i <= drac_pkg::MAX_STAGES; i++) begin
+            for (int j = 0; j < (drac_pkg::MAX_STAGES-1); j++) begin
                 simd_pipe_q[i][j] <= '0;
             end
         end
@@ -236,8 +254,8 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         previous_div_instr_type_q   <= ADD; 
 
     end else begin
-        for (int i=2; i <= MAX_STAGES; i++) begin
-            for (int j = 0; j < (MAX_STAGES-1); j++) begin
+        for (int i=2; i <= drac_pkg::MAX_STAGES; i++) begin
+            for (int j = 0; j < (drac_pkg::MAX_STAGES-1); j++) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
@@ -256,8 +274,8 @@ end
 
 // Each cycle, each instruction go forward 1 slot
 always_comb begin
-    for (int i = 2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < (MAX_STAGES-1); j++) begin
+    for (int i = 2; i <= drac_pkg::MAX_STAGES; i++) begin
+        for (int j = 0; j < (drac_pkg::MAX_STAGES-1); j++) begin
             if (flush_i) begin
                 simd_pipe_d[i][j].valid = 1'b0;
                 `ifdef VERILATOR
@@ -312,7 +330,7 @@ end
 // Management to stall the instruction if necessary (we cannot write back more than 1 simd instruction)
 always_comb begin
     stall_simd = 1'b0;
-    for (int i = 2; (i <= MAX_STAGES) && (!stall_simd); i++) begin
+    for (int i = 2; (i <= drac_pkg::MAX_STAGES) && (!stall_simd); i++) begin
         if ( (trunc_stages(i) > $unsigned(simd_exe_stages)) && (simd_pipe_q[i][trunc_stages(i)-simd_exe_stages-1].valid) ) begin
             stall_simd = 1'b1;
         end

@@ -32,7 +32,8 @@ module simd_unit
     output logic                  stall_prev_o
 );
 
-localparam MAX_STAGES = $clog2(VLEN/8) + 2; // The vector reduction tree module will have the maximum stages
+// MAX_STAGES has been defined as parameter in drac_pkg
+// to avoid duplicity with score_board_simd ex-localparams
 localparam int DIV_STAGES = 32;             // number of clocks a DIV/REM instruction takes
 
 
@@ -251,8 +252,8 @@ typedef struct packed {
     logic valid;
     rr_exe_simd_instr_t simd_instr;
 } instr_pipe_t;
-instr_pipe_t simd_pipe_d [MAX_STAGES:2] [MAX_STAGES-1:0] ;
-instr_pipe_t simd_pipe_q [MAX_STAGES:2] [MAX_STAGES-1:0] ;
+instr_pipe_t simd_pipe_d [drac_pkg::MAX_STAGES:2] [drac_pkg::MAX_STAGES-1:0] ;
+instr_pipe_t simd_pipe_q [drac_pkg::MAX_STAGES:2] [drac_pkg::MAX_STAGES-1:0] ;
 
 
 // This pipeline is taking care of in-flight DIV/REM instructions
@@ -332,16 +333,39 @@ always_comb begin
             previous_div_vs2_d          = previous_div_vs2_q;                
             previous_div_is_opvx_d      = previous_div_is_opvx_q;            
             previous_div_instr_type_d   = previous_div_instr_type_q;  
-        end                    
-    end else begin
+        end
+    end
+    else if (is_vf_redu(instruction_i.instr.instr_type)) begin
+        if (is_vw(instruction_i)) begin
+            simd_exe_stages = STAGES_TREE64_W;
+        end else begin
+            case(instruction_i.instr.sew)
+                SEW_32  : simd_exe_stages = STAGES_TREE32;
+                SEW_64  : simd_exe_stages = STAGES_TREE64;
+                default : simd_exe_stages = $clog2(VLEN >> 5);          // default case for completion
+            endcase
+        end
+    end
+    else if (is_vf_redo(instruction_i.instr.instr_type)) begin
+        if (is_vw(instruction_i)) begin
+            simd_exe_stages = STAGES_VFREDO64_W;
+        end else begin
+            case(instruction_i.instr.sew)
+                SEW_32  : simd_exe_stages = STAGES_VFREDO32;
+                SEW_64  : simd_exe_stages = STAGES_VFREDO64;
+                default : simd_exe_stages = STAGES_VFREDO32;
+            endcase
+        end
+    end
+    else begin
         simd_exe_stages = 6'd1;
     end
 end
 
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
-        for (int i = 2; i <= MAX_STAGES; i++) begin
-            for (int j = 0; j < MAX_STAGES; j++) begin
+        for (int i = 2; i <= drac_pkg::MAX_STAGES; i++) begin
+            for (int j = 0; j < drac_pkg::MAX_STAGES; j++) begin
                 simd_pipe_q[i][j] <= '0;
             end
         end
@@ -358,8 +382,8 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
 
 
     end else begin
-        for (int i = 2; i <= MAX_STAGES; i++) begin
-            for (int j = 0; j < MAX_STAGES; j++) begin
+        for (int i = 2; i <= drac_pkg::MAX_STAGES; i++) begin
+            for (int j = 0; j < drac_pkg::MAX_STAGES; j++) begin
                 simd_pipe_q[i][j] <= simd_pipe_d[i][j];
             end
         end
@@ -379,8 +403,8 @@ end
 
 // Each cycle, each instruction go forward 1 slot
 always_comb begin
-    for (int i = 2; i <= MAX_STAGES; i++) begin
-        for (int j = 0; j < MAX_STAGES; j++) begin
+    for (int i = 2; i <= drac_pkg::MAX_STAGES; i++) begin
+        for (int j = 0; j < drac_pkg::MAX_STAGES; j++) begin
             simd_pipe_d[i][j].valid = 1'b0;
             simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
             if (flush_i) begin
@@ -437,7 +461,7 @@ logic valid_found;
 always_comb begin
     instr_score_board = '0;
     valid_found = 1'b0;
-    for (int i = 2; (i <= MAX_STAGES) && (!valid_found); i++) begin
+    for (int i = 2; (i <= drac_pkg::MAX_STAGES) && (!valid_found); i++) begin
         if (simd_pipe_q[i][i-2].valid) begin
             instr_score_board = simd_pipe_q[i][i-2].simd_instr;
             valid_found = 1'b1;
@@ -799,6 +823,7 @@ vmsb_i_o_f vmsbf_inst(
     .data_vd_o     (result_vmsbf)
 );
 
+// Vectorial floating-point approximation modules
 bus_simd_t data_vf7_vd;
 fpnew_pkg::status_t status_vf7;
 
@@ -814,6 +839,55 @@ vf7_wrapper vf7_wrapper_inst (
     .status_o    ( status_vf7                                   )
 );
 
+// Vectorial reduction modules (unordered vfredtree, ordered vfredoladder)
+// MAXMIN operations are performed in the tree (see documentation)
+
+bus_simd_t          fred_data_vd      ;
+bus_simd_t          fredo_data_vd     ;
+fpnew_pkg::status_t vfredtreeflags    ;
+fpnew_pkg::status_t vfredoladderflags ;
+
+vfredtree #(
+    .DELAY_SUM_FP32( DELAY_SUM_FP32 ),
+    .DELAY_SUM_FP64( DELAY_SUM_FP64 )
+) vfredtree_inst  (
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
+    .instr_type_i   (instruction_i.instr.instr_type),
+    .frm_i          (instruction_i.instr.frm),
+    .sew_i          (instruction_i.instr.sew),
+    .vl_i           (instruction_i.instr.vl),
+    .data_vs1_i     (instruction_i.data_vs1),
+    .data_vs2_i     (instruction_i.data_vs2),
+    .data_old_vd    (instruction_i.data_old_vd),
+    .data_vm_i      (instruction_i.data_vm),
+    .instr_to_out_i (instr_to_out.instr.instr_type),
+    .vl_to_out_i    (instr_to_out.instr.vl),
+    .sew_to_out_i   (instr_to_out.instr.sew),
+    .red_data_vd_o  (fred_data_vd),
+    .status_o       (vfredtreeflags)
+);
+
+vfredoladder #(
+    .DELAY_SUM_FP32( DELAY_SUM_FP32 ),
+    .DELAY_SUM_FP64( DELAY_SUM_FP64 )
+) vfredoladder_inst  (
+    .clk_i          (clk_i),
+    .rstn_i         (rstn_i),
+    .instr_type_i   (instruction_i.instr.instr_type),
+    .frm_i          (instruction_i.instr.frm),
+    .sew_i          (instruction_i.instr.sew),
+    .vl_i           (instruction_i.instr.vl),
+    .data_vs1_i     (instruction_i.data_vs1),
+    .data_vs2_i     (instruction_i.data_vs2),
+    .data_old_vd    (instruction_i.data_old_vd),
+    .data_vm_i      (instruction_i.data_vm),
+    .instr_to_out_i (instr_to_out.instr.instr_type),
+    .vl_to_out_i    (instr_to_out.instr.vl),
+    .sew_to_out_i   (instr_to_out.instr.sew),
+    .red_data_vd_o  (fredo_data_vd),
+    .status_o       (vfredoladderflags)
+);
 
 // Main vectorial FPU instantiation
 
@@ -848,6 +922,10 @@ always_comb begin
     gather_index = 'h0;
     if (is_fpnew_turn) begin // if it's fpnew
         result_data_vd = fpnew_result;
+    end else if (is_vf_redu(instr_to_out.instr.instr_type)) begin
+        result_data_vd = fred_data_vd; 
+    end else if (is_vf_redo(instr_to_out.instr.instr_type)) begin
+        result_data_vd = fredo_data_vd; 
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
         result_data_vd = data_vf7_vd;
     end else if (instr_to_out.instr.instr_type == VFMERGE || instr_to_out.instr.instr_type == VFMV) begin
@@ -1508,7 +1586,7 @@ always_comb begin
         masked_sew = instr_to_out.instr.sew;
     end
 
-    if (is_vred(instr_to_out) || not_masked_output(instr_to_out)|| ~instr_to_out.instr.use_mask) begin
+    if (is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type) || is_vred(instr_to_out) || not_masked_output(instr_to_out)|| ~instr_to_out.instr.use_mask) begin
         masked_data_vd = result_data_vd;
     end else if (is_vm(instr_to_out)) begin
         //masked_data_vd = '1;
@@ -1579,7 +1657,7 @@ always_comb begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out)) begin
+                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(8*i)+:8] = masked_data_vd[(8*i)+:8];
                         end
@@ -1594,7 +1672,7 @@ always_comb begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out)) begin
+                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(16*i)+:16] = masked_data_vd[(16*i)+:16];
                         end
@@ -1609,7 +1687,7 @@ always_comb begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out)) begin
+                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(32*i)+:32] = masked_data_vd[(32*i)+:32];
                         end
@@ -1624,7 +1702,7 @@ always_comb begin
                 if ((i < instr_to_out.instr.vl) || (instr_to_out.instr.instr_type == VMV1R)) begin
                     if (is_vm(instr_to_out)) begin
                         tail_data_vd[i] = masked_data_vd[i];
-                    end else if (is_vred(instr_to_out)) begin
+                    end else if (is_vred(instr_to_out) || is_vf_redu(instr_to_out.instr.instr_type) || is_vf_redo(instr_to_out.instr.instr_type)) begin
                         if (i == 0) begin
                             tail_data_vd[(64*i)+:64] = masked_data_vd[(64*i)+:64];
                         end
@@ -1642,6 +1720,10 @@ fpnew_pkg::status_t flags_merged;
 always_comb begin
     if (is_fpnew_turn) begin
         flags_merged = fpnew_status;
+    end else if (is_vf_redu(instr_to_out.instr.instr_type)) begin
+        flags_merged = vfredtreeflags;
+    end else if (is_vf_redo(instr_to_out.instr.instr_type)) begin
+        flags_merged = vfredoladderflags;
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin
         flags_merged = status_vf7;
     end else begin

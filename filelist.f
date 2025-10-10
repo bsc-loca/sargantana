@@ -206,3 +206,11 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfpu_drac_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/pending_vfp_ops_queue.sv
+
+./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f32.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f64.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f32.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f64.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vfredtree.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vfredoladder.sv
+

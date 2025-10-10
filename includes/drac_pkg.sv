@@ -1342,6 +1342,27 @@ localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
+// definition of CVFPU parameters used inside reduction modules (addmul only)
+localparam fpnew_pkg::fpu_features_t SARG_ADDMUL_RV64D = '{
+    Width:         64,
+    EnableVectors: 1'b0,
+    EnableNanBox:  1'b0,
+    FpFmtMask:     5'b11000,
+    IntFmtMask:    4'b0011
+};
+
+localparam fpnew_pkg::fpu_implementation_t SARG_ADDMUL_ONLY = '{
+    PipeRegs:   '{'{default: 2},                    // ADDMUL
+                  '{default: 0},                    // DIVSQRT
+                  '{default: 0},                    // NONCOMP
+                  '{default: 0}},                   // CONV
+    UnitTypes:  '{'{default: fpnew_pkg::MERGED},    // ADDMUL
+                  '{default: fpnew_pkg::DISABLED},    // DIVSQRT
+                  '{default: fpnew_pkg::DISABLED},  // NONCOMP
+                  '{default: fpnew_pkg::DISABLED}},   // CONV
+    PipeConfig: fpnew_pkg::DISTRIBUTED
+};
+
 function logic is_vf_addmul(input instr_type_t instr);
     is_vf_addmul = ((instr == VFADD)      ||
                     (instr == VFSUB)      ||
@@ -1390,6 +1411,29 @@ function logic is_vf_approx (input instr_type_t instr);
     is_vf_approx = ((instr == VFRSQRT7)   ||
                     (instr == VFREC7)     ) ? 1'b1 : 1'b0;
 endfunction
+
+function logic is_vf_redu (input instr_type_t instr);
+    is_vf_redu = ((instr == VFREDUSUM)  ||
+                  (instr == VFREDMAX)   ||
+                  (instr == VFREDMIN)   ||
+                  (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0; 
+endfunction 
+
+function logic is_vf_redo (input instr_type_t instr);
+    is_vf_redo = ((instr == VFREDOSUM)  ||
+                  (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0;
+endfunction
+
+// depends on inner implementation of vfred modules
+parameter int DELAY_SUM_FP32    = 2;
+parameter int DELAY_SUM_FP64    = 2;
+parameter int STAGES_TREE32     = ($clog2(VLEN/32)+1)*DELAY_SUM_FP32+1;
+parameter int STAGES_TREE64     = ($clog2(VLEN/64)+1)*DELAY_SUM_FP64+1;
+parameter int STAGES_TREE64_W   = ($clog2(VLEN/32)+1)*DELAY_SUM_FP64+1;
+parameter int STAGES_VFREDO32   = (VLEN/32)*DELAY_SUM_FP32+1;
+parameter int STAGES_VFREDO64   = (VLEN/64)*DELAY_SUM_FP64+1;
+parameter int STAGES_VFREDO64_W = (VLEN/32)*DELAY_SUM_FP64+1;
+parameter int MAX_STAGES        = STAGES_VFREDO64_W;
 
 // floating-point definitions
 parameter logic [31:0] FP32_ONE = 32'h3F800000;
