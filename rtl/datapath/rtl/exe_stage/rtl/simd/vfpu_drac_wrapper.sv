@@ -557,7 +557,26 @@ always_comb begin
             endcase
         end
 
-        VMFNE: begin // Will have to make a register chain
+        VMFNE: begin // Will do an equality check and with the output of cvfpu I'll flip selected bits.
+            vector_operands[0]      = data_vs2;
+            vector_operands[1]      = data_vs1;
+            vector_operands[2]      = '0;
+            vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::CMP);
+            vector_operation_modifier   = 1'b0;
+
+            frm = riscv_pkg::FRM_RDN;
+
+            case (sew)
+                SEW_32: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                end
+                SEW_64: begin
+                    vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                    vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                    int_fmt = fpnew_pkg::int_format_e'(INT64);
+                end
+            endcase
         end
 
         VMFLT: begin
@@ -1063,6 +1082,10 @@ end
 
 reg_t               fpnew_new_tag, fpnew_out_tag;
 bus_simd_t          fpnew_result;
+
+bus_simd_t          finish_vfp_data;
+bus_simd_t          inverted_finish_vfp_result;
+
 bus_simd_t          finish_vfp_result;
 fpnew_pkg::status_t fpnew_status;
 rr_exe_simd_instr_t finish_vfp_instr;
@@ -1099,11 +1122,29 @@ pending_vfp_ops_queue pending_vfp_ops_queue_inst (
     .advance_head_i     (advance_head),
     .finish_instr_fp_o  (finish_vfp_instr),
     .finish_fp_status_o (finish_vfp_status),
-    .finish_result_o    (finish_vfp_result),
+    .finish_result_o    (finish_vfp_data),
     .tag_o              (fpnew_new_tag),
 
     .full_o             (stall_pending_vfp)
 );
+
+assign finish_vfp_result = (finish_vfp_instr.instr.instr_type == VMFNE) ? inverted_finish_vfp_result : finish_vfp_data;
+
+always_comb begin
+    inverted_finish_vfp_result = finish_vfp_data;
+
+    if (finish_vfp_instr.instr.sew == SEW_32) begin
+        inverted_finish_vfp_result[0] = ~finish_vfp_data[0];
+        inverted_finish_vfp_result[32] = ~finish_vfp_data[32];
+        inverted_finish_vfp_result[64] = ~finish_vfp_data[64];
+        inverted_finish_vfp_result[96] = ~finish_vfp_data[96];
+    end
+
+    if (finish_vfp_instr.instr.sew == SEW_64) begin
+        inverted_finish_vfp_result[0] = ~finish_vfp_data[0];
+        inverted_finish_vfp_result[64] = ~finish_vfp_data[64];
+    end
+end
 
 // instanciation of main FPNEW module
 fpnew_top #(
