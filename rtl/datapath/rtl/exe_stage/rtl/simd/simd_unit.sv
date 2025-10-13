@@ -928,7 +928,7 @@ always_comb begin
         result_data_vd = fredo_data_vd; 
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
         result_data_vd = data_vf7_vd;
-    end else if (instr_to_out.instr.instr_type == VFMERGE || instr_to_out.instr.instr_type == VFMV) begin
+    end else if ((instr_to_out.instr.instr_type == VFMERGE) || (instr_to_out.instr.instr_type == VFMV)) begin
         result_data_vd = replication_rs1_bus;
     end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
@@ -1614,7 +1614,7 @@ always_comb begin
             end
         endcase
     end else begin
-        masked_data_vd = (instr_to_out.instr.instr_type == VMERGE || instr_to_out.instr.instr_type == VFMERGE) ? instr_to_out.data_vs2 : instr_to_out.data_old_vd;
+        masked_data_vd = ((instr_to_out.instr.instr_type == VMERGE) || (instr_to_out.instr.instr_type == VFMERGE)) ? instr_to_out.data_vs2 : instr_to_out.data_old_vd;
         case (masked_sew)
             SEW_8: begin
                 for (int i = 0; i<(VLEN/8); ++i) begin

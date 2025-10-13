@@ -49,12 +49,6 @@ module vf7_mf
 // Constants
 // ============================================================================
 
-localparam status_t NV_MASK = 6'b100000; // NV = MSB
-localparam status_t DZ_MASK = 6'b010000;
-localparam status_t OF_MASK = 6'b001000;
-localparam status_t UF_MASK = 6'b000100;
-localparam status_t NX_MASK = 6'b000010;
-
 localparam NV_FLAG = 0;
 localparam DZ_FLAG = 1;
 localparam OF_FLAG = 2;
@@ -155,11 +149,18 @@ assign lzc_count         = vfrec7_sig_1xxx ? 5'd0 : vfrec7_sig_01xx ? 5'd1 : 5'd
 logic [12:0] normalized_exp  ;
 logic [51:0] normalized_mant ;
 
-assign normalized_exp   = (src_is_subnormal && !operation_i && (vfrec7_sig_1xxx || vfrec7_sig_01xx)) ? 
+logic [52:0] src_mant_shift_one;
+logic [53:0] src_mant_shift_two;
+
+assign src_mant_shift_one = (src_mant << 1);
+assign src_mant_shift_two = (src_mant << 2);
+
+assign normalized_exp   = (src_is_subnormal && !operation_i && (vfrec7_sig_1xxx || vfrec7_sig_01xx)) ?
                           (13'd1 - {8'b0, lzc_count}) : 
                           (fp64_mode ? {2'b0, src_exp} : {5'b0, src_exp});
-assign normalized_mant  = (src_is_subnormal && !operation_i && vfrec7_sig_1xxx) ? (src_mant << 1) : 
-                          (src_is_subnormal && !operation_i && vfrec7_sig_01xx) ? (src_mant << 2) : src_mant;
+// trunc of shifted values is compulsory, required to match widths for lin  stage
+assign normalized_mant  = (src_is_subnormal && !operation_i && vfrec7_sig_1xxx) ? src_mant_shift_one[51:0] :
+                          (src_is_subnormal && !operation_i && vfrec7_sig_01xx) ? src_mant_shift_two[51:0] : src_mant;
 
 // ============================================================================
 // Table Lookup
@@ -184,7 +185,7 @@ logic [4:0]  computed_exceptions ;
 logic [12:0] result_exp          ;
 logic [51:0] result_mant         ;
 
-always @(*) begin
+always_comb begin
     computed_exceptions = 5'b0;
     
     // Handle special cases
@@ -234,7 +235,7 @@ always @(*) begin
                     {src_sign, FP32_MAX_EXP, 23'h0};
                 computed_exceptions[DZ_FLAG] = 1'b1;
             end else begin
-                result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
+                result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
                 result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
                 
                 if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
@@ -242,7 +243,7 @@ always @(*) begin
                         {src_sign, FP64_MAX_EXP, 52'h0} : 
                         {src_sign, FP32_MAX_EXP, 23'h0};
                     computed_exceptions[OF_FLAG] = 1'b1;
-                end else if (result_exp == 13'd0 || result_exp[12]) begin
+                end else if ((result_exp == 13'd0) || result_exp[12]) begin
                     computed_result = fp64_mode ? 
                         {src_sign, 11'h0, 52'h0} : 
                         {src_sign, 8'h0, 23'h0};
@@ -264,12 +265,12 @@ always @(*) begin
         // Normal computation
         if (operation_i) begin
             if(!normalized_exp[0]) begin
-                result_exp = fp64_mode ? (13'd3069 - normalized_exp) >> 1 : (13'd380 - normalized_exp) >> 1;
+                result_exp = fp64_mode ? 13'(13'd3069 - normalized_exp) >> 1 : 13'(13'd380 - normalized_exp) >> 1;
             end else begin
-                result_exp = fp64_mode ? (13'd3068 - normalized_exp) >> 1 : (13'd379 - normalized_exp) >> 1;
+                result_exp = fp64_mode ? 13'(13'd3068 - normalized_exp) >> 1 : 13'(13'd379 - normalized_exp) >> 1;
             end
         end else begin
-            result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
+            result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
         end
         
         result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
@@ -279,7 +280,7 @@ always @(*) begin
                 {src_sign, FP64_MAX_EXP, 52'h0} : 
                 {src_sign, FP32_MAX_EXP, 23'h0};
             computed_exceptions[OF_FLAG] = 1'b1;
-        end else if (result_exp == 13'd0 || result_exp[12]) begin
+        end else if ((result_exp == 13'd0) || result_exp[12]) begin
             computed_result = fp64_mode ? 
                 {src_sign, 11'h0, 52'h0} : 
                 {src_sign, 8'h0, 23'h0};
@@ -293,61 +294,17 @@ always @(*) begin
     end
 end
 
-`ifdef VF7_MF_OUTREG
-
-// this is the default use on Yuda's module, but can be done combinationally
-// inside one execution cycle on Sargantana's vfpu_drac_wrapper module
-bus64_t     result_reg          ;
-logic       valid_o_reg         ;
-logic [4:0] exception_flags_reg ;
-
-always @(posedge clk_i or negedge rstn_i) begin
-    if (!rstn_i) begin
-        result_reg          <= 64'h0;
-        valid_o_reg         <= 1'b0;
-        exception_flags_reg <= 5'b0;
-    end else begin
-        valid_o_reg         <= valid_i;
-        result_reg          <= computed_result;
-        exception_flags_reg <= computed_exceptions;
-    end
-end
-
-assign res_o = result_reg;
-assign valid_o = valid_o_reg;
-
-always_comb begin
-    case (exception_flags_reg)
-        NV_FLAG:
-            status_o = fpnew_pkg::status_t'(NV);
-        DZ_FLAG:
-            status_o = fpnew_pkg::DZ;
-        OF_FLAG:
-            status_o = fpnew_pkg::OF;
-        UF_FLAG:
-            status_o = fpnew_pkg::UF;
-        NX_FLAG:
-            status_o = fpnew_pkg::NX;
-        default:
-            status_o = '0;
-    endcase
-end
-`else
-
 // directly compute by default the result combinationally
 assign res_o = computed_result;
 assign valid_o = valid_i;
 always_comb begin // "translate" exception flags to fpnew_pkg::status_t
-    unique case (computed_exceptions)
-        NV_FLAG: status_o = status_o | NV_MASK;
-        DZ_FLAG: status_o = status_o | DZ_MASK;
-        OF_FLAG: status_o = status_o | OF_MASK;
-        UF_FLAG: status_o = status_o | UF_MASK;
-        NX_FLAG: status_o = status_o | NX_MASK;
-        default: status_o = '0;
-    endcase
+    status_o = '0; // default
+    status_o.NV = computed_exceptions[NV_FLAG];
+    status_o.DZ = computed_exceptions[DZ_FLAG];
+    status_o.OF = computed_exceptions[OF_FLAG];
+    status_o.UF = computed_exceptions[UF_FLAG];
+    status_o.NX = computed_exceptions[NX_FLAG];
 end
 
-`endif
 endmodule
 

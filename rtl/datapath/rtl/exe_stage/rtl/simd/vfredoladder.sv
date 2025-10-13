@@ -80,10 +80,10 @@ always_comb begin
 end
 
 generate
-    for (genvar j = 0; j < VLEN/32; j++) begin : FP32_GEN_SIGNALS
+    for (genvar j = 0; j < (VLEN/32); j++) begin : FP32_GEN_SIGNALS
         assign fp32signals[j] = data_vm[j] ? data_vs2_i[(32*j) +: 32] : 32'h0000_0000;
     end
-    for (genvar j = 0; j < VLEN/64; j++) begin : FP64_GEN_SIGNALS
+    for (genvar j = 0; j < (VLEN/64); j++) begin : FP64_GEN_SIGNALS
         assign fp64signals[j] = data_vm[j] ? data_vs2_i[(64*j) +: 64] : 64'h0000_0000_0000_0000;
     end
 endgenerate
@@ -123,7 +123,7 @@ fpnew_top #(
    .operands_i     ( fp32_fpnew_operands_first ),
    .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(frm_i)) ),
    .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-   .op_mod_i       ( 0 ),
+   .op_mod_i       ( '0 ),
    .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
    .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
    .int_fmt_i      ( fpnew_pkg::int_format_e'(INT32) ),
@@ -171,7 +171,7 @@ for (genvar i = 1; i < (VLEN/32); i++) begin : FP32_GEN_FPNEW
        .operands_i     ( fp32_fpnew_operands ),
        .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp32_metadata[i-1][DELAY_SUM_FP32-1].frm)) ),
        .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-       .op_mod_i       ( 0 ),
+       .op_mod_i       ( '0 ),
        .src_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(FP32)) ),
        .dst_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(FP32)) ),
        .int_fmt_i      ( fpnew_pkg::int_format_e'(W2_logic'(INT32))),
@@ -235,6 +235,7 @@ for (genvar i = 0; i < (VLEN/32); i++) begin : FP32_GEN_METADATA_I
                         fp32_metadata[i][j].status.UF <= fp32_metadata[i-1][DELAY_SUM_FP32-1].status.UF || fp32statusvec[i-1].UF;
                         fp32_metadata[i][j].status.NX <= fp32_metadata[i-1][DELAY_SUM_FP32-1].status.NX || fp32statusvec[i-1].NX;
                         fp32_metadata[i][j].status.NV <= fp32_metadata[i-1][DELAY_SUM_FP32-1].status.NV || fp32statusvec[i-1].NV;
+                        fp32_metadata[i][j].status.DZ <= 1'b0;
                     end
                 end else begin // chaining registers
                     fp32_metadata[i][j] <= fp32_metadata[i][j-1];
@@ -280,7 +281,7 @@ fpnew_top #(
    .operands_i     ( fp64wide_fpnew_operands_first ),
    .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(frm_i)) ),
    .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-   .op_mod_i       ( 0 ),
+   .op_mod_i       ( '0 ),
    .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
    .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
    .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
@@ -327,7 +328,7 @@ for (genvar i = 1; i < ADDS_WIDENING; i++) begin : FP64WIDE_GEN_FPNEW
        .operands_i     ( fp64wide_fpnew_operands ),
        .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata[i-1][DELAY_SUM_FP64-1].frm)) ),
        .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-       .op_mod_i       ( 0 ),
+       .op_mod_i       ( '0 ),
        .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
        .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
        .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
@@ -377,6 +378,7 @@ for (genvar i = 0; i < ADDS_WIDENING; i++) begin : FP64WIDE_GEN_METADATA_I
                         fp64wide_metadata[i][j].status.UF <= fp64wide_metadata[i-1][DELAY_SUM_FP64-1].status.UF || fp64widestatusvec[i-1].UF;
                         fp64wide_metadata[i][j].status.NX <= fp64wide_metadata[i-1][DELAY_SUM_FP64-1].status.NX || fp64widestatusvec[i-1].NX;
                         fp64wide_metadata[i][j].status.NV <= fp64wide_metadata[i-1][DELAY_SUM_FP64-1].status.NV || fp64widestatusvec[i-1].NV;
+                        fp64wide_metadata[i][j].status.DZ <= 1'b0;
                     end
                 end else begin // chaining registers
                     fp64wide_metadata[i][j] <= fp64wide_metadata[i][j-1];
@@ -425,7 +427,7 @@ fpnew_top #(
    .operands_i     ( fp64_fpnew_operands_first ),
    .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(frm_i)) ),
    .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-   .op_mod_i       ( 0 ),
+   .op_mod_i       ( '0 ),
    .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
    .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
    .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
@@ -474,7 +476,7 @@ for (genvar i = 1; i < (VLEN/64); i++) begin : FP64_GEN_FPNEW
        .operands_i     ( fp64_fpnew_operands ),
        .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata[i-1][DELAY_SUM_FP64-1].frm)) ),
        .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
-       .op_mod_i       ( 0 ),
+       .op_mod_i       ( '0 ),
        .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
        .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
        .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
@@ -526,6 +528,7 @@ for (genvar i = 0; i < (VLEN/64); i++) begin : FP64_GEN_METADATA_I
                         fp64_metadata[i][j].status.UF <= fp64_metadata[i-1][DELAY_SUM_FP64-1].status.UF || fp64statusvec[i-1].UF;
                         fp64_metadata[i][j].status.NX <= fp64_metadata[i-1][DELAY_SUM_FP64-1].status.NX || fp64statusvec[i-1].NX;
                         fp64_metadata[i][j].status.NV <= fp64_metadata[i-1][DELAY_SUM_FP64-1].status.NV || fp64statusvec[i-1].NV;
+                        fp64_metadata[i][j].status.DZ <= 1'b0;
                     end
                 end else begin // chaining registers
                     fp64_metadata[i][j] <= fp64_metadata[i][j-1];
@@ -557,9 +560,9 @@ always_comb begin
 end
 
 
-assign status_o = (sew_to_out_i==SEW_64 || instr_to_out_i == VFWREDOSUM) ? fp64statusfinal : fp32statusfinal;
+assign status_o = ((sew_to_out_i==SEW_64) || (instr_to_out_i==VFWREDOSUM)) ? fp64statusfinal : fp32statusfinal;
 
-assign red_data_vd_o = (sew_to_out_i==SEW_64 || instr_to_out_i == VFWREDOSUM) ? 
+assign red_data_vd_o = ((sew_to_out_i==SEW_64) || (instr_to_out_i==VFWREDOSUM)) ? 
                         {data_old_vd[VLEN-1:64], fp64_res} : 
                         {data_old_vd[VLEN-1:32], fp32_res};
 

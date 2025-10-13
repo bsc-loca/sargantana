@@ -63,15 +63,15 @@ typedef struct packed {
 // Function to translate raw flags comming from DP2 into fpnew_pkg::status_t
 
 function automatic integer floor_log2(input integer value);
-    if (value == 0) return -1;
-    return $clog2(value+1) - 1;
+    if (value == 0) return integer'(-1);
+    return integer'($clog2(value+1) - 1);
 endfunction
 
 function automatic int first_node_index(int level, int sew);
     int sum;
     sum = 0;
     for (int k = 0; k < level; k++) begin
-        sum += ((VLEN/sew) >> k+1); // number of nodes at level k
+        sum = 32'(sum + ((32'(VLEN)/32'(sew)) >> (k+1))); // number of nodes at level k
     end
     return sum;
 endfunction
@@ -115,7 +115,7 @@ endfunction
 *
 */
 
-localparam NUM_WIDE_SIGNALS = VLEN/32 + VLEN/32/2;
+localparam NUM_WIDE_SIGNALS = (VLEN/32) + ((VLEN/32)/2);
 
 genvar i;
 
@@ -133,7 +133,7 @@ fpnew_pkg::status_t fp64statusvec  [(VLEN/64)-1:0];
 bus64_t fp64widesignals [NUM_WIDE_SIGNALS-1:0];
 metadata_t fp64widemetadata[DELAY_SUM_FP64-1:0];
 logic fp64widevalids[NUM_WIDE_SIGNALS-1:0];
-status_t fp64widestatus[VLEN/32/2-1:0];
+status_t fp64widestatus[((VLEN/32)/2)-1:0];
 
 // Vector Mask Managment for LMUL<1 cases
 bus_mask_t data_vm;
@@ -149,13 +149,13 @@ end
 
 // nullify all the source operands which are unmasked
 generate
-    for (genvar j = 0; j < VLEN/32; j++) begin : FP32_GEN_SIGNALS
+    for (genvar j = 0; j < (VLEN/32); j++) begin : FP32_GEN_SIGNALS
         assign fp32signals[j] = data_vm[j] ? data_vs2_i[(32*j) +: 32] : 32'h0000_0000;
         assign fp32valids[j] = data_vm[j];
         assign fp64widesignals[j] = data_vm[j] ? fp32_to_fp64(data_vs2_i[(32*j) +: 32]) : 64'h0000_0000_0000_0000;
         assign fp64widevalids[j] = data_vm[j];
     end
-    for (genvar j = 0; j < VLEN/64; j++) begin : FP64_GEN_SIGNALS
+    for (genvar j = 0; j < (VLEN/64); j++) begin : FP64_GEN_SIGNALS
         bus64_t fp64op;
         assign fp64signals[j] = data_vm[j] ? data_vs2_i[(64*j) +: 64] : 64'h0000_0000_0000_0000;
         assign fp64valids[j] = (fp64widemetadata[DELAY_SUM_FP64-1].instr_type == VFWREDUSUM) ? fp64widevalids[j] : data_vm[j];
@@ -180,8 +180,6 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
     bus32_t fp32srcb_end     [DELAY_SUM_FP32-1:0];
     logic   fp32aisvalid_end [DELAY_SUM_FP32-1:0];
     logic   fp32bisvalid_end [DELAY_SUM_FP32-1:0];
-
-    logic fp32lt;
 
     // commented on fp64 section
     for (genvar k = 0; k < DELAY_SUM_FP32; k++) begin
@@ -215,7 +213,7 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
         fp32ismininstr_end = fp32_metadata_q[FP32_NODE_LEVEL*DELAY_SUM_FP32+(DELAY_SUM_FP32-1)].instr_type == VFREDMIN;
         
         // the MAXMIN must first be masked and canonicalized if needed
-        fp32maxmin_masked = ~fp32aisvalid_end[DELAY_SUM_FP32-1] && ~fp32bisvalid_end[DELAY_SUM_FP32-1] ? 32'h0000_0000 :
+        fp32maxmin_masked = (~fp32aisvalid_end[DELAY_SUM_FP32-1] && ~fp32bisvalid_end[DELAY_SUM_FP32-1]) ? 32'h0000_0000 :
                             ~fp32aisvalid_end[DELAY_SUM_FP32-1] ? is_nan_f32(fp32srcb_end[DELAY_SUM_FP32-1]) ? FP32_QNAN : fp32srcb_end[DELAY_SUM_FP32-1] :
                             ~fp32bisvalid_end[DELAY_SUM_FP32-1] ? is_nan_f32(fp32srca_end[DELAY_SUM_FP32-1]) ? FP32_QNAN : fp32srcb_end[DELAY_SUM_FP32-1] :
                             fp32maxmin;
@@ -231,16 +229,23 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
 
         // multiplex the correct result depending on the instruction type
         // the chosen NaN treatment will be not to canonicalize nor raise invalid flag even for SUM reductions
-        fp32signals[VLEN/32+i] = fp32ismaxinstr_end || fp32ismininstr_end ? fp32maxmin_masked :
+        fp32signals[(VLEN/32)+i] = (fp32ismaxinstr_end || fp32ismininstr_end) ? fp32maxmin_masked :
                                  fp32resdp2[31:0];
-        fp32valids[VLEN/32+i] = fp32aisvalid_end[DELAY_SUM_FP32-1] || fp32bisvalid_end[DELAY_SUM_FP32-1];
+        fp32valids[(VLEN/32)+i] = fp32aisvalid_end[DELAY_SUM_FP32-1] || fp32bisvalid_end[DELAY_SUM_FP32-1];
     end // always_comb
 
     maxmin_f32 fp32comparator (
-        .maxmin_i (fp32ismaxinstr_end), // if it's max operate max, else operate min
-        .srca_i   (fp32srca_end[DELAY_SUM_FP32-1]),
-        .srcb_i   (fp32srcb_end[DELAY_SUM_FP32-1]),
-        .ret_o    (fp32maxmin)
+        .maxmin_i   (fp32ismaxinstr_end), // if it's max operate max, else operate min
+        .srca_i     (fp32srca_end[DELAY_SUM_FP32-1]),
+        .srcb_i     (fp32srcb_end[DELAY_SUM_FP32-1]),
+        .ret_o      (fp32maxmin),
+        .is_nan_o   (),
+        .invalid_o  (),
+        .lt_o       (),
+        .eq_o       (),
+        .gt_o       (),
+        .le_o       (),
+        .ge_o       ()
     );
 
     logic [2:0][63:0] fp32_fpnew_operands;
@@ -288,8 +293,6 @@ bus64_t lastfp32resdp2;
 logic lastfp32ismaxinstr_end, lastfp32ismininstr_end;
 fpnew_pkg::status_t lastfp32fpnewstatus;
 
-logic lastfp32lt;
-
 // commented on fp64 section
 bus32_t lastfp32srca_end [DELAY_SUM_FP32-1:0];
 bus32_t lastfp32srcb_end [DELAY_SUM_FP32-1:0];
@@ -305,7 +308,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         if (k == 0) begin
             lastfp32srca_end[k] <= lastfp32srca;
             lastfp32srcb_end[k] <= lastfp32srcb;
-            lastfp32isvalid_end[k] <= fp32valids[2*(VLEN/32-1)];
+            lastfp32isvalid_end[k] <= fp32valids[2*((VLEN/32)-1)];
         end else begin
             lastfp32srca_end[k] <= lastfp32srca_end[k-1];
             lastfp32srcb_end[k] <= lastfp32srcb_end[k-1];
@@ -328,22 +331,29 @@ always_comb begin
                             lastfp32maxmin;
 
     if (lastfp32ismaxinstr_end || lastfp32ismininstr_end) begin
-        fp32statusvec[VLEN/32-1] = '0; 
-        fp32statusvec[VLEN/32-1].NV = lastfp32fpnewstatus.NV; 
+        fp32statusvec[(VLEN/32)-1] = '0; 
+        fp32statusvec[(VLEN/32)-1].NV = lastfp32fpnewstatus.NV; 
     end else begin
-        fp32statusvec[VLEN/32-1] = lastfp32fpnewstatus;
+        fp32statusvec[(VLEN/32)-1] = lastfp32fpnewstatus;
     end
 
     // multiplex the correct result depending on the instruction type
-    fp32_res = lastfp32ismaxinstr_end || lastfp32ismininstr_end ? lastfp32maxmin_masked :
+    fp32_res = (lastfp32ismaxinstr_end || lastfp32ismininstr_end) ? lastfp32maxmin_masked :
                lastfp32resdp2[31:0];
 end
 
 maxmin_f32 lastfp32comparator (
-    .maxmin_i (lastfp32ismaxinstr_end),
-    .srca_i   (lastfp32srca_end[DELAY_SUM_FP32-1]),
-    .srcb_i   (lastfp32srcb_end[DELAY_SUM_FP32-1]),
-    .ret_o    (lastfp32maxmin) 
+    .maxmin_i   (lastfp32ismaxinstr_end),
+    .srca_i     (lastfp32srca_end[DELAY_SUM_FP32-1]),
+    .srcb_i     (lastfp32srcb_end[DELAY_SUM_FP32-1]),
+    .ret_o      (lastfp32maxmin),
+    .is_nan_o   (),
+    .invalid_o  (),
+    .lt_o       (),
+    .eq_o       (),
+    .gt_o       (),
+    .le_o       (),
+    .ge_o       ()
 );
 
 logic [2:0][63:0] lastfp32_fpnew_operands;
@@ -440,13 +450,13 @@ for (i = 0; i < ((VLEN/32)/2); i++) begin : fp64_wide_adders
         end
     end
     
-    assign fp64widevalids[VLEN/32+i] = fp64wideaisvalid_end[DELAY_SUM_FP64-1] || fp64widebisvalid_end[DELAY_SUM_FP64-1];
+    assign fp64widevalids[(VLEN/32)+i] = fp64wideaisvalid_end[DELAY_SUM_FP64-1] || fp64widebisvalid_end[DELAY_SUM_FP64-1];
 
     always_comb begin
         fp64widesrca = fp64widesignals[2*i];
         fp64widesrcb = fp64widesignals[2*i+1];
         fp64widestatus[i] = fpnewstatus; // in widening case, always will be computed by fpnew, only sums done
-        fp64widesignals[VLEN/32+i] = fp64wideresdp2;
+        fp64widesignals[(VLEN/32)+i] = fp64wideresdp2;
     end
 
     logic [2:0][63:0] fp64wide_fpnew_operands;
@@ -499,7 +509,6 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
     bus64_t fp64resdp2;
     logic fp64ismaxinstr_end, fp64ismininstr_end;
     fpnew_pkg::status_t fpnewstatus;
-    logic fp64lt;
 
     // As the sources will have to be available once the result has been
     // received from the FP substraction to decide which of them is min
@@ -548,19 +557,19 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
     end
 
     always_comb begin
-        if (FP64_NODE_LEVEL == 0 && fp64widemetadata[DELAY_SUM_FP64-1].instr_type == VFWREDUSUM) begin
-            fp64srca = fp64widesignals[VLEN/32+2*i];
-            fp64srcb = fp64widesignals[VLEN/32+2*i+1];
+        if ((FP64_NODE_LEVEL==0) && (fp64widemetadata[DELAY_SUM_FP64-1].instr_type == VFWREDUSUM)) begin
+            fp64srca = fp64widesignals[(VLEN/32)+(2*i)];
+            fp64srcb = fp64widesignals[((VLEN/32)+(2*i))+1];
         end else begin
-            fp64srca = fp64signals[2*i];
-            fp64srcb = fp64signals[2*i+1];
+            fp64srca = fp64signals[(2*i)];
+            fp64srcb = fp64signals[(2*i)+1];
         end
 
         // the last comparison signals can be done using the propagated instr_type's
         fp64ismaxinstr_end     = fp64_metadata_q[FP64_NODE_LEVEL*DELAY_SUM_FP64+(DELAY_SUM_FP64-1)].instr_type == VFREDMAX;
         fp64ismininstr_end     = fp64_metadata_q[FP64_NODE_LEVEL*DELAY_SUM_FP64+(DELAY_SUM_FP64-1)].instr_type == VFREDMIN;
 
-        fp64maxmin_masked      = ~fp64aisvalid_end[DELAY_SUM_FP64-1] && ~fp64bisvalid_end[DELAY_SUM_FP64-1] ? 64'h0000_0000_0000_0000 :
+        fp64maxmin_masked      = (~fp64aisvalid_end[DELAY_SUM_FP64-1] && ~fp64bisvalid_end[DELAY_SUM_FP64-1]) ? 64'h0000_0000_0000_0000 :
                                  ~fp64aisvalid_end[DELAY_SUM_FP64-1] ? is_nan_f64(fp64srcb_end[DELAY_SUM_FP64-1]) ? FP64_QNAN : fp64srcb_end[DELAY_SUM_FP64-1] :
                                  ~fp64bisvalid_end[DELAY_SUM_FP64-1] ? is_nan_f64(fp64srca_end[DELAY_SUM_FP64-1]) ? FP64_QNAN : fp64srca_end[DELAY_SUM_FP64-1] :
                                  fp64maxmin;
@@ -573,17 +582,24 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
         end
 
         // multiplex the correct result depending on the instruction type
-        fp64signals[VLEN/64+i] = fp64ismaxinstr_end || fp64ismininstr_end ? fp64maxmin_masked :
+        fp64signals[(VLEN/64)+i] = (fp64ismaxinstr_end || fp64ismininstr_end) ? fp64maxmin_masked :
                                  fp64resdp2;
-        fp64valids[VLEN/64+i] = fp64aisvalid_end[DELAY_SUM_FP64-1] || fp64bisvalid_end[DELAY_SUM_FP64-1];
+        fp64valids[(VLEN/64)+i] = fp64aisvalid_end[DELAY_SUM_FP64-1] || fp64bisvalid_end[DELAY_SUM_FP64-1];
     end
 
     maxmin_f64 fp64comparator (
-        .maxmin_i (fp64ismaxinstr_end),
-        .srca_i   (fp64srca_end[DELAY_SUM_FP64-1]),
-        .srcb_i   (fp64srcb_end[DELAY_SUM_FP64-1]),
-        .ret_o    (fp64maxmin)
-    ); 
+        .maxmin_i   (fp64ismaxinstr_end),
+        .srca_i     (fp64srca_end[DELAY_SUM_FP64-1]),
+        .srcb_i     (fp64srcb_end[DELAY_SUM_FP64-1]),
+        .ret_o      (fp64maxmin),
+        .is_nan_o   (),
+        .invalid_o  (),
+        .lt_o       (),
+        .eq_o       (),
+        .gt_o       (),
+        .le_o       (),
+        .ge_o       ()
+    );
 
     logic [2:0][63:0] fp64_fpnew_operands;
     always_comb begin
@@ -629,7 +645,6 @@ bus64_t lastfp64maxmin, lastfp64maxmin_masked;
 bus64_t lastfp64resdp2;
 logic lastfp64ismaxinstr_end, lastfp64ismininstr_end;
 fpnew_pkg::status_t lastfp64fpnewstatus;
-logic lastfp64lt;
 
 bus64_t lastfp64srca_end [DELAY_SUM_FP64-1:0];
 bus64_t lastfp64srcb_end [DELAY_SUM_FP64-1:0];
@@ -676,17 +691,23 @@ always_comb begin
     end
 
     // multiplex the correct result depending on the instruction type
-    fp64_res = lastfp64ismaxinstr_end || lastfp64ismininstr_end ? lastfp64maxmin_masked :
+    fp64_res = (lastfp64ismaxinstr_end || lastfp64ismininstr_end) ? lastfp64maxmin_masked :
                lastfp64resdp2;
 end
 
 maxmin_f64 lastfp64comparator (
-    .maxmin_i (lastfp64ismaxinstr_end),
-    .srca_i   (lastfp64srca_end[DELAY_SUM_FP64-1]),
-    .srcb_i   (lastfp64srcb_end[DELAY_SUM_FP64-1]),
-    .ret_o    (lastfp64maxmin)
+    .maxmin_i   (lastfp64ismaxinstr_end),
+    .srca_i     (lastfp64srca_end[DELAY_SUM_FP64-1]),
+    .srcb_i     (lastfp64srcb_end[DELAY_SUM_FP64-1]),
+    .ret_o      (lastfp64maxmin),
+    .is_nan_o   (),
+    .invalid_o  (),
+    .lt_o       (),
+    .eq_o       (),
+    .gt_o       (),
+    .le_o       (),
+    .ge_o       ()
 ); 
-
 
 // the result of the reduction must be added with the last element of the 2nd operand
 logic [2:0][63:0] lastfp64_fpnew_operands;
@@ -796,7 +817,7 @@ end
  */
 
 generate
-    for (i = 1; i < ($clog2(VLEN/32)+1)*DELAY_SUM_FP32; i++) begin : fp32_metadata
+    for (i = 1; i < (($clog2(VLEN/32)+1)*DELAY_SUM_FP32); i++) begin : fp32_metadata
         localparam int stage   = i / DELAY_SUM_FP32 - 1;
         // the status will always be passed from the previous stage
         localparam int base32  = first_node_index(stage, 32);
@@ -812,7 +833,7 @@ generate
 
             // we need also to treat the invalid vector propagation
             // on DELAY_SUM_FP32 multiple stages
-            if (i % DELAY_SUM_FP32 == 0) begin // if starting of stage, OR ladder propagation
+            if ((i % DELAY_SUM_FP32) == 0) begin // if starting of stage, OR ladder propagation
                 statusred = '0;
                 for (int j = 0; j < width32; j++) begin
                     statusred.OF |= fp32statusvec[base32+j].OF;
@@ -852,7 +873,7 @@ always_comb begin
     if (fp64widemetadata[DELAY_SUM_FP64-1].instr_type == VFWREDUSUM) begin
         fp64_metadata_d[0] = fp64widemetadata[DELAY_SUM_FP64-1];
         // the flags must be propagated
-        for (int j = 0; j < VLEN/32/2; j++) begin
+        for (int j = 0; j < ((VLEN/32)/2); j++) begin
             fp64_metadata_d[0].status.UF |= fp64widestatus[j].UF;
             fp64_metadata_d[0].status.NX |= fp64widestatus[j].NX;
             fp64_metadata_d[0].status.OF |= fp64widestatus[j].OF;
@@ -876,7 +897,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin // first register
 end
 
 generate
-    for (i = 1; i < ($clog2(VLEN/64)+1)*DELAY_SUM_FP64; i++) begin : fp64_metadata
+    for (i = 1; i < (($clog2(VLEN/64)+1)*DELAY_SUM_FP64); i++) begin : fp64_metadata
         localparam int stage   = i / DELAY_SUM_FP64 - 1;
         localparam int base64  = first_node_index(stage, 64);
         localparam int width64 = (VLEN/64) >> (stage+1);
@@ -891,7 +912,7 @@ generate
 
             // we need also to treat the invalid vector propagation
             // on DELAY_SUM_FP64 multiple stages
-            if (i % DELAY_SUM_FP64 == 0) begin // if starting of stage, OR ladder propagation
+            if ((i % DELAY_SUM_FP64) == 0) begin // if starting of stage, OR ladder propagation
                 statusred = '0;
                 for (int j = 0; j < width64; j++) begin
                     statusred.OF |= fp64statusvec[base64+j].OF;
@@ -943,9 +964,9 @@ always_comb begin
 end
 
 // multiplex the outputs from both trees via the sew asked by the simd_unit control
-assign status_o = (sew_to_out_i == SEW_64 || instr_to_out_i == VFWREDUSUM) ? fp64statusfinal : fp32statusfinal;
+assign status_o = ((sew_to_out_i == SEW_64) || (instr_to_out_i == VFWREDUSUM)) ? fp64statusfinal : fp32statusfinal;
 
-assign red_data_vd_o = (sew_to_out_i==SEW_64 || instr_to_out_i == VFWREDUSUM) ?
+assign red_data_vd_o = ((sew_to_out_i==SEW_64) || (instr_to_out_i == VFWREDUSUM)) ?
                         {data_old_vd[VLEN-1:64], fp64_res} :
                         {data_old_vd[VLEN-1:32], fp32_res};
 

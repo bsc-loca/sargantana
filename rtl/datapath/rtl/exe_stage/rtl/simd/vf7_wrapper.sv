@@ -40,12 +40,12 @@ module vf7_wrapper (
     output fpnew_pkg::status_t  status_o 
 );
 
-fpnew_pkg::status_t statusvec [VLEN/32-1:0];
-logic               validvec  [VLEN/32-1:0];
-bus64_t             resultvec [VLEN/32-1:0];
+fpnew_pkg::status_t statusvec [(VLEN/32)-1:0];
+logic               validvec  [(VLEN/32)-1:0];
+bus64_t             resultvec [(VLEN/32)-1:0];
 
 generate
-for (genvar i = 0; i < VLEN/32; i++) begin : GEN_VF7
+for (genvar i = 0; (i < (VLEN/32)); i++) begin : GEN_VF7
     bus64_t source_operand;
     bus64_t result;
 
@@ -53,7 +53,7 @@ for (genvar i = 0; i < VLEN/32; i++) begin : GEN_VF7
         source_operand = '0;
         result = '0;
         if (sew_i == SEW_64) begin
-            if (i < VLEN/64) begin
+            if (i < (VLEN/64)) begin
                 source_operand = src_i[i*64 +: 64];
                 // continous assignment here allowed
             end 
@@ -89,7 +89,7 @@ always_comb begin
     accstatus[1] = '0;
     accvalid [1] = '0;
 
-    for (int i = 0; i < VLEN/64; i++) begin
+    for (int i = 0; i < (VLEN/64); i++) begin
         accstatus[0].NV |= statusvec[i].NV;
         accstatus[0].DZ |= statusvec[i].DZ;
         accstatus[0].OF |= statusvec[i].OF;
@@ -97,7 +97,7 @@ always_comb begin
         accstatus[0].NX |= statusvec[i].NX;
         accvalid [0]    |= validvec[i];
     end
-    for (int i = VLEN/64; i < VLEN/32; i++) begin
+    for (int i = (VLEN/64); i < (VLEN/32); i++) begin
         accstatus[1].NV |= statusvec[i].NV;
         accstatus[1].DZ |= statusvec[i].DZ;
         accstatus[1].OF |= statusvec[i].OF;
@@ -114,11 +114,11 @@ always_comb begin
     valid_o     = (sew_i == SEW_64) ? accvalid[0] : accvalid[0] | accvalid[1];
 
     if (sew_i == SEW_64) begin
-        for (int i = 0; i < VLEN/64; i++) begin
+        for (int i = 0; i < (VLEN/64); i++) begin
             res_o[i*64 +: 64] = resultvec[i];
         end
     end else begin // SEW_32
-        for (int i = 0; i < VLEN/32; i++) begin
+        for (int i = 0; i < (VLEN/32); i++) begin
             res_o[i*32 +: 32] = resultvec[i][31:0];
         end
     end
