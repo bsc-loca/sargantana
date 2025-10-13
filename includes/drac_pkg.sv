@@ -1439,6 +1439,16 @@ function logic is_vf_conv(input instr_type_t instr);
                     (instr == VFNCVT_ROD_F_F)) ? 1'b1 : 1'b0;
 endfunction 
 
+function logic is_result_right_aligned(input rr_exe_simd_instr_t instr);
+    is_result_right_aligned = ((instr.instr.instr_type == VMFEQ) ||
+               (instr.instr.instr_type == VMFLT) ||
+               (instr.instr.instr_type == VMFLE) ||
+               (instr.instr.instr_type == VMFGT) ||
+               (instr.instr.instr_type == VMFGE) ||
+               (instr.instr.instr_type == VMFNE)) ? 1'b1 : 1'b0;
+endfunction
+
+
 function logic is_vfpnew(input instr_type_t instr);
     is_vfpnew = is_vf_addmul(instr) || is_vf_divsqrt(instr) || is_vf_noncomp(instr) || is_vf_conv(instr);
 endfunction

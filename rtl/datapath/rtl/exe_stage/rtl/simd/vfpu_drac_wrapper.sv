@@ -1084,7 +1084,7 @@ reg_t               fpnew_new_tag, fpnew_out_tag;
 bus_simd_t          fpnew_result;
 
 bus_simd_t          finish_vfp_data;
-bus_simd_t          inverted_finish_vfp_result;
+bus_simd_t          grouped_vfp_result;
 
 bus_simd_t          finish_vfp_result;
 fpnew_pkg::status_t fpnew_status;
@@ -1128,22 +1128,28 @@ pending_vfp_ops_queue pending_vfp_ops_queue_inst (
     .full_o             (stall_pending_vfp)
 );
 
-assign finish_vfp_result = (finish_vfp_instr.instr.instr_type == VMFNE) ? inverted_finish_vfp_result : finish_vfp_data;
+assign finish_vfp_result = is_result_right_aligned(finish_vfp_instr) ? grouped_vfp_result : finish_vfp_data;
+
+logic negate_result;
+assign negate_result = (finish_vfp_instr.instr.instr_type == VMFNE);
 
 always_comb begin
-    inverted_finish_vfp_result = finish_vfp_data;
+    grouped_vfp_result = '0;
 
-    if (finish_vfp_instr.instr.sew == SEW_32) begin
-        inverted_finish_vfp_result[0] = ~finish_vfp_data[0];
-        inverted_finish_vfp_result[32] = ~finish_vfp_data[32];
-        inverted_finish_vfp_result[64] = ~finish_vfp_data[64];
-        inverted_finish_vfp_result[96] = ~finish_vfp_data[96];
-    end
 
-    if (finish_vfp_instr.instr.sew == SEW_64) begin
-        inverted_finish_vfp_result[0] = ~finish_vfp_data[0];
-        inverted_finish_vfp_result[64] = ~finish_vfp_data[64];
-    end
+    case (finish_vfp_instr.instr.sew)
+        SEW_32: begin
+            for (int i = 0; i<(VLEN/32); i++) begin
+                grouped_vfp_result[i] = (negate_result) ? ~finish_vfp_data[i*32] : finish_vfp_data[i*32];
+            end
+        end
+
+        SEW_64: begin
+            for (int i = 0; i<(VLEN/64); i++) begin
+                grouped_vfp_result[i] = (negate_result) ? ~finish_vfp_data[i*64] : finish_vfp_data[i*64];
+            end
+        end
+    endcase
 end
 
 // instanciation of main FPNEW module
