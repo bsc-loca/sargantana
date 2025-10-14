@@ -2597,18 +2597,9 @@ module decoder
                                             decode_instr_int.instr_type = VFWSUBW;
                                         end
                                     end
-                                    F6_VFMERGE_VFMV: begin
-                                        if(decode_i.inst.vtype.vs2 == 5'b0 && decode_i.inst.vtype.vm == 1'b1) begin
-                                            decode_instr_int.use_vs2 = 1'b0;
-                                            decode_instr_int.use_fs1 = 1'b1;
-                                            decode_instr_int.vregfile_we = 1'b1;
-                                            decode_instr_int.instr_type = VFMV_V_F;
-                                        end
-                                    end
-
                                     F6_VRWFUNARY0: begin
                                         // VFMV_S_F
-                                        if (decode_i.inst.vtype.vs2 == VS2_S_F && decode_i.inst.vtype.vm == 1'b1) begin //forood: I'm not sure if checking for vs2 is needed or not
+                                        if ((decode_i.inst.vtype.vs2 == VS2_S_F) && (decode_i.inst.vtype.vm == 1'b1)) begin //forood: I'm not sure if checking for vs2 is needed or not
                                             decode_instr_int.use_vs2 = 1'b0;
                                             decode_instr_int.use_fs1 = 1'b1;
                                             decode_instr_int.vregfile_we = 1'b1;

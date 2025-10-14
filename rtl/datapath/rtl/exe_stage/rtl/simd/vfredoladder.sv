@@ -30,7 +30,7 @@ module vfredoladder #(
     input  logic                    clk_i,           // Clock signal
     input  logic                    rstn_i,          // Reset signal
     input  instr_type_t             instr_type_i,    // Instruction type
-    input  op_frm_fp_t              frm_i,           // Input instruction rounding mode
+    input  riscv_pkg::op_frm_fp_t   frm_i,           // Input instruction rounding mode
     input  sew_t                    sew_i,           // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
     input  logic [VMAXELEM_LOG:0]   vl_i,            // Current vector lenght in elements
     input  bus_simd_t               data_vs1_i,      // 128-bit from vs1
@@ -45,13 +45,13 @@ module vfredoladder #(
 );
 
 typedef struct packed {
-    sew_t               sew;
-    bus_simd_t          data_vs1;
-    bus_simd_t          data_vs2;
-    fpnew_pkg::status_t status;
-    instr_type_t        instr_type;
-    op_frm_fp_t         frm;
-    bus_mask_t          data_vm;
+    sew_t                   sew;
+    bus_simd_t              data_vs1;
+    bus_simd_t              data_vs2;
+    fpnew_pkg::status_t     status;
+    instr_type_t            instr_type;
+    riscv_pkg::op_frm_fp_t  frm;
+    bus_mask_t              data_vm;
 } metadata_t;
 
 // fp32 signals

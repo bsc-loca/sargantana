@@ -1070,7 +1070,6 @@ assign instruction_simd_o.vl              = instruction_to_wb.vl;
 assign instruction_simd_o.sew             = instruction_to_wb.instr.sew;
 assign instruction_simd_o.lmul            = instruction_to_wb.instr.lmul;
 
-
 `ifdef REGISTER_HPDC_OUTPUT
 assign exception_mem_commit_o = (instruction_to_wb.ex.valid & is_STORE_or_AMO_s2_q) ? instruction_to_wb.ex : 'h0;
 `else

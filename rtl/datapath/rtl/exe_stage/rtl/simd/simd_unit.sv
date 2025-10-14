@@ -29,7 +29,7 @@ module simd_unit
     input rr_exe_simd_instr_t     instruction_i,          // In instruction 
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
-    output logic                  stall_prev_o
+    output logic                  stall_prev_o,
     output exe_wb_fp_instr_t      instruction_fp_o        // Out instruction
 );
 
@@ -923,6 +923,8 @@ assign replication_rs1_bus = (instr_to_out.instr.sew == SEW_64) ? {(VLEN/64){ins
 always_comb begin
     shift_amount_in_vslide = 'h0;
     gather_index = 'h0;
+    result_data_vd = '0;
+
     if (is_fpnew_turn) begin // if it's fpnew
         result_data_vd = fpnew_result;
     end else if (is_vf_redu(instr_to_out.instr.instr_type)) begin
@@ -1572,6 +1574,7 @@ always_comb begin
 
     // Forood: I used direct implementation of VMV_S_X for this with minor chages
     else if (instr_to_out.instr.instr_type == VFMV_S_F) begin
+        result_data_vd = '1;
         case (instr_to_out.instr.sew)
             SEW_8: begin
                 if (instr_to_out.instr.vta) begin
@@ -2013,17 +2016,18 @@ always_comb begin
     end
 end
 
-assign instruction_fp_o.valid = instr_to_out.instr.valid &
-                                (instr_to_out.instr.unit == UNIT_SIMD) & 
-                                instr_to_out.instr.fregfile_we;
-assign instruction_fp_o.pc    = instr_to_out.instr.pc;
-assign instruction_fp_o.bpred = instr_to_out.instr.bpred;
-assign instruction_fp_o.rs1   = instr_to_out.instr.rs1;
-assign instruction_fp_o.rd    = instr_to_out.instr.rd;
-assign instruction_fp_o.regfile_we = instr_to_out.instr.fregfile_we;
-assign instruction_fp_o.instr_type = instr_to_out.instr.instr_type;
+assign instruction_fp_o.valid           = instr_to_out.instr.valid &
+                                          (instr_to_out.instr.unit == UNIT_SIMD) & 
+                                          instr_to_out.instr.fregfile_we;
+assign instruction_fp_o.pc              = instr_to_out.instr.pc;
+assign instruction_fp_o.bpred           = instr_to_out.instr.bpred;
+assign instruction_fp_o.rs1             = instr_to_out.instr.rs1;
+assign instruction_fp_o.rd              = instr_to_out.instr.rd;
+assign instruction_fp_o.result          = data_rd;
+assign instruction_fp_o.regfile_we      = instr_to_out.instr.fregfile_we;
+assign instruction_fp_o.instr_type      = instr_to_out.instr.instr_type;
 assign instruction_fp_o.stall_csr_fence = instr_to_out.instr.stall_csr_fence;
-assign instruction_fp_o.csr_addr = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
+assign instruction_fp_o.csr_addr        = instr_to_out.instr.imm[CSR_ADDR_SIZE-1:0];
 assign instruction_fp_o.fprd            = instr_to_out.fprd;
 assign instruction_fp_o.checkpoint_done = instr_to_out.checkpoint_done;
 assign instruction_fp_o.chkp            = instr_to_out.chkp;

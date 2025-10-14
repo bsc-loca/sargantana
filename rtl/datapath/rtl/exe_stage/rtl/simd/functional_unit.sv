@@ -240,6 +240,7 @@ vnclip vnclip_int(
 
 always_comb begin
     sat_ovf_o = '0;
+    data_vd_o = '0;
     case (sel_out_instr_i.instr.instr_type)
         VNCLIP, VNCLIPU: begin
             data_vd_o = result_vnclip;
@@ -337,6 +338,9 @@ always_comb begin
                                                                                   (data_vs1_i[i] ^ data_vs2_i[i]);
                     end
                 end
+                default: begin
+                    data_vd_o = '0;
+                end
             endcase
         end
         VSLL, VSRA, VSRL, VNSRL, VNSRA, VSSRL, VSSRA: begin
@@ -361,6 +365,9 @@ always_comb begin
                 end
                 SEW_64: begin
                     data_vd_o = fu_id_i;
+                end
+                default: begin
+                    data_vd_o = '0;
                 end
             endcase
         end
