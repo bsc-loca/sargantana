@@ -2221,10 +2221,13 @@ module decoder
                 end
                 OP_SYSTEM: begin
                   if(decode_i.inst.common.func3 == F3_HLV_HSV) begin // Hypervisor Virtual-Machine Load and Store Instructions
-                    if((v_mode_i == 1'b1) || ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_hu_i == 1'b0))) begin
+                    if(v_mode_i == 1'b1) begin
                       xcpt_virtual_instruction_int = 1'b1;
+                    end else if(((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_hu_i == 1'b0))) begin
+                      xcpt_illegal_instruction_int = 1'b1;
                     end else begin
                       xcpt_virtual_instruction_int = 1'b0;
+                      xcpt_illegal_instruction_int = 1'b0;
                       decode_instr_int.use_imm = 1'b0;
                       decode_instr_int.use_rs1 = 1'b1;
                       decode_instr_int.unit = UNIT_MEM;
