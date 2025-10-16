@@ -155,6 +155,7 @@ always_comb begin
         if (instruction_simd_writeback_enable_i[i]) begin
             valid_bit_d[instruction_simd_writeback_i[i]] = 1'b1;
             entries_d[instruction_simd_writeback_i[i]].vs_ovf  = instruction_simd_writeback_data_i[i].vs_ovf;
+            entries_d[instruction_simd_writeback_i[i]].fp_status = instruction_simd_writeback_data_i[i].fp_status;
             entries_d[instruction_simd_writeback_i[i]].vl = instruction_simd_writeback_data_i[i].vl;
             entries_d[instruction_simd_writeback_i[i]].sew = instruction_simd_writeback_data_i[i].sew;
             entries_d[instruction_simd_writeback_i[i]].lmul = instruction_simd_writeback_data_i[i].lmul;

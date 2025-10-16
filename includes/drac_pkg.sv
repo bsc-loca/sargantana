@@ -841,6 +841,7 @@ typedef struct packed {
 
     gl_index_t gl_index;                // Graduation List entry
     logic vs_ovf;
+    fpnew_pkg::status_t fp_status;      // FP status of the executed instruction
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
 
 

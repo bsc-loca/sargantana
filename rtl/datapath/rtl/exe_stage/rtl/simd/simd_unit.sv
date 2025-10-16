@@ -1957,4 +1957,6 @@ always_comb begin
     instruction_simd_o.ex.valid = 0;
 end
 
+assign instruction_simd_o.fp_status = flags_merged;
+
 endmodule
