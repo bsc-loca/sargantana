@@ -100,7 +100,6 @@ op_frm_fp_t frm;
 
 instr_type_t    instr_type  ;
 logic           instr_valid ;
-op_frm_fp_t     frm_i       ;
 sew_t           sew         ;
 bus_simd_t      data_vs1    ;
 bus_simd_t      data_vs2    ;
@@ -112,7 +111,6 @@ logic           is_opvf     ; // uses the scalar operand
 
 assign instr_type      = instruction_i.instr.instr_type                                                     ;
 assign instr_valid     = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type)    ; 
-assign frm_i           = instruction_i.instr.frm                                                            ; 
 assign sew             = instruction_i.instr.sew                                                            ;
 assign is_opvf         = instruction_i.instr.is_opvf                                                        ;
 assign data_rs1        = instruction_i.data_rs1                                                             ;
@@ -129,13 +127,13 @@ always_comb begin
     vector_operation_modifier   = '0;
     vector_src_format = fpnew_pkg::fp_format_e'(FP64);
     vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+    frm = instruction_i.instr.frm;
 
     for (int i = 0; i < (VLEN/64); i++) begin
         widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1[i*32 +: 32]);
         widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2[i*32 +: 32]);
     end
 
-    frm = frm_i;
     int_fmt = fpnew_pkg::int_format_e'(INT32);
 
     case (instr_type)
