@@ -45,12 +45,9 @@ bus64_t [drac_pkg::VELEMENTS-1:0] vd_elements;
 bus_simd_t rs1_replicated;
 bus_simd_t fu_data_vd;
 bus64_t data_rd; //Optimisation: Use just lower bits of fu_data_vd
-bus64_t fp_result;  //Forood: the naming convention may be wrong so check please.
-                    // also it was possible to reuse data_rd but I wasen't sure I won't break anything
 
 rr_exe_simd_instr_t instr_to_out; // Output instruction
 rr_exe_simd_instr_t instr_to_out_integer;
-logic [VMAXELEM_LOG:0] vl_to_out;
 
 // floating point variables' declaration
 bus_simd_t          fpnew_result;
