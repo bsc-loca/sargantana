@@ -119,7 +119,9 @@ assign data_vm         = {NumLanes{1'b1}}                                       
 assign data_vs1        = is_opvf ? rs1_repl : instruction_i.data_vs1                                        ;
 assign data_vs2        = instruction_i.data_vs2                                                             ;
 
-assign rs1_repl = (sew == SEW_64) ? {(VLEN/64){data_rs1}} : {(VLEN/32){data_rs1[31:0]}};
+// also the rs1 replication must be done taking into account NaN boxing
+assign rs1_repl = (sew == SEW_32) ? (data_rs1[63:32] == 32'hFFFF_FFFF) ? {(VLEN/32){data_rs1[31:0]}} : FP32_QNAN :
+                                    {(VLEN/64){data_rs1}};
 
 always_comb begin
     vector_operands             = '0;

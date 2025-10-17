@@ -532,7 +532,11 @@ always_comb begin
         end
         SEW_32: begin
             for (int i=0; i<(VLEN/32); ++i) begin
-                if (instruction_i.instr.is_opvx || instruction_i.instr.is_opvf) rs1_replicated[(i*32)+:32] = instruction_i.data_rs1[31:0];
+                if (instruction_i.instr.is_opvx) rs1_replicated[(i*32)+:32] = instruction_i.data_rs1[31:0];
+                else if (instruction_i.instr.is_opvf) begin
+                    rs1_replicated[(i*32)+:32] = (instruction_i.data_rs1[63:32] == 32'hFFFF_FFFF) ?
+                                                  instruction_i.data_rs1[31:0] : FP32_QNAN;
+                end
                 else rs1_replicated[(i*32)+:32] = instruction_i.instr.imm[31:0];
             end
         end
@@ -1294,7 +1298,7 @@ always_comb begin
                         result_data_vd[(i + 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                     end
                 end
-                result_data_vd[0 +: 32] = instruction_i.data_rs1[31:0];
+                result_data_vd[31:0] = rs1_replicated[31:0]; // to get proper NaN boxed values
             end
             SEW_64: begin
                 for (int i = 0 ; i < ((VLEN/64) - 1) ; ++i) begin
@@ -1345,7 +1349,7 @@ always_comb begin
                             result_data_vd[(i - 1) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                         end
                     end
-                    result_data_vd[trunc_vl_i_sew32(instr_to_out.instr.vl - 1) * 32 +: 32] = instruction_i.data_rs1[31:0];
+                    result_data_vd[trunc_vl_i_sew32(instr_to_out.instr.vl - 1) * 32 +: 32] = rs1_replicated[31:0];
             end
             SEW_64: begin
                 for (int i = 1 ; i < (VLEN/64)  ; ++i) begin
