@@ -400,7 +400,7 @@ typedef enum logic [8:0] {
    VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
    // Vectorial FP reduction instructions
    VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
-   VFMV_V_F, VFMV_F_S, VFMV_S_F, VFSLIDE1UP, VFSLIDE1DOWN,
+   VFMV_F_S, VFMV_S_F, VFSLIDE1UP, VFSLIDE1DOWN,
    // Vectorial FP conversion instructions
    VFNCVT_F_F, VFNCVT_RTZ_X_F, VFNCVT_RTZ_XU_F, VFWCVT_F_F, VFWCVT_RTZ_X_F, VFWCVT_X_F, VFNCVT_X_F, VFNCVT_ROD_F_F, VFNCVT_XU_F, VFNCVT_F_X,
    VFNCVT_F_XU, VFWCVT_F_X, VFWCVT_F_XU, VFCVT_XU_F, VFCVT_X_F, VFCVT_F_XU, VFCVT_F_X, VFCVT_RTZ_XU_F, VFCVT_RTZ_X_F, VFWCVT_XU_F, VFWCVT_RTZ_XU_F,
@@ -1411,8 +1411,7 @@ function automatic logic is_vf_noncomp(input instr_type_t instr);
                       (instr == VMFLE)     ||
                       (instr == VMFGT)     ||
                       (instr == VMFGE)     ||
-                      (instr == VFCLASS)   ||
-                      (instr == VFMV)) ? 1'b1 : 1'b0;
+                      (instr == VFCLASS)   ) ? 1'b1 : 1'b0;
 endfunction
 
 function automatic logic is_vf_conv(input instr_type_t instr);

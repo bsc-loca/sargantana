@@ -682,7 +682,7 @@ bus64_t ext_element;
 always_comb begin
     ext_element = 'h0;
     data_rd = 'h0;
-    if ((instr_to_out.instr.instr_type == VMV_X_S) || (instr_to_out.instr.instr_type == VFMV_F_S)) begin
+    if (instr_to_out.instr.instr_type == VMV_X_S) begin
         //Extract element 0
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -696,6 +696,26 @@ always_comb begin
             end
             SEW_64: begin
                 data_rd = vs2_elements[0];
+            end
+            default: begin // use default case to avoid linting issues
+                data_rd = '0;
+            end
+        endcase
+    end
+    else if (instr_to_out.instr.instr_type == VFMV_F_S) begin
+        // the VFMV must be treatened differently to scalar, as NaN boxing apply is compulory
+        case (instr_to_out.instr.sew)
+            SEW_16: begin // putting this for future support on FP16
+                data_rd = {{48{1'b1}}, vs2_elements[0][15:0]};
+            end
+            SEW_32: begin
+                data_rd = {{32{1'b1}}, vs2_elements[0][31:0]};
+            end
+            SEW_64: begin
+                data_rd = vs2_elements[0];
+            end
+            default: begin // use default case to avoid linting issues
+                data_rd = '0;
             end
         endcase
     end 
@@ -939,9 +959,6 @@ bus_simd_t result_data_vd;
 bus64_t shift_amount_in_vslide;
 bus64_t gather_index;
 
-bus_simd_t replication_rs1_bus;
-assign replication_rs1_bus = (instr_to_out.instr.sew == SEW_64) ? {(VLEN/64){instr_to_out.data_rs1}} : {(VLEN/32){instr_to_out.data_rs1[31:0]}};
-
 always_comb begin
     shift_amount_in_vslide = 'h0;
     gather_index = 'h0;
@@ -956,7 +973,7 @@ always_comb begin
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin // ready in 1c always
         result_data_vd = data_vf7_vd;
     end else if ((instr_to_out.instr.instr_type == VFMERGE) || (instr_to_out.instr.instr_type == VFMV)) begin
-        result_data_vd = replication_rs1_bus;
+        result_data_vd = rs1_replicated;
     end else if (is_vred(instr_to_out)) begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
@@ -1602,32 +1619,28 @@ always_comb begin
     else if (instr_to_out.instr.instr_type == VFMV_S_F) begin
         result_data_vd = '1;
         case (instr_to_out.instr.sew)
-            SEW_8: begin
-                if (instr_to_out.instr.vta) begin
-                    result_data_vd = {{(VLEN-8){1'b1}}, instruction_i.data_rs1[7:0]};
-                end else begin
-                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):8], instruction_i.data_rs1[7:0]};
-                end
-            end
+            // sew 8 is not allowed fo floating-point operations,
+            // maintainign SEW_16 for future FP16 support
             SEW_16: begin
                 if (instr_to_out.instr.vta) begin
                     result_data_vd = {{(VLEN-16){1'b1}}, instruction_i.data_rs1[15:0]};
                 end else begin
-                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], instruction_i.data_rs1[15:0]};
+                    // using rs1_replicated instead of rs1 to handle NaN boxing correctly
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):16], rs1_replicated[15:0]};
                 end
             end
             SEW_32: begin
                 if (instr_to_out.instr.vta) begin
                     result_data_vd = {{(VLEN-32){1'b1}}, instruction_i.data_rs1[31:0]};
                 end else begin
-                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], instruction_i.data_rs1[31:0]};
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):32], rs1_replicated[31:0]};
                 end
             end
             SEW_64: begin
                 if (instr_to_out.instr.vta) begin
                     result_data_vd = {{(VLEN-64){1'b1}}, instruction_i.data_rs1[63:0]};
                 end else begin
-                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], instruction_i.data_rs1[63:0]};
+                    result_data_vd = {instr_to_out.data_old_vd[(VLEN-1):64], rs1_replicated[63:0]};
                 end
             end
             default: begin
