@@ -135,7 +135,8 @@ package def_pkg;
                                                 
     localparam logic [63:0] HS_DELEG_INTERRUPTS = riscv_pkg::MIP_VSSIP
                                                 | riscv_pkg::MIP_VSTIP
-                                                | riscv_pkg::MIP_VSEIP;
+                                                | riscv_pkg::MIP_VSEIP
+                                                | riscv_pkg::MIP_SGEIP;
     
     // read mask for SIP and SIE over MIP
     localparam logic [63:0] SMODE_SIP_SIE_READ_MASK = riscv_pkg::MIP_SSIP
