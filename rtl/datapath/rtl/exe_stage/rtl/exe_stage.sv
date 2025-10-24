@@ -359,6 +359,7 @@ simd_unit simd_unit_inst (
     .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
+    .instruction_fp_o (simd_to_fp_wb),
     .instruction_simd_o  (simd_to_simd_wb),
     .stall_prev_o   (fpnew_stall_simd)
 );
