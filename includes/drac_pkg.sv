@@ -1369,7 +1369,7 @@ localparam fpnew_pkg::fpu_implementation_t SARG_ADDMUL_ONLY = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
-function logic is_vf_addmul(input instr_type_t instr);
+function automatic logic is_vf_addmul(input instr_type_t instr);
     is_vf_addmul = ((instr == VFADD)      ||
                     (instr == VFSUB)      ||
                     (instr == VFRSUB)     ||
@@ -1394,12 +1394,12 @@ function logic is_vf_addmul(input instr_type_t instr);
                     (instr == VFWNMSAC)   ) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vf_divsqrt(input instr_type_t instr);
+function automatic logic is_vf_divsqrt(input instr_type_t instr);
     is_vf_divsqrt = ((instr == VFDIV)     ||
                      (instr == VFSQRT)    ) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vf_noncomp(input instr_type_t instr);
+function automatic logic is_vf_noncomp(input instr_type_t instr);
     is_vf_noncomp =  ((instr == VFMIN)                              ||
                       (instr == VFMAX)                              ||
                       (instr == VFSGNJ)    ||
@@ -1415,7 +1415,7 @@ function logic is_vf_noncomp(input instr_type_t instr);
                       (instr == VFMV)) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vf_conv(input instr_type_t instr);
+function automatic logic is_vf_conv(input instr_type_t instr);
     is_vf_conv =     ((instr == FCVT_F2I)       ||
                     (instr == VFCVT_XU_F)       ||
                     (instr == VFCVT_X_F)        ||
@@ -1440,7 +1440,7 @@ function logic is_vf_conv(input instr_type_t instr);
                     (instr == VFNCVT_ROD_F_F)) ? 1'b1 : 1'b0;
 endfunction 
 
-function logic is_result_right_aligned(input rr_exe_simd_instr_t instr);
+function automatic logic is_result_right_aligned(input rr_exe_simd_instr_t instr);
     is_result_right_aligned = ((instr.instr.instr_type == VMFEQ) ||
                (instr.instr.instr_type == VMFLT) ||
                (instr.instr.instr_type == VMFLE) ||
@@ -1450,23 +1450,23 @@ function logic is_result_right_aligned(input rr_exe_simd_instr_t instr);
 endfunction
 
 
-function logic is_vfpnew(input instr_type_t instr);
+function automatic logic is_vfpnew(input instr_type_t instr);
     is_vfpnew = is_vf_addmul(instr) || is_vf_divsqrt(instr) || is_vf_noncomp(instr) || is_vf_conv(instr);
 endfunction
 
-function logic is_vf_approx (input instr_type_t instr);
+function automatic logic is_vf_approx (input instr_type_t instr);
     is_vf_approx = ((instr == VFRSQRT7)   ||
                     (instr == VFREC7)     ) ? 1'b1 : 1'b0;
 endfunction
 
-function logic is_vf_redu (input instr_type_t instr);
+function automatic logic is_vf_redu (input instr_type_t instr);
     is_vf_redu = ((instr == VFREDUSUM)  ||
                   (instr == VFREDMAX)   ||
                   (instr == VFREDMIN)   ||
                   (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0; 
 endfunction 
 
-function logic is_vf_redo (input instr_type_t instr);
+function automatic logic is_vf_redo (input instr_type_t instr);
     is_vf_redo = ((instr == VFREDOSUM)  ||
                   (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0;
 endfunction
