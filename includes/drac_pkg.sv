@@ -1345,6 +1345,7 @@ typedef struct packed {
 typedef struct packed { 
     logic miss;
     logic [PPN_SIZE-1:0] ppn; 
+    logic [PPN_SIZE-1:0] virt_ppn;
     tlb_ex_t xcpt;
     tlb_ex_t             guest_xcpt;
     logic [7:0] hit_idx;
