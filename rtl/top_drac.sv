@@ -132,6 +132,9 @@ logic csr_v_mode, ld_st_v_mode;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
+logic [3:0] csr_m_cmo;
+logic [3:0] csr_s_cmo;
+logic [3:0] csr_h_cmo;
 logic en_ld_st_translation, en_ld_st_g_translation;
 logic en_translation, en_g_translation;
 logic csr_hu;
@@ -329,6 +332,9 @@ datapath #(
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .csr_vs_i(vcsr_vs),
+    .csr_m_cmo_i(csr_m_cmo),
+    .csr_s_cmo_i(csr_s_cmo),
+    .csr_h_cmo_i(csr_h_cmo),
     .en_ld_st_translation_i(en_ld_st_translation),
     .en_ld_st_g_translation_i(en_ld_st_g_translation),
     .csr_hu_i(csr_hu),
@@ -414,6 +420,11 @@ csr_bsc #(
     .vcsr_vs_o(vcsr_vs),
     .vreg_modified_i(req_datapath_csr_interface.vreg_modified),
     .vxsat_i(req_datapath_csr_interface.csr_vxsat),
+
+    .csr_m_cmo_cfg_o(csr_m_cmo),    // M mode cmo related flags (CBIE, CBCFE, CBZE)
+    .csr_s_cmo_cfg_o(csr_s_cmo),    // S mode cmo related flags (CBIE, CBCFE, CBZE)
+    .csr_h_cmo_cfg_o(csr_h_cmo),    // H extension cmo related flags (CBIE, CBCFE, CBZE)
+
 
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
     .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled

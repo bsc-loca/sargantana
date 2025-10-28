@@ -37,7 +37,10 @@ module datapath
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input logic [2:0]       csr_frm_i, 
     input logic [1:0]       csr_fs_i,  
-    input logic [1:0]       csr_vs_i,  
+    input logic [1:0]       csr_vs_i,
+    input logic [3:0]       csr_m_cmo_i,
+    input logic [3:0]       csr_s_cmo_i,
+    input logic [3:0]       csr_h_cmo_i,
     input logic             en_translation_i,
     input logic             en_g_translation_i,
     input logic             en_ld_st_translation_i,
@@ -481,6 +484,9 @@ endfunction
         .frm_i          (csr_frm_i),
         .csr_fs_i       (csr_fs_i), 
         .csr_vs_i       (csr_vs_i), 
+        .csr_m_cmo_i    (csr_m_cmo_i),
+        .csr_s_cmo_i    (csr_s_cmo_i),
+        .csr_h_cmo_i    (csr_h_cmo_i),
         .vl_short_o     (vl_id_exe),
         .csr_hu_i       (csr_hu_i),
         .vset_rs2_i     (reg_to_exe.data_rs2),
@@ -1600,13 +1606,13 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                          (instruction_to_commit[0].instr_type == VSETVLI) ||
                                          (instruction_to_commit[0].instr_type == VSETIVLI));                                       
 
-    assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
+    assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE)  || (instruction_to_commit[0].mem_type == CMO_CBO) ||
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid
                                         && !((instruction_to_commit[0].vl == 'h0) && ((instruction_to_commit[0].instr_type == VSE) || 
                                                                (instruction_to_commit[0].instr_type == VSM) ||
                                                                (instruction_to_commit[0].instr_type == VSSE)||
                                                                (instruction_to_commit[0].instr_type == VSXE))));
-    assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
+    assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE)  || (instruction_to_commit[1].mem_type == CMO_CBO) ||
                                         (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid && !instruction_to_commit[0].ex_valid
                                         && !((instruction_to_commit[1].vl == 'h0) && ((instruction_to_commit[1].instr_type == VSE) || 
                                                                (instruction_to_commit[1].instr_type == VSM) ||

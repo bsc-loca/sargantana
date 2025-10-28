@@ -308,6 +308,10 @@ typedef enum logic [2:0] {
     F3_OPCFG = 3'b111
 } op_func3_vector_t;
 
+typedef enum logic [2:0] {
+    F3_CBO = 3'b010
+} op_funct3_misc_mem_t;
+
 typedef enum logic [5:0] {
     F6_VADD         = 6'b000000,
     F6_VANDN        = 6'b000001,
@@ -607,6 +611,18 @@ typedef enum logic [4:0] {
     AMOMAXU_D   = 5'b11100
 } op_func7_atomics_64_t;
 
+typedef enum logic [11:0] {
+    IMM_CBO_INVAL   = 12'b000000000000,
+    IMM_CBO_CLEAN   = 12'b000000000001,
+    IMM_CBO_FLUSH   = 12'b000000000010,
+    IMM_CBO_ZERO    = 12'b000000000100
+} op_cbo_imm_t;
+
+typedef enum logic [4:0] {
+    F5_CMO_PREFETCH_I = 5'b00000,
+    F5_CMO_PREFETCH_R = 5'b00001,
+    F5_CMO_PREFETCH_W = 5'b00011
+} op_func5_cmo_prefetch_t;
 // ------------------------------------------------
 // Bit-manip
 // ------------------------------------------------

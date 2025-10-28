@@ -263,9 +263,12 @@ always_comb begin
     mem_instr.ex                  = 0;
     mem_instr.instr               = from_rr_i.instr;
     mem_instr.instr.instr_type    = from_rr_i.instr.instr_type;
-    mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
+    mem_instr.is_amo_store_or_cmo = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO) ||
+                                    (from_rr_i.instr.mem_type == CMO_CBO) || (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
     mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
+    mem_instr.is_cmo              = (from_rr_i.instr.mem_type == CMO_CBO);
+    mem_instr.is_cmo_prefetch     = (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.vl                  = from_rr_i.instr.vl;
     mem_instr.agu_req_tag = '0;
     mem_instr.vmisalign_xcpt = 0;              

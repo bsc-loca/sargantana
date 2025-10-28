@@ -34,6 +34,9 @@ module decoder
     input   logic [2:0]      frm_i, // FP rounding Mode from CSR
     input   logic [1:0]      csr_fs_i, 
     input   logic [1:0]      csr_vs_i, 
+    input   logic [3:0]      csr_m_cmo_i, // M mode CMO related flags ([3] CBZE,[2] CBCFE,[1:0] CBIE)
+    input   logic [3:0]      csr_s_cmo_i, // S mode CMO related flags ([3] CBZE,[2] CBCFE,[1:0] CBIE)
+    input   logic [3:0]      csr_h_cmo_i, // H extension CMO related flags ([3] CBZE,[2] CBCFE,[1:0] CBIE)
     input   bus64_t          vset_rs2_i,
     input   bus64_t          vset_rs1_i,
     input   logic            csr_hu_i,
@@ -461,7 +464,32 @@ module decoder
                             decode_instr_int.instr_type = XOR_INST;
                         end
                         F3_ORI: begin
-                            decode_instr_int.instr_type = OR_INST;
+                            // CMO prefetch 
+                            if(decode_i.inst.itype.rd == '0) begin
+                                unique case(decode_i.inst.itype.imm[24:20])
+                                    F5_CMO_PREFETCH_I : begin // FIXME: For now do nothing, it does not make sense to send prefetch request if we only have one port in icache
+                                        decode_instr_int.instr_type = ADD;
+                                    end
+                                    F5_CMO_PREFETCH_R: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.mem_type = CMO_PREFETCH;
+                                        decode_instr_int.unit = UNIT_MEM;
+                                        decode_instr_int.instr_type = CMO_PREFETCH_R;
+                                    end
+                                    F5_CMO_PREFETCH_W: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.mem_type = CMO_PREFETCH;
+                                        decode_instr_int.unit = UNIT_MEM;
+                                        decode_instr_int.instr_type = CMO_PREFETCH_W;
+                                    end
+                                    default: begin
+                                        decode_instr_int.instr_type = OR_INST;
+                                    end
+                                endcase
+                            end
+                            else begin // ORI
+                                decode_instr_int.instr_type = OR_INST;
+                            end
                         end
                         F3_ANDI: begin
                             decode_instr_int.instr_type = AND_INST;
@@ -2858,6 +2886,99 @@ module decoder
                         F3_FENCE_I: begin
                             decode_instr_int.instr_type = FENCE_I;
                             decode_instr_int.stall_csr_fence = 1'b1;
+                        end
+                        F3_CBO: begin //Zicbom extension (CMO instructions) -> // TODO: Hypervisor cmo config with CSRs
+                            decode_instr_int.use_rs1 = 1'b1;
+                            decode_instr_int.mem_type = CMO_CBO; // CMO Cache Block Operations (flush, inval, clean, zero)
+                            decode_instr_int.unit = UNIT_MEM;
+                            decode_instr_int.stall_csr_fence = 1'b0;
+                            case (decode_i.inst.itype.imm)
+                                IMM_CBO_INVAL : begin
+                                    // Invalidation instruction not enabled by CSR
+                                    if(((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_m_cmo_i[1:0] == 2'b00)) || 
+                                       ((v_mode_i == 1'b0) && ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[1:0] == 2'b00)))) 
+                                    begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    // Invalidation instruction not enabled by CSR (Processor in VS/VU mode)
+                                    else if((v_mode_i == 1'b1) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_h_cmo_i[1:0] == 2'b00)) ||
+                                                                   ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[1:0] == 2'b00)))) 
+                                    begin
+                                            xcpt_virtual_instruction_int = 1'b1;
+                                    end
+                                    // Execute Flush instead of Inval (Inval does not write back dirty data)
+                                    else if(((v_mode_i == 1'b0) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_m_cmo_i[1:0] == 2'b01))  ||
+                                                                    ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[1:0] == 2'b01)))) ||
+                                            ((v_mode_i == 1'b1) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_h_cmo_i[1:0] == 2'b01))  ||
+                                                                    ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[1:0] == 2'b01)))))
+                                    begin
+                                            decode_instr_int.instr_type = CBO_FLUSH;
+                                    end
+                                    // Execute inval -> If the configuration of the envcfg register is 10 (reserved) an inval is executed anyways 
+                                    else 
+                                    begin
+                                        decode_instr_int.instr_type = CBO_INVAL;
+                                    end
+                                end
+                                IMM_CBO_CLEAN : begin
+                                    // Clean instruction not enabled by CSR
+                                    if(((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_m_cmo_i[2] == 1'b0)) || 
+                                       ((v_mode_i == 1'b0) && ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[2] == 1'b0)))) 
+                                    begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    // Clean instruction not enabled by CSR (Processor in VS/VU mode)
+                                    else if((v_mode_i == 1'b1) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_h_cmo_i[2] == 1'b0)) ||
+                                                                   ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[2] == 1'b0)))) 
+                                    begin
+                                            xcpt_virtual_instruction_int = 1'b1;
+                                    end
+                                    else
+                                    begin
+                                        decode_instr_int.instr_type = CBO_CLEAN;
+                                    end
+                                end
+                                IMM_CBO_FLUSH: begin
+                                    // Flush instruction not enabled by CSR
+                                    if(((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_m_cmo_i[2] == 1'b0)) || 
+                                       ((v_mode_i == 1'b0) && ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[2] == 1'b0))))
+                                    begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    // Flush instruction not enabled by CSR (Processor in VS/VU mode)
+                                    else if((v_mode_i == 1'b1) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_h_cmo_i[2] == 1'b0)) ||
+                                                                   ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[2] == 1'b0)))) 
+                                    begin
+                                            xcpt_virtual_instruction_int = 1'b1;
+                                    end
+                                    else
+                                    begin
+                                        decode_instr_int.instr_type = CBO_CLEAN;
+                                    end
+                                end
+                                IMM_CBO_ZERO: begin
+                                    // Flush instruction not enabled by CSR
+                                    if(((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_m_cmo_i[3] == 1'b0)) || 
+                                       ((v_mode_i == 1'b0) && ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[3] == 1'b0))))
+                                    begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                    // Flush instruction not enabled by CSR (Processor in VS/VU mode)
+                                    else if((v_mode_i == 1'b1) && (((priv_lvl_i != riscv_pkg::PRIV_LVL_M) && (csr_h_cmo_i[3] == 1'b0)) ||
+                                                                   ((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_s_cmo_i[3] == 1'b0)))) 
+                                    begin
+                                            xcpt_virtual_instruction_int = 1'b1;
+                                    end
+                                    else
+                                    begin
+                                        decode_instr_int.instr_type = CBO_ZERO;
+                                        decode_instr_int.mem_size = '1;
+                                    end
+                                end
+                                default : begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
                         end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;

@@ -220,11 +220,13 @@ typedef enum logic [1:0] {
 } next_pc_sel_t;    // Enum PC Selection
 
 
-typedef enum logic [1:0] {
-    NOT_MEM  = 2'b00,
-    LOAD     = 2'b01,
-    STORE    = 2'b10,
-    AMO      = 2'b11
+typedef enum logic [2:0] {
+    NOT_MEM       = 3'b000,
+    LOAD          = 3'b001,
+    STORE         = 3'b010,
+    AMO           = 3'b011,
+    CMO_CBO       = 3'b100,
+    CMO_PREFETCH  = 3'b101
 } mem_type_t; 
 
 typedef enum logic [2:0] {
@@ -415,7 +417,11 @@ typedef enum logic [8:0] {
    // Zbb bit-manip
    XNOR_INST, ORN, ANDN, ROL, ROR, ROLW, RORW, ZEXTH, SEXTB, SEXTH, MIN, MINU, MAX, MAXU, REV8, ORCB, CLZ, CLZW, CTZ, CTZW, CPOP, CPOPW,
    // Zbs bit-manip
-   BCLR, BEXT, BINV, BSET
+   BCLR, BEXT, BINV, BSET,
+   // CMO block instructions
+   CBO_INVAL, CBO_CLEAN, CBO_FLUSH, CBO_ZERO,
+   // CMO prefetch instructions
+   CMO_PREFETCH_I, CMO_PREFETCH_R, CMO_PREFETCH_W
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {
@@ -450,9 +456,11 @@ typedef struct packed {
     instr_type_t    instr_type;        // Type of instruction
     logic [3:0]       mem_size;        // Granularity of mem. access
     logic [6:0]             rd;        // Destination register. Used for identify a pending Miss
-    logic      is_amo_or_store;        // Type of instruction is amo or store
+    logic  is_amo_store_or_cmo;        // Type of instruction is amo, store or cmo
     logic               is_amo;        // Type of instruction is amo
-    logic             is_store;        // Type of instruction is amo
+    logic             is_store;        // Type of instruction is store
+    logic               is_cmo;        // Type of instruction is cmo
+    logic      is_cmo_prefetch;        // Type of instruction is cmo_prefetch
 } req_cpu_dcache_t;
 
 // Fetch 1 Stage
@@ -658,9 +666,11 @@ typedef struct packed {
     phreg_t fprd;                       // Physical register destination
     phreg_t old_fprd;                   // Old Physical register destination
     
-    logic is_amo_or_store;              // Encodes if type instruction is amo or store
+    logic is_amo_store_or_cmo;          // Encodes if type instruction is amo or store
     logic is_amo;                       // Encodes if type instruction is amo
     logic is_store;                     // Encodes if type instruction is store
+    logic is_cmo;                       // Encodes if type instruction is cmo management 
+    logic is_cmo_prefetch;              // Encodes if type instruction is cmo prefetch
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -702,9 +712,11 @@ typedef struct packed {
     phreg_t fprd;                       // Physical register destination
     phreg_t old_fprd;                   // Old Physical register destination
     
-    logic is_amo_or_store;              // Encodes if type instruction is amo or store
+    logic is_amo_store_or_cmo;          // Encodes if type instruction is amo or store
     logic is_amo;                       // Encodes if type instruction is amo
     logic is_store;                     // Encodes if type instruction is store
+    logic is_cmo;                       // Encodes if type instruction is cmo management 
+    logic is_cmo_prefetch;              // Encodes if type instruction is cmo prefetch
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch

@@ -117,7 +117,7 @@ assign write_enable = instruction_i.valid & (num < (NUM_ENTRIES-1)) & ~(flush_i)
 assign read_enable = {1'b0,read_head_i[1]} + {1'b0,read_head_i[0]}; // & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
 
 
-assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || 
+assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || (instruction_i.mem_type == CMO_CBO) ||
                          (instruction_i.instr_type == VSSE) || (instruction_i.instr_type == VSXE);
 
 gl_instruction_t [NUM_ENTRIES-1:0] entries_q;

@@ -142,7 +142,7 @@ end
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    (((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    (((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
@@ -163,7 +163,8 @@ end
                                     (instruction_to_commit_i[1].instr_type == VSETVLI)) ||
                                     (instruction_to_commit_i[1].instr_type == VSETIVLI)) ||
                                     (instruction_to_commit_i[1].mem_type == STORE)) ||
-                                    (instruction_to_commit_i[1].mem_type == AMO)) ||
+                                    (instruction_to_commit_i[1].mem_type == AMO))) ||
+                                    (instruction_to_commit_i[1].mem_type == CMO_CBO)) ||
                                     instruction_to_commit_i[1].stall_csr_fence))) ||
                                     (instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid));
 
