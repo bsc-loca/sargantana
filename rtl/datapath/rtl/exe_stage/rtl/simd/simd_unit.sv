@@ -240,6 +240,7 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMSIF)  ||
              (instr.instr.instr_type == VMSOF)  ||
              (instr.instr.instr_type == VMADC)  ||             
+             (instr.instr.instr_type == VMSBC)  ||
              (instr.instr.instr_type == VMFNE)  ||
              (instr.instr.instr_type == VMFLT)  ||
              (instr.instr.instr_type == VMFEQ)  ||
