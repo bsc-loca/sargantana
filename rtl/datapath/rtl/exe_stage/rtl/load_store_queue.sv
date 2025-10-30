@@ -177,7 +177,7 @@ always_comb begin
                 & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Guest Page fault store
         translated_instr.ex.cause       = ST_GUEST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
-        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.virt_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
                                                  (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
         translated_instr.ex.tinst   = '0;
         translated_instr.ex.gva         = v_mode_i;
@@ -187,7 +187,7 @@ always_comb begin
                 || ((~instr_to_translate.is_amo_or_store | is_load_reserved | is_hlvx_inst) & (en_ld_st_g_translation_i & ~en_ld_st_translation_i) & (|instr_to_translate.data_rs1[63:PHY_VIRT_MAX_ADDR_SIZE-1]))) begin // Guest Page fault load
         translated_instr.ex.cause       = LD_GUEST_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
-        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.virt_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
                                                  (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
         translated_instr.ex.tinst   = '0;
         translated_instr.ex.gva         = v_mode_i;

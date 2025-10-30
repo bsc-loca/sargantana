@@ -283,6 +283,7 @@ typedef struct packed {
 typedef struct packed {
     logic   valid;               // Response valid
     inst_t  data;                // Word of 32 bits from Icache
+    logic [PPN_SIZE-1:0] guest_ppn;
     logic   instr_page_fault;    // Page Fault from TLB
     logic   instr_guest_page_fault; // Guest Page Fault from TLB
 } resp_icache_cpu_t;
@@ -1345,7 +1346,7 @@ typedef struct packed {
 typedef struct packed { 
     logic miss;
     logic [PPN_SIZE-1:0] ppn; 
-    logic [PPN_SIZE-1:0] virt_ppn;
+    logic [PPN_SIZE-1:0] guest_ppn;
     tlb_ex_t xcpt;
     tlb_ex_t             guest_xcpt;
     logic [7:0] hit_idx;

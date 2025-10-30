@@ -43,6 +43,8 @@ module if_stage_1
     input logic                 invalidate_buffer_i,
     input logic                 en_translation_i,
     input logic                 en_g_translation_i,
+    // Response packet coming from Icache
+    input resp_icache_cpu_t     resp_icache_cpu_i,
     // PC comming from commit/decode/ecall/debug
     input addrPC_t              pc_jump_i,
     // Signals for branch predictor from exe stage 
@@ -205,7 +207,8 @@ module if_stage_1
     end
 
     assign fetch_o.ex.origin = pc;
-    assign fetch_o.ex.origin2 = (pc >> 2);
+    assign fetch_o.ex.origin2 = (en_translation_i && v_mode_i) ? (({resp_icache_cpu_i.guest_ppn, pc[11:0]}) >> 2) :
+                                                 (pc >> 2); //GVA = GPA in G-stage only translations
     assign fetch_o.ex.tinst = 0;
     assign fetch_o.ex.gva = v_mode_i;
    

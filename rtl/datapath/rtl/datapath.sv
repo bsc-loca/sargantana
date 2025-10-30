@@ -419,6 +419,7 @@ endfunction
         .invalidate_buffer_i(invalidate_buffer_int),
         .en_translation_i(en_translation_i), 
         .en_g_translation_i(en_g_translation_i), 
+        .resp_icache_cpu_i(resp_icache_cpu_i),
         .pc_jump_i(pc_jump_if_int),
         .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
@@ -442,6 +443,9 @@ endfunction
     if_stage_2 if_stage_2_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .v_mode_i(csr_v_mode_i),
+        .en_translation_i(en_translation_i), 
+        .en_g_translation_i(en_g_translation_i), 
         .fetch_i(stage_if_1_if_2_q),
         .stall_i(control_int.stall_if_2),
         .flush_i(flush_int.flush_if),
