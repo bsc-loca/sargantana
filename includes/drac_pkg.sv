@@ -1462,7 +1462,7 @@ function automatic logic is_vf_redu (input instr_type_t instr);
     is_vf_redu = ((instr == VFREDUSUM)  ||
                   (instr == VFREDMAX)   ||
                   (instr == VFREDMIN)   ||
-                  (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0; 
+                  (instr == VFWREDUSUM) ) ? 1'b1 : 1'b0;
 endfunction 
 
 function automatic logic is_vf_redo (input instr_type_t instr);
