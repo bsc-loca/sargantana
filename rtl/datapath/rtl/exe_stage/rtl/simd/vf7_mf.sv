@@ -190,16 +190,8 @@ always_comb begin
     
     // Handle special cases
     if (src_is_nan) begin
-        if (src_is_snan) begin
-            computed_result = fp64_mode ? 
-                {src_sign, FP64_MAX_EXP, 1'b1, 51'h0} : 
-                {src_sign, FP32_MAX_EXP, 1'b1, 22'h0};
-            computed_exceptions[NV_FLAG] = 1'b1;
-        end else begin
-            computed_result = fp64_mode ? 
-                {src_sign, FP64_MAX_EXP, 52'h8000000000000} : 
-                {src_sign, FP32_MAX_EXP, 23'h400000};
-        end
+        computed_result = fp64_mode ? drac_pkg::FP64_QNAN : drac_pkg::FP32_QNAN;
+        computed_exceptions[NV_FLAG] = src_is_snan ? 1'b1 : 1'b0;
     end else if (src_is_inf) begin
         if (operation_i == 1'b0) begin // VFREC7
             computed_result = fp64_mode ? 
