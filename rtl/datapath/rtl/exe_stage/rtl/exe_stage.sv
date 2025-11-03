@@ -210,6 +210,16 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
                                      & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
 
+logic fpnew_stall_simd_old;
+
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if (~rstn_i) begin
+        fpnew_stall_simd_old <= 1'b0;
+    end else begin
+        fpnew_stall_simd_old <= fpnew_stall_simd;
+    end
+end
+
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
     arith_instr.data_rs2            = rs2_data_def[63:0];
@@ -309,7 +319,7 @@ always_comb begin
         fp_instr.instr.valid      = 1'b0;
         simd_instr.instr.valid    = 1'b0;
     end else begin
-        simd_instr.instr.valid = (stall_simd || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
+        simd_instr.instr.valid = (stall_simd || fpnew_stall_simd_old || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
     end
 
     if (~ready || kill_i) begin
@@ -380,6 +390,8 @@ simd_unit simd_unit_inst (
 `else
 assign simd_to_scalar_wb.valid = 1'b0;
 assign simd_to_simd_wb.valid = 1'b0;
+assign simd_to_fp_wb.valid = 1'b0;
+assign fpnew_stall_simd = 1'b0;
 `endif
 
 `ifndef DISABLE_SIMD
@@ -607,7 +619,7 @@ always_comb begin
             stall_int = (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_SIMD) begin
-            stall_simd_int = stall_simd | fpnew_stall_simd;
+            stall_simd_int = stall_simd | fpnew_stall_simd | fpnew_stall_simd_old; // This last needed to add an extra cycle after the valid disabilitation
             stall_int = (~ready);
         end
     end
