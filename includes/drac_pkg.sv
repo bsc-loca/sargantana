@@ -1396,6 +1396,7 @@ endfunction
 
 function automatic logic is_vf_divsqrt(input instr_type_t instr);
     is_vf_divsqrt = ((instr == VFDIV)     ||
+                     (instr == VFRDIV)    ||
                      (instr == VFSQRT)    ) ? 1'b1 : 1'b0;
 endfunction
 
