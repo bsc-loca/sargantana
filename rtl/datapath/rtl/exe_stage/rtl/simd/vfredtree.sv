@@ -215,7 +215,7 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
         // the MAXMIN must first be masked and canonicalized if needed
         fp32maxmin_masked = (~fp32aisvalid_end[DELAY_SUM_FP32-1] && ~fp32bisvalid_end[DELAY_SUM_FP32-1]) ? 32'h0000_0000 :
                             ~fp32aisvalid_end[DELAY_SUM_FP32-1] ? is_nan_f32(fp32srcb_end[DELAY_SUM_FP32-1]) ? FP32_QNAN : fp32srcb_end[DELAY_SUM_FP32-1] :
-                            ~fp32bisvalid_end[DELAY_SUM_FP32-1] ? is_nan_f32(fp32srca_end[DELAY_SUM_FP32-1]) ? FP32_QNAN : fp32srcb_end[DELAY_SUM_FP32-1] :
+                            ~fp32bisvalid_end[DELAY_SUM_FP32-1] ? is_nan_f32(fp32srca_end[DELAY_SUM_FP32-1]) ? FP32_QNAN : fp32srca_end[DELAY_SUM_FP32-1] :
                             fp32maxmin;
 
         // for maxmin instructions the invalid check should also be done by the fpnew
