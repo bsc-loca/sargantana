@@ -1905,28 +1905,24 @@ module decoder
                                         decode_instr_int.instr_type = VASUB;
                                     end
                                     F6_VDIVU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VDIVU;
                                     end
                                     F6_VDIV: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VDIV;
                                     end
                                     F6_VREMU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREMU;
                                     end
                                     F6_VREM: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
@@ -1962,22 +1958,18 @@ module decoder
                                         decode_instr_int.instr_type = VMULH;
                                     end
                                     F6_VDIVU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VDIVU;
                                     end
                                     F6_VDIV: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VDIV;
                                     end
                                     F6_VREMU: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VREMU;
                                     end
                                     F6_VREM: begin
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VREM;
                                     end
@@ -2739,7 +2731,6 @@ module decoder
                                         if ((decode_i.inst.vtype.vs2 == VS2_S_F) && (decode_i.inst.vtype.vm == 1'b1)) begin //forood: I'm not sure if checking for vs2 is needed or not
                                             decode_instr_int.use_vs2 = 1'b0;
                                             decode_instr_int.use_fs1 = 1'b1;
-                                            decode_instr_int.vregfile_we = 1'b1;
                                             decode_instr_int.instr_type = VFMV_S_F;
                                         end
                                         else begin
@@ -2750,14 +2741,12 @@ module decoder
                                     F6_VFSLIDE1UP: begin
                                         // decode_instr_int.use_mask = 1'b1
                                         decode_instr_int.use_fs1 = 1'b1;
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.instr_type = VFSLIDE1UP;
                                     end
 
                                     F6_VFSLIDE1DOWN: begin
                                         // decode_instr_int.use_mask = 1'b1
                                         decode_instr_int.use_fs1 = 1'b1;
-                                        decode_instr_int.vregfile_we = 1'b1;
                                         decode_instr_int.instr_type = VFSLIDE1DOWN;
                                     end
  
