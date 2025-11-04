@@ -45,8 +45,8 @@ module load_store_queue
     input tlb_cache_comm_t       dtlb_comm_i,
     output cache_tlb_comm_t      dtlb_comm_o,
 
-    input logic [1:0] priv_lvl_i,
-    input logic       v_mode_i,
+    input logic [1:0] ld_st_priv_lvl_i,
+    input logic       ld_st_v_mode_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -156,7 +156,7 @@ always_comb begin
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Page fault store
         translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
@@ -177,20 +177,20 @@ always_comb begin
                 & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Guest Page fault store
         translated_instr.ex.cause       = ST_GUEST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
-        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && ld_st_v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
                                                  (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     end else if (((~is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.fetch))
                 // Translation is a G-stage: Address bits 63:41 must all be zeros, or else a guest-page-fault exception occurs:
                 || ((~instr_to_translate.is_amo_or_store | is_load_reserved | is_hlvx_inst) & (en_ld_st_g_translation_i & ~en_ld_st_translation_i) & (|instr_to_translate.data_rs1[63:PHY_VIRT_MAX_ADDR_SIZE-1]))) begin // Guest Page fault load
         translated_instr.ex.cause       = LD_GUEST_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
-        translated_instr.ex.origin2 = (en_ld_st_translation_i && v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && ld_st_v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
                                                  (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva         = v_mode_i;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     `ifdef SIM_COMMIT_LOG
     end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
@@ -204,7 +204,7 @@ always_comb begin
         translated_instr.ex.origin = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
-        translated_instr.ex.gva    = v_mode_i;
+        translated_instr.ex.gva    = ld_st_v_mode_i;
         translated_instr.ex.valid  = 1'b1;
     end else begin
         translated_instr.ex = 0;
@@ -363,9 +363,9 @@ assign csr_hs_ld_st_inst_o = (instr_to_translate.instr.instr_type inside {
                                               HSV_B, HSV_H, HSV_W,
                                               HLV_WU, HLV_D, HSV_D }) ? 1'b1 : 1'b0;
 assign dtlb_comm_o.vm_enable = en_ld_st_translation_i | en_ld_st_g_translation_i;
-assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && v_mode_i;
-assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && v_mode_i;
-assign dtlb_comm_o.priv_lvl = priv_lvl_i;
+assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && ld_st_v_mode_i;
+assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && ld_st_v_mode_i;
+assign dtlb_comm_o.priv_lvl = ld_st_priv_lvl_i;
 assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
 assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;

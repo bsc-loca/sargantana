@@ -1238,6 +1238,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
         .kill_i(flush_int.kill_exe),
 
+        .en_translation_i(en_translation_i),
+        .en_g_translation_i(en_g_translation_i),
         .en_ld_st_translation_i(en_ld_st_translation_i),
         .en_ld_st_g_translation_i(en_ld_st_g_translation_i),
         .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_o),
@@ -1248,14 +1250,17 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .vleff_vl_o(vleff_vl_int),
         .vl_id_exe_i(vl_id_exe),
 
+        .resp_icache_guest_ppn_i(resp_icache_cpu_i.guest_ppn),
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
         .commit_store_or_amo_gl_idx_i(commit_cu_int.gl_index),
         .dtlb_comm_i(dtlb_comm_i),
         .dtlb_comm_o(dtlb_comm_o),
-        .priv_lvl_i(csr_ld_st_priv_lvl_i),
-        .v_mode_i(csr_ld_st_v_mode_i),
+        .priv_lvl_i(csr_priv_lvl_i),
+        .v_mode_i(csr_v_mode_i),
+        .ld_st_priv_lvl_i(csr_ld_st_priv_lvl_i),
+        .ld_st_v_mode_i(csr_ld_st_v_mode_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),

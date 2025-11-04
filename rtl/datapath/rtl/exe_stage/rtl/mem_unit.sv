@@ -54,8 +54,8 @@ module mem_unit
     output logic                 empty_o,                // Mem unit has no pending Ops
     output cache_tlb_comm_t      dtlb_comm_o,
 
-    input logic [1:0] priv_lvl_i,
-    input logic       v_mode_i,
+    input logic [1:0] ld_st_priv_lvl_i,
+    input logic       ld_st_v_mode_i,
     //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
@@ -294,8 +294,8 @@ load_store_queue  #(
     .blocked_store_o    (blocked_store),
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
-    .priv_lvl_i(priv_lvl_i),
-    .v_mode_i(v_mode_i),
+    .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
+    .ld_st_v_mode_i(ld_st_v_mode_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 

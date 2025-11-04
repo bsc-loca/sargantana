@@ -29,12 +29,15 @@
     input logic                         rstn_i,
     input logic                         kill_i,
     input logic                         flush_i,
-    input logic                         en_ld_st_translation_i, // virtualization mechanism enabled
+    input logic                         en_translation_i, // virtualization mechanism enabled
+    input logic                         en_g_translation_i,
+    input logic                         en_ld_st_translation_i,
     input logic                         en_ld_st_g_translation_i,
     output logic                        csr_hs_ld_st_inst_o,
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
+    input logic [drac_pkg::PPN_SIZE-1:0] resp_icache_guest_ppn_i,      // guest_ppn from icache interface
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input logic [VMAXELEM_LOG:0]        vl_i,
     input vxrm_t                        vxrm_i,
@@ -70,6 +73,8 @@
 
     input logic [1:0] priv_lvl_i,
     input logic       v_mode_i,
+    input logic [1:0] ld_st_priv_lvl_i,
+    input logic       ld_st_v_mode_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
@@ -332,6 +337,11 @@ div_unit div_unit_inst (
 );
 
 branch_unit branch_unit_inst (
+    .resp_icache_guest_ppn_i(resp_icache_guest_ppn_i),
+    .en_translation_i (en_translation_i),
+    .en_g_translation_i (en_g_translation_i),
+    .priv_lvl_i(priv_lvl_i),
+    .v_mode_i(v_mode_i),
     .instruction_i      (arith_instr),
     .instruction_o      (branch_to_scalar_wb)
 );
@@ -459,8 +469,8 @@ mem_unit #(
     .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
-    .priv_lvl_i(priv_lvl_i),
-    .v_mode_i(v_mode_i),
+    .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
+    .ld_st_v_mode_i(ld_st_v_mode_i),
 //    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
