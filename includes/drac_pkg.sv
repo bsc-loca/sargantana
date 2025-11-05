@@ -1483,16 +1483,22 @@ parameter int STAGES_VFREDO64_W = (VLEN/32)*DELAY_SUM_FP64+1;
 parameter int MAX_STAGES        = STAGES_VFREDO64_W;
 
 // floating-point definitions
-parameter logic [31:0] FP32_ONE = 32'h3F800000;
-parameter logic [31:0] FP32_ZERO = 32'h00000000;
-parameter logic [63:0] FP64_ONE = 64'h3FF0000000000000;
-parameter logic [63:0] FP64_ZERO = 64'h0000000000000000;
+parameter logic [31:0] FP32_ONE     = 32'h3F800000;
+parameter logic [31:0] FP32_ZERO    = 32'h00000000;
+parameter logic [31:0] FP32_NZERO   = 32'h80000000;
+parameter logic [63:0] FP64_ONE     = 64'h3FF0000000000000;
+parameter logic [63:0] FP64_ZERO    = 64'h0000000000000000;
+parameter logic [63:0] FP64_NZERO   = 64'h8000000000000000;
 
-parameter logic [31:0] FP32_QNAN = 32'h7FC00000;
-parameter logic [63:0] FP64_QNAN = 64'h7FF8000000000000;
-parameter logic [31:0] FP32_SNAN = 32'h7FA00000;
-parameter logic [63:0] FP64_SNAN = 64'h7FF4000000000000;
+parameter logic [31:0] FP32_PINF    = 32'h7F800000;
+parameter logic [31:0] FP32_NINF    = 32'hFF800000;
+parameter logic [63:0] FP64_PINF    = 64'h7FF0000000000000;
+parameter logic [63:0] FP64_NINF    = 64'hFFF0000000000000;
 
+parameter logic [31:0] FP32_QNAN    = 32'h7FC00000;
+parameter logic [63:0] FP64_QNAN    = 64'h7FF8000000000000;
+parameter logic [31:0] FP32_SNAN    = 32'h7FA00000;
+parameter logic [63:0] FP64_SNAN    = 64'h7FF4000000000000;
 
 // FP64
 function automatic logic is_nan_f64(input logic [63:0] fp64);
@@ -1660,6 +1666,34 @@ function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
             fp32_to_fp64 = {sign, exp64, frac64};
         end
     end
+endfunction
+
+// leading zeros counters for 23 bit mantissas (FP32)
+function automatic [4:0] lzc_23(input logic [22:0] x);
+  integer i;
+  begin
+    lzc_23 = 0;
+    for (i = 22; i >= 0; i--) begin
+      if (x[i]) begin
+        lzc_23 = 22 - i;
+        break;
+      end
+    end
+  end
+endfunction
+
+// leading zeros counters for 52 bit mantissas (FP64)
+function automatic [5:0] lzc_52(input logic [51:0] x);
+  integer i;
+  begin
+    lzc_52 = 0;
+    for (i = 51; i >= 0; i--) begin
+      if (x[i]) begin
+        lzc_52 = 51 - i;
+        break;
+      end
+    end
+  end
 endfunction
 
 // --------------------------------------------------------------------

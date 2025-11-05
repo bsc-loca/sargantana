@@ -72,28 +72,28 @@ localparam FP64_MAX_EXP = 11'h7FF;
 // ============================================================================
 
 localparam [895:0] LUT_VFREC7_TABLE = {
-    7'h7F,7'h7F,7'h7E,7'h7D,7'h7C,7'h7B,7'h7A,7'h79,7'h78,7'h77,7'h76,7'h75,7'h74,7'h73,7'h72,7'h71,
-    7'h70,7'h6F,7'h6E,7'h6D,7'h6C,7'h6B,7'h6A,7'h69,7'h68,7'h67,7'h66,7'h65,7'h64,7'h63,7'h62,7'h61,
-    7'h60,7'h5F,7'h5E,7'h5D,7'h5C,7'h5B,7'h5A,7'h59,7'h58,7'h57,7'h56,7'h55,7'h54,7'h53,7'h52,7'h51,
-    7'h50,7'h4F,7'h4E,7'h4D,7'h4C,7'h4B,7'h4A,7'h49,7'h48,7'h47,7'h46,7'h45,7'h44,7'h43,7'h42,7'h41,
-    7'h40,7'h3F,7'h3E,7'h3D,7'h3C,7'h3B,7'h3A,7'h39,7'h38,7'h37,7'h36,7'h35,7'h34,7'h33,7'h32,7'h31,
-    7'h30,7'h2F,7'h2E,7'h2D,7'h2C,7'h2B,7'h2A,7'h29,7'h28,7'h27,7'h26,7'h25,7'h24,7'h23,7'h22,7'h21,
-    7'h20,7'h1F,7'h1E,7'h1D,7'h1C,7'h1B,7'h1A,7'h19,7'h18,7'h17,7'h16,7'h15,7'h14,7'h13,7'h12,7'h11,
-    7'h10,7'h0F,7'h0E,7'h0D,7'h0C,7'h0B,7'h0A,7'h09,7'h08,7'h07,7'h06,7'h05,7'h04,7'h03,7'h02,7'h01
+    7'h7F,7'h7D,7'h7B,7'h79,7'h77,7'h75,7'h74,7'h72,7'h70,7'h6E,7'h6D,7'h6B,7'h69,7'h68,7'h66,7'h64,
+    7'h63,7'h61,7'h60,7'h5E,7'h5D,7'h5B,7'h5A,7'h58,7'h57,7'h55,7'h54,7'h53,7'h51,7'h50,7'h4F,7'h4D,
+    7'h4C,7'h4B,7'h4A,7'h48,7'h47,7'h46,7'h45,7'h44,7'h42,7'h41,7'h40,7'h3F,7'h3E,7'h3D,7'h3C,7'h3B,
+    7'h3A,7'h39,7'h38,7'h37,7'h36,7'h35,7'h34,7'h33,7'h32,7'h31,7'h30,7'h2F,7'h2E,7'h2D,7'h2C,7'h2B,
+    7'h2A,7'h29,7'h28,7'h28,7'h27,7'h26,7'h25,7'h24,7'h23,7'h23,7'h22,7'h21,7'h20,7'h1F,7'h1F,7'h1E,
+    7'h1D,7'h1C,7'h1C,7'h1B,7'h1A,7'h19,7'h19,7'h18,7'h17,7'h17,7'h16,7'h15,7'h15,7'h14,7'h13,7'h13,
+    7'h12,7'h11,7'h11,7'h10,7'h0F,7'h0F,7'h0E,7'h0E,7'h0D,7'h0C,7'h0C,7'h0B,7'h0B,7'h0A,7'h09,7'h09,
+    7'h08,7'h08,7'h07,7'h07,7'h06,7'h05,7'h05,7'h04,7'h04,7'h03,7'h03,7'h02,7'h02,7'h01,7'h01,7'h00
 };
 
 localparam [447:0] LUT_VFRSQRT7_EVEN_TABLE = {
-    7'h7F,7'h7D,7'h7B,7'h79,7'h77,7'h75,7'h73,7'h72,7'h70,7'h6E,7'h6D,7'h6B,7'h6A,7'h68,7'h67,7'h65,
-    7'h64,7'h62,7'h61,7'h60,7'h5E,7'h5D,7'h5C,7'h5A,7'h59,7'h58,7'h57,7'h56,7'h54,7'h53,7'h52,7'h51,
-    7'h50,7'h4F,7'h4E,7'h4D,7'h4C,7'h4B,7'h4A,7'h49,7'h48,7'h47,7'h46,7'h45,7'h44,7'h43,7'h42,7'h41,
-    7'h41,7'h40,7'h3F,7'h3E,7'h3D,7'h3C,7'h3C,7'h3B,7'h3A,7'h39,7'h39,7'h38,7'h37,7'h36,7'h36,7'h35
+    7'h7F,7'h7D,7'h7B,7'h79,7'h77,7'h76,7'h74,7'h72,7'h71,7'h6F,7'h6D,7'h6C,7'h6A,7'h69,7'h67,7'h66,
+    7'h64,7'h63,7'h61,7'h60,7'h5F,7'h5D,7'h5C,7'h5B,7'h5A,7'h58,7'h57,7'h56,7'h55,7'h54,7'h53,7'h52,
+    7'h50,7'h4F,7'h4E,7'h4D,7'h4C,7'h4B,7'h4A,7'h49,7'h48,7'h47,7'h46,7'h46,7'h45,7'h44,7'h43,7'h42,
+    7'h41,7'h40,7'h3F,7'h3F,7'h3E,7'h3D,7'h3C,7'h3B,7'h3B,7'h3A,7'h39,7'h38,7'h38,7'h37,7'h36,7'h35
 };
 
 localparam [447:0] LUT_VFRSQRT7_ODD_TABLE  = {
-    7'h34,7'h32,7'h31,7'h30,7'h2E,7'h2D,7'h2C,7'h2B,7'h2A,7'h28,7'h27,7'h26,7'h25,7'h24,7'h23,7'h22,
-    7'h21,7'h20,7'h1F,7'h1E,7'h1D,7'h1C,7'h1B,7'h1A,7'h19,7'h19,7'h18,7'h17,7'h16,7'h15,7'h14,7'h14,
-    7'h13,7'h12,7'h11,7'h11,7'h10,7'h0F,7'h0F,7'h0E,7'h0D,7'h0C,7'h0C,7'h0B,7'h0B,7'h0A,7'h09,7'h09,
-    7'h08,7'h07,7'h07,7'h06,7'h06,7'h05,7'h05,7'h04,7'h03,7'h03,7'h02,7'h02,7'h01,7'h01,7'h00,7'h00
+    7'h34,7'h33,7'h32,7'h30,7'h2F,7'h2E,7'h2C,7'h2B,7'h2A,7'h29,7'h28,7'h27,7'h26,7'h24,7'h23,7'h22,
+    7'h21,7'h20,7'h1F,7'h1E,7'h1E,7'h1D,7'h1C,7'h1B,7'h1A,7'h19,7'h18,7'h17,7'h17,7'h16,7'h15,7'h14,
+    7'h13,7'h13,7'h12,7'h11,7'h10,7'h10,7'h0F,7'h0E,7'h0E,7'h0D,7'h0C,7'h0C,7'h0B,7'h0A,7'h0A,7'h09,
+    7'h09,7'h08,7'h07,7'h07,7'h06,7'h06,7'h05,7'h04,7'h04,7'h03,7'h03,7'h02,7'h02,7'h01,7'h01,7'h00
 };
 
 // ============================================================================
@@ -104,11 +104,13 @@ logic        src_sign;
 logic [10:0] src_exp;
 logic [51:0] src_mant;
 logic        fp64_mode;
+logic [12:0] B;
 
 assign fp64_mode = (sew_i == SEW_64);
 assign src_sign  = fp64_mode ? src_i[63] : src_i[31];
 assign src_exp   = fp64_mode ? src_i[62:52] : {3'b0, src_i[30:23]};
 assign src_mant  = fp64_mode ? src_i[51:0] : {29'b0, src_i[22:0]};
+assign B = fp64_mode ? FP64_BIAS : FP32_BIAS;
 
 // ============================================================================
 // Special Case Detection
@@ -128,39 +130,30 @@ assign src_is_snan      = fp64_mode ? drac_pkg::is_snan_f64    (src_i[63:0]) : d
 assign src_is_subnormal = fp64_mode ? drac_pkg::is_subnorm_f64 (src_i[63:0]) : drac_pkg::is_subnorm_f32 (src_i[31:0]);
 
 // ============================================================================
-// Normalization Pattern Detection (Same for both FP32 and FP64)
-// ============================================================================
-
-logic vfrec7_sig_1xxx   ;
-logic vfrec7_sig_01xx   ;
-logic vfrec7_direct_inf ;
-logic [4:0] lzc_count   ;
-
-assign vfrec7_sig_1xxx   = src_is_subnormal && (fp64_mode ? src_mant[51] : src_mant[22]);
-assign vfrec7_sig_01xx   = src_is_subnormal && (fp64_mode ? !src_mant[51] && src_mant[50] : !src_mant[22] && src_mant[21]);
-assign vfrec7_direct_inf = src_is_subnormal && (fp64_mode ? !src_mant[51] && !src_mant[50] : !src_mant[22] && !src_mant[21]);
-assign lzc_count         = vfrec7_sig_1xxx ? 5'd0 : vfrec7_sig_01xx ? 5'd1 : 5'd0;
-
-// ============================================================================
 // Normalization
 // ============================================================================
 
+logic vfrec7_direct_inf ;
+assign vfrec7_direct_inf = src_is_subnormal && (fp64_mode ? !src_mant[51] && !src_mant[50] : !src_mant[22] && !src_mant[21]);
 
-logic [12:0] normalized_exp  ;
-logic [51:0] normalized_mant ;
+// normalization of the exponent for both cases needs to count number of
+// leading zeros. In VFREC7 this could be simplified to only 2 first leading
+// zeros, as for smaller values would be direct_inf case.
+logic [5:0] lzc_count;
+assign lzc_count = fp64_mode ? lzc_52(src_mant[51:0]) : lzc_23(src_mant[22:0]);
 
-logic [52:0] src_mant_shift_one;
-logic [53:0] src_mant_shift_two;
+logic signed    [12:0] normalized_exp  ;
+logic           [51:0] normalized_mant ;
+logic           [51:0] mant_shifted    ;
 
-assign src_mant_shift_one = (src_mant << 1);
-assign src_mant_shift_two = (src_mant << 2);
+assign normalized_exp   = (src_is_subnormal) ?
+                          (-$signed({7'b0, lzc_count})) :
+                          ({'0, src_exp});
 
-assign normalized_exp   = (src_is_subnormal && !operation_i && (vfrec7_sig_1xxx || vfrec7_sig_01xx)) ?
-                          (13'd1 - {8'b0, lzc_count}) : 
-                          (fp64_mode ? {2'b0, src_exp} : {5'b0, src_exp});
-// trunc of shifted values is compulsory, required to match widths for lin  stage
-assign normalized_mant  = (src_is_subnormal && !operation_i && vfrec7_sig_1xxx) ? src_mant_shift_one[51:0] :
-                          (src_is_subnormal && !operation_i && vfrec7_sig_01xx) ? src_mant_shift_two[51:0] : src_mant;
+assign mant_shifted     = src_mant << (lzc_count + 1);
+assign normalized_mant  = src_is_subnormal ?
+                          {1'b0, mant_shifted[51:1]} :
+                          src_mant;
 
 // ============================================================================
 // Table Lookup
@@ -172,87 +165,89 @@ logic [6:0] table_result      ;
 
 assign rec_lookup_addr   = fp64_mode ? normalized_mant[51:45] : normalized_mant[22:16];
 assign rsqrt_lookup_addr = fp64_mode ? normalized_mant[51:46] : normalized_mant[22:17];
-assign table_result      = operation_i ? (!normalized_exp[0] ? LUT_VFRSQRT7_ODD_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7] : 
-                                                               LUT_VFRSQRT7_EVEN_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7]) :
-                                                               LUT_VFREC7_TABLE[(895 - rec_lookup_addr * 7) -: 7];
+assign table_result      =  (operation_i == 1'b1) ? // VFRSQRT7
+                                (!normalized_exp[0] ?
+                                    LUT_VFRSQRT7_ODD_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7] :
+                                    LUT_VFRSQRT7_EVEN_TABLE[(447 - rsqrt_lookup_addr * 7) -: 7]) :
+                                LUT_VFREC7_TABLE[(895 - rec_lookup_addr * 7) -: 7]; // VFREC7
+// bit selectors must be biased to select the correct number of bits in the
+// packed array of numbers where table is stored in
 
 // ============================================================================
 // Result Computation
 // ============================================================================
 
-bus64_t      computed_result     ;
-logic [4:0]  computed_exceptions ;
-logic [12:0] result_exp          ;
-logic [51:0] result_mant         ;
+bus64_t         computed_result     ;
+logic   [4:0]   computed_exceptions ;
+logic   [12:0]  result_exp          ;
+logic   [51:0]  result_mant         ;
 
 always_comb begin
     computed_exceptions = 5'b0;
     
     // Handle special cases
     if (src_is_nan) begin
+        // always canonicalize to QNAN and activate NV as required
         computed_result = fp64_mode ? drac_pkg::FP64_QNAN : drac_pkg::FP32_QNAN;
         computed_exceptions[NV_FLAG] = src_is_snan ? 1'b1 : 1'b0;
     end else if (src_is_inf) begin
         if (operation_i == 1'b0) begin // VFREC7
-            computed_result = fp64_mode ? 
-                {src_sign, 11'h0, 52'h0} : 
-                {src_sign, 8'h0, 23'h0};
+            // +inf -> +0.0 and -inf -> -0.0
+            computed_result = fp64_mode ?
+                (src_sign ? FP64_NZERO : FP64_ZERO) :
+                (src_sign ? {32'd0, FP32_NZERO} : {32'd0, FP32_ZERO}) ;
         end else begin // VFRSQRT7
+            // [-inf, -0.0) -> QNAN and NV
             if (src_sign) begin
-                computed_result = fp64_mode ? 
-                    {1'b0, FP64_MAX_EXP, 52'h8000000000000} : 
-                    {1'b0, FP32_MAX_EXP, 23'h400000};
+                computed_result = fp64_mode ? FP64_QNAN : {32'd0, FP32_QNAN};
                 computed_exceptions[NV_FLAG] = 1'b1;
             end else begin
-                computed_result = fp64_mode ? 
-                    {1'b0, 11'h0, 52'h0} : 
-                    {1'b0, 8'h0, 23'h0};
+                computed_result = fp64_mode ? FP64_ZERO : {32'd0, FP32_ZERO};
             end
         end
     end else if (src_is_zero) begin
-        computed_result = fp64_mode ? 
-            {src_sign, FP64_MAX_EXP, 52'h0} : 
-            {src_sign, FP32_MAX_EXP, 23'h0};
+        // -0.0 -> -inf and +0.0 -> +inf and raise of DZ flag
+        if (src_sign) begin // negative
+            computed_result = fp64_mode ? FP64_NINF : FP32_NINF;
+        end else begin // positve
+            computed_result = fp64_mode ? FP64_PINF : FP32_PINF;
+        end
         computed_exceptions[DZ_FLAG] = 1'b1;
     end else if (src_sign && operation_i) begin
-        computed_result = fp64_mode ? 
-            {1'b0, FP64_MAX_EXP, 52'h8000000000000} : 
-            {1'b0, FP32_MAX_EXP, 23'h400000};
+        // if VFRSQRT7 and negative result -> QNAN and activate NV
+        computed_result = fp64_mode ? FP64_QNAN : FP32_QNAN;
         computed_exceptions[NV_FLAG] = 1'b1;
-    end else if (src_is_subnormal) begin
-        if (operation_i == 1'b0) begin // VFREC7
-            if (vfrec7_direct_inf) begin
+
+    end else if (src_is_subnormal && (operation_i == 1'b0)) begin // only treat separatelly subnormality for VFREC7
+        if (vfrec7_direct_inf) begin
+            if (src_sign) begin
+                computed_result = fp64_mode ? FP64_NINF : {32'd0, FP32_NINF};
+            end else begin
+                computed_result = fp64_mode ? FP64_PINF : {32'd0, FP32_PINF};
+            end
+            computed_exceptions[OF_FLAG] = 1'b1;
+            computed_exceptions[NX_FLAG] = 1'b1;
+        end else begin
+            result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
+            result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
+            if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
                 computed_result = fp64_mode ? 
                     {src_sign, FP64_MAX_EXP, 52'h0} : 
                     {src_sign, FP32_MAX_EXP, 23'h0};
-                computed_exceptions[DZ_FLAG] = 1'b1;
+                computed_exceptions[OF_FLAG] = 1'b1;
+            end else if ((result_exp == 13'd0) || result_exp[12]) begin
+                computed_result = fp64_mode ? 
+                    {src_sign, 11'h0, 52'h0} : 
+                    {src_sign, 8'h0, 23'h0};
+                computed_exceptions[UF_FLAG] = 1'b1;
             end else begin
-                result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
-                result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
-                
-                if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
-                    computed_result = fp64_mode ? 
-                        {src_sign, FP64_MAX_EXP, 52'h0} : 
-                        {src_sign, FP32_MAX_EXP, 23'h0};
-                    computed_exceptions[OF_FLAG] = 1'b1;
-                end else if ((result_exp == 13'd0) || result_exp[12]) begin
-                    computed_result = fp64_mode ? 
-                        {src_sign, 11'h0, 52'h0} : 
-                        {src_sign, 8'h0, 23'h0};
-                    computed_exceptions[UF_FLAG] = 1'b1;
-                end else begin
-                    computed_result = fp64_mode ? 
-                        {src_sign, result_exp[10:0], result_mant[51:0]} : 
-                        {src_sign, result_exp[7:0], result_mant[22:0]};
-                    computed_exceptions[NX_FLAG] = 1'b1;
-                end
+                computed_result = fp64_mode ? 
+                    {src_sign, result_exp[10:0], result_mant[51:0]} : 
+                    {src_sign, result_exp[7:0], result_mant[22:0]};
+                computed_exceptions[NX_FLAG] = 1'b1;
             end
-        end else begin // VFRSQRT7
-            computed_result = fp64_mode ? 
-                {1'b0, FP64_MAX_EXP, 52'h0} : 
-                {1'b0, FP32_MAX_EXP, 23'h0};
-            computed_exceptions[DZ_FLAG] = 1'b1;
         end
+
     end else begin
         // Normal computation
         if (operation_i) begin
@@ -264,13 +259,16 @@ always_comb begin
         end else begin
             result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
         end
-        
+
+
+
         result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
-        
+
         if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
             computed_result = fp64_mode ? 
                 {src_sign, FP64_MAX_EXP, 52'h0} : 
                 {src_sign, FP32_MAX_EXP, 23'h0};
+            computed_exceptions[NX_FLAG] = 1'b1;
             computed_exceptions[OF_FLAG] = 1'b1;
         end else if ((result_exp == 13'd0) || result_exp[12]) begin
             computed_result = fp64_mode ? 
