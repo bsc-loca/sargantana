@@ -142,6 +142,12 @@ parameter PFPQ_NUM_ENTRIES = 8;
 // Store buffer size 
 parameter ST_BUF_NUM_ENTRIES = 8;
 
+// MMU Parameters
+parameter VPN_SIZE = 27;
+parameter VPN_MAX_SIZE = 29;
+parameter PPN_SIZE = 44;
+parameter ASID_SIZE = 7;
+
 // SIMD
 typedef logic [$clog2(VELEMENTS)-1:0] fu_id_t;
 
@@ -1319,11 +1325,6 @@ typedef enum logic [SEW_WIDTH - 1 : 0] {
 //  Cache-TLB communication
 //
 ///////////////////////////////   
-
-parameter VPN_SIZE = 27;
-parameter VPN_MAX_SIZE = 29;
-parameter PPN_SIZE = 44;
-parameter ASID_SIZE = 7;
 
 // Cache-TLB request
 typedef struct packed {
