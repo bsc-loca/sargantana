@@ -147,7 +147,7 @@ logic           [51:0] normalized_mant ;
 logic           [51:0] mant_shifted    ;
 
 assign normalized_exp   = (src_is_subnormal) ?
-                          (-$signed({7'b0, lzc_count})) :
+                          (13'd1 - {8'b0, lzc_count}) :
                           ({'0, src_exp});
 
 assign mant_shifted     = src_mant << (lzc_count + 1);
@@ -181,6 +181,7 @@ bus64_t         computed_result     ;
 logic   [4:0]   computed_exceptions ;
 logic   [12:0]  result_exp          ;
 logic   [51:0]  result_mant         ;
+logic   [52:0]  result_mant53       ;
 
 always_comb begin
     computed_exceptions = 5'b0;
@@ -260,24 +261,41 @@ always_comb begin
             result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
         end
 
+        result_mant = {table_result, 45'b0};
 
-
-        result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
-
-        if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
-            computed_result = fp64_mode ? 
-                {src_sign, FP64_MAX_EXP, 52'h0} : 
-                {src_sign, FP32_MAX_EXP, 23'h0};
-            computed_exceptions[NX_FLAG] = 1'b1;
+        if ($signed(result_exp) < 1) begin
+            if (operation_i == 1'b0) begin // VFREC7 --> produce subnormal number
+                result_mant53 = {1'b1, result_mant};
+                result_mant53 = result_mant53 >> (1 - $signed(result_exp));
+                result_mant = fp64_mode ?
+                    result_mant53[51:0] :
+                    {result_mant53[51 -: 23], 29'd0};
+                computed_result = fp64_mode ?
+                    {src_sign, 11'h000, result_mant[51:0]} :
+                    {src_sign, 8'h00, result_mant[51 -: 23]};
+                computed_exceptions[UF_FLAG] = 1'b1;
+                computed_exceptions[NX_FLAG] = 1'b1;
+            end else begin // VFRSQRT7 --> force to 0
+                if (src_sign) begin
+                    computed_result = fp64_mode ? FP64_NZERO : FP32_NZERO;
+                end else begin
+                    computed_result = fp64_mode ? FP64_ZERO : FP32_ZERO;
+                end
+                computed_exceptions[UF_FLAG] = 1'b1;
+            end
+        end
+        else if ($signed(result_exp) > (fp64_mode ? 2046 : 254)) begin
+            if (src_sign) begin
+                computed_result = fp64_mode ? FP64_NINF : FP32_NINF;
+            end else begin
+                computed_result = fp64_mode ? FP64_PINF : FP32_PINF;
+            end
             computed_exceptions[OF_FLAG] = 1'b1;
-        end else if ((result_exp == 13'd0) || result_exp[12]) begin
-            computed_result = fp64_mode ? 
-                {src_sign, 11'h0, 52'h0} : 
-                {src_sign, 8'h0, 23'h0};
-            computed_exceptions[UF_FLAG] = 1'b1;
-        end else begin
-            computed_result = fp64_mode ? 
-                {src_sign, result_exp[10:0], result_mant[51:0]} : 
+            computed_exceptions[NX_FLAG] = 1'b1;
+        end
+        else begin
+            computed_result = fp64_mode ?
+                {src_sign, result_exp[10:0], result_mant[51:0]} :
                 {src_sign, result_exp[7:0], result_mant[22:0]};
             computed_exceptions[NX_FLAG] = 1'b1;
         end
