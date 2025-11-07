@@ -140,15 +140,29 @@ assign vfrec7_direct_inf = src_is_subnormal && (fp64_mode ? !src_mant[51] && !sr
 // normalization of the exponent for both cases needs to count number of
 // leading zeros. In VFREC7 this could be simplified to only 2 first leading
 // zeros, as for smaller values would be direct_inf case.
+
 logic [5:0] lzc_count;
-assign lzc_count = fp64_mode ? lzc_52(src_mant[51:0]) : lzc_23(src_mant[22:0]);
+bus64_t mant64b;
+bus64_t ldzres;
+
+assign mant64b = fp64_mode ?
+                    ({src_mant[51:0], {12{1'b1}}}) :
+                    ({src_mant[22:0], {41{1'b1}}}) ;
+
+alu_count_zeros lzc_64bits (
+.data_rs1_i     (mant64b),
+    .instr_type_i   (CLZ),
+    .result_o       (ldzres)
+);
+
+assign lzc_count = ldzres[5:0];
 
 logic signed    [12:0] normalized_exp  ;
 logic           [51:0] normalized_mant ;
 logic           [51:0] mant_shifted    ;
 
 assign normalized_exp   = (src_is_subnormal) ?
-                          (13'd1 - {8'b0, lzc_count}) :
+                          (-$signed({8'b0, lzc_count})) :
                           ({'0, src_exp});
 
 assign mant_shifted     = src_mant << (lzc_count + 1);

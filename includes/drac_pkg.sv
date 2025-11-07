@@ -1673,34 +1673,6 @@ function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
     end
 endfunction
 
-// leading zeros counters for 23 bit mantissas (FP32)
-function automatic [4:0] lzc_23(input logic [22:0] x);
-  integer i;
-  begin
-    lzc_23 = 0;
-    for (i = 22; i >= 0; i--) begin
-      if (x[i]) begin
-        lzc_23 = 22 - i;
-        break;
-      end
-    end
-  end
-endfunction
-
-// leading zeros counters for 52 bit mantissas (FP64)
-function automatic [5:0] lzc_52(input logic [51:0] x);
-  integer i;
-  begin
-    lzc_52 = 0;
-    for (i = 51; i >= 0; i--) begin
-      if (x[i]) begin
-        lzc_52 = 51 - i;
-        break;
-      end
-    end
-  end
-endfunction
-
 // --------------------------------------------------------------------
 
 localparam int unsigned SEW_WIDTH = 3;
