@@ -174,6 +174,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_classifier.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_divsqrt_multi.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_divsqrt_th_32.sv
+./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_divsqrt_th_64_multi.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_fma.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_fma_multi.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_noncomp.sv
@@ -202,6 +203,17 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/opene906/E906_RTL_FACTORY/gen_rtl/fpu/rtl/pa_fpu_dp.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/opene906/E906_RTL_FACTORY/gen_rtl/fpu/rtl/pa_fpu_frbus.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/opene906/E906_RTL_FACTORY/gen_rtl/fpu/rtl/pa_fpu_src_type.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_ctrl.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_double.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_ff1.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_pack.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_prepare.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_round.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_scalar_dp.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt_radix16_bound_table.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt_radix16_with_sqrt.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_top.v
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_mf.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfpu_drac_wrapper.sv
