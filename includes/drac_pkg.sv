@@ -1483,22 +1483,27 @@ parameter int STAGES_VFREDO64_W = (VLEN/32)*DELAY_SUM_FP64+1;
 parameter int MAX_STAGES        = STAGES_VFREDO64_W;
 
 // floating-point definitions
-parameter logic [31:0] FP32_ONE     = 32'h3F800000;
-parameter logic [31:0] FP32_ZERO    = 32'h00000000;
-parameter logic [31:0] FP32_NZERO   = 32'h80000000;
-parameter logic [63:0] FP64_ONE     = 64'h3FF0000000000000;
-parameter logic [63:0] FP64_ZERO    = 64'h0000000000000000;
-parameter logic [63:0] FP64_NZERO   = 64'h8000000000000000;
+parameter logic [31:0] FP32_ONE         = 32'h3F800000;
+parameter logic [31:0] FP32_ZERO        = 32'h00000000;
+parameter logic [31:0] FP32_NZERO       = 32'h80000000;
+parameter logic [63:0] FP64_ONE         = 64'h3FF0000000000000;
+parameter logic [63:0] FP64_ZERO        = 64'h0000000000000000;
+parameter logic [63:0] FP64_NZERO       = 64'h8000000000000000;
 
-parameter logic [31:0] FP32_PINF    = 32'h7F800000;
-parameter logic [31:0] FP32_NINF    = 32'hFF800000;
-parameter logic [63:0] FP64_PINF    = 64'h7FF0000000000000;
-parameter logic [63:0] FP64_NINF    = 64'hFFF0000000000000;
+parameter logic [31:0] FP32_PINF        = 32'h7F800000;
+parameter logic [31:0] FP32_NINF        = 32'hFF800000;
+parameter logic [63:0] FP64_PINF        = 64'h7FF0000000000000;
+parameter logic [63:0] FP64_NINF        = 64'hFFF0000000000000;
 
-parameter logic [31:0] FP32_QNAN    = 32'h7FC00000;
-parameter logic [63:0] FP64_QNAN    = 64'h7FF8000000000000;
-parameter logic [31:0] FP32_SNAN    = 32'h7FA00000;
-parameter logic [63:0] FP64_SNAN    = 64'h7FF4000000000000;
+parameter logic [31:0] FP32_QNAN        = 32'h7FC00000;
+parameter logic [63:0] FP64_QNAN        = 64'h7FF8000000000000;
+parameter logic [31:0] FP32_SNAN        = 32'h7FA00000;
+parameter logic [63:0] FP64_SNAN        = 64'h7FF4000000000000;
+
+parameter logic [31:0] FP32_MAXPFINITE  = 32'h7F7FFFFF;
+parameter logic [31:0] FP32_MAXNFINITE  = 32'hFF7FFFFF;
+parameter logic [63:0] FP64_MAXPFINITE  = 64'h7FEFFFFFFFFFFFFF;
+parameter logic [63:0] FP64_MAXNFINITE  = 64'hFFEFFFFFFFFFFFFF;
 
 // FP64
 function automatic logic is_nan_f64(input logic [63:0] fp64);

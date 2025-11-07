@@ -32,17 +32,18 @@ import drac_pkg::*;
 
 module vf7_mf
 (
-    input  logic                clk_i,
-    input  logic                rstn_i,
+    input  logic                    clk_i,
+    input  logic                    rstn_i,
     // inputs
-    input  logic                valid_i,
-    input  drac_pkg::sew_t      sew_i,
-    input  logic                operation_i,    // 0: VFREC7, 1: VFRSQRT7
-    input  bus64_t              src_i,          // Expanded to 64 bits
+    input  logic                    valid_i,
+    input  drac_pkg::sew_t          sew_i,
+    input  logic                    operation_i,    // 0: VFREC7, 1: VFRSQRT7
+    input  bus64_t                  src_i,          // Expanded to 64 bits
+    input  fpnew_pkg::roundmode_e   frm_i,          // input rounding mode, considered for VFREC7 operation
     // outputs
-    output bus64_t              res_o,          // Expanded to 64 bits
-    output logic                valid_o,
-    output fpnew_pkg::status_t  status_o 
+    output bus64_t                  res_o,          // Expanded to 64 bits
+    output logic                    valid_o,
+    output fpnew_pkg::status_t      status_o 
 );
 
 // ============================================================================
@@ -196,35 +197,42 @@ always_comb begin
             // +inf -> +0.0 and -inf -> -0.0
             computed_result = fp64_mode ?
                 (src_sign ? FP64_NZERO : FP64_ZERO) :
-                (src_sign ? {32'd0, FP32_NZERO} : {32'd0, FP32_ZERO}) ;
+                (src_sign ? {FP32_QNAN, FP32_NZERO} : {FP32_QNAN, FP32_ZERO}) ;
         end else begin // VFRSQRT7
             // [-inf, -0.0) -> QNAN and NV
             if (src_sign) begin
-                computed_result = fp64_mode ? FP64_QNAN : {32'd0, FP32_QNAN};
+                computed_result = fp64_mode ? FP64_QNAN : {FP32_QNAN, FP32_QNAN};
                 computed_exceptions[NV_FLAG] = 1'b1;
             end else begin
-                computed_result = fp64_mode ? FP64_ZERO : {32'd0, FP32_ZERO};
+                computed_result = fp64_mode ? FP64_ZERO : {FP32_QNAN, FP32_ZERO};
             end
         end
     end else if (src_is_zero) begin
         // -0.0 -> -inf and +0.0 -> +inf and raise of DZ flag
         if (src_sign) begin // negative
-            computed_result = fp64_mode ? FP64_NINF : FP32_NINF;
+            computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
         end else begin // positve
-            computed_result = fp64_mode ? FP64_PINF : FP32_PINF;
+            computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
         end
         computed_exceptions[DZ_FLAG] = 1'b1;
     end else if (src_sign && operation_i) begin
         // if VFRSQRT7 and negative result -> QNAN and activate NV
-        computed_result = fp64_mode ? FP64_QNAN : FP32_QNAN;
+        computed_result = fp64_mode ? FP64_QNAN : {FP32_QNAN, FP32_QNAN};
         computed_exceptions[NV_FLAG] = 1'b1;
-
     end else if (src_is_subnormal && (operation_i == 1'b0)) begin // only treat separatelly subnormality for VFREC7
         if (vfrec7_direct_inf) begin
-            if (src_sign) begin
-                computed_result = fp64_mode ? FP64_NINF : {32'd0, FP32_NINF};
+            if (frm_i == fpnew_pkg::RDN || frm_i == fpnew_pkg::RTZ) begin
+                if (src_sign) begin
+                    computed_result = fp64_mode ? FP64_MAXNFINITE : {FP32_QNAN, FP32_MAXNFINITE};
+                end else begin
+                    computed_result = fp64_mode ? FP64_MAXPFINITE : {FP32_QNAN, FP32_MAXPFINITE};
+                end
             end else begin
-                computed_result = fp64_mode ? FP64_PINF : {32'd0, FP32_PINF};
+                if (src_sign) begin
+                    computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
+                end else begin
+                    computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
+                end
             end
             computed_exceptions[OF_FLAG] = 1'b1;
             computed_exceptions[NX_FLAG] = 1'b1;
@@ -232,23 +240,22 @@ always_comb begin
             result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
             result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
             if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
-                computed_result = fp64_mode ? 
-                    {src_sign, FP64_MAX_EXP, 52'h0} : 
-                    {src_sign, FP32_MAX_EXP, 23'h0};
+                computed_result = fp64_mode ?
+                    (src_sign ? FP64_NINF : FP64_PINF) :
+                    (src_sign ? {FP32_QNAN, FP32_NINF} : {FP32_QNAN, FP32_PINF}) ;
                 computed_exceptions[OF_FLAG] = 1'b1;
             end else if ((result_exp == 13'd0) || result_exp[12]) begin
-                computed_result = fp64_mode ? 
-                    {src_sign, 11'h0, 52'h0} : 
-                    {src_sign, 8'h0, 23'h0};
+                computed_result = fp64_mode ?
+                    (src_sign ? FP64_NZERO : FP32_ZERO) :
+                    (src_sign ? {FP32_QNAN, FP32_NZERO} : {FP32_QNAN, FP32_ZERO}) ;
                 computed_exceptions[UF_FLAG] = 1'b1;
             end else begin
                 computed_result = fp64_mode ? 
                     {src_sign, result_exp[10:0], result_mant[51:0]} : 
-                    {src_sign, result_exp[7:0], result_mant[22:0]};
+                    {src_sign, result_exp[7:0],  result_mant[22:0]} ;
                 computed_exceptions[NX_FLAG] = 1'b1;
             end
         end
-
     end else begin
         // Normal computation
         if (operation_i) begin
@@ -277,18 +284,18 @@ always_comb begin
                 computed_exceptions[NX_FLAG] = 1'b1;
             end else begin // VFRSQRT7 --> force to 0
                 if (src_sign) begin
-                    computed_result = fp64_mode ? FP64_NZERO : FP32_NZERO;
+                    computed_result = fp64_mode ? FP64_NZERO : {FP32_QNAN, FP32_NZERO};
                 end else begin
-                    computed_result = fp64_mode ? FP64_ZERO : FP32_ZERO;
+                    computed_result = fp64_mode ? FP64_ZERO : {FP32_QNAN, FP32_ZERO};
                 end
                 computed_exceptions[UF_FLAG] = 1'b1;
             end
         end
         else if ($signed(result_exp) > (fp64_mode ? 2046 : 254)) begin
             if (src_sign) begin
-                computed_result = fp64_mode ? FP64_NINF : FP32_NINF;
+                computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
             end else begin
-                computed_result = fp64_mode ? FP64_PINF : FP32_PINF;
+                computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
             end
             computed_exceptions[OF_FLAG] = 1'b1;
             computed_exceptions[NX_FLAG] = 1'b1;
@@ -296,7 +303,7 @@ always_comb begin
         else begin
             computed_result = fp64_mode ?
                 {src_sign, result_exp[10:0], result_mant[51:0]} :
-                {src_sign, result_exp[7:0], result_mant[22:0]};
+                {src_sign, result_exp[7:0], result_mant[51 -: 23]};
             computed_exceptions[NX_FLAG] = 1'b1;
         end
     end

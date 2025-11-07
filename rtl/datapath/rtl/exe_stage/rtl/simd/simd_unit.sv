@@ -21,6 +21,7 @@
 module simd_unit
     import drac_pkg::*;
     import riscv_pkg::*;
+    import fpnew_pkg::*;
 (
     input wire                    clk_i,                  // Clock
     input wire                    rstn_i,                 // Reset
@@ -876,13 +877,14 @@ fpnew_pkg::status_t status_vf7;
 vf7_wrapper vf7_wrapper_inst (
     .clk_i,
     .rstn_i,
-    .valid_i     ( is_vf_approx(instruction_i.instr.instr_type) ),
-    .sew_i       ( instruction_i.instr.sew                      ),
-    .operation_i ( instruction_i.instr.instr_type == VFRSQRT7   ), // 0: VFREC7, 1: VFRSQRT7
-    .src_i       ( instruction_i.data_vs2                       ),
-    .res_o       ( data_vf7_vd                                  ),
-    .valid_o     (                                              ), // to be asumed it will be the same cycle, carefull when enabling VF7_MF_OUTREG
-    .status_o    ( status_vf7                                   )
+    .valid_i     ( is_vf_approx(instruction_i.instr.instr_type)     ),
+    .sew_i       ( instruction_i.instr.sew                          ),
+    .operation_i ( instruction_i.instr.instr_type == VFRSQRT7       ), // 0: VFREC7, 1: VFRSQRT7
+    .src_i       ( instruction_i.data_vs2                           ),
+    .frm_i       ( fpnew_pkg::roundmode_e'{instruction_i.instr.frm} ),
+    .res_o       ( data_vf7_vd                                      ),
+    .valid_o     (                                                  ), // to be asumed it will be the same cycle, carefull when enabling VF7_MF_OUTREG
+    .status_o    ( status_vf7                                       )
 );
 
 // Vectorial reduction modules (unordered vfredtree, ordered vfredoladder)

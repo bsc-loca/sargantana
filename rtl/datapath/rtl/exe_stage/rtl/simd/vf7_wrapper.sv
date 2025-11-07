@@ -27,17 +27,18 @@ import fpnew_pkg::*;
 // compute results in traditional SIMD style the vfred and vsqrt
 // precise instructions.
 module vf7_wrapper (
-    input  logic                clk_i,
-    input  logic                rstn_i,
+    input  logic                    clk_i,
+    input  logic                    rstn_i,
     // inputs
-    input  logic                valid_i,
-    input  drac_pkg::sew_t      sew_i,
-    input  logic                operation_i,    // 0: VFREC7, 1: VFRSQRT7
-    input  bus_simd_t           src_i,
+    input  logic                    valid_i,
+    input  drac_pkg::sew_t          sew_i,
+    input  logic                    operation_i,    // 0: VFREC7, 1: VFRSQRT7
+    input  bus_simd_t               src_i,
+    input  fpnew_pkg::roundmode_e   frm_i,          // rounding mode, to be considered in VFREC7 operation
     // outputs
-    output bus_simd_t           res_o,
-    output logic                valid_o,
-    output fpnew_pkg::status_t  status_o 
+    output bus_simd_t               res_o,
+    output logic                    valid_o,
+    output fpnew_pkg::status_t      status_o 
 );
 
 fpnew_pkg::status_t statusvec [(VLEN/32)-1:0];
@@ -69,6 +70,7 @@ for (genvar i = 0; (i < (VLEN/32)); i++) begin : GEN_VF7
         .sew_i,
         .operation_i,   // 0: VFREC7, 1: VFRSQRT7
         .src_i          (source_operand),
+        .frm_i,
         .res_o          (resultvec[i]),
         .valid_o        (validvec[i]), 
         .status_o       (statusvec[i])
