@@ -55,8 +55,8 @@ for (genvar i = 0; (i < (VLEN/32)); i++) begin : GEN_VF7
         result = '0;
         if (sew_i == SEW_64) begin
             if (i < (VLEN/64)) begin
-                source_operand = src_i[i*64 +: 64];
                 // continous assignment here allowed
+                source_operand = src_i[(i*64) +: 64];
             end 
         end else begin
             source_operand = src_i[i*32 +: 32];

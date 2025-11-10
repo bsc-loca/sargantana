@@ -157,15 +157,15 @@ alu_count_zeros lzc_64bits (
 
 assign lzc_count = ldzres[5:0];
 
-logic signed    [12:0] normalized_exp  ;
+logic           [12:0] normalized_exp  ;
 logic           [51:0] normalized_mant ;
 logic           [51:0] mant_shifted    ;
 
 assign normalized_exp   = (src_is_subnormal) ?
-                          (-$signed({8'b0, lzc_count})) :
+                          ($unsigned(-$signed({8'b0, lzc_count}))) :
                           ({'0, src_exp});
 
-assign mant_shifted     = src_mant << (lzc_count + 1);
+assign mant_shifted     = (src_mant << (lzc_count + 1))[51:0]; // lower 52 bits truncation
 assign normalized_mant  = src_is_subnormal ?
                           {1'b0, mant_shifted[51:1]} :
                           src_mant;
@@ -235,7 +235,7 @@ always_comb begin
         computed_exceptions[NV_FLAG] = 1'b1;
     end else if (src_is_subnormal && (operation_i == 1'b0)) begin // only treat separatelly subnormality for VFREC7
         if (vfrec7_direct_inf) begin
-            if (frm_i == fpnew_pkg::RDN || frm_i == fpnew_pkg::RTZ) begin
+            if ((frm_i == fpnew_pkg::RDN) || (frm_i == fpnew_pkg::RTZ)) begin
                 if (src_sign) begin
                     computed_result = fp64_mode ? FP64_MAXNFINITE : {FP32_QNAN, FP32_MAXNFINITE};
                 end else begin
@@ -251,7 +251,7 @@ always_comb begin
             computed_exceptions[OF_FLAG] = 1'b1;
             computed_exceptions[NX_FLAG] = 1'b1;
         end else begin
-            result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
+            result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
             result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
             if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
                 computed_result = fp64_mode ?
@@ -274,12 +274,12 @@ always_comb begin
         // Normal computation
         if (operation_i) begin
             if(!normalized_exp[0]) begin
-                result_exp = fp64_mode ? 13'(13'd3069 - normalized_exp) >> 1 : 13'(13'd380 - normalized_exp) >> 1;
+                result_exp = fp64_mode ? ((13'd3069 - normalized_exp) >> 1) : ((13'd380 - normalized_exp) >> 1);
             end else begin
-                result_exp = fp64_mode ? 13'(13'd3068 - normalized_exp) >> 1 : 13'(13'd379 - normalized_exp) >> 1;
+                result_exp = fp64_mode ? ((13'd3068 - normalized_exp) >> 1) : ((13'd379 - normalized_exp) >> 1);
             end
         end else begin
-            result_exp = fp64_mode ? 13'(13'd2045 - normalized_exp) : 13'(13'd253 - normalized_exp);
+            result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
         end
 
         result_mant = {table_result, 45'b0};
@@ -287,7 +287,7 @@ always_comb begin
         if ($signed(result_exp) < 1) begin
             if (operation_i == 1'b0) begin // VFREC7 --> produce subnormal number
                 result_mant53 = {1'b1, result_mant};
-                result_mant53 = result_mant53 >> (1 - $signed(result_exp));
+                result_mant53 = result_mant53 >> ($signed(13'd1) - $signed(result_exp));
                 result_mant = fp64_mode ?
                     result_mant53[51:0] :
                     {result_mant53[51 -: 23], 29'd0};

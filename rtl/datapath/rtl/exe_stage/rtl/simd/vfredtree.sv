@@ -64,14 +64,14 @@ typedef struct packed {
 
 function automatic integer floor_log2(input integer value);
     if (value == 0) return integer'(-1);
-    return integer'($clog2(value+1) - 1);
+    return integer'(int'($clog2(value+1)) - 1);
 endfunction
 
 function automatic int first_node_index(int level, int sew);
     int sum;
     sum = 0;
     for (int k = 0; k < level; k++) begin
-        sum = 32'(sum + ((32'(VLEN)/32'(sew)) >> (k+1))); // number of nodes at level k
+        sum = 32'(sum + ((32'($unsigned(VLEN))/32'($unsigned(sew))) >> (k+1))); // number of nodes at level k
     end
     return sum;
 endfunction
