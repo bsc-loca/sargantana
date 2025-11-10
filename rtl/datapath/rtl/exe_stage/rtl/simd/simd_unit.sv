@@ -445,7 +445,7 @@ always_comb begin
                 simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
             end else if (j==0) begin
                 if (simd_exe_stages == i) begin
-                    simd_pipe_d[i][0].valid = instruction_i.instr.valid & (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type));
+                    simd_pipe_d[i][0].valid = instruction_i.instr.valid & (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type) || is_zvfhmin_conv(instruction_i));
                     simd_pipe_d[i][0].simd_instr = instruction_i;
                 end else begin
                     simd_pipe_d[i][0].valid = 1'b0;
@@ -512,7 +512,7 @@ end
 always_comb begin
     if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
         instr_to_out_integer = instr_score_board;
-    end else if ((instruction_i.exe_stages == 1) && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type))) begin
+    end else if ((instruction_i.exe_stages == 1) && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type) || is_zvfhmin_conv(instruction_i))) begin
         instr_to_out_integer = instruction_i;
     end else begin
         instr_to_out_integer = '0;
@@ -937,6 +937,18 @@ vfredoladder #(
     .status_o       (vfredoladderflags)
 );
 
+// Zvfhmin conversions
+
+bus_simd_t conv_zvfhmin_vd;
+fpnew_pkg::status_t conv_zvfhmin_flags;
+
+conv_zvfhmin conv_zfhmin_inst (
+   .src_i(instruction_i.data_vs2),
+   .operation_i((instruction_i.instr.instr_type == VFNCVT_F_F) ? 1'b1 : 1'b0),
+   .res_o(conv_zvfhmin_vd),
+   .status_o(conv_zvfhmin_flags)
+);
+
 // Main vectorial FPU instantiation
 
 logic   is_collision;
@@ -982,6 +994,8 @@ always_comb begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
         result_data_vd = data_viota_vd;
+    end else if (is_zvfhmin_conv(instr_to_out)) begin
+        result_data_vd = conv_zvfhmin_vd;
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -1807,6 +1821,8 @@ always_comb begin
         flags_merged = vfredoladderflags;
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin
         flags_merged = status_vf7;
+    end else if (is_zvfhmin_conv(instr_to_out)) begin
+        flags_merged = conv_zvfhmin_flags;
     end else begin
         flags_merged = '0;
     end

@@ -1489,6 +1489,11 @@ function automatic logic is_vf_redo (input instr_type_t instr);
                   (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0;
 endfunction
 
+function automatic logic is_zvfhmin_conv (input rr_exe_simd_instr_t instr);
+    is_zvfhmin_conv = ((instr.instr.sew == SEW_16) && 
+                    (instr.instr.instr_type == VFNCVT_F_F || instr.instr.instr_type == VFWCVT_F_F)     ) ? 1'b1 : 1'b0;
+endfunction
+
 // depends on inner implementation of vfred modules
 parameter int DELAY_SUM_FP32    = 2;
 parameter int DELAY_SUM_FP64    = 2;
@@ -1663,6 +1668,43 @@ endfunction
 
 function automatic logic is_snan_f16(input logic [15:0] fp16);
     is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
+endfunction
+
+function automatic logic [31:0] fp16_to_fp32(logic [15:0] f16);
+    logic        sign;
+    logic [4:0]  exp16;
+    logic [9:0]  frac16;
+
+    logic [7:0]  exp32;
+    logic [22:0] frac32;
+
+    begin
+        sign   = f16[15];
+        exp16  = f16[14:10];
+        frac16 = f16[9:0];
+
+        if (exp16 == 5'h00) begin
+            exp32  = 8'h00;
+            frac32 = {frac16, {13{1'b0}}};  // left-align mantissa
+        end
+        else if (exp16 == 5'h1F) begin
+            exp32  = 8'hFF;
+            frac32 = {frac16, {13{1'b0}}};
+        end
+        else begin
+            exp32  = (exp16 - 5'd15) + 8'd127;
+            frac32 = {frac16, {13{1'b0}}};
+        end
+
+        // canonicalize both QNAN and SNAN
+        if (is_qnan_f16(f16)) begin
+            fp16_to_fp32 = FP32_QNAN;
+        end else if (is_snan_f16(f16)) begin
+            fp16_to_fp32 = FP32_SNAN;
+        end else begin
+            fp16_to_fp32 = {sign, exp32, frac32};
+        end
+    end
 endfunction
 
 
