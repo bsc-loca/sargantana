@@ -1670,7 +1670,7 @@ function automatic logic is_snan_f16(input logic [15:0] fp16);
     is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
 endfunction
 
-function automatic logic [31:0] fp16_to_fp32(logic [15:0] f16);
+function automatic logic [32:0] fp16_to_fp32( input  logic [15:0] f16);
     logic        sign;
     logic [4:0]  exp16;
     logic [9:0]  frac16;
@@ -1678,14 +1678,19 @@ function automatic logic [31:0] fp16_to_fp32(logic [15:0] f16);
     logic [7:0]  exp32;
     logic [22:0] frac32;
 
+    logic        nv_flag;
+    logic [31:0] converted_val;
+
     begin
         sign   = f16[15];
         exp16  = f16[14:10];
         frac16 = f16[9:0];
 
+        nv_flag = (exp16 == 5'h1F) && (frac16 != 0);
+
         if (exp16 == 5'h00) begin
             exp32  = 8'h00;
-            frac32 = {frac16, {13{1'b0}}};  // left-align mantissa
+            frac32 = {frac16, {13{1'b0}}};
         end
         else if (exp16 == 5'h1F) begin
             exp32  = 8'hFF;
@@ -1696,14 +1701,15 @@ function automatic logic [31:0] fp16_to_fp32(logic [15:0] f16);
             frac32 = {frac16, {13{1'b0}}};
         end
 
-        // canonicalize both QNAN and SNAN
         if (is_qnan_f16(f16)) begin
-            fp16_to_fp32 = FP32_QNAN;
+            converted_val = FP32_QNAN;
         end else if (is_snan_f16(f16)) begin
-            fp16_to_fp32 = FP32_SNAN;
+            converted_val = FP32_SNAN;
         end else begin
-            fp16_to_fp32 = {sign, exp32, frac32};
+            converted_val = {sign, exp32, frac32};
         end
+
+        fp16_to_fp32 = {nv_flag, converted_val};
     end
 endfunction
 

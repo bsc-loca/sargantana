@@ -1,7 +1,8 @@
 module fp32_to_fp16 (
     input  logic [31:0] f32,
     input  riscv_pkg::op_frm_fp_t frm,
-    output logic [15:0] f16
+    output logic [15:0] f16,
+    output fpnew_pkg::status_t status_o
 );
 
     logic sign;
@@ -25,9 +26,13 @@ module fp32_to_fp16 (
     logic [26:0] frac_denorm;
     logic [22:0] frac_shifted;
 
+    logic inexact;
+    logic nv;
+
     localparam logic [4:0] EXP_BIAS_16  = 4'd15;
 
     always_comb begin
+        nv = 1'b0;
         sign   = f32[31];
         exp32  = f32[30:23];
         frac32 = f32[22:0];
@@ -41,6 +46,7 @@ module fp32_to_fp16 (
             // Infinity or NaN
             exp16  = 5'h1F;
             frac16 = (frac32 != 0) ? {1'b1, frac32[21:13]} : 10'h0;
+            nv = 1'b1;
         end else begin
             if ((exp32 == 0) && (frac32 == 0)) begin
                 // Zero
@@ -70,6 +76,7 @@ module fp32_to_fp16 (
                     guard = 1'b0;
                     round = 1'b0;
                     sticky = 1'b0;
+                    nv = 1'b1;
                 end else begin
                     // Normal conversion
                     exp16_ext  = exp_unbiased[4:0] + 5'd15;
@@ -93,6 +100,8 @@ module fp32_to_fp16 (
             default: round_up = 1'b0;
         endcase
 
+        inexact = (guard || round || sticky);
+
         frac_ext = {1'b0, frac16} + {{10{1'b0}}, round_up};
 
         if (frac_ext[10]) begin
@@ -105,5 +114,9 @@ module fp32_to_fp16 (
         end
 
         f16 = {sign, exp16, frac16};
+
+        status_o = '0;
+        status_o.NX = inexact;
+        status_o.NV = nv;
     end
 endmodule

@@ -941,10 +941,15 @@ vfredoladder #(
 
 bus_simd_t conv_zvfhmin_vd;
 fpnew_pkg::status_t conv_zvfhmin_flags;
+logic is_vfncvt_f_f;
+
+assign is_vfncvt_f_f = (instruction_i.instr.instr_type == VFNCVT_F_F) ? 1'b1 : 1'b0; 
 
 conv_zvfhmin conv_zfhmin_inst (
    .src_i(instruction_i.data_vs2),
-   .operation_i((instruction_i.instr.instr_type == VFNCVT_F_F) ? 1'b1 : 1'b0),
+   .valid_i(is_zvfhmin_conv(instruction_i)),
+   .operation_i(is_vfncvt_f_f),
+   .frm_i(instruction_i.instr.frm),
    .res_o(conv_zvfhmin_vd),
    .status_o(conv_zvfhmin_flags)
 );
