@@ -159,13 +159,14 @@ assign lzc_count = ldzres[5:0];
 
 logic           [12:0] normalized_exp  ;
 logic           [51:0] normalized_mant ;
+logic           [63:0] mant_tmp        ;
 logic           [51:0] mant_shifted    ;
 
 assign normalized_exp   = (src_is_subnormal) ?
                           ($unsigned(-$signed({8'b0, lzc_count}))) :
                           ({'0, src_exp});
-
-assign mant_shifted     = (src_mant << (lzc_count + 1))[51:0]; // lower 52 bits truncation
+assign mant_tmp         = (src_mant << (lzc_count + 1));
+assign mant_shifted     = mant_tmp[51:0]; // lower 52 bits truncation
 assign normalized_mant  = src_is_subnormal ?
                           {1'b0, mant_shifted[51:1]} :
                           src_mant;
