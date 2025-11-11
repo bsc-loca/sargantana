@@ -56,6 +56,7 @@ typedef struct packed {
     instr_type_t        instr_type;     // instruction type
     bus_simd_t          data_vs1;       // data of the scalar vs1 input
     op_frm_fp_t         frm;            // floating point desired rounding mode propagation
+    logic               all_inactive;   // all the elements are inactive (propagate vs1 without canonicalizing)
 } metadata_t;
 
 /////////////////////    SUPPORT FUNCTION DEFINITIONS    /////////////////////
@@ -339,6 +340,7 @@ always_comb begin
 
     // multiplex the correct result depending on the instruction type
     fp32_res = (lastfp32ismaxinstr_end || lastfp32ismininstr_end) ? lastfp32maxmin_masked :
+               (fp32_metadata_q[($clog2(VLEN/32))*DELAY_SUM_FP32+(DELAY_SUM_FP32-1)].all_inactive == 1'b0) ? lastfp32srcb_end[DELAY_SUM_FP32-1] :
                lastfp32resdp2[31:0];
 end
 
@@ -407,11 +409,12 @@ for (i = 0; i < DELAY_SUM_FP64; i++) begin : fp64_wide_metadata
             fp64widemetadata[i] <= '0;
         end else begin
             if (i == 0) begin
-                fp64widemetadata[i].instr_type <= instr_type_i;
-                fp64widemetadata[i].sew        <= SEW_64;
-                fp64widemetadata[i].data_vs1   <= data_vs1_i;
-                fp64widemetadata[i].frm        <= frm_i;
-                fp64widemetadata[i].status     <= '0;
+                fp64widemetadata[i].instr_type   <= instr_type_i;
+                fp64widemetadata[i].sew          <= SEW_64;
+                fp64widemetadata[i].data_vs1     <= data_vs1_i;
+                fp64widemetadata[i].frm          <= frm_i;
+                fp64widemetadata[i].status       <= '0;
+                fp64widemetadata[i].all_inactive <= |data_vm;
             end else begin
                 fp64widemetadata[i] <= fp64widemetadata[i-1];
             end
@@ -692,6 +695,7 @@ always_comb begin
 
     // multiplex the correct result depending on the instruction type
     fp64_res = (lastfp64ismaxinstr_end || lastfp64ismininstr_end) ? lastfp64maxmin_masked :
+               (fp64_metadata_q[($clog2(VLEN/64))*DELAY_SUM_FP64+(DELAY_SUM_FP64-1)].all_inactive == 1'b0) ? lastfp64srcb_end[DELAY_SUM_FP64-1] :
                lastfp64resdp2;
 end
 
@@ -790,13 +794,14 @@ metadata_t fp32_metadata_q[($clog2(VLEN/32)+1)*DELAY_SUM_FP32-1:0]; // register
 
 always_comb begin
     fp32_metadata_d[0] = '0;
-    fp32_metadata_d[0].instr_type = instr_type_i;
-    fp32_metadata_d[0].sew        = sew_i;
-    fp32_metadata_d[0].data_vs1   = data_vs1_i; // we'll need this data at the last sum
-    fp32_metadata_d[0].frm        = frm_i;
+    fp32_metadata_d[0].instr_type   = instr_type_i;
+    fp32_metadata_d[0].sew          = sew_i;
+    fp32_metadata_d[0].data_vs1     = data_vs1_i; // we'll need this data at the last sum
+    fp32_metadata_d[0].frm          = frm_i;
     // this could be done inside the generate block, but for the sake of
     // understandability will be defined appart for this first step
-    fp32_metadata_d[0].status     = '0;
+    fp32_metadata_d[0].status       = '0;
+    fp32_metadata_d[0].all_inactive = |data_vm;
 end
 
 always_ff @(posedge clk_i, negedge rstn_i) begin // first register
@@ -826,10 +831,11 @@ generate
         fpnew_pkg::status_t statusred;
         always_comb begin
             fp32_metadata_d[i] = '0;
-            fp32_metadata_d[i].instr_type = fp32_metadata_q[i-1].instr_type;
-            fp32_metadata_d[i].sew        = fp32_metadata_q[i-1].sew;
-            fp32_metadata_d[i].data_vs1   = fp32_metadata_q[i-1].data_vs1;
-            fp32_metadata_d[i].frm        = fp32_metadata_q[i-1].frm;
+            fp32_metadata_d[i].instr_type   = fp32_metadata_q[i-1].instr_type;
+            fp32_metadata_d[i].sew          = fp32_metadata_q[i-1].sew;
+            fp32_metadata_d[i].data_vs1     = fp32_metadata_q[i-1].data_vs1;
+            fp32_metadata_d[i].frm          = fp32_metadata_q[i-1].frm;
+            fp32_metadata_d[i].all_inactive = fp32_metadata_q[i-1].all_inactive;
 
             // we need also to treat the invalid vector propagation
             // on DELAY_SUM_FP32 multiple stages
@@ -880,11 +886,12 @@ always_comb begin
             fp64_metadata_d[0].status.NV |= fp64widestatus[j].NV;
         end
     end else begin
-        fp64_metadata_d[0].instr_type = instr_type_i;
-        fp64_metadata_d[0].sew        = sew_i;
-        fp64_metadata_d[0].data_vs1   = data_vs1_i;
-        fp64_metadata_d[0].frm        = frm_i;
-        fp64_metadata_d[0].status     = '0;
+        fp64_metadata_d[0].instr_type   = instr_type_i;
+        fp64_metadata_d[0].sew          = sew_i;
+        fp64_metadata_d[0].data_vs1     = data_vs1_i;
+        fp64_metadata_d[0].frm          = frm_i;
+        fp64_metadata_d[0].status       = '0;
+        fp64_metadata_d[0].all_inactive = |data_vm;
     end
 end
 
@@ -905,10 +912,11 @@ generate
         fpnew_pkg::status_t statusred;
         always_comb begin
             fp64_metadata_d[i] = '0;
-            fp64_metadata_d[i].instr_type = fp64_metadata_q[i-1].instr_type;
-            fp64_metadata_d[i].sew        = fp64_metadata_q[i-1].sew;
-            fp64_metadata_d[i].data_vs1   = fp64_metadata_q[i-1].data_vs1;
-            fp64_metadata_d[i].frm        = fp64_metadata_q[i-1].frm;
+            fp64_metadata_d[i].instr_type   = fp64_metadata_q[i-1].instr_type;
+            fp64_metadata_d[i].sew          = fp64_metadata_q[i-1].sew;
+            fp64_metadata_d[i].data_vs1     = fp64_metadata_q[i-1].data_vs1;
+            fp64_metadata_d[i].frm          = fp64_metadata_q[i-1].frm;
+            fp64_metadata_d[i].all_inactive = fp64_metadata_q[i-1].all_inactive;
 
             // we need also to treat the invalid vector propagation
             // on DELAY_SUM_FP64 multiple stages

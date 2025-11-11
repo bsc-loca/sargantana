@@ -100,7 +100,8 @@ bus32_t fp32_srcb_first;
 assign fp32_srcb_first = data_vm[0] ? data_vs2_i[31:0] : 32'h0000_0000;
 assign fp32_srca_first = data_vs1_i[31:0];
 
-assign fp32_res = fp32signals[(2*(VLEN/32)) -1];
+assign fp32_res = (|(fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vm) == 1'b0) ? fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vs1[31:0] :
+                  fp32signals[(2*(VLEN/32)) -1];
 
 logic [2:0][63:0] fp32_fpnew_operands_first;
 always_comb begin
@@ -403,7 +404,8 @@ fp64_srcb_first = (fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].instr_ty
                   fp32_to_fp64(fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].data_vs2[(32*(ADDS_WIDENING)) +: 32]) :
                   (data_vm[0] ? fp64signals[0] : 64'h0000_0000_0000_0000);
 
-fp64_res        = fp64signals[2*(VLEN/64) -1];
+fp64_res        = ((|fp64_metadata[(VLEN/64)-1][DELAY_SUM_FP64-1].data_vm) == 1'b0) ? fp64_metadata[(VLEN/64)-1][DELAY_SUM_FP64-1].data_vs1[63:0] :
+                  fp64signals[2*(VLEN/64) -1];
 end
 
 logic [2:0][63:0] fp64_fpnew_operands_first;
