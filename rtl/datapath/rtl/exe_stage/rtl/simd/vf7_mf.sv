@@ -168,7 +168,7 @@ assign normalized_exp   = (src_is_subnormal) ?
 assign mant_tmp         = (src_mant << (lzc_count + 1));
 assign mant_shifted     = mant_tmp[51:0]; // lower 52 bits truncation
 assign normalized_mant  = src_is_subnormal ?
-                          {1'b0, mant_shifted[51:1]} :
+                          mant_shifted :
                           src_mant;
 
 // ============================================================================
