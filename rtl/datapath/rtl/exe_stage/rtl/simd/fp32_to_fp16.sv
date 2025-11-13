@@ -28,11 +28,16 @@ module fp32_to_fp16 (
 
     logic inexact;
     logic nv;
+    logic overflow;
+    logic underflow;
 
     localparam logic [4:0] EXP_BIAS_16  = 4'd15;
 
     always_comb begin
         nv = 1'b0;
+        overflow = 1'b0;
+        underflow = 1'b0;
+
         sign   = f32[31];
         exp32  = f32[30:23];
         frac32 = f32[22:0];
@@ -76,7 +81,7 @@ module fp32_to_fp16 (
                     guard = 1'b0;
                     round = 1'b0;
                     sticky = 1'b0;
-                    nv = 1'b1;
+                    overflow = 1'b1;
                 end else begin
                     // Normal conversion
                     exp16_ext  = exp_unbiased[4:0] + 5'd15;
@@ -100,7 +105,8 @@ module fp32_to_fp16 (
             default: round_up = 1'b0;
         endcase
 
-        inexact = (guard || round || sticky);
+        underflow = (exp32 < EXP_BIAS_16) && (guard || round || sticky);
+        inexact = (guard || round || sticky || underflow || overflow);
 
         frac_ext = {1'b0, frac16} + {{10{1'b0}}, round_up};
 
@@ -116,6 +122,8 @@ module fp32_to_fp16 (
         f16 = {sign, exp16, frac16};
 
         status_o = '0;
+        status_o.OF = overflow;
+        status_o.UF = underflow;
         status_o.NX = inexact;
         status_o.NV = nv;
     end

@@ -41,6 +41,8 @@ always_comb begin
     fp32_to_fp16_merged_flags = '0;
     fp32_to_fp16_merged_flags.NV = fp32_to_fp16_flags[0].NV | fp32_to_fp16_flags[1].NV | fp32_to_fp16_flags[2].NV | fp32_to_fp16_flags[3].NV;
     fp32_to_fp16_merged_flags.NX = fp32_to_fp16_flags[0].NX | fp32_to_fp16_flags[1].NX | fp32_to_fp16_flags[2].NX | fp32_to_fp16_flags[3].NX;
+    fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[0].OF | fp32_to_fp16_flags[1].OF | fp32_to_fp16_flags[2].OF | fp32_to_fp16_flags[3].OF;
+    fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[0].UF | fp32_to_fp16_flags[1].UF | fp32_to_fp16_flags[2].UF | fp32_to_fp16_flags[3].UF;
 
     fp16_to_fp32_merged_flags = '0;
     fp16_to_fp32_merged_flags.NV = fp16_to_fp32_flags[0].NV | fp16_to_fp32_flags[1].NV | fp16_to_fp32_flags[2].NV | fp16_to_fp32_flags[3].NV;
