@@ -9,122 +9,183 @@ module fp32_to_fp16 (
     logic [7:0]  exp32;
     logic [22:0] frac32;
     logic [4:0]  exp16;
-    logic [5:0]  exp16_ext;
     logic [9:0]  frac16;
 
-    logic [10:0] frac_ext;
-    logic [5:0]  exp_ext;
+    logic [4:0]  final_exp16;
+    logic [9:0]  final_frac16;
+
+    logic [7:0]  exp_unbiased;
+    logic [8:0]  exp_unbiased_ext;
+    logic [7:0]  exp16_biased_ext;
+    logic [10:0] frac16_ext;
+    logic [8:0]  shift_amt;
 
     logic guard;
     logic round;
     logic sticky;
     logic round_up;
 
-    logic [7:0] exp_unbiased;
-    logic [8:0] shift_amt;
-
-    logic [26:0] frac_denorm;
-    logic [22:0] frac_shifted;
+    logic is_zero_f32;
+    logic is_subnormal_f32;
+    logic is_inf_f32;
+    logic is_nan_f32;
+    logic is_snan_f32;
 
     logic inexact;
     logic nv;
     logic overflow;
     logic underflow;
+    logic is_tiny;
 
-    localparam logic [4:0] EXP_BIAS_16  = 4'd15;
+    logic [23:0] significand;
+    logic [23:0] shifted_sig;
+
+    logic [8:0]  rshift_amt;
+    logic [9:0]  rshift_amt_ext;
+    logic [23:0] sticky_mask;
+    logic        sticky_shifted_out;
+
+    localparam logic signed [4:0] EXP_BIAS_16 = 5'sd15;
+    localparam logic signed [7:0] EXP_BIAS_32 = 8'sd127;
+    localparam signed [7:0] MIN_NORM_EXP_16 = -8'sd14;
 
     always_comb begin
+        sign = f32[31];
+        exp32 = f32[30:23];
+        frac32 = f32[22:0];
+
+        is_zero_f32 = (exp32 == 8'h00) && (frac32 == 23'h0);
+        is_subnormal_f32 = (exp32 == 8'h00) && (frac32 != 23'h0);
+        is_inf_f32 = (exp32 == 8'hFF) && (frac32 == 23'h0);
+        is_nan_f32 = (exp32 == 8'hFF) && (frac32 != 23'h0);
+        is_snan_f32 = is_nan_f32 && !frac32[22];
+
+        exp16 = '0;
+        frac16 = '0;
+        guard = 1'b0;
+        round = 1'b0;
+        sticky = 1'b0;
+        round_up = 1'b0;
+        sticky_shifted_out = 1'b0;
+        rshift_amt = '0;
+        sticky_mask = '0;
+
         nv = 1'b0;
         overflow = 1'b0;
         underflow = 1'b0;
+        inexact = 1'b0;
+        is_tiny = 1'b0;
 
-        sign   = f32[31];
-        exp32  = f32[30:23];
-        frac32 = f32[22:0];
+        if (is_nan_f32) begin
+            exp16 = 5'h1F;
+            frac16 = 10'h200;
+            nv = is_snan_f32;
+            sign = 1'b0;
 
-        round_up = 1'b0;
-        guard    = 1'b0;
-        round    = 1'b0;
-        sticky   = 1'b0;
+        end else if (is_inf_f32) begin
+            exp16 = 5'h1F;
+            frac16 = 10'h0;
 
-        if (exp32 == 8'hFF) begin
-            // Infinity or NaN
-            exp16  = 5'h1F;
-            frac16 = (frac32 != 0) ? {1'b1, frac32[21:13]} : 10'h0;
-            nv = 1'b1;
+        end else if (is_zero_f32) begin
+            exp16 = 5'h00;
+            frac16 = 10'h0;
+
+        end else if (is_subnormal_f32) begin
+            exp16 = 5'h00;
+            frac16 = 10'h0;
+            sticky = 1'b1;
+            is_tiny = 1'b1;
+
         end else begin
-            if ((exp32 == 0) && (frac32 == 0)) begin
-                // Zero
-                exp16  = 5'h00;
-                frac16 = 10'h0;
+            exp_unbiased_ext = 9'($signed({1'b0, exp32}) - EXP_BIAS_32);
+            exp_unbiased = exp_unbiased_ext[7:0];
+
+            if ($signed(exp_unbiased) > 15) begin
+                exp16 = 5'h1E;
+                frac16 = 10'h3FF;
+                guard = 1'b1;
+                round = 1'b0;
+                sticky = 1'b0;
+                overflow = 1'b1;
+
+            end else if ($signed(exp_unbiased) >= MIN_NORM_EXP_16) begin
+                exp16_biased_ext = $signed(exp_unbiased) + EXP_BIAS_16;
+                exp16 = exp16_biased_ext[4:0];
+
+                frac16 = frac32[22:13];
+                guard = frac32[12];
+                round = frac32[11];
+                sticky = |frac32[10:0];
+
             end else begin
-                if (exp32 == 0) begin // Subnormal
-                    frac_shifted = frac32;
-                    exp_unbiased = 8'h82; // -126
-                end else begin // Normal
-                    frac_shifted = frac32;
-                    exp_unbiased = exp32 - 8'd127;
-                end
+                is_tiny = 1'b1;
+                exp16 = 5'h00;
 
-                if (exp32 < EXP_BIAS_16) begin
-                    shift_amt   = ((-8'sd13) - signed'(exp_unbiased));
-                    frac_denorm = {1'b1, frac_shifted, 3'b000} >> shift_amt;
+                shift_amt = (MIN_NORM_EXP_16 - $signed(exp_unbiased));
 
-                    exp16  = 5'h00;
-                    frac16 = frac_denorm[26:17];
-                    guard  = frac_denorm[16];
-                    round  = frac_denorm[15];
-                    sticky = |frac_denorm[14:0];
-                end else if (signed'(exp_unbiased) > 15) begin
-                    exp16 = 5'h1F;
-                    frac16 = 10'b0;
-                    guard = 1'b0;
-                    round = 1'b0;
-                    sticky = 1'b0;
-                    overflow = 1'b1;
+                significand = {1'b1, frac32};
+                shifted_sig = significand >> shift_amt;
+
+                if (shift_amt < 24) begin
+                    rshift_amt_ext = 9'd24 - shift_amt;
+                    rshift_amt = rshift_amt_ext[8:0];
+                    sticky_mask = 24'hFFFFFF >> rshift_amt;
+                    sticky_shifted_out = |(significand & sticky_mask);
                 end else begin
-                    // Normal conversion
-                    exp16_ext  = exp_unbiased[4:0] + 5'd15;
-                    exp16 = exp16_ext[4:0];
-
-                    frac16 = frac32[22:13];
-
-                    guard  = frac32[12];
-                    round  = frac32[11];
-                    sticky = |frac32[10:0];
+                    sticky_shifted_out = |significand;
                 end
+
+                frac16 = shifted_sig[22:13];
+                guard = shifted_sig[12];
+                round = shifted_sig[11];
+                sticky = ((|shifted_sig[10:0]) | sticky_shifted_out);
             end
         end
+
+        inexact = (guard || round || sticky);
+
+        underflow = is_tiny && inexact && !is_zero_f32;
 
         case (frm)
             riscv_pkg::FRM_RNE: round_up = guard && (round || sticky || frac16[0]);
             riscv_pkg::FRM_RTZ: round_up = 1'b0;
             riscv_pkg::FRM_RDN: round_up = sign && (guard || round || sticky);
             riscv_pkg::FRM_RUP: round_up = !sign && (guard || round || sticky);
-            riscv_pkg::FRM_RMM: round_up = guard && (round || sticky || !sign);
+            riscv_pkg::FRM_RMM: round_up = (guard || round || sticky);
             default: round_up = 1'b0;
         endcase
 
-        underflow = (exp32 < EXP_BIAS_16) && (guard || round || sticky);
-        inexact = (guard || round || sticky || underflow || overflow);
+        if (!is_nan_f32 && !is_inf_f32 && !is_zero_f32) begin
+            frac16_ext = {1'b0, frac16} + round_up;
+            final_exp16 = exp16;
 
-        frac_ext = {1'b0, frac16} + {{10{1'b0}}, round_up};
+            if (frac16_ext[10]) begin
+                final_frac16 = 10'h0;
+                exp16_biased_ext = {1'b0, exp16} + 1;
 
-        if (frac_ext[10]) begin
-            exp_ext = {1'b0, exp16} + 6'b1;
-            exp16 = exp_ext[4:0];
-
-            frac16 = 10'h0;
-        end else begin
-            frac16 = frac_ext[9:0];
+                if (exp16_biased_ext == 6'h1F) begin
+                    final_exp16 = 5'h1F;
+                    overflow = 1'b1;
+                end else begin
+                    final_exp16 = exp16_biased_ext[4:0];
+                end
+            end else begin
+                final_frac16 = frac16_ext[9:0];
+            end
         end
 
-        f16 = {sign, exp16, frac16};
+        else begin
+            final_exp16 = exp16;
+            final_frac16 = frac16;
+        end
+
+        f16 = {sign, final_exp16, final_frac16};
 
         status_o = '0;
         status_o.OF = overflow;
         status_o.UF = underflow;
-        status_o.NX = inexact;
+        status_o.NX = inexact || overflow || underflow;
         status_o.NV = nv;
     end
+
 endmodule

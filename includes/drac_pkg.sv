@@ -1670,28 +1670,51 @@ function automatic logic is_snan_f16(input logic [15:0] fp16);
     is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
 endfunction
 
-function automatic logic [32:0] fp16_to_fp32( input  logic [15:0] f16);
-    logic        sign;
+function automatic logic [32:0] fp16_to_fp32( input logic [15:0] f16);
+    logic       sign;
     logic [4:0]  exp16;
     logic [9:0]  frac16;
 
     logic [7:0]  exp32;
     logic [22:0] frac32;
 
-    logic        nv_flag;
+    logic       nv_flag;
     logic [31:0] converted_val;
+    logic [3:0]  shift_amount;
 
     begin
         sign   = f16[15];
         exp16  = f16[14:10];
         frac16 = f16[9:0];
 
-        nv_flag = (exp16 == 5'h1F) && (frac16 != 0);
+        nv_flag = (exp16 == 5'h1F) && (frac16[9] == 1'b0) && (frac16[8:0] != 0);
 
         if (exp16 == 5'h00) begin
-            exp32  = 8'h00;
-            frac32 = {frac16, {13{1'b0}}};
+            if (frac16 == 10'h000) begin
+                exp32  = 8'h00;
+                frac32 = 23'h0000000;
+            end
+            else begin
+                casex (frac16[9:0])
+                    10'b1xxxxxxxxx: shift_amount = 0;
+                    10'b01xxxxxxxx: shift_amount = 1;
+                    10'b001xxxxxxx: shift_amount = 2;
+                    10'b0001xxxxxx: shift_amount = 3;
+                    10'b00001xxxxx: shift_amount = 4;
+                    10'b000001xxxx: shift_amount = 5;
+                    10'b0000001xxx: shift_amount = 6;
+                    10'b00000001xx: shift_amount = 7;
+                    10'b000000001x: shift_amount = 8;
+                    10'b0000000001: shift_amount = 9;
+                    default:        shift_amount = 10; // Should not be hit
+                endcase
+
+                exp32 = (8'd112 - shift_amount);
+
+                frac32 = {frac16, {13{1'b0}}} << (shift_amount + 1);
+            end
         end
+
         else if (exp16 == 5'h1F) begin
             exp32  = 8'hFF;
             frac32 = {frac16, {13{1'b0}}};
@@ -1704,7 +1727,7 @@ function automatic logic [32:0] fp16_to_fp32( input  logic [15:0] f16);
         if (is_qnan_f16(f16)) begin
             converted_val = FP32_QNAN;
         end else if (is_snan_f16(f16)) begin
-            converted_val = FP32_SNAN;
+            converted_val = FP32_QNAN;
         end else begin
             converted_val = {sign, exp32, frac32};
         end

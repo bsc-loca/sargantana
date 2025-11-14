@@ -1,4 +1,8 @@
-module conv_zvfhmin(
+module conv_zvfhmin
+import drac_pkg::*;
+import riscv_pkg::*;
+import mmu_pkg::*;
+(
     input bus_simd_t src_i,
     input logic valid_i,
     input logic operation_i, // 0: widening, 1: narrowing
