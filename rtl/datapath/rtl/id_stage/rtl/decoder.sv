@@ -1796,6 +1796,24 @@ module decoder
                                                 end else begin
                                                     decode_instr_int.instr_type = VSEXT_VF2;     
                                                 end
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VBREV8) begin
+                                                decode_instr_int.instr_type = VBREV8;
+                                                decode_instr_int.use_vs1 = 1'b0;
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VREV8) begin
+                                                decode_instr_int.instr_type = VREV8;
+                                                decode_instr_int.use_vs1 = 1'b0;
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VBREV) begin
+                                                decode_instr_int.instr_type = VBREV;
+                                                decode_instr_int.use_vs1 = 1'b0;
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VCLZ) begin
+                                                decode_instr_int.instr_type = VCLZ;
+                                                decode_instr_int.use_vs1 = 1'b0;
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VCTZ) begin
+                                                decode_instr_int.instr_type = VCTZ;
+                                                decode_instr_int.use_vs1 = 1'b0;
+                                            end else if (decode_i.inst.vtype.vs1 == VS1_VCPOP) begin
+                                                decode_instr_int.instr_type = VCPOP;
+                                                decode_instr_int.use_vs1 = 1'b0;
                                             end else begin
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             end
