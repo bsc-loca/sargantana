@@ -100,7 +100,7 @@ bus32_t fp32_srcb_first;
 assign fp32_srcb_first = data_vm[0] ? data_vs2_i[31:0] : 32'h0000_0000;
 assign fp32_srca_first = data_vs1_i[31:0];
 
-assign fp32_res = (|(fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vm) == 1'b0) ? fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vs1[31:0] :
+assign fp32_res = ((|(fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vm)) == 1'b0) ? fp32_metadata[(VLEN/32)-1][DELAY_SUM_FP32-1].data_vs1[31:0] :
                   fp32signals[(2*(VLEN/32)) -1];
 
 logic [2:0][63:0] fp32_fpnew_operands_first;

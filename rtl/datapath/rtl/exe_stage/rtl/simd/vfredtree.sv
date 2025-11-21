@@ -63,19 +63,23 @@ typedef struct packed {
 
 // Function to translate raw flags comming from DP2 into fpnew_pkg::status_t
 
-function automatic integer floor_log2(input integer value);
-    if (value == 0) return integer'(-1);
-    return integer'(int'($clog2(value+1)) - 1);
+function automatic int floor_log2(input int value);
+    int tmp;
+
+    if (value == 0) return 32'(-1);
+
+    tmp = 32'($clog2(value+1) - 1);
 endfunction
 
 function automatic int first_node_index(int level, int sew);
     int sum;
     sum = 0;
     for (int k = 0; k < level; k++) begin
-        sum = 32'(sum + ((32'($unsigned(VLEN))/32'($unsigned(sew))) >> (k+1))); // number of nodes at level k
+        sum = sum + ((int'(VLEN) / int'(sew)) >> (k+1));
     end
     return sum;
 endfunction
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -543,6 +547,7 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
                 fp64srca_end[k] <= 64'h0;
                 fp64srcb_end[k] <= 64'h0;
                 fp64aisvalid_end[k] <= 1'b0;
+                fp64bisvalid_end[k] <= 1'b0;
             end else begin
                 if (k == 0) begin
                     fp64srca_end[k] <= fp64srca;
