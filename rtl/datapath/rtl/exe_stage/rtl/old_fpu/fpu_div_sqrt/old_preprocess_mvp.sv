@@ -42,19 +42,19 @@ module old_preprocess_mvp
    input logic                   Sqrt_start_SI,
    input logic                   Ready_SI,
    //Input Operands
-   input logic [C_OP_FP64-1:0]   Operand_a_DI,
-   input logic [C_OP_FP64-1:0]   Operand_b_DI,
-   input logic [C_RM-1:0]        RM_SI,    //Rounding Mode
-   input logic [C_FS-1:0]        Format_sel_SI,  // Format Selection
+   input logic [OLD_C_OP_FP64-1:0]   Operand_a_DI,
+   input logic [OLD_C_OP_FP64-1:0]   Operand_b_DI,
+   input logic [OLD_C_RM-1:0]        RM_SI,    //Rounding Mode
+   input logic [OLD_C_FS-1:0]        Format_sel_SI,  // Format Selection
 
    // to control
    output logic                  Start_SO,
-   output logic [C_EXP_FP64:0]   Exp_a_DO_norm,
-   output logic [C_EXP_FP64:0]   Exp_b_DO_norm,
-   output logic [C_MANT_FP64:0]  Mant_a_DO_norm,
-   output logic [C_MANT_FP64:0]  Mant_b_DO_norm,
+   output logic [OLD_C_EXP_FP64:0]   Exp_a_DO_norm,
+   output logic [OLD_C_EXP_FP64:0]   Exp_b_DO_norm,
+   output logic [OLD_C_MANT_FP64:0]  Mant_a_DO_norm,
+   output logic [OLD_C_MANT_FP64:0]  Mant_b_DO_norm,
 
-   output logic [C_RM-1:0]       RM_dly_SO,
+   output logic [OLD_C_RM-1:0]       RM_dly_SO,
 
    output logic                  Sign_z_DO,
    output logic                  Inf_a_SO,
@@ -72,12 +72,12 @@ module old_preprocess_mvp
    logic                         Hb_a_D;
    logic                         Hb_b_D;
 
-   logic [C_EXP_FP64-1:0]        Exp_a_D;
-   logic [C_EXP_FP64-1:0]        Exp_b_D;
-   logic [C_MANT_FP64-1:0]       Mant_a_NonH_D;
-   logic [C_MANT_FP64-1:0]       Mant_b_NonH_D;
-   logic [C_MANT_FP64:0]         Mant_a_D;
-   logic [C_MANT_FP64:0]         Mant_b_D;
+   logic [OLD_C_EXP_FP64-1:0]        Exp_a_D;
+   logic [OLD_C_EXP_FP64-1:0]        Exp_b_D;
+   logic [OLD_C_MANT_FP64-1:0]       Mant_a_NonH_D;
+   logic [OLD_C_MANT_FP64-1:0]       Mant_b_NonH_D;
+   logic [OLD_C_MANT_FP64:0]         Mant_a_D;
+   logic [OLD_C_MANT_FP64:0]         Mant_b_D;
 
    /////////////////////////////////////////////////////////////////////////////
    // Disassemble operands
@@ -90,39 +90,39 @@ module old_preprocess_mvp
          case(Format_sel_SI)
            2'b00:
              begin
-               Sign_a_D = Operand_a_DI[C_OP_FP32-1];
-               Sign_b_D = Operand_b_DI[C_OP_FP32-1];
-               Exp_a_D  = {3'h0, Operand_a_DI[C_OP_FP32-2:C_MANT_FP32]};
-               Exp_b_D  = {3'h0, Operand_b_DI[C_OP_FP32-2:C_MANT_FP32]};
-               Mant_a_NonH_D = {Operand_a_DI[C_MANT_FP32-1:0],29'h0};
-               Mant_b_NonH_D = {Operand_b_DI[C_MANT_FP32-1:0],29'h0};
+               Sign_a_D = Operand_a_DI[OLD_C_OP_FP32-1];
+               Sign_b_D = Operand_b_DI[OLD_C_OP_FP32-1];
+               Exp_a_D  = {3'h0, Operand_a_DI[OLD_C_OP_FP32-2:OLD_C_MANT_FP32]};
+               Exp_b_D  = {3'h0, Operand_b_DI[OLD_C_OP_FP32-2:OLD_C_MANT_FP32]};
+               Mant_a_NonH_D = {Operand_a_DI[OLD_C_MANT_FP32-1:0],29'h0};
+               Mant_b_NonH_D = {Operand_b_DI[OLD_C_MANT_FP32-1:0],29'h0};
              end
            2'b01:
              begin
-               Sign_a_D = Operand_a_DI[C_OP_FP64-1];
-               Sign_b_D = Operand_b_DI[C_OP_FP64-1];
-               Exp_a_D  = Operand_a_DI[C_OP_FP64-2:C_MANT_FP64];
-               Exp_b_D  = Operand_b_DI[C_OP_FP64-2:C_MANT_FP64];
-               Mant_a_NonH_D = Operand_a_DI[C_MANT_FP64-1:0];
-               Mant_b_NonH_D = Operand_b_DI[C_MANT_FP64-1:0];
+               Sign_a_D = Operand_a_DI[OLD_C_OP_FP64-1];
+               Sign_b_D = Operand_b_DI[OLD_C_OP_FP64-1];
+               Exp_a_D  = Operand_a_DI[OLD_C_OP_FP64-2:OLD_C_MANT_FP64];
+               Exp_b_D  = Operand_b_DI[OLD_C_OP_FP64-2:OLD_C_MANT_FP64];
+               Mant_a_NonH_D = Operand_a_DI[OLD_C_MANT_FP64-1:0];
+               Mant_b_NonH_D = Operand_b_DI[OLD_C_MANT_FP64-1:0];
              end
            2'b10:
              begin
-               Sign_a_D = Operand_a_DI[C_OP_FP16-1];
-               Sign_b_D = Operand_b_DI[C_OP_FP16-1];
-               Exp_a_D  = {6'h00, Operand_a_DI[C_OP_FP16-2:C_MANT_FP16]};
-               Exp_b_D  = {6'h00, Operand_b_DI[C_OP_FP16-2:C_MANT_FP16]};
-               Mant_a_NonH_D = {Operand_a_DI[C_MANT_FP16-1:0],42'h0};
-               Mant_b_NonH_D = {Operand_b_DI[C_MANT_FP16-1:0],42'h0};
+               Sign_a_D = Operand_a_DI[OLD_C_OP_FP16-1];
+               Sign_b_D = Operand_b_DI[OLD_C_OP_FP16-1];
+               Exp_a_D  = {6'h00, Operand_a_DI[OLD_C_OP_FP16-2:OLD_C_MANT_FP16]};
+               Exp_b_D  = {6'h00, Operand_b_DI[OLD_C_OP_FP16-2:OLD_C_MANT_FP16]};
+               Mant_a_NonH_D = {Operand_a_DI[OLD_C_MANT_FP16-1:0],42'h0};
+               Mant_b_NonH_D = {Operand_b_DI[OLD_C_MANT_FP16-1:0],42'h0};
              end
            2'b11:
              begin
-               Sign_a_D = Operand_a_DI[C_OP_FP16ALT-1];
-               Sign_b_D = Operand_b_DI[C_OP_FP16ALT-1];
-               Exp_a_D  = {3'h0, Operand_a_DI[C_OP_FP16ALT-2:C_MANT_FP16ALT]};
-               Exp_b_D  = {3'h0, Operand_b_DI[C_OP_FP16ALT-2:C_MANT_FP16ALT]};
-               Mant_a_NonH_D = {Operand_a_DI[C_MANT_FP16ALT-1:0],45'h0};
-               Mant_b_NonH_D = {Operand_b_DI[C_MANT_FP16ALT-1:0],45'h0};
+               Sign_a_D = Operand_a_DI[OLD_C_OP_FP16ALT-1];
+               Sign_b_D = Operand_b_DI[OLD_C_OP_FP16ALT-1];
+               Exp_a_D  = {3'h0, Operand_a_DI[OLD_C_OP_FP16ALT-2:OLD_C_MANT_FP16ALT]};
+               Exp_b_D  = {3'h0, Operand_b_DI[OLD_C_OP_FP16ALT-2:OLD_C_MANT_FP16ALT]};
+               Mant_a_NonH_D = {Operand_a_DI[OLD_C_MANT_FP16ALT-1:0],45'h0};
+               Mant_b_NonH_D = {Operand_b_DI[OLD_C_MANT_FP16ALT-1:0],45'h0};
              end
            endcase
        end
@@ -158,41 +158,41 @@ module old_preprocess_mvp
    logic               Mant_b_prenorm_QNaN_S;
    logic               Mant_b_prenorm_SNaN_S;
 
-   assign Mant_a_prenorm_QNaN_S=Mant_a_NonH_D[C_MANT_FP64-1]&&(~(|Mant_a_NonH_D[C_MANT_FP64-2:0]));
-   assign Mant_a_prenorm_SNaN_S=(~Mant_a_NonH_D[C_MANT_FP64-1])&&((|Mant_a_NonH_D[C_MANT_FP64-2:0]));
-   assign Mant_b_prenorm_QNaN_S=Mant_b_NonH_D[C_MANT_FP64-1]&&(~(|Mant_b_NonH_D[C_MANT_FP64-2:0]));
-   assign Mant_b_prenorm_SNaN_S=(~Mant_b_NonH_D[C_MANT_FP64-1])&&((|Mant_b_NonH_D[C_MANT_FP64-2:0]));
+   assign Mant_a_prenorm_QNaN_S=Mant_a_NonH_D[OLD_C_MANT_FP64-1]&&(~(|Mant_a_NonH_D[OLD_C_MANT_FP64-2:0]));
+   assign Mant_a_prenorm_SNaN_S=(~Mant_a_NonH_D[OLD_C_MANT_FP64-1])&&((|Mant_a_NonH_D[OLD_C_MANT_FP64-2:0]));
+   assign Mant_b_prenorm_QNaN_S=Mant_b_NonH_D[OLD_C_MANT_FP64-1]&&(~(|Mant_b_NonH_D[OLD_C_MANT_FP64-2:0]));
+   assign Mant_b_prenorm_SNaN_S=(~Mant_b_NonH_D[OLD_C_MANT_FP64-1])&&((|Mant_b_NonH_D[OLD_C_MANT_FP64-2:0]));
 
      always_comb
        begin
          case(Format_sel_SI)
            2'b00:
              begin
-               Mant_a_prenorm_zero_S=(Operand_a_DI[C_MANT_FP32-1:0] == C_MANT_ZERO_FP32);
-               Mant_b_prenorm_zero_S=(Operand_b_DI[C_MANT_FP32-1:0] == C_MANT_ZERO_FP32);
-               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[C_OP_FP32-2:C_MANT_FP32] == C_EXP_INF_FP32);
-               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[C_OP_FP32-2:C_MANT_FP32] == C_EXP_INF_FP32);
+               Mant_a_prenorm_zero_S=(Operand_a_DI[OLD_C_MANT_FP32-1:0] == OLD_C_MANT_ZERO_FP32);
+               Mant_b_prenorm_zero_S=(Operand_b_DI[OLD_C_MANT_FP32-1:0] == OLD_C_MANT_ZERO_FP32);
+               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[OLD_C_OP_FP32-2:OLD_C_MANT_FP32] == OLD_C_EXP_INF_FP32);
+               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[OLD_C_OP_FP32-2:OLD_C_MANT_FP32] == OLD_C_EXP_INF_FP32);
              end
            2'b01:
              begin
-               Mant_a_prenorm_zero_S=(Operand_a_DI[C_MANT_FP64-1:0] == C_MANT_ZERO_FP64);
-               Mant_b_prenorm_zero_S=(Operand_b_DI[C_MANT_FP64-1:0] == C_MANT_ZERO_FP64);
-               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[C_OP_FP64-2:C_MANT_FP64] == C_EXP_INF_FP64);
-               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[C_OP_FP64-2:C_MANT_FP64] == C_EXP_INF_FP64);
+               Mant_a_prenorm_zero_S=(Operand_a_DI[OLD_C_MANT_FP64-1:0] == OLD_C_MANT_ZERO_FP64);
+               Mant_b_prenorm_zero_S=(Operand_b_DI[OLD_C_MANT_FP64-1:0] == OLD_C_MANT_ZERO_FP64);
+               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[OLD_C_OP_FP64-2:OLD_C_MANT_FP64] == OLD_C_EXP_INF_FP64);
+               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[OLD_C_OP_FP64-2:OLD_C_MANT_FP64] == OLD_C_EXP_INF_FP64);
              end
            2'b10:
              begin
-               Mant_a_prenorm_zero_S=(Operand_a_DI[C_MANT_FP16-1:0] == C_MANT_ZERO_FP16);
-               Mant_b_prenorm_zero_S=(Operand_b_DI[C_MANT_FP16-1:0] == C_MANT_ZERO_FP16);
-               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[C_OP_FP16-2:C_MANT_FP16] == C_EXP_INF_FP16);
-               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[C_OP_FP16-2:C_MANT_FP16] == C_EXP_INF_FP16);
+               Mant_a_prenorm_zero_S=(Operand_a_DI[OLD_C_MANT_FP16-1:0] == OLD_C_MANT_ZERO_FP16);
+               Mant_b_prenorm_zero_S=(Operand_b_DI[OLD_C_MANT_FP16-1:0] == OLD_C_MANT_ZERO_FP16);
+               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[OLD_C_OP_FP16-2:OLD_C_MANT_FP16] == OLD_C_EXP_INF_FP16);
+               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[OLD_C_OP_FP16-2:OLD_C_MANT_FP16] == OLD_C_EXP_INF_FP16);
              end
            2'b11:
              begin
-               Mant_a_prenorm_zero_S=(Operand_a_DI[C_MANT_FP16ALT-1:0] == C_MANT_ZERO_FP16ALT);
-               Mant_b_prenorm_zero_S=(Operand_b_DI[C_MANT_FP16ALT-1:0] == C_MANT_ZERO_FP16ALT);
-               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[C_OP_FP16ALT-2:C_MANT_FP16ALT] == C_EXP_INF_FP16ALT);
-               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[C_OP_FP16ALT-2:C_MANT_FP16ALT] == C_EXP_INF_FP16ALT);
+               Mant_a_prenorm_zero_S=(Operand_a_DI[OLD_C_MANT_FP16ALT-1:0] == OLD_C_MANT_ZERO_FP16ALT);
+               Mant_b_prenorm_zero_S=(Operand_b_DI[OLD_C_MANT_FP16ALT-1:0] == OLD_C_MANT_ZERO_FP16ALT);
+               Exp_a_prenorm_Inf_NaN_S=(Operand_a_DI[OLD_C_OP_FP16ALT-2:OLD_C_MANT_FP16ALT] == OLD_C_EXP_INF_FP16ALT);
+               Exp_b_prenorm_Inf_NaN_S=(Operand_b_DI[OLD_C_OP_FP16ALT-2:OLD_C_MANT_FP16ALT] == OLD_C_EXP_INF_FP16ALT);
              end
            endcase
        end
@@ -296,8 +296,8 @@ module old_preprocess_mvp
          end
     end
 
-   logic [C_RM-1:0]                  RM_DN;
-   logic [C_RM-1:0]                  RM_DP;
+   logic [OLD_C_RM-1:0]                  RM_DN;
+   logic [OLD_C_RM-1:0]                  RM_DP;
 
    always_comb
      begin
@@ -324,7 +324,7 @@ module old_preprocess_mvp
    logic                        Mant_zero_S_a,Mant_zero_S_b;
 
   lzc #(
-    .WIDTH ( C_MANT_FP64+1 ),
+    .WIDTH ( OLD_C_MANT_FP64+1 ),
     .MODE  ( 1             )
   ) LOD_Ua (
     .in_i    ( Mant_a_D          ),
@@ -332,7 +332,7 @@ module old_preprocess_mvp
     .empty_o ( Mant_zero_S_a     )
   );
 
-   logic [C_MANT_FP64:0]            Mant_a_norm_DN,Mant_a_norm_DP;
+   logic [OLD_C_MANT_FP64:0]            Mant_a_norm_DN,Mant_a_norm_DP;
 
    assign  Mant_a_norm_DN = ((Start_S&&Ready_SI))?(Mant_a_D<<(Mant_leadingOne_a)):Mant_a_norm_DP;
 
@@ -348,7 +348,7 @@ module old_preprocess_mvp
           end
      end
 
-   logic [C_EXP_FP64:0]            Exp_a_norm_DN,Exp_a_norm_DP;
+   logic [OLD_C_EXP_FP64:0]            Exp_a_norm_DN,Exp_a_norm_DP;
    assign  Exp_a_norm_DN = ((Start_S&&Ready_SI))?(Exp_a_D-Mant_leadingOne_a+(|Mant_leadingOne_a)):Exp_a_norm_DP;  //Covering the process of denormal numbers
 
    always_ff @(posedge Clk_CI, negedge Rst_RBI)
@@ -364,7 +364,7 @@ module old_preprocess_mvp
      end
 
   lzc #(
-    .WIDTH ( C_MANT_FP64+1 ),
+    .WIDTH ( OLD_C_MANT_FP64+1 ),
     .MODE  ( 1             )
   ) LOD_Ub (
     .in_i    ( Mant_b_D          ),
@@ -373,7 +373,7 @@ module old_preprocess_mvp
   );
 
 
-   logic [C_MANT_FP64:0]            Mant_b_norm_DN,Mant_b_norm_DP;
+   logic [OLD_C_MANT_FP64:0]            Mant_b_norm_DN,Mant_b_norm_DP;
 
    assign  Mant_b_norm_DN = ((Start_S&&Ready_SI))?(Mant_b_D<<(Mant_leadingOne_b)):Mant_b_norm_DP;
 
@@ -389,7 +389,7 @@ module old_preprocess_mvp
           end
      end
 
-   logic [C_EXP_FP64:0]            Exp_b_norm_DN,Exp_b_norm_DP;
+   logic [OLD_C_EXP_FP64:0]            Exp_b_norm_DN,Exp_b_norm_DP;
    assign  Exp_b_norm_DN = ((Start_S&&Ready_SI))?(Exp_b_D-Mant_leadingOne_b+(|Mant_leadingOne_b)):Exp_b_norm_DP; //Covering the process of denormal numbers
 
    always_ff @(posedge Clk_CI, negedge Rst_RBI)

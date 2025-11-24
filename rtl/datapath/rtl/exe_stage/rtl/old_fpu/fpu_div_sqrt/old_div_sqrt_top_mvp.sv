@@ -43,17 +43,17 @@ module old_div_sqrt_top_mvp
    input logic                            Sqrt_start_SI,
 
    //Input Operands
-   input logic [C_OP_FP64-1:0]            Operand_a_DI,
-   input logic [C_OP_FP64-1:0]            Operand_b_DI,
+   input logic [OLD_C_OP_FP64-1:0]            Operand_a_DI,
+   input logic [OLD_C_OP_FP64-1:0]            Operand_b_DI,
 
    // Input Control
-   input logic [C_RM-1:0]                 RM_SI,    //Rounding Mode
-   input logic [C_PC-1:0]                 Precision_ctl_SI, // Precision Control
-   input logic [C_FS-1:0]                 Format_sel_SI,  // Format Selection,
+   input logic [OLD_C_RM-1:0]                 RM_SI,    //Rounding Mode
+   input logic [OLD_C_PC-1:0]                 Precision_ctl_SI, // Precision Control
+   input logic [OLD_C_FS-1:0]                 Format_sel_SI,  // Format Selection,
    input logic                            Kill_SI,
 
    //Output Result
-   output logic [C_OP_FP64-1:0]           Result_DO,
+   output logic [OLD_C_OP_FP64-1:0]           Result_DO,
 
    //Output-Flags
    output logic [4:0]                     Fflags_SO,
@@ -66,16 +66,16 @@ module old_div_sqrt_top_mvp
 
 
    //Operand components
-   logic [C_EXP_FP64:0]                 Exp_a_D;
-   logic [C_EXP_FP64:0]                 Exp_b_D;
-   logic [C_MANT_FP64:0]                Mant_a_D;
-   logic [C_MANT_FP64:0]                Mant_b_D;
+   logic [OLD_C_EXP_FP64:0]                 Exp_a_D;
+   logic [OLD_C_EXP_FP64:0]                 Exp_b_D;
+   logic [OLD_C_MANT_FP64:0]                Mant_a_D;
+   logic [OLD_C_MANT_FP64:0]                Mant_b_D;
 
-   logic [C_EXP_FP64+1:0]               Exp_z_D;
-   logic [C_MANT_FP64+4:0]              Mant_z_D;
+   logic [OLD_C_EXP_FP64+1:0]               Exp_z_D;
+   logic [OLD_C_MANT_FP64+4:0]              Mant_z_D;
    logic                                Sign_z_D;
    logic                                Start_S;
-   logic [C_RM-1:0]                     RM_dly_S;
+   logic [OLD_C_RM-1:0]                     RM_dly_S;
    logic                                Div_enable_S;
    logic                                Sqrt_enable_S;
    logic                                Inf_a_S;

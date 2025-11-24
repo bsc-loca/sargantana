@@ -50,17 +50,17 @@ module old_div_sqrt_mvp_wrapper
    input logic                            Sqrt_start_SI,
 
    //Input Operands
-   input logic [C_OP_FP64-1:0]            Operand_a_DI,
-   input logic [C_OP_FP64-1:0]            Operand_b_DI,
+   input logic [OLD_C_OP_FP64-1:0]            Operand_a_DI,
+   input logic [OLD_C_OP_FP64-1:0]            Operand_b_DI,
 
    // Input Control
-   input logic [C_RM-1:0]                 RM_SI,    //Rounding Mode
-   input logic [C_PC-1:0]                 Precision_ctl_SI, // Precision Control
-   input logic [C_FS-1:0]                 Format_sel_SI,  // Format Selection,
+   input logic [OLD_C_RM-1:0]                 RM_SI,    //Rounding Mode
+   input logic [OLD_C_PC-1:0]                 Precision_ctl_SI, // Precision Control
+   input logic [OLD_C_FS-1:0]                 Format_sel_SI,  // Format Selection,
    input logic                            Kill_SI,
 
    //Output Result
-   output logic [C_OP_FP64-1:0]           Result_DO,
+   output logic [OLD_C_OP_FP64-1:0]           Result_DO,
 
    //Output-Flags
    output logic [4:0]                     Fflags_SO,
@@ -70,17 +70,17 @@ module old_div_sqrt_mvp_wrapper
 
 
    logic                                 Div_start_S_S,Sqrt_start_S_S;
-   logic [C_OP_FP64-1:0]                 Operand_a_S_D;
-   logic [C_OP_FP64-1:0]                 Operand_b_S_D;
+   logic [OLD_C_OP_FP64-1:0]                 Operand_a_S_D;
+   logic [OLD_C_OP_FP64-1:0]                 Operand_b_S_D;
 
    // Input Control
-   logic [C_RM-1:0]                      RM_S_S;    //Rounding Mode
-   logic [C_PC-1:0]                      Precision_ctl_S_S; // Precision Control
-   logic [C_FS-1:0]                      Format_sel_S_S;  // Format Selection,
+   logic [OLD_C_RM-1:0]                      RM_S_S;    //Rounding Mode
+   logic [OLD_C_PC-1:0]                      Precision_ctl_S_S; // Precision Control
+   logic [OLD_C_FS-1:0]                      Format_sel_S_S;  // Format Selection,
    logic                                 Kill_S_S;
 
 
-  logic [C_OP_FP64-1:0]                  Result_D;
+  logic [OLD_C_OP_FP64-1:0]                  Result_D;
   logic                                  Ready_S;
   logic                                  Done_S;
   logic [4:0]                            Fflags_S;
@@ -163,7 +163,7 @@ module old_div_sqrt_mvp_wrapper
    /////////////////////////////////////////////////////////////////////////////
    // First Stage of Outputs
    /////////////////////////////////////////////////////////////////////////////
-  logic [C_OP_FP64-1:0]         Result_dly_S_D;
+  logic [OLD_C_OP_FP64-1:0]         Result_dly_S_D;
   logic                         Ready_dly_S_S;
   logic                         Done_dly_S_S;
   logic [4:0]                   Fflags_dly_S_S;
@@ -189,7 +189,7 @@ module old_div_sqrt_mvp_wrapper
    // Second Stage of Outputs
    /////////////////////////////////////////////////////////////////////////////
 
-  logic [C_OP_FP64-1:0]         Result_dly_D_D;
+  logic [OLD_C_OP_FP64-1:0]         Result_dly_D_D;
   logic                         Ready_dly_D_S;
   logic                         Done_dly_D_S;
   logic [4:0]                   Fflags_dly_D_S;

@@ -44,12 +44,12 @@ module old_nrbd_nrsc_mvp
    input logic                                 Kill_SI,
    input logic                                 Special_case_SBI,
    input logic                                 Special_case_dly_SBI,
-   input logic [C_PC-1:0]                      Precision_ctl_SI,
+   input logic [OLD_C_PC-1:0]                      Precision_ctl_SI,
    input logic [1:0]                           Format_sel_SI,
-   input logic [C_MANT_FP64:0]                 Mant_a_DI,
-   input logic [C_MANT_FP64:0]                 Mant_b_DI,
-   input logic [C_EXP_FP64:0]                  Exp_a_DI,
-   input logic [C_EXP_FP64:0]                  Exp_b_DI,
+   input logic [OLD_C_MANT_FP64:0]                 Mant_a_DI,
+   input logic [OLD_C_MANT_FP64:0]                 Mant_b_DI,
+   input logic [OLD_C_EXP_FP64:0]                  Exp_a_DI,
+   input logic [OLD_C_EXP_FP64:0]                  Exp_b_DI,
   //output
    output logic                                Div_enable_SO,
    output logic                                Sqrt_enable_SO,
@@ -61,8 +61,8 @@ module old_nrbd_nrsc_mvp
    output logic                                FP16ALT_SO,
    output logic                                Ready_SO,
    output logic                                Done_SO,
-   output logic  [C_MANT_FP64+4:0]             Mant_z_DO,
-   output logic [C_EXP_FP64+1:0]               Exp_z_DO
+   output logic  [OLD_C_MANT_FP64+4:0]             Mant_z_DO,
+   output logic [OLD_C_EXP_FP64+1:0]               Exp_z_DO
     );
 
 
