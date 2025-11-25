@@ -509,7 +509,6 @@ typedef enum logic [4:0] {
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
-<<<<<<< HEAD
     VS1_VFCVT_XU_F           = 5'b00000,
     VS1_VFCVT_X_F            = 5'b00001,
     VS1_VFCVT_F_XU           = 5'b00010,
