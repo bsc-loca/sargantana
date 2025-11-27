@@ -63,12 +63,9 @@ typedef struct packed {
 
 // Function to translate raw flags comming from DP2 into fpnew_pkg::status_t
 
-function automatic int floor_log2(input int value);
-    int tmp;
-
-    if (value == 0) return 32'(-1);
-
-    tmp = 32'($clog2(value+1) - 1);
+function automatic integer floor_log2(input integer value);
+    if (value == 0) return integer'(-1);
+    return integer'(int'($clog2(value+1)) - 1);
 endfunction
 
 function automatic int first_node_index(int level, int sew);
