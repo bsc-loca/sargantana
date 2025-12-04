@@ -123,6 +123,21 @@ assign data_vs2        = instruction_i.data_vs2                                 
 assign rs1_repl = (sew == SEW_32) ? (data_rs1[63:32] == 32'hFFFF_FFFF) ? {(VLEN/32){data_rs1[31:0]}} : {(VLEN/32){FP32_QNAN}} :
                                     {(VLEN/64){data_rs1}};
 
+genvar i;
+generate
+    for (i = 0; i < (VLEN/64); i++) begin : g_widened_operands
+        fp32_to_fp64 fp32_to_fp64_operand_1 (
+            .fp32_i(data_vs1[i*32 +: 32]),
+            .fp64_o(widened_operands[0][i*64 +: 64])
+        );
+
+        fp32_to_fp64 fp32_to_fp64_operand_0 (
+            .fp32_i(data_vs2[i*32 +: 32]),
+            .fp64_o(widened_operands[1][i*64 +: 64])
+        );
+    end
+endgenerate;
+
 always_comb begin
     vector_operands             = '0;
     vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::ADD);
@@ -130,11 +145,6 @@ always_comb begin
     vector_src_format = fpnew_pkg::fp_format_e'(FP64);
     vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
     frm = instruction_i.instr.frm;
-
-    for (int i = 0; i < (VLEN/64); i++) begin
-        widened_operands[0][i*64 +: 64] = fp32_to_fp64(data_vs1[i*32 +: 32]);
-        widened_operands[1][i*64 +: 64] = fp32_to_fp64(data_vs2[i*32 +: 32]);
-    end
 
     int_fmt = fpnew_pkg::int_format_e'(INT32);
 

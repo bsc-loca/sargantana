@@ -155,7 +155,7 @@ generate
         assign fp32signals[j] = data_vm[j] ? data_vs2_i[(32*j) +: 32] :
                                 (frm_i == FRM_RDN) ? 32'h8000_0000 : 32'h0000_0000;
         assign fp32valids[j] = data_vm[j];
-        assign fp64widesignals[j] = data_vm[j] ? fp32_to_fp64(data_vs2_i[(32*j) +: 32]) :
+        assign fp64widesignals[j] = data_vm[j] ? fp32_to_fp64_func(data_vs2_i[(32*j) +: 32]) :
                                     (frm_i == FRM_RDN) ? 64'h8000_0000_0000_0000 : 64'h0000_0000_0000_0000;
         assign fp64widevalids[j] = data_vm[j];
     end

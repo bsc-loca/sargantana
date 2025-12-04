@@ -71,6 +71,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vbrev.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vdiv.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/div_2bits.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/fp32_to_fp64.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv

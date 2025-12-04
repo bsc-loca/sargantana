@@ -1638,7 +1638,7 @@ function automatic logic is_subnorm_f32(input logic [31:0] fp32);
 endfunction
 
 // convert from single precision bus to double precision bus
-function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
+function automatic logic [63:0] fp32_to_fp64_func(logic [31:0] f32);
     logic        sign;
     logic [7:0]  exp32;
     logic [22:0] frac32;
@@ -1666,11 +1666,11 @@ function automatic logic [63:0] fp32_to_fp64(logic [31:0] f32);
 
         // canonicalize both QNAN and SNAN
         if (is_qnan_f32(f32)) begin
-            fp32_to_fp64 = FP64_QNAN;
+            fp32_to_fp64_func = FP64_QNAN;
         end else if (is_snan_f32(f32)) begin
-            fp32_to_fp64 = FP64_SNAN;
+            fp32_to_fp64_func = FP64_SNAN;
         end else begin
-            fp32_to_fp64 = {sign, exp64, frac64};
+            fp32_to_fp64_func = {sign, exp64, frac64};
         end
     end
 endfunction
