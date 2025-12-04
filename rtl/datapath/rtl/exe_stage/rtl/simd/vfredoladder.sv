@@ -256,9 +256,17 @@ status_t fp64widestatusvec  [ADDS_WIDENING-1:0];
 bus64_t fp64wide_srca_first;
 bus64_t fp64wide_srcb_first;
 
+bus64_t fp64wide_srcb_unmasked;
+
+fp32_to_fp64 fp32_to_fp64_inst_srcb_unmasked (
+    .fp32_i(data_vs2_i[(32*((0)+1)) +: 32]),
+    .fp64_o(fp64wide_srcb_unmasked)
+);
+
+
 always_comb begin
 fp64wide_srca_first = data_vs1_i[63:0];
-fp64wide_srcb_first = data_vm[0] ? fp32_to_fp64_func(data_vs2_i[(32*((0)+1)) +: 32]) : 64'h0000_0000_0000_0000;
+fp64wide_srcb_first = data_vm[0] ? fp64wide_srcb_unmasked : 64'h0000_0000_0000_0000;
 end
 
 logic [2:0][63:0] fp64wide_fpnew_operands_first;
@@ -303,8 +311,16 @@ fpnew_top #(
 generate
 for (genvar i = 1; i < ADDS_WIDENING; i++) begin : FP64WIDE_GEN_FPNEW
     bus64_t fp64wide_srca, fp64wide_srcb;
+
+    bus64_t fp64_wide_srca_unmasked;
+
+    fp32_to_fp64 fp32_to_fp64_inst (
+        .fp32_i(fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vs2[(32*(i)) +: 32]),
+        .fp64_o(fp64_wide_srca_unmasked)
+    );
+
     assign fp64wide_srca = fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vm[i+1] ? 
-                           fp32_to_fp64_func(fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vs2[(32*(i)) +: 32]) :
+                           fp64_wide_srca_unmasked :
                            64'h0000_0000_0000_0000;
     assign fp64wide_srcb = fp64widesignals[i-1];
 
@@ -396,12 +412,19 @@ endgenerate
 bus64_t fp64_srca_first;
 bus64_t fp64_srcb_first;
 
+bus64_t fp64_srcb_vfwredosum;
+
+fp32_to_fp64 fp32_to_fp64_inst (
+    .fp32_i(fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].data_vs2[(32*(ADDS_WIDENING)) +: 32]),
+    .fp64_o(fp64_srcb_vfwredosum)
+);
+
 always_comb begin
 fp64_srca_first = (fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].instr_type == VFWREDOSUM) ? 
                   fp64widesignals[ADDS_WIDENING-1] :
                   (data_vs1_i[63:0]);
 fp64_srcb_first = (fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].instr_type == VFWREDOSUM) ?
-                  fp32_to_fp64_func(fp64wide_metadata[ADDS_WIDENING-1][DELAY_SUM_FP64-1].data_vs2[(32*(ADDS_WIDENING)) +: 32]) :
+                  fp64_srcb_vfwredosum :
                   (data_vm[0] ? fp64signals[0] : 64'h0000_0000_0000_0000);
 
 fp64_res        = ((|fp64_metadata[(VLEN/64)-1][DELAY_SUM_FP64-1].data_vm) == 1'b0) ? fp64_metadata[(VLEN/64)-1][DELAY_SUM_FP64-1].data_vs1[63:0] :
@@ -451,8 +474,16 @@ generate
 for (genvar i = 1; i < (VLEN/64); i++) begin : FP64_GEN_FPNEW
     bus64_t fp64_srca;
     bus64_t fp64_srcb;
+
+    bus64_t fp64_srca_unmasked;
+
+    fp32_to_fp64 fp32_to_fp64_inst (
+        .fp32_i(fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vs2[(32*(ADDS_WIDENING+i)) +: 32]),
+        .fp64_o(fp64_srca_unmasked)
+    );
+
     assign fp64_srca = (fp64_metadata[i-1][DELAY_SUM_FP64-1].instr_type == VFWREDOSUM) ? fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vm[VLEN/64+i-1] ?
-                       fp32_to_fp64_func(fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vs2[(32*(ADDS_WIDENING+i)) +: 32]) : 64'h0000_0000_0000_0000 :
+                       fp64_srca_unmasked : 64'h0000_0000_0000_0000 :
                        fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vm[i] ?
                        fp64_metadata[i-1][DELAY_SUM_FP64-1].data_vs2[(64*i) +: 64] : 64'h0000_0000_0000_0000;
     assign fp64_srcb = fp64signals[(VLEN/64)-1+i];
