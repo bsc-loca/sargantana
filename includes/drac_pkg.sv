@@ -1670,7 +1670,7 @@ function automatic logic is_snan_f16(input logic [15:0] fp16);
     is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
 endfunction
 
-function automatic logic [32:0] fp16_to_fp32( input logic [15:0] f16);
+function automatic logic [32:0] fp16_to_fp32_func( input logic [15:0] f16);
     logic       sign;
     logic [4:0]  exp16;
     logic [9:0]  frac16;

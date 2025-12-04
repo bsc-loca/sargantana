@@ -30,16 +30,14 @@ generate
             .f16(fp32_to_fp16_o[(i * 16) +: 16]),
             .status_o(fp32_to_fp16_flags[i])
         );
+
+        fp16_to_fp32 fp16_to_fp32_inst (
+            .fp16_i(src_i[(j * 16) +: 16]),
+            .fp32_o(fp16_to_fp32_o[(j * 32) +: 32]),
+            .nv_o(fp16_to_fp32_flags[j].NV)
+        );
     end
 endgenerate
-
-always_comb begin
-    integer j;
-    for (j = 0; j < 4; j = j + 1) begin
-        fp16_to_fp32_flags[j] = '0;
-        {fp16_to_fp32_flags[j].NV, fp16_to_fp32_o[(j * 32) +: 32]} = fp16_to_fp32(src_i[(j * 16) +: 16]);
-    end
-end
 
 always_comb begin
     fp32_to_fp16_merged_flags = '0;
