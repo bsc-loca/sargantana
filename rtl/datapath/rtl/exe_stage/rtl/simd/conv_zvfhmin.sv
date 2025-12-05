@@ -17,7 +17,7 @@ bus_simd_t fp32_to_fp16_o;
 bus_simd_t fp16_to_fp32_o;
 
 fpnew_pkg::status_t fp32_to_fp16_flags [3:0];
-fpnew_pkg::status_t fp16_to_fp32_flags [3:0];
+logic fp16_to_fp32_nv_flag [3:0];
 
 fpnew_pkg::status_t fp32_to_fp16_merged_flags;
 fpnew_pkg::status_t fp16_to_fp32_merged_flags;
@@ -32,9 +32,9 @@ generate
         );
 
         fp16_to_fp32 fp16_to_fp32_inst (
-            .fp16_i(src_i[(j * 16) +: 16]),
-            .fp32_o(fp16_to_fp32_o[(j * 32) +: 32]),
-            .nv_o(fp16_to_fp32_flags[j].NV)
+            .fp16_i(src_i[(i * 16) +: 16]),
+            .fp32_o(fp16_to_fp32_o[(i * 32) +: 32]),
+            .nv_o(fp16_to_fp32_nv_flag[i])
         );
     end
 endgenerate
@@ -47,7 +47,7 @@ always_comb begin
     fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[0].UF | fp32_to_fp16_flags[1].UF | fp32_to_fp16_flags[2].UF | fp32_to_fp16_flags[3].UF;
 
     fp16_to_fp32_merged_flags = '0;
-    fp16_to_fp32_merged_flags.NV = fp16_to_fp32_flags[0].NV | fp16_to_fp32_flags[1].NV | fp16_to_fp32_flags[2].NV | fp16_to_fp32_flags[3].NV;
+    fp16_to_fp32_merged_flags = fp16_to_fp32_nv_flag[0] | fp16_to_fp32_nv_flag[1] | fp16_to_fp32_nv_flag[2] | fp16_to_fp32_nv_flag[3];
 end
 
 assign fp32_to_fp16_o[127:64] = 64'b0;

@@ -149,6 +149,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f64.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/fp32_to_fp16.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/fp16_to_fp32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/conv_zvfhmin.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f64.sv
