@@ -6,6 +6,7 @@ module fp32_to_fp64(
     logic [7:0]  exp32;
     logic [22:0] frac32;
     logic [22:0] frac32_shifted;
+    logic [54:0] frac32_shifted_ext;
 
     logic [10:0] exp64;
     logic [51:0] frac64;
@@ -14,13 +15,15 @@ module fp32_to_fp64(
 
     logic [4:0] shift_amt;
 
+    logic empty_lzc_denormals;
+
     lzc #(
         .WIDTH (23),
         .MODE  (1) // MODE = 1 counts leading zeroes
     ) i_lzc (
         .in_i    (frac32),
         .cnt_o   (shift_amt),
-        .empty_o()
+        .empty_o(empty_lzc_denormals)
     );
 
     always_comb begin
@@ -34,8 +37,11 @@ module fp32_to_fp64(
                 frac64 = 52'd0;
             end else begin
                 exp64  = 11'h000;
-                exp64  = 11'd896 - (shift_amt);
-                frac32_shifted = frac32 << (shift_amt + 1);
+                exp64  = 11'd896 - {6'h0, shift_amt};
+
+                frac32_shifted_ext = {32'b0, frac32} << (shift_amt + 1);
+                frac32_shifted = frac32_shifted_ext[22:0];
+
                 frac64 = {frac32_shifted, {29'b0}};  // left-align mantissa
             end
         end
@@ -44,7 +50,7 @@ module fp32_to_fp64(
             frac64 = {frac32, {29{1'b0}}};
         end
         else begin
-            exp64  = (exp32 - 8'd127) + 11'd1023;
+            exp64  = {3'b0, (exp32 - 8'd127)} + 11'd1023;
             frac64 = {frac32, {29{1'b0}}};
         end
 

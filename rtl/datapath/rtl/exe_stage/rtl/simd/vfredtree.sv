@@ -152,7 +152,7 @@ end
 bus64_t fp64widened_signals [NUM_WIDE_SIGNALS-1:0];
 
 generate begin : g_widened_operands
-        for (i = 0; i < (VLEN/32); i++) begin : g_widened_operands
+        for (i = 0; i < (VLEN/32); i++) begin
             fp32_to_fp64 fp32_to_fp64_inst (
                 .fp32_i(data_vs2_i[data_vs2_i[(32*j) +: 32]]),
                 .fp64_o(fp64widened_signals[i])
