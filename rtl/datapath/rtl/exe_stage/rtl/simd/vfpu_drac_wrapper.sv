@@ -1149,14 +1149,14 @@ always_comb begin
 
     case (finish_vfp_instr.instr.sew)
         SEW_32: begin
-            for (int i = 0; i<(VLEN/32); i++) begin
-                grouped_vfp_result[i] = (negate_result) ? ~finish_vfp_data[i*32] : finish_vfp_data[i*32];
+            for (int j = 0; j<(VLEN/32); j++) begin
+                grouped_vfp_result[j] = (negate_result) ? ~finish_vfp_data[j*32] : finish_vfp_data[j*32];
             end
         end
 
         SEW_64: begin
-            for (int i = 0; i<(VLEN/64); i++) begin
-                grouped_vfp_result[i] = (negate_result) ? ~finish_vfp_data[i*64] : finish_vfp_data[i*64];
+            for (int j = 0; j<(VLEN/64); j++) begin
+                grouped_vfp_result[j] = (negate_result) ? ~finish_vfp_data[j*64] : finish_vfp_data[j*64];
             end
         end
     endcase
