@@ -340,8 +340,8 @@ always_comb begin
     end
 
     // multiplex the correct result depending on the instruction type
-    fp32_res = (lastfp32ismaxinstr_end || lastfp32ismininstr_end) ? lastfp32maxmin_masked :
-               (fp32_metadata_q[($clog2(VLEN/32))*DELAY_SUM_FP32+(DELAY_SUM_FP32-1)].all_inactive == 1'b0) ? lastfp32srcb_end[DELAY_SUM_FP32-1] :
+    fp32_res = (fp32_metadata_q[($clog2(VLEN/32))*DELAY_SUM_FP32+(DELAY_SUM_FP32-1)].all_inactive == 1'b0) ? lastfp32srcb_end[DELAY_SUM_FP32-1] :
+               (lastfp32ismaxinstr_end || lastfp32ismininstr_end) ? lastfp32maxmin_masked :
                lastfp32resdp2[31:0];
 end
 
@@ -696,8 +696,8 @@ always_comb begin
     end
 
     // multiplex the correct result depending on the instruction type
-    fp64_res = (lastfp64ismaxinstr_end || lastfp64ismininstr_end) ? lastfp64maxmin_masked :
-               (fp64_metadata_q[($clog2(VLEN/64))*DELAY_SUM_FP64+(DELAY_SUM_FP64-1)].all_inactive == 1'b0) ? lastfp64srcb_end[DELAY_SUM_FP64-1] :
+    fp64_res = (fp64_metadata_q[($clog2(VLEN/64))*DELAY_SUM_FP64+(DELAY_SUM_FP64-1)].all_inactive == 1'b0) ? lastfp64srcb_end[DELAY_SUM_FP64-1] :
+               (lastfp64ismaxinstr_end || lastfp64ismininstr_end) ? lastfp64maxmin_masked :
                lastfp64resdp2;
 end
 
