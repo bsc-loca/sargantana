@@ -630,7 +630,7 @@ always_comb begin
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::CMP);
             vector_operation_modifier   = 1'b0;
 
-            frm = riscv_pkg::FRM_RNE;
+            frm = riscv_pkg::FRM_RTZ;
 
             case (sew)
                 SEW_32: begin
@@ -652,7 +652,7 @@ always_comb begin
             vector_operation            = fpnew_pkg::operation_e'(fpnew_pkg::CMP);
             vector_operation_modifier   = 1'b0;
 
-            frm = riscv_pkg::FRM_RTZ;
+            frm = riscv_pkg::FRM_RNE;
 
             case (sew)
                 SEW_32: begin
