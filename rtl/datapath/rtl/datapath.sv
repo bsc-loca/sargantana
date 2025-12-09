@@ -928,7 +928,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     assign gl_is_vector_vl_0 = ((((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
-                                (stage_ir_rr_q.instr.regfile_we == 1'b0)) || 
+                                (stage_ir_rr_q.instr.regfile_we == 1'b0) && (stage_ir_rr_q.instr.fregfile_we == 1'b0)) || 
                                 (stage_ir_rr_q.instr.instr_type == VLE) ||
                                 (stage_ir_rr_q.instr.instr_type == VLM) ||
                                 (stage_ir_rr_q.instr.instr_type == VLEFF) ||
