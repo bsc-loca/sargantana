@@ -238,15 +238,15 @@ always_comb begin
         computed_exceptions[NV_FLAG] = 1'b1;
     end else if (src_is_subnormal && (operation_i == 1'b0)) begin // only treat separatelly subnormality for VFREC7
         if (vfrec7_direct_inf) begin
-            if ((frm_i == fpnew_pkg::RDN) || (frm_i == fpnew_pkg::RTZ)) begin
-                if (src_sign) begin
+            if (src_sign) begin
+                if ((frm_i == fpnew_pkg::RUP) || (frm_i == fpnew_pkg::RTZ)) begin
                     computed_result = fp64_mode ? FP64_MAXNFINITE : {FP32_QNAN, FP32_MAXNFINITE};
                 end else begin
-                    computed_result = fp64_mode ? FP64_MAXPFINITE : {FP32_QNAN, FP32_MAXPFINITE};
+                    computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
                 end
             end else begin
-                if (src_sign) begin
-                    computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
+                if ((frm_i == fpnew_pkg::RDN) || (frm_i == fpnew_pkg::RTZ)) begin
+                    computed_result = fp64_mode ? FP64_MAXPFINITE : {FP32_QNAN, FP32_MAXPFINITE};
                 end else begin
                     computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
                 end
