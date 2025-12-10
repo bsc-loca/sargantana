@@ -24,12 +24,10 @@
 // once this is done we need 1 clock cycle to compute the final data which will have the final sign
 // or exceptional data in case of div by zero.
 // Overall the whole process takes 34 cycles to complete
-
-
-import drac_pkg::*;
-import riscv_pkg::*;
  
 module vdiv 
+    import drac_pkg::*;
+    import riscv_pkg::*;
 (
   input wire                  clk_i,          // Clock
   input wire                  rstn_i,         // Reset 

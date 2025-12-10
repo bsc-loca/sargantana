@@ -17,10 +17,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
- import drac_pkg::*;
- import riscv_pkg::*;
  
- module score_board_simd (
+ module score_board_simd 
+    import drac_pkg::*;
+    import riscv_pkg::*;
+ (
      input logic                    clk_i,
      input logic                    rstn_i,
      input logic                    flush_i,
