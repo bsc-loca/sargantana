@@ -32,9 +32,8 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import old_defs_div_sqrt_mvp::*;
-
 module old_preprocess_mvp
+  import old_defs_div_sqrt_mvp::*;
   (
    input logic                   Clk_CI,
    input logic                   Rst_RBI,

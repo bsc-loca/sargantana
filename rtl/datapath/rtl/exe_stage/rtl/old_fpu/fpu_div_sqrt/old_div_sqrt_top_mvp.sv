@@ -32,9 +32,8 @@
 //                 control for special cases                                  //
 ////////////////////////////////////////////////////////////////////////////////
 
-import old_defs_div_sqrt_mvp::*;
-
 module old_div_sqrt_top_mvp
+  import old_defs_div_sqrt_mvp::*;
 
   (//Input
    input logic                            Clk_CI,

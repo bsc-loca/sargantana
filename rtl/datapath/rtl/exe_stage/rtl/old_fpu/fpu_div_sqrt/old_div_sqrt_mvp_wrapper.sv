@@ -36,9 +36,8 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-import old_defs_div_sqrt_mvp::*;
-
 module old_div_sqrt_mvp_wrapper
+  import old_defs_div_sqrt_mvp::*;
 #(
    parameter   PrePipeline_depth_S             =        0,  // If you want to add a flip/flop stage before preprocess, set it to 1.
    parameter   PostPipeline_depth_S            =        2  // The output delay stages
