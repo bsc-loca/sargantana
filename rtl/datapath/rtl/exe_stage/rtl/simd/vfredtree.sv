@@ -152,14 +152,17 @@ end
 // nullify all the source operands which are unmasked
 generate
     for (genvar j = 0; j < (VLEN/32); j++) begin : FP32_GEN_SIGNALS
-        assign fp32signals[j] = data_vm[j] ? data_vs2_i[(32*j) +: 32] : 32'h0000_0000;
+        assign fp32signals[j] = data_vm[j] ? data_vs2_i[(32*j) +: 32] :
+                                (frm_i == FRM_RDN) ? 32'h8000_0000 : 32'h0000_0000;
         assign fp32valids[j] = data_vm[j];
-        assign fp64widesignals[j] = data_vm[j] ? fp32_to_fp64(data_vs2_i[(32*j) +: 32]) : 64'h0000_0000_0000_0000;
+        assign fp64widesignals[j] = data_vm[j] ? fp32_to_fp64(data_vs2_i[(32*j) +: 32]) :
+                                    (frm_i == FRM_RDN) ? 64'h8000_0000_0000_0000 : 64'h0000_0000_0000_0000;
         assign fp64widevalids[j] = data_vm[j];
     end
     for (genvar j = 0; j < (VLEN/64); j++) begin : FP64_GEN_SIGNALS
         bus64_t fp64op;
-        assign fp64signals[j] = data_vm[j] ? data_vs2_i[(64*j) +: 64] : 64'h0000_0000_0000_0000;
+        assign fp64signals[j] = data_vm[j] ? data_vs2_i[(64*j) +: 64] :
+                                (frm_i == FRM_RDN) ? 64'h8000_0000_0000_0000 : 64'h0000_0000_0000_0000;
         assign fp64valids[j] = (fp64widemetadata[DELAY_SUM_FP64-1].instr_type == VFWREDUSUM) ? fp64widevalids[j] : data_vm[j];
     end
 endgenerate
