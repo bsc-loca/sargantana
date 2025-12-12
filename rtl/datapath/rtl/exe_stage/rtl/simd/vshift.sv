@@ -121,11 +121,17 @@ always_comb begin
                         if ((data_b[(i*8)+:3]) > 'h1) begin
                             for (int j = 0; j < 6; ++j) begin // max shift 7, d-2 = 5
                                 if (j < (data_b[(i*8)+:3]-1)) begin
-                                    rounding_increment[i] = rounding_increment[i] | velements_a.sew8[i][j];
+                                    rounding_increment[i] = rounding_increment[i] | velements_a.sew8[i][j]; // v[d-2:0] != 0
                                 end
                             end
                         end
-                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew8[i][(data_b[(i*8)+:3])+:1]) & velements_a.sew8[i][((data_b[(i*8)+:3])-1)+:1];
+                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew8[i][(data_b[(i*8)+:3])]);
+                        
+                        if ((data_b[(i*8)+:3]) != 'h0) begin
+                            rounding_increment[i] = (rounding_increment[i] & velements_a.sew8[i][((data_b[(i*8)+:3])-1)+:1]);
+                        end else begin
+                            rounding_increment[i] = 'h0; // and with 0 is always 0
+                        end
                     end
                     RDN_V: begin
                         rounding_increment[i] = 1'b0;
@@ -161,7 +167,13 @@ always_comb begin
                                 end
                             end
                         end
-                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew16[i][(data_b[(i*16)+:4])+:1]) & velements_a.sew16[i][((data_b[(i*16)+:4])-1)+:1];
+                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew16[i][(data_b[(i*16)+:4])+:1]);
+
+                        if ((data_b[(i*16)+:4]) != 'h0) begin
+                            rounding_increment[i] = (rounding_increment[i] & velements_a.sew16[i][((data_b[(i*16)+:4])-1)+:1]);
+                        end else begin
+                            rounding_increment[i] = 'h0; // and with 0 is always 0
+                        end
                     end
                     RDN_V: begin
                         rounding_increment[i] = 1'b0;
@@ -197,7 +209,13 @@ always_comb begin
                                 end
                             end
                         end
-                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew32[i][(data_b[(i*32)+:5])+:1]) & velements_a.sew32[i][((data_b[(i*32)+:5])-1)+:1];
+                        rounding_increment[i] = (rounding_increment[i] | velements_a.sew32[i][(data_b[(i*32)+:5])+:1]);
+
+                        if ((data_b[(i*32)+:5]) != 'h0) begin
+                            rounding_increment[i] = (rounding_increment[i] & velements_a.sew32[i][((data_b[(i*32)+:5])-1)+:1]);
+                        end else begin
+                            rounding_increment[i] = 'h0; // and with 0 is always 0
+                        end
                     end
                     RDN_V: begin
                         rounding_increment[i] = 1'b0;
@@ -232,7 +250,13 @@ always_comb begin
                             end
                         end
                     end
-                    rounding_increment[0] = (rounding_increment[0] | data_a[(data_b[5:0])+:1]) & data_a[((data_b[5:0])-1)+:1];
+                    rounding_increment[0] = (rounding_increment[0] | data_a[(data_b[5:0])+:1]);
+                    
+                    if ((data_b[5:0]) != 'h0) begin
+                        rounding_increment[0] = (rounding_increment[0] & data_a[((data_b[5:0])-1)+:1]);
+                    end else begin
+                        rounding_increment[0] = 'h0; // and with 0 is always 0
+                    end
                 end
                 RDN_V: begin
                     rounding_increment[0] = 1'b0;
