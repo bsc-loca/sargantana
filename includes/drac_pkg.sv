@@ -421,7 +421,9 @@ typedef enum logic [8:0] {
    // CMO block instructions
    CBO_INVAL, CBO_CLEAN, CBO_FLUSH, CBO_ZERO,
    // CMO prefetch instructions
-   CMO_PREFETCH_I, CMO_PREFETCH_R, CMO_PREFETCH_W
+   CMO_PREFETCH_I, CMO_PREFETCH_R, CMO_PREFETCH_W,
+   //  Zicond conditional instructions
+   CZ_NEZ, CZ_EQZ
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {

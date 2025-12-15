@@ -631,6 +631,7 @@ typedef enum logic [6:0] {
     F7_SRAI_SUB_SRA_NLOG         = 7'b0100000,
     F7_NORMAL                    = 7'b0000000,
     F7_CLMUL_MIN_MAX             = 7'b0000101,
+    F7_CZERO                     = 7'b0000111,
     F7_SHADD                     = 7'b0010000,
     F7_BSET_ORCB                 = 7'b0010100,
     F7_BCLR_BEXT                 = 7'b0100100,

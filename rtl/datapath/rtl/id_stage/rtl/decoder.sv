@@ -689,6 +689,13 @@ module decoder
                         {F7_BINV, F3_BINV}: begin
                             decode_instr_int.instr_type = BINV;
                         end
+                        // Zicond
+                        {F7_CZERO, F3_SRL_SRA}: begin
+                            decode_instr_int.instr_type = CZ_EQZ;
+                        end
+                        {F7_CZERO, F3_AND}: begin
+                            decode_instr_int.instr_type = CZ_NEZ;
+                        end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
