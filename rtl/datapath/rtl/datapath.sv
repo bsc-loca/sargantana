@@ -27,7 +27,7 @@ module datapath
 )(
     input logic             clk_i,
     input logic             rstn_i,
-    input addr_t            reset_addr_i,
+    input phy_addr_t        reset_addr_i,
     `ifdef SIM_COMMIT_LOG
     input logic [63:0]          core_id_i,
     `endif

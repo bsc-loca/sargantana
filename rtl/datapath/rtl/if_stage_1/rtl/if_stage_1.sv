@@ -28,7 +28,7 @@ module if_stage_1
     input logic                 clk_i,
     input logic                 rstn_i,
     input logic                 v_mode_i,
-    input addr_t                reset_addr_i,
+    input phy_addr_t            reset_addr_i,
 
     // Signals from debug
     //input addr_t                deb_change_pc_addr_i,
@@ -122,7 +122,7 @@ module if_stage_1
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= {24'b0,reset_addr_i};
+            pc <= {{{64-PHY_ADDR_SIZE}{1'b0}}, reset_addr_i};
             `ifdef SIM_KONATA_DUMP
             id <= 64'h0;
             `endif

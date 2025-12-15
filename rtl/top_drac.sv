@@ -32,7 +32,7 @@ module top_drac
     `ifdef INTEL_FSCAN_CTECH
     input logic                 fscan_rstbypen,//AK
     `endif // INTEL_FSCAN_CTECH
-    input addr_t                reset_addr_i,
+    input phy_addr_t            reset_addr_i,
     input logic [63:0]          core_id_i,
     `ifdef PITON_CINCORANCH
     input logic [1:0]           boot_main_id_i,
@@ -349,7 +349,7 @@ datapath #(
 
 // Trap vector is defined to be at an offset of 0x40 from whichever address the core boots from
 logic [63:0] trap_vector_addr;
-assign trap_vector_addr = {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40};
+assign trap_vector_addr = {{{64-PHY_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40};
 
 logic fcsr_flags_valid;
 assign fcsr_flags_valid = |req_datapath_csr_interface.csr_retire;
