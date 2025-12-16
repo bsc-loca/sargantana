@@ -154,7 +154,7 @@ always_comb begin
                         to_add[i] = 0;
                     end
                     ROD_V: begin
-                        to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 6] != 0);
+                        to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 7] != 0);
                     end
                 endcase
             end
@@ -172,7 +172,7 @@ always_comb begin
                         to_add[2*i] = 0;
                     end
                     ROD_V: begin
-                        to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 14] != 0);
+                        to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 15] != 0);
                     end
                 endcase
                 to_add[2*i + 1] = 1'b0;
@@ -191,7 +191,7 @@ always_comb begin
                         to_add[4*i] = 0;
                     end
                     ROD_V: begin
-                        to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 30] != 0);
+                        to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 31] != 0);
                     end
                 endcase
 
