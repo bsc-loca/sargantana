@@ -821,16 +821,6 @@ always_comb begin
     end
 end
 
-`ifdef VBPM_ENABLE
-bus_simd_t data_vbpm;
-// VBPM
-vbpm vbpm_inst (
-    .data_vs1_i    (instruction_i.data_vs1),
-    .data_vs2_i    (instruction_i.data_vs2),
-    .data_vd_o     (data_vbpm)
-);
-`endif
-
 // Vector Reduction Module
 bus_simd_t red_data_vd;
 
@@ -1014,12 +1004,6 @@ always_comb begin
                 result_data_vd = '0; 
             end
         endcase  
-    `ifdef VBPM_ENABLE
-    end else if (instr_to_out.instr.instr_type == VBPM) begin
-        result_data_vd = data_vbpm;
-    end else if (instr_to_out.instr.instr_type == VPIG) begin
-        result_data_vd = {instr_to_out.data_vs2[(VLEN-1) -: 2], instr_to_out.data_vs1[(VLEN-3):0]};
-    `endif
     end else if ((instr_to_out.instr.instr_type == VMORN) || (instr_to_out.instr.instr_type == VMNOR) ||
                  (instr_to_out.instr.instr_type == VMANDN) || (instr_to_out.instr.instr_type == VMNAND) ||
                  (instr_to_out.instr.instr_type == VMAND) || (instr_to_out.instr.instr_type == VMOR) ||
