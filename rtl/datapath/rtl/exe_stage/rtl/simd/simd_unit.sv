@@ -250,6 +250,12 @@ function logic is_vm(input rr_exe_simd_instr_t instr);
              (instr.instr.instr_type == VMFGE)) ? 1'b1 : 1'b0;
 endfunction
 
+function logic is_vsetvl(input rr_exe_simd_instr_t instr);
+    is_vsetvl = ((instr.instr.instr_type == VSETVL)   ||
+                (instr.instr.instr_type == VSETVLI)   || 
+                (instr.instr.instr_type == VSETIVLI)) ? 1'b1 : 1'b0;
+endfunction
+
 function bus64_t min_unsigned (input bus64_t a, b);
     min_unsigned = (a < b) ? a : b ;
 endfunction
@@ -312,7 +318,10 @@ always_comb begin
     previous_div_is_opvx_d = previous_div_is_opvx_q;            
     previous_div_instr_type_d = previous_div_instr_type_q; 
 
-    if (is_vmul(instruction_i)) begin
+    if (is_vsetvl(instruction_i)) begin
+        previous_div_instr_type_d = instruction_i.instr.instr_type;
+        simd_exe_stages = 6'd1;
+    end else if (is_vmul(instruction_i)) begin
         simd_exe_stages = (instruction_i.instr.sew == SEW_64) ? 6'd3 : 6'd2;
     end
     else if (is_vmadd_vsmul(instruction_i)) begin

@@ -65,6 +65,7 @@ logic is_vmul;
 logic is_vred;
 logic is_vmadd_vsmul;
 logic is_vdiv;
+logic is_vsetvl;
 
 logic stall_simd;
 
@@ -132,6 +133,10 @@ assign is_vred = ((instr_entry_i.instr.instr_type == VREDSUM) ||
                 (instr_entry_i.instr.instr_type == VREDMIN)   ||
                 (instr_entry_i.instr.instr_type == VWREDSUM)  ||
                 (instr_entry_i.instr.instr_type == VWREDSUMU)) ? 1'b1 : 1'b0;
+                
+assign is_vsetvl = ((instr_entry_i.instr.instr_type == VSETVL)   ||
+                   (instr_entry_i.instr.instr_type == VSETVLI)   || 
+                   (instr_entry_i.instr.instr_type == VSETIVLI)) ? 1'b1 : 1'b0;
 
 // This fucntion indicates wehter the current DIV/REM can be done in 1 clock cycle
 // this happens when the opearands and type matched the previous DIV/REM and the result
@@ -157,8 +162,11 @@ always_comb begin
     previous_div_vs2_d          = previous_div_vs2_q;                
     previous_div_is_opvx_d      = previous_div_is_opvx_q;            
     previous_div_instr_type_d   = previous_div_instr_type_q;
-
-    if (is_vmul) begin
+    
+    if (is_vsetvl) begin
+        previous_div_instr_type_d = instr_entry_i.instr.instr_type;
+        simd_exe_stages = 6'd1;
+    end else if (is_vmul) begin
         simd_exe_stages = (sew_i == SEW_64) ? 6'd3 : 6'd2;
     end 
     else if (is_vmadd_vsmul) begin
