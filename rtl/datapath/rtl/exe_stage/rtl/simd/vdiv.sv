@@ -743,7 +743,7 @@ end
 
 
 assign data_vd_o =  (instr_valid_i && (exe_stages == 1'b1)) ? 
-                    (is_division(instr_type_i) ? quotients_out : remnants_out) : (is_division(instr_type_q) ? quotients_out : remnants_out);
+                    (is_division(instr_type_i) ? quotients_out : (is_remainder(instr_type_i) ? remnants_out : 'h0)) : (is_division(instr_type_q) ? quotients_out : remnants_out);
 
 
 
