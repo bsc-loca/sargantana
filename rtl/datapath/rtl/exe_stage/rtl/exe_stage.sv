@@ -534,7 +534,7 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
    .flush_i                 (flush_i),
-   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & (simd_instr.instr.regfile_we | simd_instr.instr.fregfile_we)), // TODO: (gerard) check it
+   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & (simd_instr.instr.fregfile_we)), // TODO: (gerard) check it
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
    .instruction_scalar_o    (fp_to_scalar_wb),
@@ -574,14 +574,13 @@ always_comb begin
     // FP write-back struct
     if (simd_to_fp_wb.valid) begin
         fp_to_wb_o = simd_to_fp_wb;
-        fp_to_scalar_wb_o = 'h0;
-    end else if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
+    end else if (fp_to_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
-        fp_to_scalar_wb_o = fp_to_scalar_wb;
     end else begin
         fp_to_wb_o = 'h0;
-        fp_to_scalar_wb_o = 'h0;
     end
+
+    fp_to_scalar_wb_o = (fp_to_scalar_wb.valid) ? fp_to_scalar_wb : 'h0;
 end
 
 always_comb begin
