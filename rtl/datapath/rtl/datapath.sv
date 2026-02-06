@@ -519,16 +519,18 @@ endfunction
                                            (decoded_instr.instr.instr_type == JALR);
     assign id_cu_int.full_vset_queue = full_vset_queue_int;                                           
     
- // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
-    assign exception_enable = ((commit_cu_int.valid && commit_cu_int.xcpt) || 
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) begin
+            exception_enable <= 'h0;
+        end else begin
+            exception_enable <= ((commit_cu_int.valid && commit_cu_int.xcpt) || 
                                                             resp_csr_cpu_i.csr_eret || 
                                                             resp_csr_cpu_i.csr_exception || 
                                                             resp_csr_cpu_i.debug_ebreak ||
                                                             debug_contr_o.halt_ack ||
                                                             (commit_cu_int.valid && commit_cu_int.ecall_taken));
-
-
-
+        end
+    end
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
