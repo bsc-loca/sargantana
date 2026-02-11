@@ -1134,7 +1134,9 @@ typedef struct packed {   // Wasn't changed for the H ext since is not used
 } status_rv32_t;
 
 typedef struct packed {
-    logic [29:0] wpri4;
+    logic [14:0] wpri5;
+    logic [1:0]  hupmm;
+    logic [12:0] wpri4;
     logic [1:0]  vsxl;
     logic [8:0]  wpri3;
     logic        vtsr;
@@ -1602,7 +1604,8 @@ localparam logic [63:0] HSTATUS_VTVM   = 64'h00100000;
 localparam logic [63:0] HSTATUS_VTW    = 64'h00200000;
 localparam logic [63:0] HSTATUS_VTSR   = 64'h00400000;
 localparam logic [63:0] HSTATUS_VSXL   = 64'h0000000300000000;
-localparam logic [63:0] HSTATUS_WPRI   = 64'hFFFFFFFCFF8C0C1F;
+localparam logic [63:0] HSTATUS_WPRI   = 64'hFFFCFFFCFF8C0C1F;
+localparam logic [63:0] HSTATUS_HUPMM  = 64'h0003000000000000;
 
 
 localparam logic [31:0] SSTATEEN0_C     = 32'h00000001;
