@@ -127,7 +127,8 @@ package def_pkg;
                                                 | riscv_pkg::HSTATUS_HU
                                                 | riscv_pkg::HSTATUS_VTVM
                                                 | riscv_pkg::HSTATUS_VTW
-                                                | riscv_pkg::HSTATUS_VTSR;
+                                                | riscv_pkg::HSTATUS_VTSR
+                                                | riscv_pkg::HSTATUS_HUPMM;
 
     localparam logic [63:0] VS_DELEG_INTERRUPTS = riscv_pkg::MIP_VSSIP
                                                 | riscv_pkg::MIP_VSTIP
