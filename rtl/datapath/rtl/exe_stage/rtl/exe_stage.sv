@@ -530,11 +530,17 @@ mem_unit #(
     .pmu_exe_store_o(pmu_exe_store_o)
 );
 
+logic stall_fpu_wb;
+
+assign stall_fpu_wb = simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & 
+    ((simd_instr.instr.fregfile_we & fp_to_wb.regfile_we) |
+     (simd_instr.instr.regfile_we  & fp_to_scalar_wb.regfile_we));
+
 fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
    .flush_i                 (flush_i),
-   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & (simd_instr.instr.fregfile_we)), // TODO: (gerard) check it
+   .stall_wb_i              (stall_fpu_wb), // TODO: (gerard) check it
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
    .instruction_scalar_o    (fp_to_scalar_wb),
