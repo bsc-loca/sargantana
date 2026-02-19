@@ -102,6 +102,7 @@ logic translate_enable;
 logic translate_incoming;
 gl_index_t ex_gl_index;
 logic ex_reg;
+logic [63:0] masked_addr;
 
 logic io_address_space;
 
@@ -136,7 +137,6 @@ always_comb begin
     logic is_hlvx_inst;
     logic [1:0] active_pmm_mode;
     logic [63:0] pmm_mask;
-    logic [63:0] masked_addr;
 
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
