@@ -1078,6 +1078,19 @@ typedef enum logic [1:0] {
     Dirty   = 2'b11
 } xs_t;
 
+typedef enum logic [1:0] {
+    PMM_DISABLED = 2'b00,
+    PMM_RSV      = 2'b01,
+    PMM_XLEN_57  = 2'b10,
+    PMM_XLEN_48  = 2'b11
+} pmm_warl_t;
+
+typedef enum logic [63:0] {
+    PMM_MASK_DISABLED = 64'hFFFF_FFFF_FFFF_FFFF,
+    PMM_MASK_XLEN_57  = 64'h01FF_FFFF_FFFF_FFFF,
+    PMM_MASK_XLEN_48  = 64'h0000_FFFF_FFFF_FFFF
+} pmm_mask_t;
+
 typedef struct packed {
     logic         sd;     // signal dirty state - read-only
     logic [62:40] wpri4;  // writes preserved reads ignored // Took away 4 bits for H ext
