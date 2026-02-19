@@ -47,6 +47,8 @@ module load_store_queue
 
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [1:0] csr_s_pmm_i,
+    input logic [1:0] csr_h_pmm_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -132,13 +134,35 @@ rr_exe_mem_instr_t translated_instr;
 always_comb begin 
     logic is_load_reserved;
     logic is_hlvx_inst;
+    logic [1:0] active_pmm_mode;
+    logic [63:0] pmm_mask;
+    logic [63:0] masked_addr;
+
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
     is_hlvx_inst     = (instr_to_translate.instr.instr_type == HLVX_HU) || (instr_to_translate.instr.instr_type ==HLVX_WU);
+    
+    active_pmm_mode = riscv_pkg::PMM_DISABLED;
+    if (!is_hlvx_inst) begin
+        if (ld_st_v_mode_i) begin
+            active_pmm_mode = (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) ? csr_h_pmm_i : csr_s_pmm_i;
+        end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
+            active_pmm_mode = csr_s_pmm_i;
+        end
+    end
+
+    unique case (active_pmm_mode)
+        riscv_pkg::PMM_DISABLED: pmm_mask = riscv_pkg::PMM_MASK_DISABLED;
+        riscv_pkg::PMM_XLEN_57: pmm_mask = riscv_pkg::PMM_MASK_XLEN_57;
+        riscv_pkg::PMM_XLEN_48: pmm_mask = riscv_pkg::PMM_MASK_XLEN_48;
+        default : pmm_mask = riscv_pkg::PMM_MASK_DISABLED;
+    endcase
+
+    masked_addr = is_hlvx_inst ? instr_to_translate.data_rs1 : (instr_to_translate.data_rs1 & pmm_mask);
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
-    translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
+    translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, masked_addr[11:0]};
     
     // Exception treatment
     if ((ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index)) begin // a previous request of the same instruction generated an exception
@@ -368,7 +392,7 @@ assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && ld_st_v_mode_i;
 assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && ld_st_v_mode_i;
 assign dtlb_comm_o.priv_lvl = ld_st_priv_lvl_i;
 assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
-assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12];
+assign dtlb_comm_o.req.vpn = masked_addr[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;

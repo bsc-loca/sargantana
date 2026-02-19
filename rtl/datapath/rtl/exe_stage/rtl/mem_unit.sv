@@ -56,6 +56,8 @@ module mem_unit
 
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [1:0] csr_s_pmm_i,
+    input logic [1:0] csr_h_pmm_i,
     //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
@@ -315,6 +317,8 @@ load_store_queue  #(
     .dtlb_comm_o(dtlb_comm_o),
     .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
     .ld_st_v_mode_i(ld_st_v_mode_i),
+    .csr_s_pmm_i(csr_s_pmm_i),
+    .csr_h_pmm_i(csr_h_pmm_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
