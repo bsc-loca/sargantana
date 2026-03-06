@@ -115,7 +115,15 @@ assign sew             = instruction_i.instr.sew                                
 assign is_opvf         = instruction_i.instr.is_opvf                                                        ;
 assign data_rs1        = instruction_i.data_rs1                                                             ;
 assign data_old_vd     = instruction_i.data_old_vd                                                          ;
-assign data_vm         = {NumLanes{1'b1}}                                                                   ;
+
+always_comb begin
+    data_vm = '0;
+
+    for (int i = 0; ((i < instruction_i.instr.vl) && (i < NumLanes)); ++i) begin
+        data_vm[i] = instruction_i.data_vm[i];
+    end
+end
+
 assign data_vs1        = is_opvf ? rs1_repl : instruction_i.data_vs1                                        ;
 assign data_vs2        = instruction_i.data_vs2                                                             ;
 
@@ -1167,7 +1175,8 @@ fpnew_top #(
     .Features       (SARG_RV64DV),
     .Implementation (SARG_SIMD_INIT),
     .TagType        (logic[4:0]),
-    .TrueSIMDClass  (1'b1)
+    .TrueSIMDClass  (1'b1),
+    .EnableSIMDMask (1'b1)
 ) vector_fpnew (
     .clk_i          (clk_i),
     .rst_ni         (rstn_i),
