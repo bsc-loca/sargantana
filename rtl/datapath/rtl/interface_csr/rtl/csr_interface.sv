@@ -52,6 +52,8 @@ csr_cmd_t csr_cmd_int;
 csr_addr_t csr_addr_int;
 logic commit_2_blocked;
 
+logic commit_0_vstore;
+logic commit_1_vstore;
 
 always_comb begin
     csr_cmd_int = CSR_CMD_NOPE;
@@ -137,8 +139,24 @@ always_comb begin
     end
 end
 
+assign commit_0_vstore = (((instruction_to_commit_i[0].instr_type == VSE)  ||
+                           (instruction_to_commit_i[0].instr_type == VS1R) ||
+                           (instruction_to_commit_i[0].instr_type == VSM)  ||
+                           (instruction_to_commit_i[0].instr_type == VSSE) ||
+                           (instruction_to_commit_i[0].instr_type == VSXE)) 
+                           && (instruction_to_commit_i[0].vl != 'h0)) ? 1'b1 : 1'b0;
+
+assign commit_1_vstore = (((instruction_to_commit_i[1].instr_type == VSE)  ||
+                           (instruction_to_commit_i[1].instr_type == VS1R) ||
+                           (instruction_to_commit_i[1].instr_type == VSM)  ||
+                           (instruction_to_commit_i[1].instr_type == VSSE) ||
+                           (instruction_to_commit_i[1].instr_type == VSXE)) 
+                           && (instruction_to_commit_i[1].vl != 'h0)) ? 1'b1 : 1'b0;
+
+
+
 // tell cu that ecall was taken
-    assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
+assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
@@ -216,6 +234,7 @@ assign req_cpu_csr_o.csr_pc = (debug_pc_valid_i) ? debug_pc_i : instruction_to_c
 assign csr_ena_int_o = csr_ena_int;
 // Notify the CSR if the retiring instructions modify the FP or vector regfiles
 assign req_cpu_csr_o.freg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].fregfile_we & (~commit_xcpt_i)) | (retire_inst_o[1] & instruction_to_commit_i[1].fregfile_we));
-assign req_cpu_csr_o.vreg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].vregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].vregfile_we));
+assign req_cpu_csr_o.vreg_modified = ((retire_inst_o[0] & (instruction_to_commit_i[0].vregfile_we | commit_0_vstore)) | 
+                                      (retire_inst_o[1] & (instruction_to_commit_i[1].vregfile_we | commit_1_vstore)));
 
 endmodule
