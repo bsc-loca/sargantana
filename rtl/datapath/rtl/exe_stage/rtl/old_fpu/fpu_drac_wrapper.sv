@@ -7,7 +7,7 @@
 
 module fpu_drac_wrapper
 import drac_pkg::*;
-import old_fpnew_pkg::*;
+import fpnew_pkg::*;
 
 #(
    parameter fpu_features_t       Features = EPI_RV64D,
@@ -35,7 +35,7 @@ fp_format_e  src_fmt;
 fp_format_e  dst_fmt;
 int_format_e int_fmt;
 logic ready_fpu;
-old_fpnew_pkg::status_t result_fp_status_int,finish_fp_status_int;
+fpnew_pkg::status_t result_fp_status_int,finish_fp_status_int;
 reg_t tag_current_instr_int, result_tag_int;
 
 logic sign_extend_int;
@@ -81,49 +81,49 @@ always_comb begin
       // Documentation: https://github.com/pulp-platform/fpnew/tree/79f75e0a0fdab6ebc3840a14077c39f4934321fe/docs#parameters
 
       drac_pkg::FADD: begin // addition
-         op     = old_fpnew_pkg::ADD;
+         op     = fpnew_pkg::ADD;
          op_mod = 0;
          operands[0] = '0;
          operands[1] = instruction_i.data_rs1;
          operands[2] = instruction_i.data_rs2;
       end  
       drac_pkg::FSUB: begin // subtraction
-         op     = old_fpnew_pkg::ADD; 
+         op     = fpnew_pkg::ADD;
          op_mod = 1;
          operands[0] = '0;
          operands[1] = instruction_i.data_rs1;
          operands[2] = instruction_i.data_rs2;
       end
       drac_pkg::FMUL: begin // multiplication
-         op     = old_fpnew_pkg::MUL;
+         op     = fpnew_pkg::MUL;
          op_mod = 0;
          operands[0] = instruction_i.data_rs1;
          operands[1] = instruction_i.data_rs2;
          operands[2] = '0;//instruction_i.data_rs3;
       end
       drac_pkg::FMADD: begin // fused multiply-add
-         op     = old_fpnew_pkg::FMADD;
+         op     = fpnew_pkg::FMADD;
          op_mod = 0;
          operands[0] = instruction_i.data_rs1;
          operands[1] = instruction_i.data_rs2;
          operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FMSUB: begin // fused multiply-subtract
-         op     = old_fpnew_pkg::FMADD;
+         op     = fpnew_pkg::FMADD;
          op_mod = 1;
          operands[0] = instruction_i.data_rs1;
          operands[1] = instruction_i.data_rs2;
          operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FNMSUB: begin // negated fused multiply-subtract 
-         op     = old_fpnew_pkg::FNMSUB;
+         op     = fpnew_pkg::FNMSUB;
          op_mod = 0;
          operands[0] = instruction_i.data_rs1;
          operands[1] = instruction_i.data_rs2;
          operands[2] = instruction_i.data_rs3;
       end
       drac_pkg::FNMADD: begin // negated fused multiply-add
-         op     = old_fpnew_pkg::FNMSUB;
+         op     = fpnew_pkg::FNMSUB;
          op_mod = 1;
          operands[0] = instruction_i.data_rs1;
          operands[1] = instruction_i.data_rs2;
@@ -133,14 +133,14 @@ always_comb begin
       //                 DIV
       // -------------------------------------------
       drac_pkg::FDIV: begin
-         op     = old_fpnew_pkg::DIV;
+         op     = fpnew_pkg::DIV;
          op_mod = 0;
          operands[0] = ((src_fmt == FP32) & (instruction_i.data_rs1[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs1;
          operands[1] = ((src_fmt == FP32) & (instruction_i.data_rs2[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs2;
          operands[2] = '0;//instruction_i.data_rs3;
       end
       drac_pkg::FSQRT: begin
-         op     = old_fpnew_pkg::SQRT;
+         op     = fpnew_pkg::SQRT;
          op_mod = 0;
          operands[0] = ((src_fmt == FP32) & (instruction_i.data_rs1[WIDTH-1:32] != '1)) ? 64'hffffffff7fc00000 : instruction_i.data_rs1;
          operands[1] = '0;
@@ -150,47 +150,47 @@ always_comb begin
       //                 NONCOMP
       // -------------------------------------------
       drac_pkg::FMIN_MAX: begin 
-         op          = old_fpnew_pkg::MINMAX;
+         op          = fpnew_pkg::MINMAX;
          op_mod      = 0;
       end 
       drac_pkg::FCMP: begin
-         op          = old_fpnew_pkg::CMP;
+         op          = fpnew_pkg::CMP;
          op_mod      = 0;
       end
       drac_pkg::FCLASS: begin
-         op          = old_fpnew_pkg::CLASSIFY;
+         op          = fpnew_pkg::CLASSIFY;
          op_mod      = 0;
       end   
       drac_pkg::FSGNJ: begin
-         op          = old_fpnew_pkg::SGNJ;
+         op          = fpnew_pkg::SGNJ;
          op_mod      = 0;
       end
       // FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
       // FP to I
       drac_pkg::FCVT_F2I: begin
-         op          = old_fpnew_pkg::F2I;
+         op          = fpnew_pkg::F2I;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
          int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
          sign_extend_int = (int_fmt == INT32);
       end
       // I to FP
       drac_pkg::FCVT_I2F: begin
-         op          = old_fpnew_pkg::I2F;
+         op          = fpnew_pkg::I2F;
          op_mod      = instruction_i.instr.rs2[0]; // 1 --> Unsigned
          int_fmt     = instruction_i.instr.rs2[1] ? INT64 : INT32;
       end
       // FP to FP
       drac_pkg::FCVT_F2F: begin
-         op              = old_fpnew_pkg::F2F;
+         op              = fpnew_pkg::F2F;
          op_mod          = 0;
          src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
       end
       // FP to FP
       drac_pkg::FMV_X2F: begin
-         op              = old_fpnew_pkg::SGNJ;
+         op              = fpnew_pkg::SGNJ;
          op_mod          = 1;
          rnd_mode_sel    = 1'b1;
-         opcode_rnd_mode = old_fpnew_pkg::RUP;
+         opcode_rnd_mode = fpnew_pkg::RUP;
       end
       default: begin 
          op     = operation_e'('1); // don't care
@@ -229,11 +229,11 @@ typedef logic [3:0]W4_logic;
 typedef logic [2:0]W3_logic;
 typedef logic [1:0]W2_logic;
 
-old_fpnew_pkg::roundmode_e rnd_mode;
-assign rnd_mode = rnd_mode_sel ? old_fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mode))
-                               : old_fpnew_pkg::roundmode_e'(W3_logic'(instruction_i.instr.frm));
+fpnew_pkg::roundmode_e rnd_mode;
+assign rnd_mode = rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mode))
+                               : fpnew_pkg::roundmode_e'(W3_logic'(instruction_i.instr.frm));
 
-old_fpnew_top #(
+fpnew_top #(
    .Features       ( Features ),
    .Implementation ( Implementation )
 ) i_fpuv_top (
@@ -243,11 +243,11 @@ old_fpnew_top #(
    // Input
    .operands_i     ( operands ),
    .rnd_mode_i     ( rnd_mode ),
-   .op_i           ( old_fpnew_pkg::operation_e'(W4_logic'(op ))),
+   .op_i           ( fpnew_pkg::operation_e'(W4_logic'(op ))),
    .op_mod_i       ( op_mod ),
-   .src_fmt_i      ( old_fpnew_pkg::fp_format_e'(W3_logic'(src_fmt ))),
-   .dst_fmt_i      ( old_fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt ))),
-   .int_fmt_i      ( old_fpnew_pkg::int_format_e'(W2_logic'(int_fmt ))),
+   .src_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(src_fmt ))),
+   .dst_fmt_i      ( fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt ))),
+   .int_fmt_i      ( fpnew_pkg::int_format_e'(W2_logic'(int_fmt ))),
    .simd_mask_i    ( '0 ),
    //.inactive_sel_i ( 2'b11 ),
    .vectorial_op_i ( '0 ),
@@ -260,7 +260,8 @@ old_fpnew_top #(
    .status_o       ( result_fp_status_int ),
    .tag_o          ( result_tag_int ),
    .out_valid_o    ( result_valid_int ),
-   .busy_o         ( /* unused */ )
+   .busy_o         ( /* unused */ ),
+   .early_valid_o  ( /* unsued */ )
 );
 
 // Output FPU

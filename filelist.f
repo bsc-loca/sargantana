@@ -9,7 +9,6 @@
 ./rtl/common_cells/src/fifo_v3.sv
 ./rtl/common_cells/src/rr_arb_tree.sv
 ./rtl/common_cells/src/exp_backoff.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/cb_filter_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/common_cells/src/ecc_pkg.sv
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_pkg.sv
@@ -33,18 +32,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_norm_div_sqrt_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_nrbd_nrsc_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_preprocess_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_cast_multi.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_classifier.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_divsqrt_multi.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_divsqrt_th_32.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_fma.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_fma_multi.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_noncomp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_opgroup_block.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_opgroup_fmt_slice.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_opgroup_multifmt_slice.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_rounding.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/old_fpnew_top.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_drac_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_add.sv
