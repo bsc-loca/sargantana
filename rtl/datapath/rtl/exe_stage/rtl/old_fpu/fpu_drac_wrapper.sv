@@ -235,7 +235,8 @@ assign rnd_mode = rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mo
 
 fpnew_top #(
    .Features       ( Features ),
-   .Implementation ( Implementation )
+   .Implementation ( Implementation ),
+   .TagType	   ( reg_t )
 ) i_fpuv_top (
    .clk_i          ( clk_i ),
    .rst_ni         ( rstn_i ),
