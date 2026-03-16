@@ -25,13 +25,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vshift.sv
 ./rtl/datapath/rtl/exe_stage/rtl/div_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_mem_req_queue.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_defs_div_sqrt_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_control_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_div_sqrt_top_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_iteration_div_sqrt_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_norm_div_sqrt_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_nrbd_nrsc_mvp.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_div_sqrt/old_preprocess_mvp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_drac_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_add.sv
