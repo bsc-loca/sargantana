@@ -156,6 +156,8 @@ logic [VMAXELEM_LOG:0] vagu_vl;
 logic vmem_unit_stride;
 bus64_t vagu_stride;
 
+logic scoreboard_stall_from_vfp;
+
 // Bypasses
 `ifdef ASSERTIONS
     always @(posedge clk_i) begin
@@ -198,7 +200,7 @@ score_board_simd score_board_simd_inst(
     .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
     .vl_i                (simd_instr.instr.vl),
-    .stall_from_vfp      (fpnew_stall_simd),
+    .stall_from_vfp      (scoreboard_stall_from_vfp),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
@@ -211,6 +213,8 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
 
 logic fpnew_stall_simd_old;
+
+assign scoreboard_stall_from_vfp = fpnew_stall_simd | fpnew_stall_simd_old;
 
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
