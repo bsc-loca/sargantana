@@ -3237,10 +3237,13 @@ module decoder
                         // we only support the first two modes (S,D)
                         case (decode_i.inst.r4type.fmt)
                             FMT_S: begin
-                                decode_instr_int.fmt = 1'b0;
+                                decode_instr_int.fmt = 2'b00;
                             end
                             FMT_D: begin
-                                decode_instr_int.fmt = 1'b1;
+                                decode_instr_int.fmt = 2'b01;
+                            end
+                            FMT_H: begin
+                                decode_instr_int.fmt = 2'b10;
                             end
                             default: begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -3423,6 +3426,9 @@ module decoder
                             end
                             FMT_FP_D: begin
                                 decode_instr_int.fmt = FMT_D;
+                            end
+                            FMT_FP_Q: begin // TODO fishy
+                                decode_instr_int.fmt = FMT_H;
                             end
                             default: begin
                                 xcpt_illegal_instruction_int = 1'b0;

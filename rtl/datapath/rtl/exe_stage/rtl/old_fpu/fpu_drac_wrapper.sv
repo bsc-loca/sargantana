@@ -46,8 +46,12 @@ logic enable_fp_op_int;
 rr_exe_fpu_instr_t finish_fp_op_int;
 
 always_comb begin : decide_FMT
-   if (instruction_i.instr.fmt) begin
+   if (instruction_i.instr.fmt == riscv_pkg::FMT_S) begin
+      dst_fmt = FP32;
+   end else if (instruction_i.instr.fmt == riscv_pkg::FMT_D) begin
       dst_fmt = FP64;
+   end else if (instruction_i.instr.fmt == riscv_pkg::FMT_H) begin
+      dst_fmt = FP16;
    end else begin
       dst_fmt = FP32;
    end
@@ -183,7 +187,9 @@ always_comb begin
       drac_pkg::FCVT_F2F: begin
          op              = fpnew_pkg::F2F;
          op_mod          = 0;
-         src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
+         src_fmt         = instruction_i.instr.rs2[1:0] == 2'b00 ? FP32 :
+                           instruction_i.instr.rs2[1:0] == 2'b10 ? FP16 :
+                           FP64; // TODO improve this
       end
       // FP to FP
       drac_pkg::FMV_X2F: begin
@@ -208,16 +214,29 @@ assign pending_fp_op_queue_valid = enable_fp_op_int & ready_fpu;
 logic pending_fp_op_queue_advance_head;
 assign pending_fp_op_queue_advance_head = finish_fp_op_int.instr.valid & !stall_wb_i;
 
+logic is_zfhmin;
+assign is_zfhmin = (op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16);
+
+bus64_t pending_result_int;
+assign pending_result_int = is_zfhmin ? result_zfhmin : result_int;
+
+fpnew_pkg::status_t pending_fp_status_int;
+assign pending_fp_status_int = is_zfhmin ? status_zfhmin : result_fp_status_int;
+
+logic pending_result_valid_int;
+assign pending_result_valid_int = is_zfhmin ? valid_zfhmin_o : result_valid_int;
+
+
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
     .rstn_i(rstn_i),           // Negated Reset Signal
     .flush_i(flush_i),          // Flush all entries
     .valid_i(pending_fp_op_queue_valid),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
-    .result_valid_i(result_valid_int),         // Result valid
+    .result_valid_i(pending_result_valid_int),         // Result valid
     .result_tag_i(result_tag_int),           // Instruction that finishes
-    .result_data_i(result_int),          // Result asociated data
-    .result_fp_status_i(result_fp_status_int),
+    .result_data_i(pending_result_int),          // Result asociated data
+    .result_fp_status_i(pending_fp_status_int),
     .advance_head_i(pending_fp_op_queue_advance_head),         // Advance head pointer one position
     .finish_instr_fp_o(finish_fp_op_int),      // Next Instruction to Write Back FP
     .finish_fp_status_o(finish_fp_status_int),  // FP_STATUS
@@ -264,6 +283,31 @@ fpnew_top #(
    .busy_o         ( /* unused */ ),
    .early_valid_o  ( /* unsued */ )
 );
+
+
+   logic [63:0] result_zfhmin;
+   logic        valid_zfhmin_i;
+   logic        valid_zfhmin_o;
+   fpnew_pkg::status_t status_zfhmin;
+
+   assign valid_zfhmin_i = (op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16);
+
+
+conv_zfhmin #(
+   .TagType	   ( reg_t )
+) conv_zfhmin_inst (
+   .operand_i(operands[0]),
+   .src_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(src_fmt))),
+   .dst_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt))),
+   .rnd_mode_i(rnd_mode),
+   .valid_i(valid_zfhmin_i),
+   .tag_i(tag_current_instr_int),
+   .result_o(result_zfhmin),
+   .status_o(status_zfhmin),
+   .tag_o(tag_zfhmin),
+   .out_valid_o(valid_zfhmin_o)
+);
+
 
 // Output FPU
 assign instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;

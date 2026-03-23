@@ -520,7 +520,7 @@ typedef struct packed {
     
     // FP instructions only
     reg_t rs3;                          // Register Source 3 for fused ops
-    logic fmt;                          // FMT mode (0:S, 1:D)
+    logic [1:0] fmt;                          // FMT mode (0:S, 1:D, 2: H)
     logic use_fs1;                      // Instruction uses fregister source 1
     logic use_fs2;                      // Instruction uses fregister source 2
     logic use_fs3;                      // Instruction uses fregister source 2
@@ -1324,7 +1324,7 @@ localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{
     Width:         64,
     EnableVectors: 1'b0,
     EnableNanBox:  1'b1,
-    FpFmtMask:     5'b11000,
+    FpFmtMask:     5'b11100,
     IntFmtMask:    4'b0011
 };
 
@@ -1650,6 +1650,19 @@ endfunction
 function automatic logic is_subnorm_f32(input logic [31:0] fp32);
     is_subnorm_f32 = !(|fp32[30:23]) && (|fp32[22:0]);
 endfunction
+
+function automatic logic is_nan_f16(input logic [15:0] fp16);
+    is_nan_f16 = (&fp16[14:10]) && (|fp16[9:0]);
+endfunction
+
+function automatic logic is_qnan_f16(input logic [15:0] fp16);
+    is_qnan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f16(input logic [15:0] fp16);
+    is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
+endfunction
+
 
 // --------------------------------------------------------------------
 
