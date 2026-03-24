@@ -3345,9 +3345,12 @@ module decoder
                                 decode_instr_int.use_fs2 = 1'b0;
                                 case (decode_i.inst.fprtype.rm)
                                     3'b000: begin
-                                        if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                        if (decode_i.inst.fprtype.fmt == FMT_S) begin
                                             decode_instr_int.instr_type    = ADDW;
                                             decode_instr_int.op_32         = 1'b1;
+                                        end else if (decode_i.inst.fprtype.fmt == FMT_H) begin
+                                            decode_instr_int.instr_type    = SEXTH;
+                                            decode_instr_int.op_32         = 1'b1;  // TODO fix this, add a wider field and support H and Q.
                                         end else begin
                                             decode_instr_int.instr_type    = ADD;
                                             decode_instr_int.op_32         = 1'b0;
@@ -3400,7 +3403,7 @@ module decoder
                                 decode_instr_int.use_rs1 = 1'b1;
                                 decode_instr_int.use_rs2 = 1'b0;
                                 // Check if FMT is FP32 then INT 32 then extens sign
-                                if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                if (decode_i.inst.fprtype.fmt == FMT_S) begin
                                     decode_instr_int.op_32   = 1'b1;
                                 end else begin
                                     decode_instr_int.op_32   = 1'b0;
@@ -3421,13 +3424,13 @@ module decoder
                         endcase
 
                         unique case (decode_i.inst.fprtype.fmt)
-                            FMT_FP_S: begin
+                            FMT_S: begin
                                 decode_instr_int.fmt = FMT_S;
                             end
-                            FMT_FP_D: begin
+                            FMT_D: begin
                                 decode_instr_int.fmt = FMT_D;
                             end
-                            FMT_FP_Q: begin // TODO fishy
+                            FMT_H: begin
                                 decode_instr_int.fmt = FMT_H;
                             end
                             default: begin

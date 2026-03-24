@@ -189,7 +189,7 @@ always_comb begin
          op_mod          = 0;
          src_fmt         = instruction_i.instr.rs2[1:0] == 2'b00 ? FP32 :
                            instruction_i.instr.rs2[1:0] == 2'b10 ? FP16 :
-                           FP64; // TODO improve this
+                           FP64;
       end
       // FP to FP
       drac_pkg::FMV_X2F: begin
@@ -215,7 +215,8 @@ logic pending_fp_op_queue_advance_head;
 assign pending_fp_op_queue_advance_head = finish_fp_op_int.instr.valid & !stall_wb_i;
 
 logic is_zfhmin;
-assign is_zfhmin = (op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16);
+assign is_zfhmin = ((op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16)) |
+                   (op == fpnew_pkg::SGNJ & (src_fmt == fpnew_pkg::FP16 & dst_fmt == fpnew_pkg::FP16));
 
 bus64_t pending_result_int;
 assign pending_result_int = is_zfhmin ? result_zfhmin : result_int;
