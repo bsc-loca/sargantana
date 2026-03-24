@@ -54,9 +54,7 @@ always_comb begin
     eq_o = 1'b0;
     gt_o = 1'b0;
 
-    if (is_zero_f64(srca_i) && is_zero_f64(srcb_i)) begin
-        eq_o = 1'b1;
-    end else if (srca_i == srcb_i) begin
+    if (srca_i == srcb_i) begin
         // bitwise equality covers +inf==+inf, -inf==-inf,
         // same finite nums, same subnormals
         eq_o = 1'b1;
