@@ -1197,6 +1197,7 @@ fpnew_top #(
     .status_o       (fpnew_status),
     .tag_o          (fpnew_out_tag),
     .busy_o         (/* unused */),
+    .early_valid_o  (/* unused */),
     // handshake signals
     .in_valid_i     (instr_valid),
     .in_ready_o     (in_ready),
