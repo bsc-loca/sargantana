@@ -49,6 +49,7 @@ module load_store_queue
     input logic       ld_st_v_mode_i,
     input logic [1:0] csr_s_pmm_i,
     input logic [1:0] csr_h_pmm_i,
+    input logic [1:0] csr_hstatus_hupmm_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -145,10 +146,13 @@ always_comb begin
     active_pmm_mode = riscv_pkg::PMM_DISABLED;
     if (!is_hlvx_inst) begin
         if (ld_st_v_mode_i) begin
-            active_pmm_mode = (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) ? csr_h_pmm_i : csr_s_pmm_i;
-        end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
-            active_pmm_mode = csr_s_pmm_i;
+        if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) begin
+            active_pmm_mode = csr_h_pmm_i;
+        end else begin
+            active_pmm_mode = csr_hstatus_hupmm_i;
         end
+    end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
+        active_pmm_mode = csr_s_pmm_i;
     end
 
     unique case (active_pmm_mode)

@@ -58,6 +58,7 @@ module mem_unit
     input logic       ld_st_v_mode_i,
     input logic [1:0] csr_s_pmm_i,
     input logic [1:0] csr_h_pmm_i,
+    input logic [1:0] csr_hstatus_hupmm_i,
     //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
@@ -319,6 +320,7 @@ load_store_queue  #(
     .ld_st_v_mode_i(ld_st_v_mode_i),
     .csr_s_pmm_i(csr_s_pmm_i),
     .csr_h_pmm_i(csr_h_pmm_i),
+    .csr_hstatus_hupmm_i(csr_hstatus_hupmm_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 

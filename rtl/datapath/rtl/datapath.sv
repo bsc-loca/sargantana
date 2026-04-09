@@ -43,6 +43,7 @@ module datapath
     input logic [3:0]       csr_h_cmo_i,
     input logic [1:0]       csr_s_pmm_i,
     input logic [1:0]       csr_h_pmm_i,
+    input logic [1:0]       csr_hstatus_hupmm_i,
     input logic             en_translation_i,
     input logic             en_g_translation_i,
     input logic             en_ld_st_translation_i,
@@ -1304,6 +1305,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .ld_st_v_mode_i(csr_ld_st_v_mode_i),
         .csr_s_pmm_i(csr_s_pmm_i),
         .csr_h_pmm_i(csr_h_pmm_i),
+        .csr_hstatus_hupmm_i(csr_hstatus_hupmm_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),

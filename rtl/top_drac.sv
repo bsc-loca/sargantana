@@ -140,6 +140,7 @@ logic [3:0] csr_s_cmo;
 logic [3:0] csr_h_cmo;
 logic [1:0] csr_s_pmm;
 logic [1:0] csr_h_pmm;
+logic [1:0] csr_hstatus_hupmm;
 logic en_ld_st_translation, en_ld_st_g_translation;
 logic en_translation, en_g_translation;
 logic csr_hu;
@@ -342,6 +343,7 @@ datapath #(
     .csr_h_cmo_i(csr_h_cmo),
     .csr_s_pmm_i(csr_s_pmm),
     .csr_h_pmm_i(csr_h_pmm),
+    .csr_hstatus_hupmm_i(csr_hstatus_hupmm),
     .en_ld_st_translation_i(en_ld_st_translation),
     .en_ld_st_g_translation_i(en_ld_st_g_translation),
     .csr_hu_i(csr_hu),
@@ -436,6 +438,7 @@ csr_bsc #(
 
     .csr_s_pmm_cfg_o(csr_s_pmm),
     .csr_h_pmm_cfg_o(csr_h_pmm),
+    .csr_hstatus_hupmm_o(csr_hstatus_hupmm),
 
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
     .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled
