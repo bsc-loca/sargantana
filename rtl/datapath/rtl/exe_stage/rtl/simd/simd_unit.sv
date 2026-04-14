@@ -1508,7 +1508,7 @@ always_comb begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/8)  ; ++i) begin
-                    if((gather_index) < (VLEN/8)) begin
+                    if((gather_index) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(gather_index) * 8 +: 8];
                     end
                     else begin
@@ -1518,7 +1518,7 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
-                    if((gather_index) < (VLEN/16)) begin
+                    if((gather_index) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(gather_index) * 16 +: 16];
                     end
                     else begin
@@ -1528,7 +1528,7 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
-                    if((gather_index) < (VLEN/32)) begin
+                    if((gather_index) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(gather_index) * 32 +: 32];
                     end
                     else begin
@@ -1538,7 +1538,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((gather_index) < (VLEN/64)) begin
+                    if((gather_index) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(gather_index) * 64 +: 64];
                     end
                     else begin
@@ -1548,7 +1548,7 @@ always_comb begin
             end
             default: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((gather_index) < (VLEN/64)) begin
+                    if((gather_index) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(gather_index) * 64 +: 64];
                     end
                     else begin
