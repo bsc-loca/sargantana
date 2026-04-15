@@ -1212,7 +1212,7 @@ always_comb begin
             SEW_8: begin
                 if(shift_amount_in_vslide < (VLEN/8)) begin
 
-                    for (int i = 0; i < (VLEN/8) ; ++i) begin
+                    for (int i = 0; i < instr_to_out.instr.vlmax ; ++i) begin
                         if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 8 +: 8] = instruction_i.data_vs2[i * 8 +: 8];
                         end
@@ -1225,7 +1225,7 @@ always_comb begin
             SEW_16: begin
                 if(shift_amount_in_vslide < (VLEN/16)) begin
 
-                    for (int i = 0; i < (VLEN/16) ; ++i) begin
+                    for (int i = 0; i < instr_to_out.instr.vlmax ; ++i) begin
                         if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                         end
@@ -1238,7 +1238,7 @@ always_comb begin
             SEW_32: begin
                 if(shift_amount_in_vslide < (VLEN/32)) begin
 
-                    for (int i = 0; i < (VLEN/32) ; ++i) begin
+                    for (int i = 0; i < instr_to_out.instr.vlmax ; ++i) begin
                         if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 32 +: 32] = instruction_i.data_vs2[i * 32 +: 32];
                         end
@@ -1251,7 +1251,7 @@ always_comb begin
             SEW_64: begin
                 if(shift_amount_in_vslide < (VLEN/64)) begin
 
-                    for (int i = 0; i < (VLEN/64) ; ++i) begin
+                    for (int i = 0; i < instr_to_out.instr.vlmax ; ++i) begin
                         if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0))) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 64 +: 64] = instruction_i.data_vs2[i * 64 +: 64];
                         end
