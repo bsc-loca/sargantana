@@ -1442,7 +1442,7 @@ always_comb begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/8)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 8) +: 8] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/8), 16)]) * 8 +: 8];
                     end
                     else begin
@@ -1453,7 +1453,7 @@ always_comb begin
             end
             SEW_16: begin
                 for (int i = 0 ; i < (VLEN/16)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/16)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 16) +: 16] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/16), 16)]) * 16 +: 16];
                     end
                     else begin
@@ -1463,7 +1463,7 @@ always_comb begin
             end
             SEW_32: begin
                 for (int i = 0 ; i < (VLEN/32)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/32)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 32) +: 32] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/32), 16)]) * 32 +: 32];
                     end
                     else begin
@@ -1473,7 +1473,7 @@ always_comb begin
             end
             SEW_64: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/64)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/64), 16)]) * 64 +: 64];
                     end
                     else begin
@@ -1483,7 +1483,7 @@ always_comb begin
             end
             default: begin
                 for (int i = 0 ; i < (VLEN/64)  ; ++i) begin
-                    if((instruction_i.data_vs1[(i * 16) +: 16]) < (VLEN/64)) begin
+                    if((instruction_i.data_vs1[(i * 16) +: 16]) < instruction_i.instr.vlmax) begin
                         result_data_vd[(i * 64) +: 64] = instruction_i.data_vs2[(instruction_i.data_vs1[(i * 16) +: min_unsigned($clog2(VLEN/64), 16)]) * 64 +: 64];
                     end
                     else begin
