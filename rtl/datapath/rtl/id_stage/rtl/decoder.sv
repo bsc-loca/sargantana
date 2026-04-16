@@ -862,7 +862,7 @@ module decoder
                         F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vltype.vm;
                             decode_instr_int.mem_size = {1'b0, decode_i.inst.vltype.width};
-                            decode_instr_int.use_old_vd = ~vta_int;
+                            decode_instr_int.use_old_vd = (vta_int & vma_int) ? 1'b0 : 1'b1;
                             if ((csr_vs_i == 2'b00) || (decode_i.inst.vltype.mew != 1'b0)) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
@@ -956,7 +956,7 @@ module decoder
                         F3_V8B, F3_V16B, F3_V32B, F3_V64B: begin
                             decode_instr_int.use_mask = ~decode_i.inst.vstype.vm;
                             decode_instr_int.mem_size = {1'b0, decode_i.inst.vstype.width};
-                            decode_instr_int.use_old_vd = ~vta_int;
+                            decode_instr_int.use_old_vd = (vta_int & vma_int) ? 1'b0 : 1'b1;
                             if ((csr_vs_i == 2'b00) || (decode_i.inst.vstype.mew != 1'b0)) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
@@ -1026,7 +1026,7 @@ module decoder
                     decode_instr_int.vregfile_we = ~vl_0;
                     decode_instr_int.unit = UNIT_SIMD;
                     decode_instr_int.use_mask = ~decode_i.inst.vtype.vm;
-                    decode_instr_int.use_old_vd = ~vta_int;
+                    decode_instr_int.use_old_vd = (vta_int & vma_int) ? 1'b0 : 1'b1;
                     if ((csr_vs_i == 2'b00) || ((vill == 1'b1) && (decode_i.inst.vtype.func3 != F3_OPCFG))) begin
                         xcpt_illegal_instruction_int = 1'b1;
                     end else begin
