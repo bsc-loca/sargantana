@@ -1378,7 +1378,7 @@ localparam fpnew_pkg::fpu_features_t SARG_RV64DV = '{
     EnableVectors: 1'b1,        // enable vector support
     EnableNanBox:  1'b1,
     FpFmtMask:     5'b11000,    // [FP128, FP64, FP32, BF16, FP16]
-    IntFmtMask:    4'b0011
+    IntFmtMask:    4'b0111
 };
 
 localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
