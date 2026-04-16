@@ -1226,7 +1226,7 @@ always_comb begin
                 if(shift_amount_in_vslide < (VLEN/16)) begin
 
                     for (int i = 0; i < (VLEN/16) ; ++i) begin
-                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0) && (i < instr_to_out.instr.vlmax))) begin
+                        if(((i - shift_amount_in_vslide[31:0]) < (instr_to_out.instr.vl)) && ((i - shift_amount_in_vslide[31:0]) >= (0)) && (i < instr_to_out.instr.vlmax)) begin
                             result_data_vd[(i - shift_amount_in_vslide) * 16 +: 16] = instruction_i.data_vs2[i * 16 +: 16];
                         end
 
