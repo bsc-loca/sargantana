@@ -110,6 +110,9 @@ module immediate
             riscv_pkg::OP_BRANCH: begin
                 imm_o = {sign_extended,imm_btype};
             end
+            riscv_pkg::OP_FP: begin
+                imm_o = {{28 {1'b0}},instr_i.bits[19:15]};
+            end
             riscv_pkg::OP_STORE_FP: begin
                 case (instr_i.stype.func3)
                     F3_FLH,

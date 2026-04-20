@@ -26,6 +26,9 @@
 ./rtl/datapath/rtl/exe_stage/rtl/div_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_mem_req_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpu_drac_wrapper.sv
+./rtl/datapath/rtl/exe_stage/rtl/old_fpu/zfa_post_process.sv
+./rtl/datapath/rtl/exe_stage/rtl/old_fpu/conv_zfa.sv
+./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpnew_int2fp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/conv_zfhmin.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp32_to_fp16.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp64_to_fp16.sv

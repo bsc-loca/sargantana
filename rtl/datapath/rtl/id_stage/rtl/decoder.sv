@@ -3338,9 +3338,14 @@ module decoder
                                 end
                             end
                             F5_FP_FMIN_MAX: begin
-                                decode_instr_int.instr_type = FMIN_MAX;
+                                if (decode_i.inst.bits[13] == 1'b0) begin
+                                    decode_instr_int.instr_type = FMIN_MAX;
+                                end else begin
+                                    decode_instr_int.instr_type = FMINM_MAXM;
+                                end
+
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b011]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
@@ -3393,11 +3398,17 @@ module decoder
                                 endcase
                             end
                             F5_FP_FCMP: begin // FP comp
-                                decode_instr_int.instr_type = FCMP;
                                 decode_instr_int.fregfile_we = 1'b0;
                                 decode_instr_int.regfile_we = 1'b1;
+
+                                if (decode_i.inst.bits[14] == 1'b0) begin
+                                    decode_instr_int.instr_type = FCMP;
+                                end else begin
+                                    decode_instr_int.instr_type = FLEQ_FLTQ;
+                                end
+
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b110], [3'b000:3'b010]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
@@ -3429,10 +3440,22 @@ module decoder
                                 if (decode_i.inst.fprtype.rm != 3'b000) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
+
+                                if (decode_i.inst.bits[24:20] == 5'd1) begin // rs2=1
+                                    decode_instr_int.use_imm = 1'b1;
+                                    decode_instr_int.instr_type = FLI;
+                                end else begin
+                                    decode_instr_int.instr_type = FMV_X2F;
+                                end
                             end
                             // D2S & S2D specific 
                             F5_FP_FCVT_SD: begin
-                                decode_instr_int.instr_type = FCVT_F2F;
+                                if (decode_i.inst.bits[22] == 1'b1) begin
+                                    decode_instr_int.instr_type = FROUND;
+                                end else begin
+                                    decode_instr_int.instr_type = FCVT_F2F;
+                                end
+
                                 decode_instr_int.use_fs2 = 1'b0;
                                 check_frm = 1'b1;
                             end

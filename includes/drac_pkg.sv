@@ -374,6 +374,8 @@ typedef enum logic [8:0] {
    FLD, FLW, FSD, FSW, FLH, FSH, //FLB, FSD, FSW, FSB,
    // Floating-Point Computational Instructions
    FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
+   // Floating-point Zfa instructions
+   FMINM_MAXM, FLEQ_FLTQ, FROUND, FLI, FCVTMOD,
    // Floating-Point Conversion and Move Instructions
    FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
    // Floating-Point Compare Instructions
@@ -789,6 +791,7 @@ typedef struct packed {
     checkpoint_ptr chkp;                 // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
+    reg_t tag;                          // Tag for out-of-order execution
 } rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
 
 typedef struct packed {

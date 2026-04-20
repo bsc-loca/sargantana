@@ -105,6 +105,4 @@ import fpnew_pkg::*;
             end
         end
     end
-
-
 endmodule

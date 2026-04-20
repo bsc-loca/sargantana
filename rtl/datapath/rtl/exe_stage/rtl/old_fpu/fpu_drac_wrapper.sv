@@ -198,7 +198,24 @@ always_comb begin
          rnd_mode_sel    = 1'b1;
          opcode_rnd_mode = fpnew_pkg::RUP;
       end
-      default: begin 
+      // FP to FP
+       drac_pkg::FMV_X2F: begin
+          op              = fpnew_pkg::SGNJ;
+          op_mod          = 1;
+          rnd_mode_sel    = 1'b1;
+          opcode_rnd_mode = fpnew_pkg::RUP;
+       end
+       // ZFA instructions
+       drac_pkg::FLI: begin
+          op              = fpnew_pkg::SGNJ;
+           operands[0] = instruction_i.instr.imm;
+          op_mod          = 0;
+       end
+       drac_pkg::FCVTMOD: begin
+          op              = fpnew_pkg::SGNJ;
+          op_mod          = 0;
+       end
+       default: begin
          op     = operation_e'('1); // don't care
          op_mod = DONT_CARE;        // don't care
       end
