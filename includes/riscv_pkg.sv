@@ -820,7 +820,7 @@ typedef enum logic [1:0] {
 } op_fmt_fp_t;
 
 typedef enum logic [2:0] {
-    F3_UNIMP2 = 3'b001,
+    F3_FLH    = 3'b001,
     F3_FLW    = 3'b010,
     F3_FLD    = 3'b011,
     F3_V8B    = 3'b000,

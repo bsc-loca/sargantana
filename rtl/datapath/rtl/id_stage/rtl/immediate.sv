@@ -71,6 +71,7 @@ module immediate
             end
             riscv_pkg::OP_LOAD_FP: begin
                 case (instr_i.stype.func3)
+                    F3_FLH,
                     F3_FLW,
                     F3_FLD: begin
                         imm_o = {sign_extended,imm_itype};
@@ -111,6 +112,7 @@ module immediate
             end
             riscv_pkg::OP_STORE_FP: begin
                 case (instr_i.stype.func3)
+                    F3_FLH,
                     F3_FLW,
                     F3_FLD: begin
                         imm_o = {sign_extended,imm_stype};

@@ -842,6 +842,14 @@ module decoder
                     decode_instr_int.unit = UNIT_MEM;
                     decode_instr_int.use_rs1    = 1'b1;
                     case (decode_i.inst.itype.func3)
+                        F3_FLH: begin
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FLH;
+                                decode_instr_int.fregfile_we = 1'b1;
+                            end
+                        end
                         F3_FLW: begin
                             if (csr_fs_i == 2'b00) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -934,6 +942,14 @@ module decoder
                     decode_instr_int.use_imm = 1'b0;
                     decode_instr_int.use_rs1 = 1'b1;
                     case (decode_i.inst.stype.func3)
+                        F3_FLH: begin
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FLH;
+                                decode_instr_int.fregfile_we = 1'b1;
+                            end
+                        end
                         F3_FLW: begin
                             //decode_instr_int.regfile_src = FPU_RF;
                             if (csr_fs_i == 2'b00) begin

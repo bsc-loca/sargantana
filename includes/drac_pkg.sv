@@ -371,7 +371,7 @@ typedef enum logic [8:0] {
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
    // Floating-Point Load and Store Instructions
-   FLD, FLW, FSD, FSW, // FLH, FLB, FSD, FSW, FSH, FSB,
+   FLD, FLW, FSD, FSW, FLH, FSH, //FLB, FSD, FSW, FSB,
    // Floating-Point Computational Instructions
    FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
    // Floating-Point Conversion and Move Instructions
