@@ -27,9 +27,11 @@ import fpnew_pkg::*;
     input logic         clk_i,
     input logic         rstn_i,
     input logic [63:0]  operand_i,
+    input rr_exe_fpu_instr_t instruction_i,
     input               fpnew_pkg::fp_format_e fmt_i,
     input               valid_i,
     input               reg_t tag_i,
+    input logic         stall_collision_i,
     output logic [63:0] result_o,
     output fpnew_pkg::status_t status_o,
     output TagType      tag_o,
@@ -46,6 +48,7 @@ import fpnew_pkg::*;
 
     logic [63:0] fli_result_fp32;
     logic [63:0] fli_result_fp64;
+    logic [63:0] fcvtmod_result;
 
     localparam EXP_BITS_FP32 = 8;
     localparam MAN_BITS_FP32 = 23;
@@ -128,11 +131,20 @@ import fpnew_pkg::*;
         endcase
     end
 
+    always_comb begin: fcvtmod
+
+    end
+
     always_comb begin : result_selection
-        case (fmt_i)
-            FP32: result_d = fli_result_fp32;
-            FP64: result_d = fli_result_fp64;
-            default: result_d = '0;
+        case (instruction_i.instr.instr_type)
+            FLI:
+            case (fmt_i)
+                FP32: result_d = fli_result_fp32;
+                FP64: result_d = fli_result_fp64;
+                default: result_d = '0;
+            endcase
+            FCVTMOD:
+                result_d = fcvtmod_result;
         endcase
     end
 
@@ -146,7 +158,7 @@ import fpnew_pkg::*;
           status_o    <= '0;
           tag_o       <= '0;
           out_valid_o <= 1'b0;
-       end else begin
+       end else if (!stall_collision_i) begin
           result_o    <= result_d;
           status_o    <= status_d;
           tag_o       <= tag_d;

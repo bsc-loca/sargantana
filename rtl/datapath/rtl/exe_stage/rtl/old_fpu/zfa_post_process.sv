@@ -70,15 +70,15 @@ import fpnew_pkg::*;
         out_valid_o = out_valid_i;
         result_o    = result_i;
 
-        // FMINM/FMAXM
+        // FMINM/FMAXM - return canonical NaN if EITHER operand is NaN
         if (instruction_i.instr.instr_type == FMINM_MAXM) begin
             if (instruction_i.instr.fmt == FP32) begin
                 if (is_nan_f32(instruction_i.data_rs1[31:0]) || is_nan_f32(instruction_i.data_rs2[31:0])) begin
-                    result_o = {32'b1, 1'b0, {8{1'b1}}, 1'b1, {22{1'b0}}};
+                    result_o = 64'hFFFFFFFF_7FC00000;
                 end
             end else begin // FP64
                 if (is_nan_f64(instruction_i.data_rs1) || is_nan_f64(instruction_i.data_rs2)) begin
-                    result_o = {1'b0, {11{1'b1}}, 1'b1, {51{1'b0}}};
+                    result_o = 64'h7FF8000000000000;
                 end
             end
 
@@ -104,5 +104,5 @@ import fpnew_pkg::*;
                 status_o.NX = ~(fp64_post_in2fp == instruction_i.data_rs1);
             end
         end
-    end
+       end
 endmodule
