@@ -29,10 +29,15 @@
     input logic                         rstn_i,
     input logic                         kill_i,
     input logic                         flush_i,
-    input logic                         en_ld_st_translation_i, // virtualization mechanism enabled
+    input logic                         en_translation_i, // virtualization mechanism enabled
+    input logic                         en_g_translation_i,
+    input logic                         en_ld_st_translation_i,
+    input logic                         en_ld_st_g_translation_i,
+    output logic                        csr_hs_ld_st_inst_o,
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
+    input logic [drac_pkg::PPN_SIZE-1:0] resp_icache_guest_ppn_i,      // guest_ppn from icache interface
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input logic [VMAXELEM_LOG:0]        vl_i,
     input vxrm_t                        vxrm_i,
@@ -41,6 +46,7 @@
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
     input logic [VMAXELEM_LOG:0]        vl_id_exe_i,
+    
     // OUTPUTS
     output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
     output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
@@ -67,6 +73,9 @@
     output logic [VMAXELEM_LOG:0]       vleff_vl_o,
 
     input logic [1:0] priv_lvl_i,
+    input logic       v_mode_i,
+    input logic [1:0] ld_st_priv_lvl_i,
+    input logic       ld_st_v_mode_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
@@ -109,12 +118,14 @@ rr_exe_fpu_instr_t   fp_instr;
 exe_wb_scalar_instr_t fp_to_scalar_wb;
 exe_wb_fp_instr_t     mem_to_fp_wb;
 exe_wb_fp_instr_t     fp_to_wb;
+exe_wb_fp_instr_t     simd_to_fp_wb;
 
 logic stall_mem;
 logic stall_vagu;
 logic stall_int;
 logic stall_simd;
 logic stall_simd_int;
+logic fpnew_stall_simd;
 logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
@@ -144,6 +155,8 @@ logic vagu_store_data_valid;
 logic [VMAXELEM_LOG:0] vagu_vl;
 logic vmem_unit_stride;
 bus64_t vagu_stride;
+
+logic scoreboard_stall_from_vfp;
 
 // Bypasses
 `ifdef ASSERTIONS
@@ -187,6 +200,7 @@ score_board_simd score_board_simd_inst(
     .instr_entry_i       (simd_instr),
     .sew_i               (simd_instr.instr.sew),
     .vl_i                (simd_instr.instr.vl),
+    .stall_from_vfp      (scoreboard_stall_from_vfp),
     .simd_exe_stages_o   (simd_exe_stages),
     .stall_simd_o        (stall_simd)
 );
@@ -197,6 +211,18 @@ assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_p
                                      & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3) 
                                      & (from_rr_i.vrdy1) & (from_rr_i.vrdy2)
                                      & (from_rr_i.vrdy_old_vd) & (from_rr_i.vrdym));
+
+logic fpnew_stall_simd_old;
+
+assign scoreboard_stall_from_vfp = fpnew_stall_simd | fpnew_stall_simd_old;
+
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if (~rstn_i) begin
+        fpnew_stall_simd_old <= 1'b0;
+    end else begin
+        fpnew_stall_simd_old <= fpnew_stall_simd;
+    end
+end
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -241,9 +267,12 @@ always_comb begin
     mem_instr.ex                  = 0;
     mem_instr.instr               = from_rr_i.instr;
     mem_instr.instr.instr_type    = from_rr_i.instr.instr_type;
-    mem_instr.is_amo_or_store     = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO);
+    mem_instr.is_amo_store_or_cmo = (from_rr_i.instr.mem_type == STORE) || (from_rr_i.instr.mem_type == AMO) ||
+                                    (from_rr_i.instr.mem_type == CMO_CBO) || (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.is_store            = from_rr_i.instr.mem_type == STORE;               
     mem_instr.is_amo              = from_rr_i.instr.mem_type == AMO;
+    mem_instr.is_cmo              = (from_rr_i.instr.mem_type == CMO_CBO);
+    mem_instr.is_cmo_prefetch     = (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.vl                  = from_rr_i.instr.vl;
     mem_instr.agu_req_tag = '0;
     mem_instr.vmisalign_xcpt = 0;              
@@ -282,6 +311,7 @@ always_comb begin
     simd_instr.vrdy_old_vd         = from_rr_i.vrdy_old_vd;
     simd_instr.prd                 = from_rr_i.prd;
     simd_instr.pvd                 = from_rr_i.pvd;
+    simd_instr.fprd                = from_rr_i.fprd;
     simd_instr.old_prd             = from_rr_i.old_prd;
     simd_instr.old_pvd             = from_rr_i.old_pvd;
     simd_instr.checkpoint_done     = from_rr_i.checkpoint_done;
@@ -296,7 +326,7 @@ always_comb begin
         fp_instr.instr.valid      = 1'b0;
         simd_instr.instr.valid    = 1'b0;
     end else begin
-        simd_instr.instr.valid = (stall_simd_int || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
+        simd_instr.instr.valid = (stall_simd || fpnew_stall_simd_old || (simd_instr.instr.unit != UNIT_SIMD)) ? 1'b0 : from_rr_i.instr.valid;
     end
 
     if (~ready || kill_i) begin
@@ -329,6 +359,11 @@ div_unit div_unit_inst (
 );
 
 branch_unit branch_unit_inst (
+    .resp_icache_guest_ppn_i(resp_icache_guest_ppn_i),
+    .en_translation_i (en_translation_i),
+    .en_g_translation_i (en_g_translation_i),
+    .priv_lvl_i(priv_lvl_i),
+    .v_mode_i(v_mode_i),
     .instruction_i      (arith_instr),
     .instruction_o      (branch_to_scalar_wb)
 );
@@ -341,11 +376,29 @@ simd_unit simd_unit_inst (
     .vxrm_i         (vxrm_i),
     .instruction_i  (simd_instr),
     .instruction_scalar_o (simd_to_scalar_wb),
-    .instruction_simd_o  (simd_to_simd_wb)
+    .instruction_fp_o (simd_to_fp_wb),
+    .instruction_simd_o  (simd_to_simd_wb),
+    .stall_prev_o   (fpnew_stall_simd)
 );
+
+//forood: why is VL_I removed from up there
+// simd_unit simd_unit_inst (
+//     .clk_i                  (clk_i),
+//     .rstn_i                 (rstn_i),
+//     .flush_i                (flush_i),
+//     .vl_i                   (vl_i),
+//     .vxrm_i                 (vxrm_i),
+//     .instruction_i          (simd_instr),
+//     .instruction_scalar_o   (simd_to_scalar_wb),
+//     .instruction_simd_o     (simd_to_simd_wb),
+//     .instruction_fp_o       ()
+// );
+
 `else
 assign simd_to_scalar_wb.valid = 1'b0;
 assign simd_to_simd_wb.valid = 1'b0;
+assign simd_to_fp_wb.valid = 1'b0;
+assign fpnew_stall_simd = 1'b0;
 `endif
 
 `ifndef DISABLE_SIMD
@@ -446,6 +499,8 @@ mem_unit #(
     .clk_i                  (clk_i),
     .rstn_i                 (rstn_i),
     .en_ld_st_translation_i (en_ld_st_translation_i),
+    .en_ld_st_g_translation_i (en_ld_st_g_translation_i),
+    .csr_hs_ld_st_inst_o    (csr_hs_ld_st_inst_o),
     .instruction_i          (vagu_mem_instr),
     .flush_i                (flush_i),
     .kill_i                 (1'b0),
@@ -454,7 +509,8 @@ mem_unit #(
     .commit_store_or_amo_gl_idx_i  (commit_store_or_amo_gl_idx_i),
     .dtlb_comm_i(dtlb_comm_i),
     .dtlb_comm_o(dtlb_comm_o),
-    .priv_lvl_i(priv_lvl_i),
+    .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
+    .ld_st_v_mode_i(ld_st_v_mode_i),
 //    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),
@@ -478,11 +534,17 @@ mem_unit #(
     .pmu_exe_store_o(pmu_exe_store_o)
 );
 
+logic stall_fpu_wb;
+
+assign stall_fpu_wb = simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & 
+    ((simd_instr.instr.fregfile_we & fp_to_wb.regfile_we) |
+     (simd_instr.instr.regfile_we  & fp_to_scalar_wb.regfile_we));
+
 fpu_drac_wrapper fpu_drac_wrapper_inst (
    .clk_i                   (clk_i),
    .rstn_i                  (rstn_i),
    .flush_i                 (flush_i),
-   .stall_wb_i              (simd_instr.instr.valid & (simd_instr.instr.unit == UNIT_SIMD) & simd_instr.instr.regfile_we), // TODO: (gerard) check it
+   .stall_wb_i              (stall_fpu_wb), // TODO: (gerard) check it
    .instruction_i           (fp_instr),
    .instruction_o           (fp_to_wb),
    .instruction_scalar_o    (fp_to_scalar_wb),
@@ -520,13 +582,15 @@ always_comb begin
     simd_to_simd_wb_o = (simd_to_simd_wb.valid) ? simd_to_simd_wb : 'h0;
 
     // FP write-back struct
-    if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
+    if (simd_to_fp_wb.valid) begin
+        fp_to_wb_o = simd_to_fp_wb;
+    end else if (fp_to_wb.valid) begin
         fp_to_wb_o  = fp_to_wb;
-        fp_to_scalar_wb_o = fp_to_scalar_wb;
     end else begin
         fp_to_wb_o = 'h0;
-        fp_to_scalar_wb_o = 'h0;
     end
+
+    fp_to_scalar_wb_o = (fp_to_scalar_wb.valid) ? fp_to_scalar_wb : 'h0;
 end
 
 always_comb begin
@@ -567,7 +631,7 @@ always_comb begin
             stall_int = (~ready);
         end
         else if (from_rr_i.instr.unit == UNIT_SIMD) begin
-            stall_simd_int = stall_simd;
+            stall_simd_int = stall_simd | fpnew_stall_simd | fpnew_stall_simd_old; // This last needed to add an extra cycle after the valid disabilitation
             stall_int = (~ready);
         end
     end

@@ -148,13 +148,13 @@ always_comb begin
                         to_add[i] = data_i[16*i + 6];
                     end
                     RNE_V: begin
-                        to_add[i] = data_i[16*i + 6] & ((data_i[16*i +: 5] != 0) | data_i[16*i + 7]);
+                        to_add[i] = data_i[16*i + 6] & ((data_i[16*i +: 6] != 0) | data_i[16*i + 7]);
                     end
                     RDN_V: begin
                         to_add[i] = 0;
                     end
                     ROD_V: begin
-                        to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 6] != 0);
+                        to_add[i] = (~data_i[16*i + 7]) & (data_i[16*i +: 7] != 0);
                     end
                 endcase
             end
@@ -166,13 +166,13 @@ always_comb begin
                         to_add[2*i] = data_i[32*i + 14];
                     end
                     RNE_V: begin
-                        to_add[2*i] = data_i[32*i + 14] & ((data_i[32*i +: 13] != 0) | data_i[32*i + 15]);
+                        to_add[2*i] = data_i[32*i + 14] & ((data_i[32*i +: 14] != 0) | data_i[32*i + 15]);
                     end
                     RDN_V: begin
                         to_add[2*i] = 0;
                     end
                     ROD_V: begin
-                        to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 14] != 0);
+                        to_add[2*i] = (~data_i[32*i + 15]) & (data_i[32*i +: 15] != 0);
                     end
                 endcase
                 to_add[2*i + 1] = 1'b0;
@@ -185,13 +185,13 @@ always_comb begin
                         to_add[4*i] = data_i[64*i + 30];
                     end
                     RNE_V: begin
-                        to_add[4*i] = data_i[64*i + 30] & ((data_i[64*i +: 29] != 0) | data_i[64*i + 31]);
+                        to_add[4*i] = data_i[64*i + 30] & ((data_i[64*i +: 30] != 0) | data_i[64*i + 31]);
                     end
                     RDN_V: begin
                         to_add[4*i] = 0;
                     end
                     ROD_V: begin
-                        to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 30] != 0);
+                        to_add[4*i] = (~data_i[64*i + 31]) & (data_i[64*i +: 31] != 0);
                     end
                 endcase
 

@@ -664,7 +664,7 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            if ((memp_instr_i.instr.valid) && (memp_instr_i.vl != 'h0)) begin
+            if ((memp_instr_i.instr.valid) && (vl_i != 'h0)) begin
                 vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
                                    (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
                                    (((memp_instr_i.instr.instr_type == VLSE)|| (memp_instr_i.instr.instr_type == VLEFF)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :

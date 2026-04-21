@@ -33,6 +33,7 @@ module immediate
     bus64_t imm_uitype;
     bus64_t imm_vtype;
     bus64_t imm_uvtype;
+    bus64_t imm_uvrtype;
     bus64_t imm_shamt, imm_shamt_big;
     bus32_t sign_extended;
 
@@ -56,6 +57,7 @@ module immediate
     // No sign extended
     assign imm_uitype = {{59{1'b0}}, instr_i.common.rs1};
     assign imm_uvtype = {{59{1'b0}}, instr_i.vtype.vs1};
+    assign imm_uvrtype = {{58{1'b0}}, instr_i[26], instr_i.vtype.vs1}; // special for vror.vi
     assign sign_extended = {32{instr_i[31]}}; 
 
     always_comb begin
@@ -126,6 +128,7 @@ module immediate
                     F3_OPIVI: begin
                         case (instr_i.vtype.func6)
                             F6_VSLL, F6_VSRL, F6_VSRA, F6_VNSRL, F6_VNSRA, F6_VSLIDEUP, F6_VSLIDEDOWN, F6_VRGATHER: imm_o = imm_uvtype;
+                            F6_VROR: imm_o = imm_uvrtype;
                             default: imm_o = imm_vtype;
                         endcase
                     end

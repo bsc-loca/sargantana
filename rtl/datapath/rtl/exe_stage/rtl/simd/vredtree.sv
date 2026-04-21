@@ -169,10 +169,22 @@ always_comb begin
                                 gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {8'b0, gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{8{gen_intermediate_q[i-1].intermediate[2*(j*8) + 7]}}, gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
+                                end
                             end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {8'b0, gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{8{gen_intermediate_q[i-1].intermediate[2*(j*8) + 15]}}, gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
+                                end
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
@@ -284,10 +296,22 @@ always_comb begin
                                 gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {16'b0, gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{16{gen_intermediate_q[i-1].intermediate[2*(j*16) + 15]}}, gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
+                                end
                             end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {16'b0, gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{16{gen_intermediate_q[i-1].intermediate[2*(j*16) + 31]}}, gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
+                                end
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)
@@ -399,10 +423,22 @@ always_comb begin
                                 gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
                             end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {32'b0, gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{32{gen_intermediate_q[i-1].intermediate[2*(j*32) + 31]}}, gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
+                                end
                             end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
+                                if (i == 1) begin
+                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {32'b0, gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]} : 
+                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{32{gen_intermediate_q[i-1].intermediate[2*(j*32) + 63]}}, gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]} : 
+                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
+                                end else begin
+                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
+                                end
                             end else begin
                                 gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
                                 case (gen_intermediate_q[i-1].instr_type)

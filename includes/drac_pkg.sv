@@ -31,7 +31,7 @@ import riscv_pkg::*;
 `endif
 parameter PHY_ADDR_SIZE = `CONF_SARGANTANA_PHY_ADDR_SIZE;
 
-parameter VIRT_ADDR_SIZE = 39;
+parameter VIRT_ADDR_SIZE = 41;
 parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_SIZE : PHY_ADDR_SIZE;
 
 parameter PHISIC_MEM_LIMIT = (64'h01 << PHY_ADDR_SIZE) - 64'h01; 
@@ -142,6 +142,12 @@ parameter PFPQ_NUM_ENTRIES = 8;
 // Store buffer size 
 parameter ST_BUF_NUM_ENTRIES = 8;
 
+// MMU Parameters
+parameter VPN_SIZE = 27;
+parameter VPN_MAX_SIZE = 29;
+parameter PPN_SIZE = 44;
+parameter ASID_SIZE = 7;
+
 // SIMD
 typedef logic [$clog2(VELEMENTS)-1:0] fu_id_t;
 
@@ -214,11 +220,13 @@ typedef enum logic [1:0] {
 } next_pc_sel_t;    // Enum PC Selection
 
 
-typedef enum logic [1:0] {
-    NOT_MEM  = 2'b00,
-    LOAD     = 2'b01,
-    STORE    = 2'b10,
-    AMO      = 2'b11
+typedef enum logic [2:0] {
+    NOT_MEM       = 3'b000,
+    LOAD          = 3'b001,
+    STORE         = 3'b010,
+    AMO           = 3'b011,
+    CMO_CBO       = 3'b100,
+    CMO_PREFETCH  = 3'b101
 } mem_type_t; 
 
 typedef enum logic [2:0] {
@@ -264,6 +272,9 @@ typedef struct packed {
 typedef struct packed {
     riscv_pkg::exception_cause_t cause; // Cause of exception vector 64 bits
     bus64_t origin; // Addr or PC generating exception
+    bus64_t origin2; // 0
+    bus64_t tinst; // 0
+    logic gva;    // gva
     logic valid;    // There is an eception
 } exception_t;      // Struct contains exceptions
 
@@ -280,7 +291,9 @@ typedef struct packed {
 typedef struct packed {
     logic   valid;               // Response valid
     inst_t  data;                // Word of 32 bits from Icache
+    logic [PPN_SIZE-1:0] guest_ppn;
     logic   instr_page_fault;    // Page Fault from TLB
+    logic   instr_guest_page_fault; // Guest Page Fault from TLB
 } resp_icache_cpu_t;
 
 // Request send to ICache
@@ -326,7 +339,6 @@ typedef enum logic [1:0]{
     SIMD_RF        // Select simd regfile
 } regfile_sel_t;
 
-
 typedef enum logic [8:0] { 
     // basic ALU op
    ADD, SUB, ADDW, SUBW,
@@ -341,13 +353,15 @@ typedef enum logic [8:0] {
    // set lower than operations
    SLT, SLTU,
    // CSR functions
-   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA, VSETVL, VSETVLI, VSETIVLI,
+   MRET, SRET, URET, ECALL, EBREAK, WFI, FENCE, FENCE_I, SFENCE_VMA, HFENCE_VVMA, HFENCE_GVMA, VSETVL, VSETVLI, VSETIVLI,
    // Old ISA CSR functions
    ERET, MRTS, MRTH, HRTS,
    //CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
    // LSU functions
    LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
+   // Hypervisor Virtual-Machine Load and Store Instructions
+   HLV_B, HLV_BU, HLV_H, HLV_HU, HLVX_HU, HLV_W, HLVX_WU, HSV_B, HSV_H, HSV_W, HLV_WU, HLV_D, HSV_D,
    // Atomic Memory Operations
    AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
    AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW, AMO_MAXWU, AMO_MINW, AMO_MINWU,
@@ -367,7 +381,7 @@ typedef enum logic [8:0] {
    // Floating-Point Classify Instruction
    FCLASS,
    // Vectorial Floating-Point Instructions that don't directly map onto the scalar ones
-   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VFEQ, VFNE, VFLT, VFGE, VFLE, VFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
+   VFMIN, VFMAX, VFSGNJ, VFSGNJN, VFSGNJX, VMFEQ, VMFNE, VMFLT, VMFGE, VMFLE, VMFGT, VFCPKAB_S, VFCPKCD_S, VFCPKAB_D, VFCPKCD_D,
    // Vectorial Instructions
    VADD, VSUB, VRSUB, VMIN, VMINU, VMAX, VMAXU, VAND, VOR, VXOR, VMSEQ, VMSNE, VMSLTU, VMSLT, VMSLEU, VMSLE, VMSGTU, VMSGT, VSADD, VSADDU, VSSUB, VSSUBU, VWADD, VWADDU, VWSUB, VWSUBU, VWADDW, VWADDUW, VWSUBW, VWSUBUW, VSLL, VSRA, VSRL, VNSRL, VNSRA, VMERGE, VMV, VMV1R, VEXT, VMV_X_S, VMV_S_X, VMUL, VMULH, VMULHU, VMULHSU,
    VMADD, VNMSUB, VMACC, VNMSAC, VADC, VMADC, VSBC, VMSBC, VWMUL, VWMULU, VWMULSU, VWMACC, VWMACCU, VWMACCUS, VWMACCSU, VAADD, VAADDU, VASUB, VASUBU, VSSRL, VSSRA, VNCLIP, VNCLIPU, VSMUL,
@@ -382,17 +396,34 @@ typedef enum logic [8:0] {
    //Vectorial Division Instructions
    VDIVU, VDIV, VREMU, VREM,
    // Vectorial FP instructions
-   VFADD, VFMV,
+   VFMV, VFMERGE, VFCLASS,
+   // Vectorial FP other instructions
+   VFADD, VFSUB, VFRSUB, VFMUL, VFDIV, VFRDIV, VFMADD, VFMSUB, VFMACC, VFMSAC, VFNMADD, VFNMSUB, VFNMACC, VFNMSAC, VFSQRT, VFRSQRT7, VFREC7,
+   VFWADD, VFWSUB, VFWMUL, VFWMACC, VFWNMACC, VFWMSAC, VFWNMSAC, VFWADDW, VFWSUBW,
+   // Vectorial FP reduction instructions
+   VFREDUSUM, VFREDMAX, VFREDMIN, VFREDOSUM, VFWREDOSUM, VFWREDUSUM,
+   VFMV_F_S, VFMV_S_F, VFSLIDE1UP, VFSLIDE1DOWN,
+   // Vectorial FP conversion instructions
+   VFNCVT_F_F, VFNCVT_RTZ_X_F, VFNCVT_RTZ_XU_F, VFWCVT_F_F, VFWCVT_RTZ_X_F, VFWCVT_X_F, VFNCVT_X_F, VFNCVT_ROD_F_F, VFNCVT_XU_F, VFNCVT_F_X,
+   VFNCVT_F_XU, VFWCVT_F_X, VFWCVT_F_XU, VFCVT_XU_F, VFCVT_X_F, VFCVT_F_XU, VFCVT_F_X, VFCVT_RTZ_XU_F, VFCVT_RTZ_X_F, VFWCVT_XU_F, VFWCVT_RTZ_XU_F,
    // Vectorial memory operations
    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Vectorial custom instructions
    VCNT,
+   // Vectorial bit-manipulation
+   VANDN, VBREV, VBREV8, VREV8, VCLZ, VCTZ, VCPOP, VROL, VROR, VWSLL,
    // Zba bit-manip
    ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, SLLIUW, ZEXTW,
    // Zbb bit-manip
    XNOR_INST, ORN, ANDN, ROL, ROR, ROLW, RORW, ZEXTH, SEXTB, SEXTH, MIN, MINU, MAX, MAXU, REV8, ORCB, CLZ, CLZW, CTZ, CTZW, CPOP, CPOPW,
    // Zbs bit-manip
-   BCLR, BEXT, BINV, BSET
+   BCLR, BEXT, BINV, BSET,
+   // CMO block instructions
+   CBO_INVAL, CBO_CLEAN, CBO_FLUSH, CBO_ZERO,
+   // CMO prefetch instructions
+   CMO_PREFETCH_I, CMO_PREFETCH_R, CMO_PREFETCH_W,
+   //  Zicond conditional instructions
+   CZ_NEZ, CZ_EQZ
 } instr_type_t;
 
 typedef enum logic[CSR_CMD_SIZE-1:0] {
@@ -427,9 +458,11 @@ typedef struct packed {
     instr_type_t    instr_type;        // Type of instruction
     logic [3:0]       mem_size;        // Granularity of mem. access
     logic [6:0]             rd;        // Destination register. Used for identify a pending Miss
-    logic      is_amo_or_store;        // Type of instruction is amo or store
+    logic  is_amo_store_or_cmo;        // Type of instruction is amo, store or cmo
     logic               is_amo;        // Type of instruction is amo
-    logic             is_store;        // Type of instruction is amo
+    logic             is_store;        // Type of instruction is store
+    logic               is_cmo;        // Type of instruction is cmo
+    logic      is_cmo_prefetch;        // Type of instruction is cmo_prefetch
 } req_cpu_dcache_t;
 
 // Fetch 1 Stage
@@ -474,6 +507,7 @@ typedef struct packed {
     logic  use_vs2;                     // Instruction uses vregister source 2
     logic  is_opvx;                     // Instruction uses rs1 instead of vs1
     logic  is_opvi;                     // Instruciton uses imm instead of vs1
+    logic  is_opvf;                     // Instruction uses fs1 instead of vs1
     sew_t  sew;                         // Instruction SEW
     logic [2:0] lmul;                   // Instruction LMUL
     logic [VMAXELEM_LOG:0] vl;      
@@ -634,9 +668,11 @@ typedef struct packed {
     phreg_t fprd;                       // Physical register destination
     phreg_t old_fprd;                   // Old Physical register destination
     
-    logic is_amo_or_store;              // Encodes if type instruction is amo or store
+    logic is_amo_store_or_cmo;          // Encodes if type instruction is amo or store
     logic is_amo;                       // Encodes if type instruction is amo
     logic is_store;                     // Encodes if type instruction is store
+    logic is_cmo;                       // Encodes if type instruction is cmo management 
+    logic is_cmo_prefetch;              // Encodes if type instruction is cmo prefetch
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -678,9 +714,11 @@ typedef struct packed {
     phreg_t fprd;                       // Physical register destination
     phreg_t old_fprd;                   // Old Physical register destination
     
-    logic is_amo_or_store;              // Encodes if type instruction is amo or store
+    logic is_amo_store_or_cmo;          // Encodes if type instruction is amo or store
     logic is_amo;                       // Encodes if type instruction is amo
     logic is_store;                     // Encodes if type instruction is store
+    logic is_cmo;                       // Encodes if type instruction is cmo management 
+    logic is_cmo_prefetch;              // Encodes if type instruction is cmo prefetch
 
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch
@@ -718,6 +756,7 @@ typedef struct packed {
     
     phreg_t prd;                         // Physical register destination
     phvreg_t pvd;                       // Physical register destination 
+    phreg_t fprd;                         // Physical register destination
     phreg_t old_prd;                    // Old Physical register destination
     phvreg_t old_pvd;                   // Old Physical register destination
     logic vrdy_old_vd;                  // Ready register old vd
@@ -818,6 +857,7 @@ typedef struct packed {
 
     gl_index_t gl_index;                // Graduation List entry
     logic vs_ovf;
+    fpnew_pkg::status_t fp_status;      // FP status of the executed instruction
 } exe_wb_simd_instr_t;       //  Execution Stage to SIMD Write Back
 
 
@@ -1041,6 +1081,9 @@ typedef struct packed {
     bus64_t     csr_xcpt_cause;
     // exception origin
     bus64_t     csr_xcpt_origin;
+    bus64_t     csr_xcpt_origin2;
+    bus64_t     csr_xcpt_tinst;
+    logic       csr_gva;
     // xcpt pc 
     bus64_t     csr_pc;
     logic [4:0] fp_status;       // FP status of the executed instruction
@@ -1083,6 +1126,7 @@ typedef struct packed {
     bus64_t     csr_interrupt_cause;
     // tval
     bus64_t     csr_tval;
+    bus64_t     csr_tval2;
     // Step_mode_enbled
     logic       debug_step;
     // Ebreak in CSR module
@@ -1266,7 +1310,7 @@ localparam drac_cfg_t DracDefaultConfig = '{
     DCacheMSHRWays: 2,
     DCacheWBUFSize: 16,
     DCacheWTNotWB: 1,
-    DCacheCoalescing: 0,
+    DCacheCoalescing: 1,
     DCacheWBUFTh: 2,
     DCacheRefillFIFODepth: 2,
 
@@ -1296,6 +1340,319 @@ localparam fpnew_pkg::fpu_implementation_t EPI_INIT = '{
     PipeConfig: fpnew_pkg::DISTRIBUTED
 };
 
+// --------------------------------------------------------------------
+// ------------------ floating-point simd definitions -----------------
+// --------------------------------------------------------------------
+
+localparam fpnew_pkg::fpu_features_t SARG_RV64DV = '{
+    Width:         128,         // 128 bits on Sargantana's SIMD unit
+    EnableVectors: 1'b1,        // enable vector support
+    EnableNanBox:  1'b1,
+    FpFmtMask:     5'b11000,    // [FP128, FP64, FP32, BF16, FP16]
+    IntFmtMask:    4'b0011
+};
+
+localparam fpnew_pkg::fpu_implementation_t SARG_SIMD_INIT = '{
+    PipeRegs:   '{'{default: 5}, // ADDMUL
+                '{default: 5},   // DIVSQRT
+                '{default: 5},   // NONCOMP
+                '{default: 5}},  // CONV
+    UnitTypes:  '{'{default: fpnew_pkg::MERGED}, // ADDMUL
+                '{default: fpnew_pkg::MERGED},   // DIVSQRT
+                '{default: fpnew_pkg::PARALLEL}, // NONCOMP
+                '{default: fpnew_pkg::MERGED}},  // CONV
+    PipeConfig: fpnew_pkg::DISTRIBUTED
+};
+
+// definition of CVFPU parameters used inside reduction modules (addmul only)
+localparam fpnew_pkg::fpu_features_t SARG_ADDMUL_RV64D = '{
+    Width:         64,
+    EnableVectors: 1'b0,
+    EnableNanBox:  1'b0,
+    FpFmtMask:     5'b11000,
+    IntFmtMask:    4'b0011
+};
+
+localparam fpnew_pkg::fpu_implementation_t SARG_ADDMUL_ONLY = '{
+    PipeRegs:   '{'{default: 2},                    // ADDMUL
+                  '{default: 0},                    // DIVSQRT
+                  '{default: 0},                    // NONCOMP
+                  '{default: 0}},                   // CONV
+    UnitTypes:  '{'{default: fpnew_pkg::MERGED},    // ADDMUL
+                  '{default: fpnew_pkg::DISABLED},    // DIVSQRT
+                  '{default: fpnew_pkg::DISABLED},  // NONCOMP
+                  '{default: fpnew_pkg::DISABLED}},   // CONV
+    PipeConfig: fpnew_pkg::DISTRIBUTED
+};
+
+function automatic logic is_vf_addmul(input instr_type_t instr);
+    is_vf_addmul = ((instr == VFADD)      ||
+                    (instr == VFSUB)      ||
+                    (instr == VFRSUB)     ||
+                    (instr == VFWADD)     ||
+                    (instr == VFWSUB)     ||
+                    (instr == VFWADDW)    ||
+                    (instr == VFWSUBW)    ||
+                    (instr == VFMUL)      ||
+                    (instr == VFDIV)      ||
+                    (instr == VFWMUL)     ||
+                    (instr == VFMACC)     ||
+                    (instr == VFNMACC)    ||
+                    (instr == VFMSAC)     ||
+                    (instr == VFNMSAC)    ||
+                    (instr == VFMADD)     ||
+                    (instr == VFNMADD)    ||
+                    (instr == VFMSUB)     ||
+                    (instr == VFNMSUB)    ||
+                    (instr == VFWMACC)    ||
+                    (instr == VFWNMACC)   ||
+                    (instr == VFWMSAC)    ||
+                    (instr == VFWNMSAC)   ) ? 1'b1 : 1'b0;
+endfunction
+
+function automatic logic is_vf_divsqrt(input instr_type_t instr);
+    is_vf_divsqrt = ((instr == VFDIV)     ||
+                     (instr == VFRDIV)    ||
+                     (instr == VFSQRT)    ) ? 1'b1 : 1'b0;
+endfunction
+
+function automatic logic is_vf_noncomp(input instr_type_t instr);
+    is_vf_noncomp =  ((instr == VFMIN)                              ||
+                      (instr == VFMAX)                              ||
+                      (instr == VFSGNJ)    ||
+                      (instr == VFSGNJN)   ||
+                      (instr == VFSGNJX)   ||
+                      (instr == VMFEQ)     ||
+                      (instr == VMFNE)     ||
+                      (instr == VMFLT)     ||
+                      (instr == VMFLE)     ||
+                      (instr == VMFGT)     ||
+                      (instr == VMFGE)     ||
+                      (instr == VFCLASS)   ) ? 1'b1 : 1'b0;
+endfunction
+
+function automatic logic is_vf_conv(input instr_type_t instr);
+    is_vf_conv =     ((instr == FCVT_F2I)       ||
+                    (instr == VFCVT_XU_F)       ||
+                    (instr == VFCVT_X_F)        ||
+                    (instr == VFCVT_RTZ_XU_F)   ||
+                    (instr == VFCVT_RTZ_X_F)    ||
+                    (instr == VFCVT_F_XU)       ||
+                    (instr == VFCVT_F_X)        ||
+                    (instr == VFWCVT_XU_F)      ||
+                    (instr == VFWCVT_X_F)       ||
+                    (instr == VFWCVT_RTZ_XU_F)  ||
+                    (instr == VFWCVT_RTZ_X_F)   ||
+                    (instr == VFWCVT_F_XU)      ||
+                    (instr == VFWCVT_F_X)       ||
+                    (instr == VFWCVT_F_F)       ||
+                    (instr == VFNCVT_XU_F)      ||
+                    (instr == VFNCVT_X_F)       ||
+                    (instr == VFNCVT_RTZ_XU_F)  ||
+                    (instr == VFNCVT_RTZ_X_F)   ||
+                    (instr == VFNCVT_F_XU)      ||
+                    (instr == VFNCVT_F_X)       ||
+                    (instr == VFNCVT_F_F)       ||
+                    (instr == VFNCVT_ROD_F_F)) ? 1'b1 : 1'b0;
+endfunction 
+
+function automatic logic is_result_right_aligned(input rr_exe_simd_instr_t instr);
+    is_result_right_aligned = ((instr.instr.instr_type == VMFEQ) ||
+               (instr.instr.instr_type == VMFLT) ||
+               (instr.instr.instr_type == VMFLE) ||
+               (instr.instr.instr_type == VMFGT) ||
+               (instr.instr.instr_type == VMFGE) ||
+               (instr.instr.instr_type == VMFNE)) ? 1'b1 : 1'b0;
+endfunction
+
+
+function automatic logic is_vfpnew(input instr_type_t instr);
+    is_vfpnew = is_vf_addmul(instr) || is_vf_divsqrt(instr) || is_vf_noncomp(instr) || is_vf_conv(instr);
+endfunction
+
+function automatic logic is_vf_approx (input instr_type_t instr);
+    is_vf_approx = ((instr == VFRSQRT7)   ||
+                    (instr == VFREC7)     ) ? 1'b1 : 1'b0;
+endfunction
+
+function automatic logic is_vf_redu (input instr_type_t instr);
+    is_vf_redu = ((instr == VFREDUSUM)  ||
+                  (instr == VFREDMAX)   ||
+                  (instr == VFREDMIN)   ||
+                  (instr == VFWREDUSUM) ) ? 1'b1 : 1'b0;
+endfunction 
+
+function automatic logic is_vf_redo (input instr_type_t instr);
+    is_vf_redo = ((instr == VFREDOSUM)  ||
+                  (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0;
+endfunction
+
+// depends on inner implementation of vfred modules
+parameter int DELAY_SUM_FP32    = 2;
+parameter int DELAY_SUM_FP64    = 2;
+parameter int STAGES_TREE32     = ($clog2(VLEN/32)+1)*DELAY_SUM_FP32+1;
+parameter int STAGES_TREE64     = ($clog2(VLEN/64)+1)*DELAY_SUM_FP64+1;
+parameter int STAGES_TREE64_W   = ($clog2(VLEN/32)+1)*DELAY_SUM_FP64+1;
+parameter int STAGES_VFREDO32   = (VLEN/32)*DELAY_SUM_FP32+1;
+parameter int STAGES_VFREDO64   = (VLEN/64)*DELAY_SUM_FP64+1;
+parameter int STAGES_VFREDO64_W = (VLEN/32)*DELAY_SUM_FP64+1;
+parameter int MAX_STAGES        = STAGES_VFREDO64_W;
+
+// floating-point definitions
+parameter logic [31:0] FP32_ONE         = 32'h3F800000;
+parameter logic [31:0] FP32_ZERO        = 32'h00000000;
+parameter logic [31:0] FP32_NZERO       = 32'h80000000;
+parameter logic [63:0] FP64_ONE         = 64'h3FF0000000000000;
+parameter logic [63:0] FP64_ZERO        = 64'h0000000000000000;
+parameter logic [63:0] FP64_NZERO       = 64'h8000000000000000;
+
+parameter logic [31:0] FP32_PINF        = 32'h7F800000;
+parameter logic [31:0] FP32_NINF        = 32'hFF800000;
+parameter logic [63:0] FP64_PINF        = 64'h7FF0000000000000;
+parameter logic [63:0] FP64_NINF        = 64'hFFF0000000000000;
+
+parameter logic [31:0] FP32_QNAN        = 32'h7FC00000;
+parameter logic [63:0] FP64_QNAN        = 64'h7FF8000000000000;
+parameter logic [31:0] FP32_SNAN        = 32'h7FA00000;
+parameter logic [63:0] FP64_SNAN        = 64'h7FF4000000000000;
+
+parameter logic [31:0] FP32_MAXPFINITE  = 32'h7F7FFFFF;
+parameter logic [31:0] FP32_MAXNFINITE  = 32'hFF7FFFFF;
+parameter logic [63:0] FP64_MAXPFINITE  = 64'h7FEFFFFFFFFFFFFF;
+parameter logic [63:0] FP64_MAXNFINITE  = 64'hFFEFFFFFFFFFFFFF;
+
+// FP64
+function automatic logic is_nan_f64(input logic [63:0] fp64);
+    is_nan_f64 = (&fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+function automatic logic is_qnan_f64(input logic [63:0] fp64);
+    is_qnan_f64 = is_nan_f64(fp64) && (fp64[51] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f64(input logic [63:0] fp64);
+    is_snan_f64 = is_nan_f64(fp64) && (fp64[51] == 1'b0);
+endfunction
+
+function automatic logic is_pos_f64(input logic [63:0] fp64);
+    is_pos_f64 = fp64[63] == 1'b0;
+endfunction
+
+function automatic logic is_neg_f64(input logic [63:0] fp64);
+    is_neg_f64 = fp64[63] == 1'b1;
+endfunction
+
+function automatic logic is_inf_f64(input logic [63:0] fp64);
+    is_inf_f64 = (&fp64[62:52]) && !(|fp64[51:0]);
+endfunction
+
+function automatic logic is_neg_inf_f64(input logic [63:0] fp64);
+    is_neg_inf_f64 = is_neg_f64(fp64) && is_inf_f64(fp64);
+endfunction
+
+function automatic logic is_pos_inf_f64(input logic [63:0] fp64);
+    is_pos_inf_f64 = is_pos_f64(fp64) && is_inf_f64(fp64);
+endfunction
+
+function automatic logic is_zero_f64(input logic [63:0] fp64);
+    is_zero_f64 = (fp64[62:52] == 11'd0) && (fp64[51:0] == 52'd0);
+endfunction
+
+function automatic logic is_neg_zero_f64(input logic [63:0] fp64);
+    is_neg_zero_f64 = is_neg_f64(fp64) && !(|fp64[62:0]);
+endfunction
+
+function automatic logic is_pos_zero_f64(input logic [63:0] fp64);
+    is_pos_zero_f64 = is_pos_f64(fp64) && !(|fp64[62:0]);
+endfunction
+
+function automatic logic is_neg_norm_f64(input logic [63:0] fp64);
+    is_neg_norm_f64 = is_neg_f64(fp64) && (|fp64[62:52]) && !(&fp64[62:52]);
+endfunction
+
+function automatic logic is_pos_norm_f64(input logic [63:0] fp64);
+    is_pos_norm_f64 = is_pos_f64(fp64) && (|fp64[62:52]) && !(&fp64[62:52]);
+endfunction
+
+function automatic logic is_neg_subnorm_f64(input logic [63:0] fp64);
+    is_neg_subnorm_f64 = is_neg_f64(fp64) && !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+function automatic logic is_pos_subnorm_f64(input logic [63:0] fp64);
+    is_pos_subnorm_f64 = is_pos_f64(fp64) && !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+function automatic logic is_subnorm_f64(input logic [63:0] fp64);
+    is_subnorm_f64 = !(|fp64[62:52]) && (|fp64[51:0]);
+endfunction
+
+// FP32
+function automatic logic is_nan_f32(input logic [31:0] fp32);
+    is_nan_f32 = (&fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_qnan_f32(input logic [31:0] fp32);
+    is_qnan_f32 = is_nan_f32(fp32) && (fp32[22] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f32(input logic [31:0] fp32);
+    is_snan_f32 = is_nan_f32(fp32) && (fp32[22] == 1'b0);
+endfunction
+
+function automatic logic is_pos_f32(input logic [31:0] fp32);
+    is_pos_f32 = fp32[31] == 1'b0;
+endfunction
+
+function automatic logic is_neg_f32(input logic [31:0] fp32);
+    is_neg_f32 = fp32[31] == 1'b1;
+endfunction
+
+function automatic logic is_inf_f32(input logic [31:0] fp32);
+    is_inf_f32 = (&fp32[30:23]) && !(|fp32[22:0]);
+endfunction
+
+function automatic logic is_neg_inf_f32(input logic [31:0] fp32);
+    is_neg_inf_f32 = is_neg_f32(fp32) && is_inf_f32(fp32);
+endfunction
+
+function automatic logic is_pos_inf_f32(input logic [31:0] fp32);
+    is_pos_inf_f32 = is_pos_f32(fp32) && is_inf_f32(fp32);
+endfunction
+
+function automatic logic is_zero_f32(input logic [31:0] fp32);
+    is_zero_f32 = (fp32[30:23] == 8'h00) && (fp32[22:0] == 23'd0);
+endfunction
+
+function automatic logic is_neg_zero_f32(input logic [31:0] fp32);
+    is_neg_zero_f32 = is_neg_f32(fp32) && !(|fp32[30:0]);
+endfunction
+
+function automatic logic is_pos_zero_f32(input logic [31:0] fp32);
+    is_pos_zero_f32 = is_pos_f32(fp32) && !(|fp32[30:0]);
+endfunction
+
+function automatic logic is_neg_norm_f32(input logic [31:0] fp32);
+    is_neg_norm_f32 = is_neg_f32(fp32) && (|fp32[30:23]) && !(&fp32[30:23]);
+endfunction
+
+function automatic logic is_pos_norm_f32(input logic [31:0] fp32);
+    is_pos_norm_f32 = is_pos_f32(fp32) && (|fp32[30:23]) && !(&fp32[30:23]);
+endfunction
+
+function automatic logic is_neg_subnorm_f32(input logic [31:0] fp32);
+    is_neg_subnorm_f32 = is_neg_f32(fp32) && !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_pos_subnorm_f32(input logic [31:0] fp32);
+    is_pos_subnorm_f32 = is_pos_f32(fp32) && !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_subnorm_f32(input logic [31:0] fp32);
+    is_subnorm_f32 = !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+// --------------------------------------------------------------------
+
 localparam int unsigned SEW_WIDTH = 3;
 typedef enum logic [SEW_WIDTH - 1 : 0] {
     BINARY32 = 'b010,
@@ -1309,15 +1666,12 @@ typedef enum logic [SEW_WIDTH - 1 : 0] {
 //
 ///////////////////////////////   
 
-parameter VPN_SIZE = 27;
-parameter PPN_SIZE = 44;
-parameter ASID_SIZE = 7;
-
 // Cache-TLB request
 typedef struct packed {
     logic valid;   
     logic [ASID_SIZE-1:0] asid;
-    logic [VPN_SIZE:0] vpn;
+    logic [ASID_SIZE-2-1:0] vmid;
+    logic [VPN_MAX_SIZE:0] vpn;
     logic passthrough;
     logic instruction;
     logic store;
@@ -1333,14 +1687,22 @@ typedef struct packed {
 typedef struct packed { 
     logic miss;
     logic [PPN_SIZE-1:0] ppn; 
+    logic [PPN_SIZE-1:0] guest_ppn;
     tlb_ex_t xcpt;
+    tlb_ex_t             guest_xcpt;
     logic [7:0] hit_idx;
 } tlb_cache_resp_t;
 
 typedef struct packed {
     logic [63:0] satp;
+    logic [63:0] vsatp;
+    logic [63:0] hgatp;
     logic flush;
+    logic flush_satp;
+    logic flush_vsatp;
+    logic flush_hgatp;
     logic [63:0] mstatus;
+    logic [63:0] vsstatus;
 } csr_ptw_comm_t;
 
 typedef struct packed {

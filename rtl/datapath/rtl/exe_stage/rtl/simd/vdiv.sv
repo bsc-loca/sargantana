@@ -24,12 +24,10 @@
 // once this is done we need 1 clock cycle to compute the final data which will have the final sign
 // or exceptional data in case of div by zero.
 // Overall the whole process takes 34 cycles to complete
-
-
-import drac_pkg::*;
-import riscv_pkg::*;
  
 module vdiv 
+    import drac_pkg::*;
+    import riscv_pkg::*;
 (
   input wire                  clk_i,          // Clock
   input wire                  rstn_i,         // Reset 
@@ -317,7 +315,7 @@ div_2bits div_2bits_simd (
         .remanent_o             (remnant_out),
         .dividend_quotient_o    (dividend_quotient_out),
         .divisor_o              (divisor_out),
-        .sew_i                  (sew_q)
+        .sew_i                  (sew_d)
     );
 
 
@@ -745,7 +743,7 @@ end
 
 
 assign data_vd_o =  (instr_valid_i && (exe_stages == 1'b1)) ? 
-                    (is_division(instr_type_i) ? quotients_out : remnants_out) : (is_division(instr_type_q) ? quotients_out : remnants_out);
+                    (is_division(instr_type_i) ? quotients_out : (is_remainder(instr_type_i) ? remnants_out : 'h0)) : (is_division(instr_type_q) ? quotients_out : remnants_out);
 
 
 

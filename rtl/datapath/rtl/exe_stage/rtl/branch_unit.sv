@@ -22,6 +22,11 @@ module branch_unit
     import drac_pkg::*;
     import riscv_pkg::*;
 (
+    input logic                      en_translation_i, // virtualization mechanism enabled
+    input logic                      en_g_translation_i,
+    input logic [1:0]                priv_lvl_i,
+    input logic                      v_mode_i,
+    input logic [drac_pkg::PPN_SIZE-1:0] resp_icache_guest_ppn_i,
     input rr_exe_arith_instr_t       instruction_i,       // In instruction
     output exe_wb_scalar_instr_t     instruction_o        // Out instruction
 );
@@ -141,6 +146,9 @@ assign instruction_o.result_pc  = target;
 always_comb begin
     instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
     instruction_o.ex.origin = 0;
+    instruction_o.ex.origin2 = 0;
+    instruction_o.ex.tinst  = 0;
+    instruction_o.ex.gva    = 0;
     instruction_o.ex.valid  = 0;
     if(instruction_i.instr.valid) begin // Check exceptions in exe stage
         if ((result[1:0] != 0) && (instruction_i.instr.unit == UNIT_BRANCH) &&
@@ -154,6 +162,10 @@ always_comb begin
                 branch_taken ))) begin // invalid address
             instruction_o.ex.cause = INSTR_ADDR_MISALIGNED;
             instruction_o.ex.origin = result;
+            instruction_o.ex.origin2 = (en_translation_i && v_mode_i) ? (({resp_icache_guest_ppn_i, result[11:0]}) >> 2) :
+                                                (result >> 2); //GVA = GPA in G-stage only translations
+            instruction_o.ex.tinst  = 0;
+            instruction_o.ex.gva    = v_mode_i;
             instruction_o.ex.valid = 1;
         end
     end 

@@ -27,7 +27,7 @@ module datapath
 )(
     input logic             clk_i,
     input logic             rstn_i,
-    input addr_t            reset_addr_i,
+    input phy_addr_t        reset_addr_i,
     `ifdef SIM_COMMIT_LOG
     input logic [63:0]          core_id_i,
     `endif
@@ -37,12 +37,21 @@ module datapath
     input resp_csr_cpu_t    resp_csr_cpu_i,
     input logic [2:0]       csr_frm_i, 
     input logic [1:0]       csr_fs_i,  
-    input logic [1:0]       csr_vs_i,  
+    input logic [1:0]       csr_vs_i,
+    input logic [3:0]       csr_m_cmo_i,
+    input logic [3:0]       csr_s_cmo_i,
+    input logic [3:0]       csr_h_cmo_i,
     input logic             en_translation_i,
+    input logic             en_g_translation_i,
     input logic             en_ld_st_translation_i,
+    input logic             en_ld_st_g_translation_i,
+    input logic             csr_hu_i,
     input debug_reg_in_t    debug_reg_i,
     input debug_contr_in_t  debug_contr_i,
     input logic [1:0]       csr_priv_lvl_i,
+    input logic             csr_v_mode_i,
+    input logic [1:0]       csr_ld_st_priv_lvl_i,
+    input logic             csr_ld_st_v_mode_i,
     input logic             req_icache_ready_i,
     input vxrm_t            vxrm_i,
     input tlb_cache_comm_t  dtlb_comm_i,
@@ -55,6 +64,7 @@ module datapath
     output logic            debug_csr_halt_ack_o,
     output visa_signals_t   visa_o,
     output cache_tlb_comm_t dtlb_comm_o,
+    output logic            csr_hs_ld_st_inst_o,
     //--PMU   
     output to_PMU_t         pmu_flags_o
 );
@@ -403,6 +413,7 @@ endfunction
     ) if_stage_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .v_mode_i(csr_v_mode_i),
         .reset_addr_i(reset_addr_i),
         .stall_debug_i(debug_contr_o.parked),
         .stall_i(control_int.stall_if_1),
@@ -410,6 +421,8 @@ endfunction
         .invalidate_icache_i(invalidate_icache_int),
         .invalidate_buffer_i(invalidate_buffer_int),
         .en_translation_i(en_translation_i), 
+        .en_g_translation_i(en_g_translation_i), 
+        .resp_icache_cpu_i(resp_icache_cpu_i),
         .pc_jump_i(pc_jump_if_int),
         .retry_fetch_i(retry_fetch),
         .req_cpu_icache_o(req_cpu_icache_o),
@@ -433,6 +446,9 @@ endfunction
     if_stage_2 if_stage_2_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
+        .v_mode_i(csr_v_mode_i),
+        .en_translation_i(en_translation_i), 
+        .en_g_translation_i(en_g_translation_i), 
         .fetch_i(stage_if_1_if_2_q),
         .stall_i(control_int.stall_if_2),
         .flush_i(flush_int.flush_if),
@@ -463,10 +479,16 @@ endfunction
         .stall_i        (control_int.stall_id),
         .flush_i        (flush_int.flush_id),
         .decode_i       (stage_if_2_id_q),
+        .priv_lvl_i     (csr_priv_lvl_i),
+        .v_mode_i       (csr_v_mode_i),
         .frm_i          (csr_frm_i),
         .csr_fs_i       (csr_fs_i), 
         .csr_vs_i       (csr_vs_i), 
+        .csr_m_cmo_i    (csr_m_cmo_i),
+        .csr_s_cmo_i    (csr_s_cmo_i),
+        .csr_h_cmo_i    (csr_h_cmo_i),
         .vl_short_o     (vl_id_exe),
+        .csr_hu_i       (csr_hu_i),
         .vset_rs2_i     (reg_to_exe.data_rs2),
         .vset_rs1_i     (reg_to_exe.data_rs1),
         .write_vset_i   (exe_cu_int.clear_vset_fence),
@@ -497,16 +519,18 @@ endfunction
                                            (decoded_instr.instr.instr_type == JALR);
     assign id_cu_int.full_vset_queue = full_vset_queue_int;                                           
     
- // set the exception state that will stall the pipeline on cycle to reduce the delay of the CSRs
-    assign exception_enable = ((commit_cu_int.valid && commit_cu_int.xcpt) || 
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (~rstn_i) begin
+            exception_enable <= 'h0;
+        end else begin
+            exception_enable <= ((commit_cu_int.valid && commit_cu_int.xcpt) || 
                                                             resp_csr_cpu_i.csr_eret || 
                                                             resp_csr_cpu_i.csr_exception || 
                                                             resp_csr_cpu_i.debug_ebreak ||
                                                             debug_contr_o.halt_ack ||
                                                             (commit_cu_int.valid && commit_cu_int.ecall_taken));
-
-
-
+        end
+    end
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
@@ -884,6 +908,9 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign interrupt_ex.valid = resp_csr_cpu_i.csr_interrupt;
     assign interrupt_ex.cause = exception_cause_t'(resp_csr_cpu_i.csr_interrupt_cause);
     assign interrupt_ex.origin = 64'b0;
+    assign interrupt_ex.origin2 = 64'b0;
+    assign interrupt_ex.tinst = 64'b0;
+    assign interrupt_ex.gva = csr_v_mode_i;
     assign instruction_decode_gl.ex_valid = stage_ir_rr_q.ex.valid | resp_csr_cpu_i.csr_interrupt;
     assign ex_gl_in_int = (!stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt) ? interrupt_ex : stage_ir_rr_q.ex ;
 
@@ -895,6 +922,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == EBREAK)     ||
                         (stage_ir_rr_q.instr.instr_type == FENCE)      ||
                         (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA) ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA) ||
                         (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
                         (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
                         (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
@@ -907,7 +936,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     assign gl_is_vector_vl_0 = ((((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
-                                (stage_ir_rr_q.instr.regfile_we == 1'b0)) || 
+                                (stage_ir_rr_q.instr.regfile_we == 1'b0) && (stage_ir_rr_q.instr.fregfile_we == 1'b0)) || 
                                 (stage_ir_rr_q.instr.instr_type == VLE) ||
                                 (stage_ir_rr_q.instr.instr_type == VLM) ||
                                 (stage_ir_rr_q.instr.instr_type == VLEFF) ||
@@ -1217,7 +1246,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
         .kill_i(flush_int.kill_exe),
 
+        .en_translation_i(en_translation_i),
+        .en_g_translation_i(en_g_translation_i),
         .en_ld_st_translation_i(en_ld_st_translation_i),
+        .en_ld_st_g_translation_i(en_ld_st_g_translation_i),
+        .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_o),
 
         .from_rr_i(reg_to_exe),
         .vl_i(reg_to_exe.instr.vl),
@@ -1225,6 +1258,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .vleff_vl_o(vleff_vl_int),
         .vl_id_exe_i(vl_id_exe),
 
+        .resp_icache_guest_ppn_i(resp_icache_cpu_i.guest_ppn),
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),
@@ -1232,6 +1266,9 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .dtlb_comm_i(dtlb_comm_i),
         .dtlb_comm_o(dtlb_comm_o),
         .priv_lvl_i(csr_priv_lvl_i),
+        .v_mode_i(csr_v_mode_i),
+        .ld_st_priv_lvl_i(csr_ld_st_priv_lvl_i),
+        .ld_st_v_mode_i(csr_ld_st_v_mode_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),
@@ -1402,7 +1439,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             instruction_simd_writeback_gl[i].csr_addr  = wb_simd[i].csr_addr;
             instruction_simd_writeback_gl[i].exception = wb_simd[i].ex;
             instruction_simd_writeback_gl[i].result    = wb_simd[i].vresult;
-            instruction_simd_writeback_gl[i].fp_status = '{default:'0};
+            instruction_simd_writeback_gl[i].fp_status = wb_simd[i].fp_status;
             instruction_simd_writeback_gl[i].vs_ovf = wb_simd[i].vs_ovf;
             instruction_simd_writeback_gl[i].vl = wb_simd[i].vl;
             instruction_simd_writeback_gl[i].sew = wb_simd[i].sew;
@@ -1548,10 +1585,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     // tell cu that there is a fence or fence_i
     assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
                                   (instruction_to_commit[0].instr_type == FENCE)     || 
-                                  (instruction_to_commit[0].instr_type == SFENCE_VMA));
+                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
+                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
+                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA));
     // tell cu there is a fence i to flush the icache
     assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                    (instruction_to_commit[0].instr_type == SFENCE_VMA));
+                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
+                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
+                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA));
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
@@ -1567,13 +1608,13 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                          (instruction_to_commit[0].instr_type == VSETVLI) ||
                                          (instruction_to_commit[0].instr_type == VSETIVLI));                                       
 
-    assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE) || 
+    assign commit_store_or_amo_int[0] = (((instruction_to_commit[0].mem_type == STORE)  || (instruction_to_commit[0].mem_type == CMO_CBO) ||
                                         (instruction_to_commit[0].mem_type == AMO)) && !instruction_to_commit[0].ex_valid
                                         && !((instruction_to_commit[0].vl == 'h0) && ((instruction_to_commit[0].instr_type == VSE) || 
                                                                (instruction_to_commit[0].instr_type == VSM) ||
                                                                (instruction_to_commit[0].instr_type == VSSE)||
                                                                (instruction_to_commit[0].instr_type == VSXE))));
-    assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE) || 
+    assign commit_store_or_amo_int[1] = (((instruction_to_commit[1].mem_type == STORE)  || (instruction_to_commit[1].mem_type == CMO_CBO) ||
                                         (instruction_to_commit[1].mem_type == AMO)) && !instruction_to_commit[1].ex_valid && !instruction_to_commit[0].ex_valid
                                         && !((instruction_to_commit[1].vl == 'h0) && ((instruction_to_commit[1].instr_type == VSE) || 
                                                                (instruction_to_commit[1].instr_type == VSM) ||
@@ -1609,7 +1650,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
             commit_data[i].vl              = instruction_to_commit[i].vl;
             commit_data[i].xcpt            = commit_xcpt;
             commit_data[i].xcpt_cause      = commit_xcpt_cause;
-            commit_data[i].csr_priv_lvl    = csr_priv_lvl_i;
+            commit_data[i].csr_priv_lvl    = csr_ld_st_priv_lvl_i;
+            //commit_data[i].csr_v_mode      = csr_ld_st_v_mode_i;
             commit_data[i].csr_rw_data     = req_cpu_csr_o.csr_rw_data;
             commit_data[i].csr_xcpt        = resp_csr_cpu_i.csr_exception;
             commit_data[i].csr_xcpt_cause  = resp_csr_cpu_i.csr_exception_cause;

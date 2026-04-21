@@ -117,7 +117,7 @@ assign write_enable = instruction_i.valid & (num < (NUM_ENTRIES-1)) & ~(flush_i)
 assign read_enable = {1'b0,read_head_i[1]} + {1'b0,read_head_i[0]}; // & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
 
 
-assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || 
+assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO) || (instruction_i.mem_type == CMO_CBO) ||
                          (instruction_i.instr_type == VSSE) || (instruction_i.instr_type == VSXE);
 
 gl_instruction_t [NUM_ENTRIES-1:0] entries_q;
@@ -155,6 +155,7 @@ always_comb begin
         if (instruction_simd_writeback_enable_i[i]) begin
             valid_bit_d[instruction_simd_writeback_i[i]] = 1'b1;
             entries_d[instruction_simd_writeback_i[i]].vs_ovf  = instruction_simd_writeback_data_i[i].vs_ovf;
+            entries_d[instruction_simd_writeback_i[i]].fp_status = instruction_simd_writeback_data_i[i].fp_status;
             entries_d[instruction_simd_writeback_i[i]].vl = instruction_simd_writeback_data_i[i].vl;
             entries_d[instruction_simd_writeback_i[i]].sew = instruction_simd_writeback_data_i[i].sew;
             entries_d[instruction_simd_writeback_i[i]].lmul = instruction_simd_writeback_data_i[i].lmul;

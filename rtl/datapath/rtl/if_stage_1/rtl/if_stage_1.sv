@@ -27,7 +27,8 @@ module if_stage_1
 ) (
     input logic                 clk_i,
     input logic                 rstn_i,
-    input addr_t                reset_addr_i,
+    input logic                 v_mode_i,
+    input phy_addr_t            reset_addr_i,
 
     // Signals from debug
     //input addr_t                deb_change_pc_addr_i,
@@ -41,6 +42,9 @@ module if_stage_1
     input logic                 invalidate_icache_i,
     input logic                 invalidate_buffer_i,
     input logic                 en_translation_i,
+    input logic                 en_g_translation_i,
+    // Response packet coming from Icache
+    input resp_icache_cpu_t     resp_icache_cpu_i,
     // PC comming from commit/decode/ecall/debug
     input addrPC_t              pc_jump_i,
     // Signals for branch predictor from exe stage 
@@ -71,6 +75,7 @@ module if_stage_1
     // on icache interface or icache itself
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
+    logic ex_if_guest_page_fault_int;
 
     // Branch Predictor wires
     logic       branch_predict_is_branch;
@@ -117,7 +122,7 @@ module if_stage_1
     // PC output is the next_pc after a latch
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
-            pc <= {24'b0,reset_addr_i};
+            pc <= {{{64-PHY_ADDR_SIZE}{1'b0}}, reset_addr_i};
             `ifdef SIM_KONATA_DUMP
             id <= 64'h0;
             `endif
@@ -136,6 +141,14 @@ module if_stage_1
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;
     end
+
+    // check instr guest page fault
+    // Translation is a G-stage: Address bits 63:41 must all be zeros, or else a guest-page-fault exception occurs
+    always_comb begin
+        if ((|pc[63:PHY_VIRT_MAX_ADDR_SIZE-1]) & (en_g_translation_i & ~en_translation_i))
+             ex_if_guest_page_fault_int = 1'b1;
+        else ex_if_guest_page_fault_int = 1'b0;
+    end
     
     // check misaligned fetch
     always_comb begin
@@ -147,7 +160,7 @@ module if_stage_1
     end
 
     // logic for icache access: if not misaligned 
-    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !stall_debug_i && !stall_i;
+    assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !ex_if_guest_page_fault_int && !stall_debug_i && !stall_i;
     assign req_cpu_icache_o.vaddr = pc[PHY_VIRT_MAX_ADDR_SIZE-1:0];
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
@@ -183,6 +196,10 @@ module if_stage_1
         if (ex_if_addr_fault_int) begin
             fetch_o.ex.cause = INSTR_ACCESS_FAULT;
             fetch_o.ex.valid = 1'b1;
+        end else
+        if (ex_if_guest_page_fault_int) begin
+            fetch_o.ex.cause = INSTR_GUEST_PAGE_FAULT;
+            fetch_o.ex.valid = 1'b1;
         end else begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
             fetch_o.ex.valid = 1'b0;
@@ -190,6 +207,10 @@ module if_stage_1
     end
 
     assign fetch_o.ex.origin = pc;
+    assign fetch_o.ex.origin2 = (en_translation_i && v_mode_i) ? (({resp_icache_cpu_i.guest_ppn, pc[11:0]}) >> 2) :
+                                                 (pc >> 2); //GVA = GPA in G-stage only translations
+    assign fetch_o.ex.tinst = 0;
+    assign fetch_o.ex.gva = v_mode_i;
    
     // Pipeline branch prediction to exe stage
     assign fetch_o.bpred.is_branch = branch_predict_is_branch;

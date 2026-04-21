@@ -28,6 +28,8 @@ module load_store_queue
 
     input rr_exe_mem_instr_t   instruction_i,    // All instruction input signals
     input logic                en_ld_st_translation_i,
+    input logic                en_ld_st_g_translation_i,
+    output logic               csr_hs_ld_st_inst_o,
      
     input logic                flush_i,          // Flush all entries
     input logic                read_next_i,      // Read next instruction of the ciruclar buffer
@@ -43,7 +45,8 @@ module load_store_queue
     input tlb_cache_comm_t       dtlb_comm_i,
     output cache_tlb_comm_t      dtlb_comm_o,
 
-    input logic [1:0] priv_lvl_i,
+    input logic [1:0] ld_st_priv_lvl_i,
+    input logic       ld_st_v_mode_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -128,8 +131,10 @@ rr_exe_mem_instr_t translated_instr;
 
 always_comb begin 
     logic is_load_reserved;
+    logic is_hlvx_inst;
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
+    is_hlvx_inst     = (instr_to_translate.instr.instr_type == HLVX_HU) || (instr_to_translate.instr.instr_type ==HLVX_WU);
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
@@ -140,34 +145,67 @@ always_comb begin
         translated_instr.ex.valid       = 1'b1;
     end else if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
         translated_instr.ex = 0;
-    end else if (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
-        ((instr_to_translate.instr.mem_size == 4'b0010) & (|instr_to_translate.data_rs1[1:0])) |
-        ((instr_to_translate.instr.mem_size == 4'b0011) & (|instr_to_translate.data_rs1[2:0])) |
-        ((instr_to_translate.instr.mem_size == 4'b0101) & (|instr_to_translate.data_rs1[0:0])) |
-        ((instr_to_translate.instr.mem_size == 4'b0110) & (|instr_to_translate.data_rs1[1:0])) |
-        ((instr_to_translate.instr.mem_size == 4'b0111) & (|instr_to_translate.data_rs1[2:0])) |
-         instr_to_translate.vmisalign_xcpt) begin // Misaligned address
-        translated_instr.ex.cause       = (instr_to_translate.is_amo_or_store && ~is_load_reserved) ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
+    end else if ( !(instr_to_translate.is_cmo || instr_to_translate.is_cmo_prefetch) && // Cmo instructions don't throw missaligned exceptions
+        (((instr_to_translate.instr.mem_size == 4'b0001) & (|instr_to_translate.data_rs1[0:0])) |
+         ((instr_to_translate.instr.mem_size == 4'b0010) & (|instr_to_translate.data_rs1[1:0])) |
+         ((instr_to_translate.instr.mem_size == 4'b0011) & (|instr_to_translate.data_rs1[2:0])) |
+         ((instr_to_translate.instr.mem_size == 4'b0101) & (|instr_to_translate.data_rs1[0:0])) |
+         ((instr_to_translate.instr.mem_size == 4'b0110) & (|instr_to_translate.data_rs1[1:0])) |
+         ((instr_to_translate.instr.mem_size == 4'b0111) & (|instr_to_translate.data_rs1[2:0])) |
+          instr_to_translate.vmisalign_xcpt)) begin // Misaligned address
+        translated_instr.ex.cause       = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_ADDR_MISALIGNED : LD_ADDR_MISALIGNED;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
-    end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_or_store & ~is_load_reserved) begin // Page fault store
+    end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_store_or_cmo & ~is_load_reserved & ((!instr_to_translate.is_cmo) | (instr_to_translate.instr.instr_type == CBO_ZERO)) ) begin // Page fault store, only CBO Zero 
         translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
-    end else if (dtlb_comm_i.resp.xcpt.load) begin // Page fault load
-        translated_instr.ex.cause       = LD_PAGE_FAULT;
+    end else if ((~is_hlvx_inst && dtlb_comm_i.resp.xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.xcpt.fetch)) begin // Page fault load
+        translated_instr.ex.cause       = instr_to_translate.is_cmo ? ST_AMO_PAGE_FAULT : LD_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva         = '0;
+        translated_instr.ex.valid       = 1'b1;
+                                                      // Translation is a G-stage: Address bits 63:41 must all be zeros, or else a guest-page-fault exception occurs:
+    end else if ((dtlb_comm_i.resp.guest_xcpt.store | ((en_ld_st_g_translation_i & ~en_ld_st_translation_i) & (|instr_to_translate.data_rs1[63:PHY_VIRT_MAX_ADDR_SIZE-1]))) 
+                & instr_to_translate.is_amo_store_or_cmo & ~is_load_reserved) begin // Guest Page fault store
+        translated_instr.ex.cause       = ST_GUEST_AMO_PAGE_FAULT;
+        translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && ld_st_v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+                                                 (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
+        translated_instr.ex.valid       = 1'b1;
+    end else if (((~is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.guest_xcpt.fetch))
+                // Translation is a G-stage: Address bits 63:41 must all be zeros, or else a guest-page-fault exception occurs:
+                || ((~instr_to_translate.is_amo_store_or_cmo | is_load_reserved | is_hlvx_inst) & (en_ld_st_g_translation_i & ~en_ld_st_translation_i) & (|instr_to_translate.data_rs1[63:PHY_VIRT_MAX_ADDR_SIZE-1]))) begin // Guest Page fault load
+        translated_instr.ex.cause       = LD_GUEST_PAGE_FAULT;
+        translated_instr.ex.origin      = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = (en_ld_st_translation_i && ld_st_v_mode_i) ? (({dtlb_comm_i.resp.guest_ppn, instr_to_translate.data_rs1[11:0]}) >> 2) :
+                                                 (instr_to_translate.data_rs1 >> 2); //GVA = GPA in G-stage only translations
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     `ifdef SIM_COMMIT_LOG
-    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) ||
-                  (en_ld_st_translation_i && translate_enable && (~is_inside_mapped_sections(DracCfg, translated_instr.data_rs1) || (translated_instr.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
+    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
+                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) ||
+                  ((en_ld_st_translation_i) && translate_enable && (~is_inside_mapped_sections(DracCfg, translated_instr.data_rs1) || (translated_instr.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
     `else 
-    end else if ((en_ld_st_translation_i && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~en_ld_st_translation_i && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin
+    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
+                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin
     `endif
-        translated_instr.ex.cause  = (instr_to_translate.is_amo_or_store && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
+        translated_instr.ex.cause  = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
         translated_instr.ex.origin = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva    = ld_st_v_mode_i;
         translated_instr.ex.valid  = 1'b1;
     end else begin
         translated_instr.ex = 0;
@@ -320,14 +358,22 @@ always_comb begin
     `endif
 end
 
-assign dtlb_comm_o.vm_enable = en_ld_st_translation_i;
-assign dtlb_comm_o.priv_lvl = priv_lvl_i;
+assign csr_hs_ld_st_inst_o = (instr_to_translate.instr.instr_type inside {
+                                              HLV_B, HLV_BU, HLV_H, HLV_HU,
+                                              HLVX_HU, HLV_W, HLVX_WU,
+                                              HSV_B, HSV_H, HSV_W,
+                                              HLV_WU, HLV_D, HSV_D }) ? 1'b1 : 1'b0;
+assign dtlb_comm_o.vm_enable = en_ld_st_translation_i | en_ld_st_g_translation_i;
+assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && ld_st_v_mode_i;
+assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && ld_st_v_mode_i;
+assign dtlb_comm_o.priv_lvl = ld_st_priv_lvl_i;
 assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
 assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
-assign dtlb_comm_o.req.store = instr_to_translate.is_amo_or_store; // TODO: Check this, might not be exactly right...
+assign dtlb_comm_o.req.vmid = '0;
+assign dtlb_comm_o.req.store = instr_to_translate.is_amo_store_or_cmo; // TODO: Check this, might not be exactly right...
 
 assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);
 `ifdef SARG_BYPASS_LSQ
@@ -337,10 +383,11 @@ assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '
 `endif
 assign full_o  = (((num_to_exe + num_to_translate) == LSQ_NUM_ENTRIES) | flush_i | ~rstn_i);
 
-assign is_next_load = (num_to_exe > '0) && (control_table[head].instr.mem_type == LOAD);
+assign is_next_load = (num_to_exe > '0) && ((control_table[head].instr.mem_type == LOAD) || (control_table[head].instr.mem_type == CMO_PREFETCH));
 
-assign is_next_store = (num_to_exe > '0) && ((control_table[head].instr.mem_type == STORE)     || 
-                                        (control_table[head].instr.mem_type == AMO));
+assign is_next_store = (num_to_exe > '0) && ((control_table[head].instr.mem_type == STORE   )   || 
+                                             (control_table[head].instr.mem_type == AMO     )   ||
+                                             (control_table[head].instr.mem_type == CMO_CBO ));
 
 assign pmu_load_after_store_o = st_buff_collision;
 

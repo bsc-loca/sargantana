@@ -88,7 +88,7 @@ always_comb begin
          operands[2] = instruction_i.data_rs2;
       end  
       drac_pkg::FSUB: begin // subtraction
-         op     = fpnew_pkg::ADD; 
+         op     = fpnew_pkg::ADD;
          op_mod = 1;
          operands[0] = '0;
          operands[1] = instruction_i.data_rs1;
@@ -235,7 +235,8 @@ assign rnd_mode = rnd_mode_sel ? fpnew_pkg::roundmode_e'(W3_logic'(opcode_rnd_mo
 
 fpnew_top #(
    .Features       ( Features ),
-   .Implementation ( Implementation )
+   .Implementation ( Implementation ),
+   .TagType	   ( reg_t )
 ) i_fpuv_top (
    .clk_i          ( clk_i ),
    .rst_ni         ( rstn_i ),
@@ -260,7 +261,8 @@ fpnew_top #(
    .status_o       ( result_fp_status_int ),
    .tag_o          ( result_tag_int ),
    .out_valid_o    ( result_valid_int ),
-   .busy_o         ( /* unused */ )
+   .busy_o         ( /* unused */ ),
+   .early_valid_o  ( /* unsued */ )
 );
 
 // Output FPU

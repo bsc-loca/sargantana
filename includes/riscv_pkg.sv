@@ -1,16 +1,16 @@
 /*
  * Copyright 2025 BSC*
  * *Barcelona Supercomputing Center (BSC)
- * 
+ *
  * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
- * 
+ *
  * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
  * may not use this file except in compliance with the License, or, at your
  * option, the Apache License version 2.0. You may obtain a copy of the
  * License at
- * 
+ *
  * https://solderpad.org/licenses/SHL-2.1/
- * 
+ *
  * Unless required by applicable law or agreed to in writing, any work
  * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -247,7 +247,8 @@ typedef enum logic [2:0] {
     F3_CSRRC             = 3'b011,
     F3_CSRRWI            = 3'b101,
     F3_CSRRSI            = 3'b110,
-    F3_CSRRCI            = 3'b111
+    F3_CSRRCI            = 3'b111,
+    F3_HLV_HSV           = 3'b100
 } op_func3_system_t;
 
 
@@ -307,8 +308,13 @@ typedef enum logic [2:0] {
     F3_OPCFG = 3'b111
 } op_func3_vector_t;
 
+typedef enum logic [2:0] {
+    F3_CBO = 3'b010
+} op_funct3_misc_mem_t;
+
 typedef enum logic [5:0] {
     F6_VADD         = 6'b000000,
+    F6_VANDN        = 6'b000001,
     F6_VSUB         = 6'b000010,
     F6_VRSUB        = 6'b000011,
     F6_VADC         = 6'b010000,
@@ -322,6 +328,8 @@ typedef enum logic [5:0] {
     F6_VAND         = 6'b001001,
     F6_VOR          = 6'b001010,
     F6_VXOR         = 6'b001011,
+    F6_VROR         = 6'b010100,
+    F6_VROL         = 6'b010101,
     F6_VMERGE_VMV   = 6'b010111,
     F6_VMSEQ        = 6'b011000,
     F6_VMSNE        = 6'b011001,
@@ -343,6 +351,7 @@ typedef enum logic [5:0] {
     F6_VSSRA        = 6'b101011,
     F6_VNSRL        = 6'b101100,
     F6_VNSRA        = 6'b101101,
+    F6_VWSLL        = 6'b110101,
     F6_VNCLIPU      = 6'b101110,
     F6_VNCLIP       = 6'b101111,
     F6_VWREDSUMU    = 6'b110000,
@@ -351,6 +360,7 @@ typedef enum logic [5:0] {
     F6_VSLIDEDOWN   = 6'b001111,
     F6_VRGATHER     = 6'b001100
 } op_func6_vector_opi_t;
+
 
 typedef enum logic [5:0] {
     F6_VREDSUM   = 6'b000000, 
@@ -368,6 +378,7 @@ typedef enum logic [5:0] {
     F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why?? //Todo: check to delete
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
+    F6_BITMANIP_VXUNARY0 = 6'b010010,
     F6_VMAND     = 6'b011001,
     F6_VMNAND    = 6'b011101,
     F6_VMANDNOT  = 6'b011000,
@@ -377,7 +388,7 @@ typedef enum logic [5:0] {
     F6_VMXOR     = 6'b011011,
     F6_VMXNOR    = 6'b011111,
     F6_VMUNARY0  = 6'b010100,  //This encoding changes on v1.0 of specs. For now we keep it like this
-    F6_VXUNARY0  = 6'b010010,
+    //F6_VXUNARY0  = 6'b010010,
     F6_VMULHU    = 6'b100100,
     F6_VMUL      = 6'b100101,
     F6_VMULHSU   = 6'b100110,
@@ -410,12 +421,61 @@ typedef enum logic [5:0] {
     F6_VREM      = 6'b100011
 } op_func6_vector_opm_t;
 
+// vector floating-point decoding F6 fields
 typedef enum logic [5:0] {
-    F6_VFADD = 6'b000000,
-    F6_VFSUB = 6'b000010,
-    F6_VFMIN = 6'b000100,
-    F6_VFMAX = 6'b000110,
-    F6_VFMV  = 6'b001101
+    // Arithmetic vector FP operations
+    F6_VFADD        = 6'b000000,    // Floating-point add
+    F6_VFSUB        = 6'b000010,    // Floating-point subtract
+    F6_VFRSUB       = 6'b100111,    // Floating-point reverse subtract
+    F6_VFMIN        = 6'b000100,    // Floating-point minimum
+    F6_VFMAX        = 6'b000110,    // Floating-point maximum
+    F6_VFMV         = 6'b001101,    // Floating-point move
+    F6_VFSGNJ       = 6'b001000,    // Floating-point sign-injection (copy sign from second operand)
+    F6_VFSGNJN      = 6'b001001,    // Floating-point sign-injection negated
+    F6_VFSGNJX      = 6'b001010,    // Floating-point sign-injection XOR (sign of result = XOR of signs)
+    F6_VFMERGE_VFMV = 6'b010111,    // Merge vector floating-point move based on mask
+    F6_VFUNARY1     = 6'b010011,    // Unary floating-point operation (e.g., sqrt, abs, neg)
+    F6_VMFEQ        = 6'b011000,    // Vector floating-point compare equal
+    F6_VMFLE        = 6'b011001,    // Vector floating-point compare less or equal
+    F6_VMFLT        = 6'b011011,    // Vector floating-point compare less than
+    F6_VMFNE        = 6'b011100,    // Vector floating-point compare not equal
+    F6_VMFGT        = 6'b011101,    // Vector floating-point compare greater than
+    F6_VMFGE        = 6'b011111,    // Vector floating-point compare greater or equal
+    F6_VFMUL        = 6'b100100,    // Floating-point multiply
+    F6_VFDIV        = 6'b100000,    // Floating-point division
+    F6_VFRDIV       = 6'b100001,    // Floating-point reverse division
+    F6_VFMADD       = 6'b101000,    // Floating-point fused multiply-add
+    F6_VFNMADD      = 6'b101001,    // Floating-point fused negative multiply-add
+    F6_VFMSUB       = 6'b101010,    // Floating-point fused multiply-subtract
+    F6_VFNMSUB      = 6'b101011,    // Floating-point fused negative multiply-subtract
+    F6_VFMACC       = 6'b101100,    // Floating-point multiply-accumulate
+    F6_VFNMACC      = 6'b101101,    // Floating-point negative multiply-accumulate
+    F6_VFMSAC       = 6'b101110,    // Floating-point multiply-subtract-accumulate
+    F6_VFNMSAC      = 6'b101111,    // Floating-point negative multiply-subtract-accumulate
+
+    // Widening Floating-Point Instructions
+    F6_VFWADD       = 6'b110000,    // Vector widening floating-point add
+    F6_VFWSUB       = 6'b110010,    // Vector widening floating-point subtract
+    F6_VFWADDW      = 6'b110100,    // Vector widening floating-point add (w-form)
+    F6_VFWSUBW      = 6'b110110,    // Vector widening floating-point subtract (w-form)
+    F6_VFWMUL       = 6'b111000,    // Vector widening floating-point multiply
+    F6_VFWMACC      = 6'b111100,    // Vector widening floating-point multiply-accumulate
+    F6_VFWNMACC     = 6'b111101,    // Vector widening floating-point negative multiply-accumulate
+    F6_VFWMSAC      = 6'b111110,    // Vector widening floating-point multiply-subtract-accumulate
+    F6_VFWNMSAC     = 6'b111111,    // Vector widening floating-point negative multiply-subtract-accumulate
+
+    // Vector Floating-Point Reduction Instructions
+    F6_VFREDUSUM    = 6'b000001,    // Vector floating-point reduction unordered sum
+    F6_VFREDMAX     = 6'b000111,    // Vector floating-point reduction maximum
+    F6_VFREDMIN     = 6'b000101,    // Vector floating-point reduction minimum
+    F6_VFREDOSUM    = 6'b000011,    // Vector floating-point reduction ordered sum
+    F6_VFWREDUSUM   = 6'b110001,    // Vector widening floating-point reduction unordered sum
+    F6_VFWREDOSUM   = 6'b110011,    // Vector widening floating-point reduction ordered sum
+    // Widening and narrowing instructions
+    F6_VFUNARY0     = 6'b010010,
+    F6_VFSLIDE1UP   = 6'b001110,
+    F6_VFSLIDE1DOWN = 6'b001111,
+    F6_VRWFUNARY0   = 6'b010000
 } op_func6_vector_opf_t;
 
 typedef enum logic [4:0] {
@@ -434,6 +494,17 @@ typedef enum logic [4:0] {
     VS1_VFIRST  = 5'b10001
 } op_vwxunary0_vs1_vector_t;
 
+
+
+typedef enum logic [4:0] {
+    VS2_S_F     = 5'b00000
+} op_vrfunary0_vs2_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_F_S     = 5'b00000
+} op_vwfunary0_vs1_vector_t;
+
+
 typedef enum logic [4:0] {
     VS1_VID     = 5'b10001,
     VS1_VIOTA   = 5'b10000,
@@ -442,8 +513,48 @@ typedef enum logic [4:0] {
 } op_vmunary0_vs1_vector_t;
 
 typedef enum logic [4:0] {
+    VS1_VFCVT_XU_F           = 5'b00000,
+    VS1_VFCVT_X_F            = 5'b00001,
+    VS1_VFCVT_F_XU           = 5'b00010,
+    VS1_VFCVT_F_X            = 5'b00011,
+    VS1_VFCVT_RTZ_XU_F       = 5'b00110,
+    VS1_VFCVT_RTZ_X_F        = 5'b00111,
+    VS1_VFWCVT_XU_F         = 5'b01000,
+    VS1_VFWCVT_X_F          = 5'b01001,
+    VS1_VFWCVT_F_XU         = 5'b01010,
+    VS1_VFWCVT_F_X          = 5'b01011,
+    VS1_VFWCVT_F_F          = 5'b01100,
+    VS1_VFWCVT_RTZ_XU_F     = 5'b01110,
+    VS1_VFWCVT_RTZ_X_F      = 5'b01111,
+    VS1_VFNCVT_XU_F         = 5'b10000,
+    VS1_VFNCVT_F_XU         = 5'b10010,
+    VS1_VFNCVT_X_F          = 5'b10001,
+    VS1_VFNCVT_F_X          = 5'b10011,
+    VS1_VFNCVT_F_F          = 5'b10100,
+    VS1_VFNCVT_ROD_F_F      = 5'b10101,
+    VS1_VFNCVT_RTZ_XU_F     = 5'b10110,
+    VS1_VFNCVT_RTZ_X_F      = 5'b10111
+} op_vfunary0_vs1_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_VBREV8 = 5'b01000,
+    VS1_VREV8  = 5'b01001,
+    VS1_VBREV  = 5'b01010,
+    VS1_VCLZ   = 5'b01100,
+    VS1_VCTZ   = 5'b01101,
+    VS1_VCPOP  = 5'b01110
+} op_bitmanip_vs1_vector_t;
+
+typedef enum logic [4:0] {
     VS2_VMV_S_X = 5'b00000
 } op_vrxunary0_vs2_vector_t;
+
+typedef enum logic [4:0] {
+    VS1_VFSQRT    = 5'b00000,
+    VS1_VFRSQRT7  = 5'b00100,
+    VS1_VFREC7    = 5'b00101,
+    VS1_VFCLASS   = 5'b10000
+} op_vfunary1_vs1_vector_t;
 
 typedef enum logic [1:0] {
     MOP_UNIT_STRIDE         = 2'b00,
@@ -500,6 +611,18 @@ typedef enum logic [4:0] {
     AMOMAXU_D   = 5'b11100
 } op_func7_atomics_64_t;
 
+typedef enum logic [11:0] {
+    IMM_CBO_INVAL   = 12'b000000000000,
+    IMM_CBO_CLEAN   = 12'b000000000001,
+    IMM_CBO_FLUSH   = 12'b000000000010,
+    IMM_CBO_ZERO    = 12'b000000000100
+} op_cbo_imm_t;
+
+typedef enum logic [4:0] {
+    F5_CMO_PREFETCH_I = 5'b00000,
+    F5_CMO_PREFETCH_R = 5'b00001,
+    F5_CMO_PREFETCH_W = 5'b00011
+} op_func5_cmo_prefetch_t;
 // ------------------------------------------------
 // Bit-manip
 // ------------------------------------------------
@@ -508,6 +631,7 @@ typedef enum logic [6:0] {
     F7_SRAI_SUB_SRA_NLOG         = 7'b0100000,
     F7_NORMAL                    = 7'b0000000,
     F7_CLMUL_MIN_MAX             = 7'b0000101,
+    F7_CZERO                     = 7'b0000111,
     F7_SHADD                     = 7'b0010000,
     F7_BSET_ORCB                 = 7'b0010100,
     F7_BCLR_BEXT                 = 7'b0100100,
@@ -638,8 +762,21 @@ typedef enum logic [6:0] {
     F7_ECALL_EBREAK_URET    = 7'b0000000,
     F7_SRET_WFI_ERET_SFENCE = 7'b0001000,
     F7_SFENCE_VM            = 7'b0001001,
+    F7_HFENCE_VVMA          = 7'b0010001,
+    F7_HFENCE_GVMA          = 7'b0110001,
     F7_MRET_MRTS            = 7'b0011000
 } op_func7_system_t; // The first 7 bits of func7
+
+typedef enum logic [6:0] {
+    F7_HLV_B_BU             = 7'b0110000,
+    F7_HSV_B                = 7'b0110001,
+    F7_HLV_H_HU_XHU         = 7'b0110010,
+    F7_HSV_H                = 7'b0110011,
+    F7_HLV_W_WU_XWU         = 7'b0110100,
+    F7_HSV_W                = 7'b0110101,
+    F7_HLV_D                = 7'b0110110,
+    F7_HSV_D                = 7'b0110111
+} op_func7_hlv_hsv_t; // The first 7 bits of func7
 
 typedef enum logic [4:0] {
     RS2_ECALL_ERET      = 5'b00000,
@@ -648,6 +785,12 @@ typedef enum logic [4:0] {
     RS2_WFI             = 5'b00101
     //RS2_MRTS            = 5'b00101 //Old ISA
 } op_rs2_system_t; // the next 5 bits after func7
+
+typedef enum logic [4:0] {
+    RS2_HLV_NO_U        = 5'b00000,
+    RS2_HLV_WITH_U      = 5'b00001,
+    RS2_HLVX            = 5'b00011
+} op_rs2_hlv_t; // the next 5 bits after func7
 
 typedef enum logic [6:0] {
     F7_MUL_DIV  = 7'b0000001
@@ -733,9 +876,15 @@ typedef enum logic[XLEN-1:0] {
     ST_AMO_ACCESS_FAULT     = 64'h07,
     USER_ECALL              = 64'h08,
     SUPERVISOR_ECALL        = 64'h09,
+    VIRTUALSUPERVISOR_ECALL = 64'h0A, //Added for H ext?
+    ECALL_MMODE             = 64'h0B,
     INSTR_PAGE_FAULT        = 64'h0C,
     LD_PAGE_FAULT           = 64'h0D,
     ST_AMO_PAGE_FAULT       = 64'h0F,
+    INSTR_GUEST_PAGE_FAULT  = 64'h14, //Added for H ext
+    LD_GUEST_PAGE_FAULT     = 64'h15, //Added for H ext
+    VIRTUAL_INSTRUCTION     = 64'h16, //Added for H ext
+    ST_GUEST_AMO_PAGE_FAULT = 64'h17, //Added for H ext
     DEBUG_REQUEST           = 64'h18,
     NONE                    = 64'hFF
 } exception_cause_t;
@@ -748,6 +897,7 @@ parameter __vector_element = 4'b1000;
 // --------------------
 typedef enum logic[1:0] {
     PRIV_LVL_M = 2'b11,
+    PRIV_LVL_HS = 2'b10,
     PRIV_LVL_S = 2'b01,
     PRIV_LVL_U = 2'b00
 } priv_lvl_t;
@@ -768,7 +918,11 @@ typedef enum logic [1:0] {
 
 typedef struct packed {
     logic         sd;     // signal dirty state - read-only
-    logic [62:36] wpri4;  // writes preserved reads ignored
+    logic [62:40] wpri4;  // writes preserved reads ignored // Took away 4 bits for H ext
+    logic         mpv;    // Added for H ext
+    logic         gva;    // Added for H ext
+    logic         mbe;    // Wasn't needed before H ext, will stay considered as part of wpri4
+    logic         sbe;    // Wasn't needed before H ext, will stay considered as part of wpri4
     xlen_t        sxl;    // variable supervisor mode xlen - hardwired to zero
     xlen_t        uxl;    // variable user mode xlen - hardwired to zero
     logic [8:0]   wpri3;  // writes preserved reads ignored
@@ -793,7 +947,7 @@ typedef struct packed {
     logic         uie;    // user interrupts enable - hardwired to zero
 } status_rv64_t;
 
-typedef struct packed {
+typedef struct packed {   // Wasn't changed for the H ext since is not used
     logic         sd;     // signal dirty - read-only - hardwired zero
     logic [7:0]   wpri3;  // writes preserved reads ignored
     logic         tsr;    // trap sret
@@ -818,33 +972,69 @@ typedef struct packed {
 } status_rv32_t;
 
 typedef struct packed {
+    logic [29:0] wpri4;
+    logic [1:0]  vsxl;
+    logic [8:0]  wpri3;
+    logic        vtsr;
+    logic        vtw;
+    logic        vtvm;
+    logic [1:0]  wpri2;
+    logic [5:0]  vgein;
+    logic [1:0]  wpri1;
+    logic        hu;
+    logic        spvp;
+    logic        spv;
+    logic        gva;
+    logic        vsbe;
+    logic [4:0]  wpri0;
+} hstatus_rv64_t;
+
+typedef struct packed {
     logic [3:0]  mode;
     logic [15:0] asid;
     logic [43:0] ppn;
 } satp_t;
+typedef struct packed {
+    logic [3:0]  mode;
+    logic [1:0]  warl0;
+    logic [13:0] vmid;
+    logic [43:0] ppn;
+} hgatp_t;
 
 localparam int unsigned IRQ_S_SOFT  = 1;
+localparam int unsigned IRQ_VS_SOFT = 2;    //Added for H ext
 localparam int unsigned IRQ_M_SOFT  = 3;
 localparam int unsigned IRQ_S_TIMER = 5;
+localparam int unsigned IRQ_VS_TIMER = 6;   //Added for H ext
 localparam int unsigned IRQ_M_TIMER = 7;
 localparam int unsigned IRQ_S_EXT   = 9;
+localparam int unsigned IRQ_VS_EXT  = 10;   //Added for H ext
 localparam int unsigned IRQ_M_EXT   = 11;
+localparam int unsigned IRQ_S_G_EXT = 12;   //Added for H ext
 localparam int unsigned IRQ_LCOF    = 13;
 
 localparam logic [63:0] MIP_SSIP = 1 << IRQ_S_SOFT;
+localparam logic [63:0] MIP_VSSIP = 1 << IRQ_VS_SOFT;   //Added for H ext
 localparam logic [63:0] MIP_MSIP = 1 << IRQ_M_SOFT;
 localparam logic [63:0] MIP_STIP = 1 << IRQ_S_TIMER;
+localparam logic [63:0] MIP_VSTIP = 1 << IRQ_VS_TIMER;  //Added for H ext
 localparam logic [63:0] MIP_MTIP = 1 << IRQ_M_TIMER;
 localparam logic [63:0] MIP_SEIP = 1 << IRQ_S_EXT;
+localparam logic [63:0] MIP_VSEIP = 1 << IRQ_VS_EXT;    //Added for H ext
 localparam logic [63:0] MIP_MEIP = 1 << IRQ_M_EXT;
+localparam logic [63:0] MIP_SGEIP = 1 << IRQ_S_G_EXT;   //Added for H ext
 localparam logic [63:0] MIP_LCOFIP = 1 << IRQ_LCOF;
 
 localparam logic [63:0] S_SW_INTERRUPT    = (1 << 63) | IRQ_S_SOFT;
+localparam logic [63:0] VS_SW_INTERRUPT   = (1 << 63) | IRQ_VS_SOFT;    //Added for H ext
 localparam logic [63:0] M_SW_INTERRUPT    = (1 << 63) | IRQ_M_SOFT;
 localparam logic [63:0] S_TIMER_INTERRUPT = (1 << 63) | IRQ_S_TIMER;
+localparam logic [63:0] VS_TIMER_INTERRUPT = (1 << 63) | IRQ_VS_TIMER;  //Added for H ext
 localparam logic [63:0] M_TIMER_INTERRUPT = (1 << 63) | IRQ_M_TIMER;
 localparam logic [63:0] S_EXT_INTERRUPT   = (1 << 63) | IRQ_S_EXT;
+localparam logic [63:0] VS_EXT_INTERRUPT  = (1 << 63) | IRQ_VS_EXT;     //Added for H ext
 localparam logic [63:0] M_EXT_INTERRUPT   = (1 << 63) | IRQ_M_EXT;
+localparam logic [63:0] S_G_EXT_INTERRUPT = (1 << 63) | IRQ_S_G_EXT;    //Added for H ext
 localparam logic [63:0] LCOF_INTERRUPT    = (1 << 63) | IRQ_LCOF;
 
 // -----
@@ -877,6 +1067,31 @@ typedef enum logic [11:0] {
     CSR_SIP            = 12'h144,
     CSR_SATP           = 12'h180,
     CSR_SCOUNTOVF      = 12'hDA0,
+    // Supervisor Mode CSRs
+    CSR_VSSTATUS       = 12'h200,
+    CSR_VSIE           = 12'h204,
+    CSR_VSTVEC         = 12'h205,
+    CSR_VSSCRATCH      = 12'h240,
+    CSR_VSEPC          = 12'h241,
+    CSR_VSCAUSE        = 12'h242,
+    CSR_VSTVAL         = 12'h243,
+    CSR_VSIP           = 12'h244,
+    CSR_VSATP          = 12'h280,
+    // Hypervisor Mode CSRs
+    CSR_HSTATUS        = 12'h600,
+    CSR_HEDELEG        = 12'h602,
+    CSR_HIDELEG        = 12'h603,
+    CSR_HIE            = 12'h604,
+    CSR_HCOUNTEREN     = 12'h606,
+    CSR_HGEIE          = 12'h607,
+    CSR_HTVAL          = 12'h643,
+    CSR_HIP            = 12'h644,
+    CSR_HVIP           = 12'h645,
+    CSR_HTINST         = 12'h64A,
+    CSR_HENVCFG        = 12'h60A,
+    CSR_HTIMEDELTA     = 12'h605,
+    CSR_HGATP          = 12'h680,
+    CSR_HGEIP          = 12'hE12,
     // Machine Mode CSRs
     CSR_MSTATUS        = 12'h300,
     CSR_MISA           = 12'h301,
@@ -920,6 +1135,8 @@ typedef enum logic [11:0] {
     CSR_MCAUSE         = 12'h342,
     CSR_MTVAL          = 12'h343,
     CSR_MIP            = 12'h344,
+    CSR_MTINST         = 12'h34A,
+    CSR_MTVAL2         = 12'h34B,
     CSR_MENVCFG        = 12'h30A,
     CSR_MVENDORID      = 12'hF11,
     CSR_MARCHID        = 12'hF12,
@@ -1090,6 +1307,11 @@ typedef enum logic [11:0] {
     CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
     CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
     CSR_SPI_CONFIG = 12'h7F2  // SPI Configuration CSR
+
+    `ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+    ,
+    CSR_DYN_MEM_LATENCY = 12'h801
+    `endif
     
 } csr_reg_t;
 
@@ -1131,8 +1353,22 @@ localparam logic [63:0] MSTATUS32_SD   = 64'h80000000;
 localparam logic [64:0] MSTATUS32_WPRI = 64'h7f800044;
 localparam logic [63:0] MSTATUS_UXL    = 64'h0000000300000000;
 localparam logic [63:0] MSTATUS_SXL    = 64'h0000000C00000000;
+localparam logic [63:0] MSTATUS_GVA    = 64'h0000004000000000;
+localparam logic [63:0] MSTATUS_MPV    = 64'h0000008000000000;
 localparam logic [63:0] MSTATUS64_SD   = 64'h8000000000000000;
-localparam logic [63:0] MSTATUS64_WPRI = 64'h7ffffff5ff800044;
+localparam logic [63:0] MSTATUS64_WPRI = 64'h7fffff35ff800044; //Canged from 64'h7ffffff5ff800044; to add H ext bits
+
+localparam logic [63:0] HSTATUS_VSBE   = 64'h00000020;
+localparam logic [63:0] HSTATUS_GVA    = 64'h00000040;
+localparam logic [63:0] HSTATUS_SPV    = 64'h00000080;
+localparam logic [63:0] HSTATUS_SPVP   = 64'h00000100;
+localparam logic [63:0] HSTATUS_HU     = 64'h00000200;
+localparam logic [63:0] HSTATUS_VGEIN  = 64'h0003F000;
+localparam logic [63:0] HSTATUS_VTVM   = 64'h00100000;
+localparam logic [63:0] HSTATUS_VTW    = 64'h00200000;
+localparam logic [63:0] HSTATUS_VTSR   = 64'h00400000;
+localparam logic [63:0] HSTATUS_VSXL   = 64'h0000000300000000;
+localparam logic [63:0] HSTATUS_WPRI   = 64'hFFFFFFFCFF8C0C1F;
 
 // decoded CSR address
 typedef struct packed {
@@ -1174,6 +1410,7 @@ typedef struct packed {
     logic             stopcount;
     logic             stoptime;
     logic [8:6]       cause;
+    logic             v;
     logic             zero0;
     logic             mprven;
     logic             nmip;

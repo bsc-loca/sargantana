@@ -52,6 +52,8 @@ csr_cmd_t csr_cmd_int;
 csr_addr_t csr_addr_int;
 logic commit_2_blocked;
 
+logic commit_0_vstore;
+logic commit_1_vstore;
 
 always_comb begin
     csr_cmd_int = CSR_CMD_NOPE;
@@ -97,6 +99,8 @@ always_comb begin
             MRET,
             WFI,
             SFENCE_VMA,
+            HFENCE_VVMA,
+            HFENCE_GVMA,
             MRTS: begin
                 csr_cmd_int = CSR_CMD_SYS;
                 csr_rw_data_int = 64'b0;
@@ -135,12 +139,28 @@ always_comb begin
     end
 end
 
+assign commit_0_vstore = (((instruction_to_commit_i[0].instr_type == VSE)  ||
+                           (instruction_to_commit_i[0].instr_type == VS1R) ||
+                           (instruction_to_commit_i[0].instr_type == VSM)  ||
+                           (instruction_to_commit_i[0].instr_type == VSSE) ||
+                           (instruction_to_commit_i[0].instr_type == VSXE)) 
+                           && (instruction_to_commit_i[0].vl != 'h0)) ? 1'b1 : 1'b0;
+
+assign commit_1_vstore = (((instruction_to_commit_i[1].instr_type == VSE)  ||
+                           (instruction_to_commit_i[1].instr_type == VS1R) ||
+                           (instruction_to_commit_i[1].instr_type == VSM)  ||
+                           (instruction_to_commit_i[1].instr_type == VSSE) ||
+                           (instruction_to_commit_i[1].instr_type == VSXE)) 
+                           && (instruction_to_commit_i[1].vl != 'h0)) ? 1'b1 : 1'b0;
+
+
+
 // tell cu that ecall was taken
-    assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
+assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    (((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    (((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
@@ -148,6 +168,8 @@ end
                                     (instruction_to_commit_i[1].instr_type == EBREAK)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE)) ||
                                     (instruction_to_commit_i[1].instr_type == SFENCE_VMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == HFENCE_VVMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == HFENCE_GVMA)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE_I)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRW)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRS)) ||
@@ -159,7 +181,8 @@ end
                                     (instruction_to_commit_i[1].instr_type == VSETVLI)) ||
                                     (instruction_to_commit_i[1].instr_type == VSETIVLI)) ||
                                     (instruction_to_commit_i[1].mem_type == STORE)) ||
-                                    (instruction_to_commit_i[1].mem_type == AMO)) ||
+                                    (instruction_to_commit_i[1].mem_type == AMO))) ||
+                                    (instruction_to_commit_i[1].mem_type == CMO_CBO)) ||
                                     instruction_to_commit_i[1].stall_csr_fence))) ||
                                     (instruction_to_commit_i[1].valid & instruction_to_commit_i[1].ex_valid));
 
@@ -203,11 +226,15 @@ assign req_cpu_csr_o.csr_vxsat = ((retire_inst_o[0] & instruction_to_commit_i[0]
 // if there is a csr interrupt we take the interrupt?
 assign req_cpu_csr_o.csr_xcpt_cause = (~commit_store_or_amo_i)? exception_gl_i.cause : exception_mem_commit_i.cause;
 assign req_cpu_csr_o.csr_xcpt_origin = (~commit_store_or_amo_i)? exception_gl_i.origin : exception_mem_commit_i.origin;
+assign req_cpu_csr_o.csr_xcpt_origin2 = (~commit_store_or_amo_i)? exception_gl_i.origin2 : exception_mem_commit_i.origin2;
+assign req_cpu_csr_o.csr_xcpt_tinst = (~commit_store_or_amo_i)? exception_gl_i.tinst : exception_mem_commit_i.tinst;
+assign req_cpu_csr_o.csr_gva = (~commit_store_or_amo_i)? exception_gl_i.gva : exception_mem_commit_i.gva;
 assign req_cpu_csr_o.csr_pc = (debug_pc_valid_i) ? debug_pc_i : instruction_to_commit_i[0].pc;
 // CSR interruption
 assign csr_ena_int_o = csr_ena_int;
 // Notify the CSR if the retiring instructions modify the FP or vector regfiles
-assign req_cpu_csr_o.freg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].fregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].fregfile_we));
-assign req_cpu_csr_o.vreg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].vregfile_we) | (retire_inst_o[1] & instruction_to_commit_i[1].vregfile_we));
+assign req_cpu_csr_o.freg_modified = ((retire_inst_o[0] & instruction_to_commit_i[0].fregfile_we & (~commit_xcpt_i)) | (retire_inst_o[1] & instruction_to_commit_i[1].fregfile_we));
+assign req_cpu_csr_o.vreg_modified = ((retire_inst_o[0] & (instruction_to_commit_i[0].vregfile_we | commit_0_vstore)) | 
+                                      (retire_inst_o[1] & (instruction_to_commit_i[1].vregfile_we | commit_1_vstore)));
 
 endmodule

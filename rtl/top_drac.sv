@@ -32,7 +32,7 @@ module top_drac
     `ifdef INTEL_FSCAN_CTECH
     input logic                 fscan_rstbypen,//AK
     `endif // INTEL_FSCAN_CTECH
-    input addr_t                reset_addr_i,
+    input phy_addr_t            reset_addr_i,
     input logic [63:0]          core_id_i,
     `ifdef PITON_CINCORANCH
     input logic [1:0]           boot_main_id_i,
@@ -53,7 +53,9 @@ module top_drac
     input  logic                req_icache_ready_i,
     output req_cpu_icache_t     req_cpu_icache_o,
     output logic                en_translation_o,
+    output logic                en_g_translation_o,
     output logic [1:0]          priv_lvl_o,
+    output logic                v_mode_o,
     input  resp_icache_cpu_t    resp_icache_cpu_i,
 
 //----------------------------------------------------------------------------------
@@ -109,6 +111,10 @@ module top_drac
     output logic  [63:0]        pcr_req_core_id_o   // core id of the tile
 `endif // CONF_SARGANTANA_ENABLE_PCR
 
+`ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+    output logic [63:0]                     dyn_fpga_mem_latency_o,
+`endif // CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+
 //-----------------------------------------------------------------------------
 // INTERRUPTS
 //-----------------------------------------------------------------------------
@@ -122,18 +128,26 @@ module top_drac
 // Response CSR Interface to datapath
 resp_csr_cpu_t resp_csr_interface_datapath;
 logic [1:0] csr_priv_lvl, ld_st_priv_lvl;
+logic csr_v_mode, ld_st_v_mode;
 logic [2:0] fcsr_rm;
 logic [1:0] fcsr_fs;
 logic [1:0] vcsr_vs;
-logic en_ld_st_translation;
-logic en_translation;
+logic [3:0] csr_m_cmo;
+logic [3:0] csr_s_cmo;
+logic [3:0] csr_h_cmo;
+logic en_ld_st_translation, en_ld_st_g_translation;
+logic en_translation, en_g_translation;
+logic csr_hu;
+logic csr_hs_ld_st_inst_int;
 logic [42:0] vpu_csr;
 logic debug_csr_halt_ack;
 mmu_pkg::cache_tlb_comm_t core_dtlb_comm;
 mmu_pkg::tlb_cache_comm_t dtlb_core_comm;
 
 assign en_translation_o = en_translation;
+assign en_g_translation_o = en_g_translation;
 assign priv_lvl_o = csr_priv_lvl;
+assign v_mode_o = csr_v_mode;
 
 addr_t dcache_addr;
 
@@ -168,7 +182,11 @@ req_cpu_csr_t req_datapath_csr_interface;
 
 csr_ptw_comm_t csr_ptw_comm;
 logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
+logic [drac_pkg::PPN_SIZE-1:0] csr_vsatp;
+logic [drac_pkg::PPN_SIZE-1:0] csr_hgatp;
 assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
+assign csr_ptw_comm.vsatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_vsatp}; // PTW expects 64 bits
+assign csr_ptw_comm.hgatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_hgatp}; // PTW expects 64 bits
 
 `ifdef EXTERNAL_HPM_EVENT_NUM
 localparam HPM_EXT_NUM_EVENT = `EXTERNAL_HPM_EVENT_NUM;
@@ -269,6 +287,7 @@ hpm_counters #(
     
     .mcountinhibit_i(mcountinhibit_hpm),
     .priv_lvl_i(csr_priv_lvl),
+    .v_mode_i(csr_v_mode),
 
     // Events
     .events_i(hpm_events_q),
@@ -295,7 +314,8 @@ datapath #(
     .resp_dcache_cpu_i(resp_dcache_cpu_i), 
     .resp_csr_cpu_i(resp_csr_interface_datapath),
     .vxrm_i(vxrm),
-    .en_translation_i( en_translation ), 
+    .en_translation_i( en_translation), 
+    .en_g_translation_i( en_g_translation),
     .req_icache_ready_i(req_icache_ready_i),
     .dtlb_comm_i(dtlb_core_comm),
     .debug_contr_i(debug_contr_i),
@@ -305,15 +325,25 @@ datapath #(
     .req_cpu_icache_o(req_cpu_icache_o),
     .req_cpu_csr_o(req_datapath_csr_interface),
     .visa_o(visa_o),
-    .csr_priv_lvl_i(ld_st_priv_lvl),
+    .csr_priv_lvl_i(csr_priv_lvl),
+    .csr_v_mode_i(csr_v_mode),
+    .csr_ld_st_priv_lvl_i(ld_st_priv_lvl),
+    .csr_ld_st_v_mode_i(ld_st_v_mode),
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .csr_vs_i(vcsr_vs),
+    .csr_m_cmo_i(csr_m_cmo),
+    .csr_s_cmo_i(csr_s_cmo),
+    .csr_h_cmo_i(csr_h_cmo),
     .en_ld_st_translation_i(en_ld_st_translation),
+    .en_ld_st_g_translation_i(en_ld_st_g_translation),
+    .csr_hu_i(csr_hu),
+    .csr_hs_ld_st_inst_o(csr_hs_ld_st_inst_int),
     .dtlb_comm_o(core_dtlb_comm),
     .debug_contr_o(debug_contr_o),
     .debug_reg_o(debug_reg_o),
     .debug_csr_halt_ack_o(debug_csr_halt_ack),
+
     //PMU                                                   
     .pmu_flags_o        (pmu_flags)
 );
@@ -325,7 +355,7 @@ datapath #(
 
 // Trap vector is defined to be at an offset of 0x40 from whichever address the core boots from
 logic [63:0] trap_vector_addr;
-assign trap_vector_addr = {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40};
+assign trap_vector_addr = {{{64-PHY_ADDR_SIZE}{1'b0}}, reset_addr_i + 8'h40};
 
 logic fcsr_flags_valid;
 assign fcsr_flags_valid = |req_datapath_csr_interface.csr_retire;
@@ -345,12 +375,16 @@ csr_bsc #(
 
     .rw_addr_i(req_datapath_csr_interface.csr_rw_addr),                               // read and write address form the core
     .rw_cmd_i(req_datapath_csr_interface.csr_rw_cmd),                                 // specific operation to execute from the core 
+    .csr_hs_ld_st_inst_i(csr_hs_ld_st_inst_int),                                      // instruction is a Hypervisor Load/Store Instruction
     .w_data_core_i(req_datapath_csr_interface.csr_rw_data),                           // write data from the core
     .r_data_core_o(resp_csr_interface_datapath.csr_rw_rdata),                         // read data to the core, address specified with the rw_addr_i
 
     .ex_i(req_datapath_csr_interface.csr_exception),                                  // exception produced in the core
     .ex_cause_i(req_datapath_csr_interface.csr_xcpt_cause),                           // cause of the exception
     .ex_origin_i(req_datapath_csr_interface.csr_xcpt_origin),                         // origin of the exception
+    .ex_origin2_i(req_datapath_csr_interface.csr_xcpt_origin2),  //
+    .ex_tinst_i(req_datapath_csr_interface.csr_xcpt_tinst),    //
+    .ex_gva_i(req_datapath_csr_interface.csr_gva),      //
     .pc_i(req_datapath_csr_interface.csr_pc),                                         // pc were the exception is produced
 
     .retire_i(req_datapath_csr_interface.csr_retire),                                 // shows if a instruction is retired from the core.
@@ -374,6 +408,10 @@ csr_bsc #(
     .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
 `endif // CONF_SARGANTANA_ENABLE_PCR
 
+`ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+    .dyn_fpga_mem_latency_o(dyn_fpga_mem_latency_o),
+`endif // CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
+
     .freg_modified_i(req_datapath_csr_interface.freg_modified),
     .fcsr_flags_valid_i(fcsr_flags_valid),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
@@ -383,24 +421,41 @@ csr_bsc #(
     .vreg_modified_i(req_datapath_csr_interface.vreg_modified),
     .vxsat_i(req_datapath_csr_interface.csr_vxsat),
 
+    .csr_m_cmo_cfg_o(csr_m_cmo),    // M mode cmo related flags (CBIE, CBCFE, CBZE)
+    .csr_s_cmo_cfg_o(csr_s_cmo),    // S mode cmo related flags (CBIE, CBCFE, CBZE)
+    .csr_h_cmo_cfg_o(csr_h_cmo),    // H extension cmo related flags (CBIE, CBCFE, CBZE)
+
+
     .csr_replay_o(resp_csr_interface_datapath.csr_replay),               // replay send to the core because there are some parts that are bussy
     .csr_stall_o(resp_csr_interface_datapath.csr_stall),                // The csr are waiting a resp and de core is stalled
     .csr_xcpt_o(resp_csr_interface_datapath.csr_exception),                 // Exeption pproduced by the csr   
     .csr_xcpt_cause_o(resp_csr_interface_datapath.csr_exception_cause),           // Exception cause
     .csr_tval_o(resp_csr_interface_datapath.csr_tval),                 // Value written to the tval registers
+    .csr_tval2_o(resp_csr_interface_datapath.csr_tval2),   //
     .eret_o(resp_csr_interface_datapath.csr_eret),
 
-    .status_o(csr_ptw_comm.mstatus),                   //actual mstatus of the core
+    .mstatus_o(csr_ptw_comm.mstatus),                  //actual mstatus of the core
+    .vsstatus_o(csr_ptw_comm.vsstatus),                 //actual vsstatus of the core
     .priv_lvl_o(csr_priv_lvl),                 // actual privialge level of the core
+    .v_mode_o(csr_v_mode),//
     .ld_st_priv_lvl_o(ld_st_priv_lvl),
+    .ld_st_v_mode_o(ld_st_v_mode),//
     .en_ld_st_translation_o(en_ld_st_translation),
+    .en_ld_st_g_translation_o(en_ld_st_g_translation),    //
     .en_translation_o(en_translation),
+    .en_g_translation_o(en_g_translation),//
+    .csr_hu_o(csr_hu),
 
     .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
+    .vsatp_ppn_o(csr_vsatp),                 // Page table base pointer for the PTW
+    .hgatp_ppn_o(csr_hgatp),                 // Page table base pointer for the PTW
 
     .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 
-    .flush_o(csr_ptw_comm.flush),                    // the core is executing a sfence.vm instruction and a tlb flush is needed
+    .flush_o(csr_ptw_comm.flush),                    // a tlb flush is needed
+    .flush_satp_o(csr_ptw_comm.flush_satp),          // invalidate tlb entries controlled by the current satp
+    .flush_vsatp_o(csr_ptw_comm.flush_vsatp),        // invalidate tlb entries controlled by the current vsatp
+    .flush_hgatp_o(csr_ptw_comm.flush_hgatp),        // invalidate tlb entries controlled by the current hgatp
     .vpu_csr_o(vpu_csr),
 
     .debug_halt_req_i(debug_contr_i.halt_req),

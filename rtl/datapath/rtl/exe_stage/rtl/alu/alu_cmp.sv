@@ -54,6 +54,12 @@ always_comb begin
         MAXU: begin
             result_o = sltu ? data_rs2_i : data_rs1_i;
         end
+        CZ_EQZ: begin
+            result_o = ((|data_rs2_i) == 1'b0) ? 64'b0 : data_rs1_i;
+        end
+        CZ_NEZ: begin
+            result_o = ((|data_rs2_i) == 1'b0) ? data_rs1_i : 64'b0;
+        end
         default: begin
             result_o = 64'b0;
         end

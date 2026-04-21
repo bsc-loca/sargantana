@@ -214,7 +214,7 @@ always_comb begin
         SLL, SLLW, SRL, SRLW, SRA, SRAW, SLLIUW, ROR, ROL, RORW, ROLW: begin
             result_modules = alu_shift_result;
         end
-        SLT, SLTU, MIN, MINU, MAX, MAXU: begin
+        SLT, SLTU, MIN, MINU, MAX, MAXU, CZ_EQZ, CZ_NEZ: begin
             result_modules = alu_cmp_result;
         end
         AND_INST, OR_INST, XOR_INST, XNOR_INST, ORN, ANDN, ORCB, BSET, BCLR, BEXT, BINV: begin
@@ -236,7 +236,7 @@ end
 // Result
 always_comb begin
     case (instruction_i.instr.instr_type)
-        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB, CLZ, CTZ, CPOP, BSET, BCLR, BEXT, BINV: begin
+        ADD, SUB, SLL, SRL, SRA, SLT, SLTU, AND_INST, OR_INST, XOR_INST, ADDUW, SLLIUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, XNOR_INST, ORN, ANDN, ROR, ROL, MIN, MINU, MAX, MAXU, ORCB, CLZ, CTZ, CPOP, BSET, BCLR, BEXT, BINV, CZ_EQZ, CZ_NEZ: begin
             instruction_o.result = result_modules;
         end
         ADDW, SUBW, SLLW, SRLW, SRAW, RORW, ROLW, CLZW, CTZW, CPOPW: begin
@@ -298,9 +298,12 @@ assign instruction_o.fp_status     = 'h0;
 // Exceptions
 
 always_comb begin
-    instruction_o.ex.cause  = INSTR_ADDR_MISALIGNED;
-    instruction_o.ex.origin = 0;
-    instruction_o.ex.valid  = 0;
+    instruction_o.ex.cause   = INSTR_ADDR_MISALIGNED;
+    instruction_o.ex.origin  = 0;
+    instruction_o.ex.origin2 = 0;
+    instruction_o.ex.tinst   = 0;
+    instruction_o.ex.gva     = 0;
+    instruction_o.ex.valid   = 0;
 end
 
 endmodule
