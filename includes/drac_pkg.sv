@@ -1324,7 +1324,7 @@ localparam fpnew_pkg::fpu_features_t EPI_RV64D = '{
     Width:         64,
     EnableVectors: 1'b0,
     EnableNanBox:  1'b1,
-    FpFmtMask:     5'b11100,
+    FpFmtMask:     5'b11000,
     IntFmtMask:    4'b0011
 };
 

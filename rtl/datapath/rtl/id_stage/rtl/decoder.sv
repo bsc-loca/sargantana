@@ -946,8 +946,8 @@ module decoder
                             if (csr_fs_i == 2'b00) begin
                                 xcpt_illegal_instruction_int = 1'b1;
                             end else begin
-                                decode_instr_int.instr_type = FLH;
-                                decode_instr_int.fregfile_we = 1'b1;
+                                decode_instr_int.instr_type = FSH;
+                                decode_instr_int.use_fs2    = 1'b1;
                             end
                         end
                         F3_FLW: begin

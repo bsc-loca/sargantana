@@ -206,26 +206,31 @@ always_comb begin
 
 end
 
+logic [63:0] result_zfhmin;
+logic        valid_zfhmin_i;
+logic        valid_zfhmin_o;
+fpnew_pkg::status_t status_zfhmin;
+reg_t tag_zfhmin;
+
 assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops;
 
 logic pending_fp_op_queue_valid;
-assign pending_fp_op_queue_valid = enable_fp_op_int & ready_fpu;
+assign pending_fp_op_queue_valid = (enable_fp_op_int & ready_fpu) | valid_zfhmin_i;
 
 logic pending_fp_op_queue_advance_head;
 assign pending_fp_op_queue_advance_head = finish_fp_op_int.instr.valid & !stall_wb_i;
 
-logic is_zfhmin;
-assign is_zfhmin = ((op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16)) |
-                   (op == fpnew_pkg::SGNJ & (src_fmt == fpnew_pkg::FP16 & dst_fmt == fpnew_pkg::FP16));
-
 bus64_t pending_result_int;
-assign pending_result_int = is_zfhmin ? result_zfhmin : result_int;
+assign pending_result_int = valid_zfhmin_o ? result_zfhmin : result_int;
 
 fpnew_pkg::status_t pending_fp_status_int;
-assign pending_fp_status_int = is_zfhmin ? status_zfhmin : result_fp_status_int;
+assign pending_fp_status_int = valid_zfhmin_o ? status_zfhmin : result_fp_status_int;
 
 logic pending_result_valid_int;
-assign pending_result_valid_int = is_zfhmin ? valid_zfhmin_o : result_valid_int;
+assign pending_result_valid_int = valid_zfhmin_o | result_valid_int;
+
+logic pending_result_tag_int;
+assign pending_result_tag_int = valid_zfhmin_o ? tag_zfhmin : result_tag_int;
 
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
@@ -235,7 +240,7 @@ pending_fp_ops_queue pending_fp_ops_queue_inst (
     .valid_i(pending_fp_op_queue_valid),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
     .result_valid_i(pending_result_valid_int),         // Result valid
-    .result_tag_i(result_tag_int),           // Instruction that finishes
+    .result_tag_i(pending_result_tag_int),           // Instruction that finishes
     .result_data_i(pending_result_int),          // Result asociated data
     .result_fp_status_i(pending_fp_status_int),
     .advance_head_i(pending_fp_op_queue_advance_head),         // Advance head pointer one position
@@ -286,28 +291,31 @@ fpnew_top #(
 );
 
 
-   logic [63:0] result_zfhmin;
-   logic        valid_zfhmin_i;
-   logic        valid_zfhmin_o;
-   fpnew_pkg::status_t status_zfhmin;
 
-   assign valid_zfhmin_i = (op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16);
+assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16)) |
+                         ((op == fpnew_pkg::SGNJ) & (src_fmt == fpnew_pkg::FP16 & dst_fmt == fpnew_pkg::FP16));
 
 
-conv_zfhmin #(
-   .TagType	   ( reg_t )
-) conv_zfhmin_inst (
-   .operand_i(operands[0]),
-   .src_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(src_fmt))),
-   .dst_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt))),
-   .rnd_mode_i(rnd_mode),
-   .valid_i(valid_zfhmin_i),
-   .tag_i(tag_current_instr_int),
-   .result_o(result_zfhmin),
-   .status_o(status_zfhmin),
-   .tag_o(tag_zfhmin),
-   .out_valid_o(valid_zfhmin_o)
-);
+   logic is_move_zfhmin;
+   assign is_move_zfhmin = (op == fpnew_pkg::SGNJ) & (src_fmt == fpnew_pkg::FP16) & (dst_fmt == fpnew_pkg::FP16);
+
+   conv_zfhmin #(
+       .TagType	   ( reg_t )
+   ) conv_zfhmin_inst (
+       .clk_i(clk_i),
+       .rstn_i(rstn_i),
+       .operand_i(operands[0]),
+       .src_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(src_fmt))),
+       .dst_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt))),
+       .rnd_mode_i(rnd_mode),
+       .is_move_i(is_move_zfhmin),
+       .valid_i(valid_zfhmin_i),
+       .tag_i(tag_current_instr_int),
+       .result_o(result_zfhmin),
+       .status_o(status_zfhmin),
+       .tag_o(tag_zfhmin),
+       .out_valid_o(valid_zfhmin_o)
+   );
 
 
 // Output FPU
@@ -335,7 +343,7 @@ assign instruction_o.ex              = '0;
 
 
 // Stall if the FPU is not ready or there is a fp instruction on flight
-assign stall_o = (!ready_fpu | stall_pending_fp_ops);
+assign stall_o = ((!ready_fpu & !valid_zfhmin_i) | stall_pending_fp_ops);
 
 
 // Output FPU scalar

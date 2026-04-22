@@ -1087,7 +1087,7 @@ assign instruction_fp_o.chkp              = instruction_to_wb.chkp;
 assign instruction_fp_o.gl_index          = instruction_to_wb.gl_index;
 assign instruction_fp_o.branch_taken      = 1'b0;
 assign instruction_fp_o.result_pc         = 0;
-assign instruction_fp_o.result            = (instruction_to_wb.instr.instr_type == FLW) ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb[63:0];
+assign instruction_fp_o.result            = wb_result_boxed;
 assign instruction_fp_o.ex                = instruction_to_wb.ex;
 assign instruction_fp_o.fp_status         = 'h0;
 
