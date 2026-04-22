@@ -3624,7 +3624,7 @@ module decoder
             end else if (xcpt_virtual_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = VIRTUAL_INSTRUCTION;
-                decode_instr_o.ex.origin = 'h0;
+                decode_instr_o.ex.origin = {32'd0, decode_i.inst};
                 decode_instr_o.ex.origin2 = 'h0;
                 decode_instr_o.ex.tinst  = 'h0;
                 decode_instr_o.ex.gva    = v_mode_i;
