@@ -92,6 +92,7 @@ logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[LSQ_NUM_ENTRIES-1:0];
+rr_exe_mem_instr_t translated_instr;
 
 // Internal Control Signals
 logic write_enable;
@@ -131,7 +132,6 @@ assign instr_to_translate = translate_incoming ? instruction_i : control_table[t
 // A translation can be done if there is a hit in the dTLB
 assign translate_enable = dtlb_comm_i.tlb_ready & !dtlb_comm_i.resp.miss & instr_to_translate.instr.valid;
 
-rr_exe_mem_instr_t translated_instr;
 
 always_comb begin 
     logic is_load_reserved;
@@ -146,13 +146,14 @@ always_comb begin
     active_pmm_mode = riscv_pkg::PMM_DISABLED;
     if (!is_hlvx_inst) begin
         if (ld_st_v_mode_i) begin
-        if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) begin
-            active_pmm_mode = csr_h_pmm_i;
-        end else begin
-            active_pmm_mode = csr_hstatus_hupmm_i;
+            if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) begin
+                active_pmm_mode = csr_h_pmm_i;
+            end else begin
+                active_pmm_mode = csr_hstatus_hupmm_i;
+            end
+        end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
+            active_pmm_mode = csr_s_pmm_i;
         end
-    end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
-        active_pmm_mode = csr_s_pmm_i;
     end
 
     unique case (active_pmm_mode)
