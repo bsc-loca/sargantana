@@ -229,7 +229,7 @@ assign pending_fp_status_int = valid_zfhmin_o ? status_zfhmin : result_fp_status
 logic pending_result_valid_int;
 assign pending_result_valid_int = valid_zfhmin_o | result_valid_int;
 
-logic pending_result_tag_int;
+reg_t pending_result_tag_int;
 assign pending_result_tag_int = valid_zfhmin_o ? tag_zfhmin : result_tag_int;
 
 

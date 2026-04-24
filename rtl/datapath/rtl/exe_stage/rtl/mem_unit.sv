@@ -1028,7 +1028,7 @@ logic [63:0] wb_result_boxed;
 always_comb begin
     case (instruction_to_wb.instr.instr_type)
         FLH: wb_result_boxed = {{48{1'b1}}, data_to_wb[15:0]};
-        FLW: wb_result_boxed = {{31{1'b1}}, data_to_wb[31:0]};
+        FLW: wb_result_boxed = {{32{1'b1}}, data_to_wb[31:0]};
         default: wb_result_boxed = data_to_wb[63:0];
     endcase
 end
