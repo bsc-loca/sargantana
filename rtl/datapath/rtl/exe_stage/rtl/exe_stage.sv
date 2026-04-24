@@ -37,7 +37,6 @@
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
-    input logic [drac_pkg::PPN_SIZE-1:0] resp_icache_guest_ppn_i,      // guest_ppn from icache interface
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input logic [VMAXELEM_LOG:0]        vl_i,
     input vxrm_t                        vxrm_i,
@@ -360,7 +359,6 @@ div_unit div_unit_inst (
 );
 
 branch_unit branch_unit_inst (
-    .resp_icache_guest_ppn_i(resp_icache_guest_ppn_i),
     .en_translation_i (en_translation_i),
     .en_g_translation_i (en_g_translation_i),
     .priv_lvl_i(priv_lvl_i),

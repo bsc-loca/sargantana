@@ -189,6 +189,7 @@ module if_stage_1
 
     // exceptions ordering
     always_comb begin
+        fetch_o.ex.origin2 = 0;
         if (ex_addr_misaligned_int) begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
             fetch_o.ex.valid = 1'b1;
@@ -200,6 +201,9 @@ module if_stage_1
         if (ex_if_guest_page_fault_int) begin
             fetch_o.ex.cause = INSTR_GUEST_PAGE_FAULT;
             fetch_o.ex.valid = 1'b1;
+            // htval only set for guest page faults
+            fetch_o.ex.origin2 = (en_translation_i && v_mode_i) ? (({resp_icache_cpu_i.guest_ppn, pc[11:0]}) >> 2) :
+                                                 (pc >> 2); //GVA = GPA in G-stage only translations
         end else begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
             fetch_o.ex.valid = 1'b0;
@@ -207,8 +211,6 @@ module if_stage_1
     end
 
     assign fetch_o.ex.origin = pc;
-    assign fetch_o.ex.origin2 = (en_translation_i && v_mode_i) ? (({resp_icache_cpu_i.guest_ppn, pc[11:0]}) >> 2) :
-                                                 (pc >> 2); //GVA = GPA in G-stage only translations
     assign fetch_o.ex.tinst = 0;
     assign fetch_o.ex.gva = v_mode_i;
    
