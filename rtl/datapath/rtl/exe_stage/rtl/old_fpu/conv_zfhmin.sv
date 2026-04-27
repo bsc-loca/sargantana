@@ -30,8 +30,8 @@ import fpnew_pkg::*;
     input               fpnew_pkg::fp_format_e src_fmt_i,
     input               fpnew_pkg::fp_format_e dst_fmt_i,
     input               fpnew_pkg::roundmode_e rnd_mode_i,
-    input               is_move_i,
-    input               valid_i,
+    input logic         is_move_i,
+    input logic         valid_i,
     input               reg_t tag_i,
     output logic [63:0] result_o,
     output fpnew_pkg::status_t status_o,
@@ -115,12 +115,14 @@ import fpnew_pkg::*;
 
    fp16_to_fp32 fp16_to_fp32_inst (
                                    .fp16_i(fp16fp32_i),
-                                   .fp32_o(fp16fp32_o)
+                                   .fp32_o(fp16fp32_o),
+                                   .nv_o(fp16fp32_nv)
                                    );
 
    fp16_to_fp64 fp16_to_fp64_inst (
                                    .fp16_i(fp16fp64_i),
-                                   .fp64_o(fp16fp64_o)
+                                   .fp64_o(fp16fp64_o),
+                                   .nv_o(fp16fp64_nv)
                                    );
 
    always_comb begin : s_fp16_to_fp32

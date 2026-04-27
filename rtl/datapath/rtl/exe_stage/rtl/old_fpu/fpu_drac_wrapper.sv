@@ -187,9 +187,9 @@ always_comb begin
       drac_pkg::FCVT_F2F: begin
          op              = fpnew_pkg::F2F;
          op_mod          = 0;
-         src_fmt         = instruction_i.instr.rs2[1:0] == 2'b00 ? FP32 :
-                           instruction_i.instr.rs2[1:0] == 2'b10 ? FP16 :
-                           FP64;
+         src_fmt         = (instruction_i.instr.rs2[1:0] == 2'b00) ? FP32 :
+                           ((instruction_i.instr.rs2[1:0] == 2'b10) ? FP16 :
+                           FP64);
       end
       // FP to FP
       drac_pkg::FMV_X2F: begin
@@ -292,8 +292,8 @@ fpnew_top #(
 
 
 
-assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & (src_fmt == fpnew_pkg::FP16 | dst_fmt == fpnew_pkg::FP16)) |
-                         ((op == fpnew_pkg::SGNJ) & (src_fmt == fpnew_pkg::FP16 & dst_fmt == fpnew_pkg::FP16));
+assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & ((src_fmt == fpnew_pkg::FP16) | (dst_fmt == fpnew_pkg::FP16))) |
+                         ((op == fpnew_pkg::SGNJ) & ((src_fmt == fpnew_pkg::FP16) & (dst_fmt == fpnew_pkg::FP16)));
 
 
    logic is_move_zfhmin;

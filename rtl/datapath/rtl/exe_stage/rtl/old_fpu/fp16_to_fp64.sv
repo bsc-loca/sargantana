@@ -21,7 +21,7 @@
 module fp16_to_fp64 (
     input logic [15:0] fp16_i,
     output logic [63:0] fp64_o,
-    output logic nv_flag_o
+    output logic nv_o
 );
 
     logic        sign;
@@ -92,6 +92,6 @@ module fp16_to_fp64 (
     end
 
     assign fp64_o = fp64_s;
-    assign nv_flag_o = nv_flag;
+    assign nv_o = nv_flag;
 
 endmodule
