@@ -1101,6 +1101,8 @@ typedef enum logic [11:0] {
     CSR_MTVEC          = 12'h305,
     CSR_MCOUNTEREN     = 12'h306,
     CSR_MCOUNTINHIBIT  = 12'h320,
+    CSR_MCYCLECFG      = 12'h321,  //Machine cycle counter configuration
+    CSR_MINSTRETCFG    = 12'h322,  //Machine instruction retired counter configuration
     CSR_MHPM_EVENT_3   = 12'h323,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_4   = 12'h324,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_5   = 12'h325,  //Machine performance monitoring Event Selector
