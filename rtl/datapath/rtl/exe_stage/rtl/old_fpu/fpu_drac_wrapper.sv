@@ -212,7 +212,7 @@ logic        valid_zfhmin_o;
 fpnew_pkg::status_t status_zfhmin;
 reg_t tag_zfhmin;
 
-assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops;
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops & !valid_zfhmin_i;
 
 logic pending_fp_op_queue_valid;
 assign pending_fp_op_queue_valid = (enable_fp_op_int & ready_fpu) | valid_zfhmin_i;
@@ -232,6 +232,7 @@ assign pending_result_valid_int = valid_zfhmin_o | result_valid_int;
 reg_t pending_result_tag_int;
 assign pending_result_tag_int = valid_zfhmin_o ? tag_zfhmin : result_tag_int;
 
+logic stall_cvfpu;
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
@@ -279,7 +280,7 @@ fpnew_top #(
    .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),
-   .out_ready_i    ( 1'b1 ),
+   .out_ready_i    ( stall_cvfpu ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
    .result_o       ( result_int ),
@@ -289,6 +290,7 @@ fpnew_top #(
    .busy_o         ( /* unused */ ),
    .early_valid_o  ( /* unsued */ )
 );
+
 
 
 
@@ -316,6 +318,8 @@ assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & ((src_fmt == fpnew_pkg::FP16) 
        .tag_o(tag_zfhmin),
        .out_valid_o(valid_zfhmin_o)
    );
+
+assign stall_cvfpu = (valid_zfhmin_o == 1'b1 && result_valid_int == 1'b1) ? 1'b1 : 1'b0;
 
 
 // Output FPU
