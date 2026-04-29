@@ -214,6 +214,7 @@ reg_t tag_zfhmin;
 
 assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops & !valid_zfhmin_i;
 
+
 logic pending_fp_op_queue_valid;
 assign pending_fp_op_queue_valid = (enable_fp_op_int & ready_fpu) | valid_zfhmin_i;
 
@@ -280,7 +281,7 @@ fpnew_top #(
    .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),
-   .out_ready_i    ( stall_cvfpu ),
+   .out_ready_i    ( !stall_cvfpu ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
    .result_o       ( result_int ),
