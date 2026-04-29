@@ -213,7 +213,6 @@ module decoder
                     decode_instr_int.instr_type = JAL;
                     decode_instr_int.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
-                    xcpt_addr_misaligned_int = |imm_value[1:0];
                     jal_id_if_o.jump_addr = trunc_65_64(imm_value+decode_i.pc_inst); 
                     jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
                                         !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 

@@ -43,6 +43,12 @@ module if_stage_1
     input logic                 invalidate_buffer_i,
     input logic                 en_translation_i,
     input logic                 en_g_translation_i,
+    // Signals from fetch 2 stage
+    // Instruction fetched is compressed: 0 -> add 4; 1 -> add 2
+    input logic                 compressed_on_f2_i,
+    // We maintain PC but need to fetch the next bytes to complete unaligned instruction
+    input logic                 fetch_next_32b_i,
+
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
     // PC comming from commit/decode/ecall/debug
@@ -90,7 +96,7 @@ module if_stage_1
                 next_id = id;
                 `endif
             end
-            NEXT_PC_SEL_BP_OR_PC_4: begin 
+            NEXT_PC_SEL_BP_OR_PC_ADD: begin 
                 if (branch_predict_is_branch && branch_predict_taken) 
                     next_pc = branch_predict_addr;
                 else
@@ -150,13 +156,13 @@ module if_stage_1
         else ex_if_guest_page_fault_int = 1'b0;
     end
     
-    // check misaligned fetch
+    // check misaligned fetch not needed as C extension disables this exceptions
     always_comb begin
-        if (|pc[1:0]) begin
-            ex_addr_misaligned_int = 1'b1;
-        end else begin
+    //    if (|pc[1:0]) begin
+    //        ex_addr_misaligned_int = 1'b1;
+    //    end else begin
             ex_addr_misaligned_int = 1'b0;
-        end
+    //    end
     end
 
     // logic for icache access: if not misaligned 

@@ -94,6 +94,7 @@ endfunction
     pipeline_ctrl_t control_int;
     pipeline_flush_t flush_int;
     cu_if_t cu_if_int;
+    if2_cu_t if2_cu_int;
     addrPC_t pc_jump_if_int;
     addrPC_t pc_evec_q;
     addrPC_t pc_next_csr_q;
@@ -354,7 +355,8 @@ endfunction
         .rstn_i(rstn_i),
         .miss_icache_i(miss_icache),
         .ready_icache_i(req_icache_ready_i),
-        .if2_cu_valid_i(stage_if_1_if_2_q.valid),
+        //.if2_cu_valid_i(),
+        .if2_cu_i(if2_cu_int),
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
         .cu_ir_o(cu_ir_int),
@@ -454,8 +456,11 @@ endfunction
         .flush_i(flush_int.flush_if),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
-        .stall_o(miss_icache)
+        .stall_o(miss_icache),
+        .req_next_32b_o(if2_cu_int.req_next_32b)
     );
+
+    assign if2_cu_int.valid_fetch = stage_if_1_if_2_q.valid;
 
     // Register IF to ID
     register #($bits(if_id_stage_t)) reg_if_2_inst(

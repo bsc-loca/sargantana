@@ -213,10 +213,10 @@ function automatic logic is_inside_mapped_sections (drac_cfg_t Cfg, bus64_t addr
 endfunction : is_inside_mapped_sections
 
 typedef enum logic [1:0] {
-    NEXT_PC_SEL_BP_OR_PC_4  = 2'b00,
-    NEXT_PC_SEL_KEEP_PC     = 2'b01,
-    NEXT_PC_SEL_JUMP        = 2'b10,
-    NEXT_PC_SEL_DEBUG       = 2'b11
+    NEXT_PC_SEL_BP_OR_PC_ADD = 2'b00,
+    NEXT_PC_SEL_KEEP_PC      = 2'b01,
+    NEXT_PC_SEL_JUMP         = 2'b10,
+    NEXT_PC_SEL_DEBUG        = 2'b11
 } next_pc_sel_t;    // Enum PC Selection
 
 
@@ -904,7 +904,8 @@ typedef struct packed {
 // Control Unit signals
 typedef struct packed {
     logic valid_fetch;      // Fetch is valid
-} if_cu_t;      // Fetch to Control Unit
+    logic req_next_32b;     // F1 has to fetch the next 32b
+} if2_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {
     logic valid;                        // Valid instruction

@@ -38,12 +38,17 @@ module if_stage_2
     // fetch data output
     output if_id_stage_t        fetch_o,
     // stall fetch_1 if there are a miss
-    output logic                stall_o
+    output logic                stall_o,
+    output logic                req_next_32b_o
 );
 
 logic ex_if_page_fault_int, ex_if_guest_page_fault_int;
 resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
 
+logic realigner_valid;
+
+logic instr_valid;
+resp_icache_cpu_t instr_data;
 
 // check exceptions instr page fault
     always_comb begin
@@ -101,15 +106,36 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
     assign fetch_o.ex.origin = fetch_i.ex.origin;
     assign fetch_o.ex.gva = fetch_i.ex.gva;
 
+/*
+
 // output instruction and valid bit
     assign fetch_o.inst    = resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data;
 // valid if the response of the cache is valid or xcpt
     assign fetch_o.valid   = fetch_i.valid && (resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid);
+*/
+    assign instr_data = resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data;
+    assign instr_valid = resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid;
+
+    realigner realigner_inst(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .flush_i(flush_i),
+        .icache_valid_i(instr_valid),
+        .data_i(instr_data),
+        .f1_valid_i(fetch_i.valid),
+        .addr_i(fetch_i.pc_inst),
+        .valid_o(realigner_valid),
+        .data_o(fetch_o.inst),
+        .pc_o(fetch_o.pc_inst),
+        .req_next_32b_o(req_next_32b_o)
+    );
+
 // stall the pipeline in case of a cache miss 
     assign stall_o         = fetch_i.valid && !(resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid); 
+    assign fetch_o.valid   = realigner_valid || (fetch_i.valid && fetch_i.ex.valid);
 
 //bypassing wires
-    assign fetch_o.pc_inst = fetch_i.pc_inst;
+    //assign fetch_o.pc_inst = fetch_i.pc_inst;
     assign fetch_o.bpred.is_branch = fetch_i.bpred.is_branch;
     assign fetch_o.bpred.decision  = fetch_i.bpred.decision;
     assign fetch_o.bpred.pred_addr = fetch_i.bpred.pred_addr;

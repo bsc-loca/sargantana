@@ -300,7 +300,7 @@ module tb_if_stage();
                 $error("Invalidate icache not set correctly");
             end
             tb_invalidate_buffer_i <= 1'b0;
-            tb_cu_if_i.next_pc <= NEXT_PC_SEL_BP_OR_PC_4;
+            tb_cu_if_i.next_pc <= NEXT_PC_SEL_BP_OR_PC_ADD;
             half_tick();
         end
     endtask

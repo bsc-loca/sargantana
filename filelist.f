@@ -82,6 +82,7 @@
 ./rtl/datapath/rtl/ir_stage/rtl/free_list.sv
 ./rtl/datapath/rtl/ir_stage/rtl/instruction_queue.sv
 ./rtl/datapath/rtl/ir_stage/rtl/rename_table.sv
+./rtl/datapath/rtl/if_stage_2/rtl/realigner.sv
 ./rtl/datapath/rtl/if_stage_2/rtl/if_stage_2.sv
 ./rtl/datapath/rtl/id_stage/rtl/immediate.sv
 ./rtl/datapath/rtl/id_stage/rtl/decoder.sv
