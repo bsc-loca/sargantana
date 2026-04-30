@@ -320,7 +320,7 @@ assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & ((src_fmt == fpnew_pkg::FP16) 
        .out_valid_o(valid_zfhmin_o)
    );
 
-assign stall_cvfpu = (valid_zfhmin_o == 1'b1 && result_valid_int == 1'b1) ? 1'b1 : 1'b0;
+assign stall_cvfpu = ((valid_zfhmin_o == 1'b1) && (result_valid_int == 1'b1)) ? 1'b1 : 1'b0;
 
 
 // Output FPU
