@@ -16,14 +16,14 @@ genvar i;
 bus_simd_t fp32_to_fp16_o;
 bus_simd_t fp16_to_fp32_o;
 
-fpnew_pkg::status_t fp32_to_fp16_flags [3:0];
-logic fp16_to_fp32_nv_flag [3:0];
+fpnew_pkg::status_t fp32_to_fp16_flags [(VLEN/32):0];
+logic fp16_to_fp32_nv_flag [(VLEN/32):0];
 
 fpnew_pkg::status_t fp32_to_fp16_merged_flags;
 fpnew_pkg::status_t fp16_to_fp32_merged_flags;
 
 generate
-    for (i = 0; i < 4; i = i + 1) begin
+    for (i = 0; i < (VLEN/32); i = i + 1) begin
         fp32_to_fp16 fp32_to_fp16_inst (
             .f32(src_i[(i * 32) +: 32]),
             .frm(frm_i),
@@ -41,16 +41,21 @@ endgenerate
 
 always_comb begin
     fp32_to_fp16_merged_flags = '0;
-    fp32_to_fp16_merged_flags.NV = fp32_to_fp16_flags[0].NV | fp32_to_fp16_flags[1].NV | fp32_to_fp16_flags[2].NV | fp32_to_fp16_flags[3].NV;
-    fp32_to_fp16_merged_flags.NX = fp32_to_fp16_flags[0].NX | fp32_to_fp16_flags[1].NX | fp32_to_fp16_flags[2].NX | fp32_to_fp16_flags[3].NX;
-    fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[0].OF | fp32_to_fp16_flags[1].OF | fp32_to_fp16_flags[2].OF | fp32_to_fp16_flags[3].OF;
-    fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[0].UF | fp32_to_fp16_flags[1].UF | fp32_to_fp16_flags[2].UF | fp32_to_fp16_flags[3].UF;
-
     fp16_to_fp32_merged_flags = '0;
-    fp16_to_fp32_merged_flags = fp16_to_fp32_nv_flag[0] | fp16_to_fp32_nv_flag[1] | fp16_to_fp32_nv_flag[2] | fp16_to_fp32_nv_flag[3];
+
+    for (int k = 0; k < (VLEN/32); k = k + 1) begin
+        fp32_to_fp16_merged_flags.NV = fp32_to_fp16_flags[k].NV | fp32_to_fp16_merged_flags.NV;
+        fp32_to_fp16_merged_flags.NX = fp32_to_fp16_flags[k].NX | fp32_to_fp16_merged_flags.NX;
+        fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[k].OF | fp32_to_fp16_merged_flags.OF;
+        fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[k].UF | fp32_to_fp16_merged_flags.UF;
+
+        fp16_to_fp32_merged_flags = fp16_to_fp32_nv_flag[k] | fp16_to_fp32_merged_flags;
+    end
+
+
 end
 
-assign fp32_to_fp16_o[127:64] = 64'b0;
+assign fp32_to_fp16_o[VLEN-1:(VLEN/2)] = '0;
 
 assign res_o = (operation_i == 1'b0) ? fp16_to_fp32_o : fp32_to_fp16_o;
 assign status_o = (operation_i == 1'b0) ? fp16_to_fp32_merged_flags : fp32_to_fp16_merged_flags;
