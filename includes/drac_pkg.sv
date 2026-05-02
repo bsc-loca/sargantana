@@ -36,10 +36,6 @@ parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_
 
 parameter PHISIC_MEM_LIMIT = (64'h01 << PHY_ADDR_SIZE) - 64'h01; 
 
-parameter ICACHE_IDX_BITS_SIZE = 12;
-parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
-
-parameter ICACHELINE_SIZE = 512;
 parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
 parameter logic [6:0] VMAXELEM = riscv_pkg::VLEN/8;
@@ -94,10 +90,6 @@ typedef reg   [CSR_ADDR_SIZE-1:0] reg_csr_addr_t;
 //typedef reg   [CSR_CMD_SIZE-1:0] reg_csr_cmd_t;
 
 typedef logic [riscv_pkg::INST_SIZE-1:0] inst_t;
-typedef logic [ICACHELINE_SIZE-1:0] icache_line_t;
-typedef reg   [ICACHELINE_SIZE-1:0] icache_line_reg_t;
-typedef logic [ICACHE_IDX_BITS_SIZE-1:0] icache_idx_t;
-typedef logic [ICACHE_VPN_BITS_SIZE-1:0] icache_vpn_t;
 
 
 // Instruction Queue
