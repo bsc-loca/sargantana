@@ -57,6 +57,7 @@ module decoder
 	localparam [5:0] F7_NORMAL_AUX = F7_NORMAL >> 1;
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
+    logic xcpt_illegal_c_instr_int;
     logic xcpt_virtual_instruction_int;
     logic xcpt_addr_misaligned_int;
     addrPC_t ras_pc_int;
@@ -101,6 +102,7 @@ module decoder
      
     always_comb begin
         xcpt_illegal_instruction_int = 1'b0;
+        xcpt_illegal_c_instr_int = 1'b0;
         xcpt_virtual_instruction_int = 1'b0;
         xcpt_addr_misaligned_int     = 1'b0;
 
@@ -3483,7 +3485,12 @@ module decoder
                 end
                 default: begin
                     // By default this is not a valid instruction
-                    xcpt_illegal_instruction_int = 1'b1;
+                    if (decode_i.inst.common.opcode[1:0] != 2'b11) begin
+                        // This is a compressed instruction, but we do not support it
+                        xcpt_illegal_c_instr_int = 1'b1;
+                    end else begin
+                        xcpt_illegal_instruction_int = 1'b1;
+                    end
                 end
             endcase
         end
@@ -3563,6 +3570,14 @@ module decoder
                 decode_instr_o.ex.tinst  = 'h0;
                 decode_instr_o.ex.gva    = 'h0;
                 decode_instr_o.instr.ex_valid = 1'b1; 
+            end else if (xcpt_illegal_c_instr_int) begin
+                decode_instr_o.ex.valid  = 1'b1;
+                decode_instr_o.ex.cause  = ILLEGAL_INSTR;
+                decode_instr_o.ex.origin = {48'd0, decode_i.inst.bits[15:0]};
+                decode_instr_o.ex.origin2 = 'h0;
+                decode_instr_o.ex.tinst  = 'h0;
+                decode_instr_o.ex.gva    = 'h0;
+                decode_instr_o.instr.ex_valid = 1'b1;
             end else if (xcpt_illegal_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = ILLEGAL_INSTR;
