@@ -944,7 +944,7 @@ logic   fpnew_stall;
 assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out_integer.instr.valid &
                                                            (instr_to_out_integer.instr.unit == UNIT_SIMD));
 
-assign stall_prev_o = (is_collision & simd_exe_stages == 1'd1) | fpnew_stall;
+assign stall_prev_o = (is_collision & (simd_exe_stages == 1'd1)) | fpnew_stall;
 assign stall_post_o = is_collision | fpnew_stall;
 
 vfpu_drac_wrapper vectorial_fpu_inst (
