@@ -31,6 +31,7 @@ module simd_unit
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
     output logic                  stall_prev_o,
+    output logic                  stall_post_o,
     output exe_wb_fp_instr_t      instruction_fp_o        // Out instruction
 );
 
@@ -942,7 +943,9 @@ logic   is_collision;
 logic   fpnew_stall;
 assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out_integer.instr.valid &
                                                            (instr_to_out_integer.instr.unit == UNIT_SIMD));
-assign  stall_prev_o = is_collision | fpnew_stall;
+
+assign stall_prev_o = (is_collision & simd_exe_stages == 1'd1) | fpnew_stall;
+assign stall_post_o = is_collision | fpnew_stall;
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,

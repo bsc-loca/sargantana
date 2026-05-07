@@ -126,6 +126,7 @@ logic stall_int;
 logic stall_simd;
 logic stall_simd_int;
 logic fpnew_stall_simd;
+logic fpnew_stall_simd_next;
 logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
@@ -220,7 +221,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
         fpnew_stall_simd_old <= 1'b0;
     end else begin
-        fpnew_stall_simd_old <= fpnew_stall_simd;
+        fpnew_stall_simd_old <= fpnew_stall_simd_next;
     end
 end
 
@@ -378,7 +379,8 @@ simd_unit simd_unit_inst (
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_fp_o (simd_to_fp_wb),
     .instruction_simd_o  (simd_to_simd_wb),
-    .stall_prev_o   (fpnew_stall_simd)
+    .stall_prev_o   (fpnew_stall_simd),
+    .stall_post_o   (fpnew_stall_simd_next)
 );
 
 //forood: why is VL_I removed from up there
@@ -399,6 +401,7 @@ assign simd_to_scalar_wb.valid = 1'b0;
 assign simd_to_simd_wb.valid = 1'b0;
 assign simd_to_fp_wb.valid = 1'b0;
 assign fpnew_stall_simd = 1'b0;
+assign fpnew_stall_simd_next = 1'b0;
 `endif
 
 `ifndef DISABLE_SIMD
