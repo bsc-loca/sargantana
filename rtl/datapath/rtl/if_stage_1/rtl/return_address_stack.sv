@@ -27,7 +27,8 @@ module return_address_stack
     input   addrPC_t   pc_execution_i,                // Program counter at Execution Stage (for push)
     input   logic      push_i,                        // Push enable bit
     input   logic      pop_i,                         // Pop enable bit
-    output  addrPC_t   return_address_o               // Address popped from the stack
+    output  addrPC_t   return_address_o,              // Address popped from the stack
+    output  logic      empty_o                        // The structure is empty
 );
 
     // log_2 of the number of entries in the RAS.
@@ -38,6 +39,10 @@ module return_address_stack
     function [_LENGTH_RAS_-1:0] trunc_ras_sum(input [_LENGTH_RAS_:0] val_in);
         trunc_ras_sum = val_in[_LENGTH_RAS_-1:0];
     endfunction
+
+    // Register representing the amount of elements in the structure with
+    // values 0..2**(_LENGTH_RAS_) saturating at 2**(_LENGTH_RAS_)
+    logic [_LENGTH_RAS_:0] elements_amount;
 
     // Registers representing the actual address stack.
     addrPC_t address_stack [_NUM_RAS_ENTRIES_-1:0];
@@ -54,15 +59,25 @@ module return_address_stack
             for(integer i = 0; i < _NUM_RAS_ENTRIES_ ; i = i + 1) begin
                 address_stack[i] <= 'h0;
             end
+
+            elements_amount <= 0;
         end else if (push_i && pop_i) begin
             address_stack[head_pointer] <= pc_execution_i;
         end else if(push_i) begin
             address_stack[head_pointer] <= pc_execution_i;
             head_pointer <= trunc_ras_sum(head_pointer + 1);
+
+            if (elements_amount != 2**_LENGTH_RAS_) begin
+                elements_amount <= elements_amount + 1;
+            end
         end else if(pop_i) begin
             head_pointer <= trunc_ras_sum(head_pointer - 1);
+
+            elements_amount <= elements_amount - 1;
         end
     end
+
+    assign empty_o = (elements_amount == 0);
 
     assign return_address_o = address_stack[output_pointer];
 

@@ -29,6 +29,7 @@ module decoder
     input   logic            flush_i,
     input   logic            stall_i,
     input   if_id_stage_t    decode_i,
+    input   logic            is_compressed_i,
     input   logic [1:0]      priv_lvl_i,
     input   logic            v_mode_i,
     input   logic [2:0]      frm_i, // FP rounding Mode from CSR
@@ -65,6 +66,7 @@ module decoder
     logic ras_pop_int;
     logic ras_link_rd_int;
     logic ras_link_rs1_int;
+    logic ras_empty;
 
     logic check_frm;
 
@@ -108,6 +110,8 @@ module decoder
 
         decode_instr_int.pc    = decode_i.pc_inst;
         decode_instr_int.bpred = decode_i.bpred;
+
+        decode_instr_int.is_compressed = is_compressed_i;
 
         decode_instr_int.valid = decode_i.valid;
         // Registers sources
@@ -246,7 +250,8 @@ module decoder
                         end
                     end
                     jal_id_if_o.jump_addr = ras_pc_int; 
-                    jal_id_if_o.valid = ras_pop_int && !((((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) &
+                    // TODO: Consider not activating this signal for all JALR
+                    jal_id_if_o.valid = ras_pop_int && !ras_empty && !((((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) &
                                                         (decode_i.bpred.decision == PRED_TAKEN)) && (!flush_i)) && !stall_i);
 
                     decode_instr_int.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
@@ -3649,7 +3654,9 @@ module decoder
         .pc_execution_i(decode_instr_int.pc + 64'h4),
         .push_i(ras_push_int && !stall_i && !flush_i),
         .pop_i(ras_pop_int && !stall_i && !flush_i),
-        .return_address_o(ras_pc_int));
+        .return_address_o(ras_pc_int),
+        .empty_o(ras_empty)
+    );
 
 endmodule
 //`default_nettype wire

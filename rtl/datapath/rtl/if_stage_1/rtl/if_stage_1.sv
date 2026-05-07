@@ -100,7 +100,7 @@ module if_stage_1
                 if (branch_predict_is_branch && branch_predict_taken) 
                     next_pc = branch_predict_addr;
                 else
-                    next_pc = trunc_pc_sum(pc + 64'h04);
+                    next_pc = trunc_pc_sum({pc[riscv_pkg::XLEN-1:2], 2'b00} + 64'h04);
                 
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
@@ -117,7 +117,7 @@ module if_stage_1
                 `ifdef VERIFICATION
                     $error("next pc not defined error in if stage");
                 `endif
-                next_pc = trunc_pc_sum(pc + 64'h04);
+                next_pc = trunc_pc_sum({pc[riscv_pkg::XLEN-1:2], 2'b00} + 64'h04);
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif

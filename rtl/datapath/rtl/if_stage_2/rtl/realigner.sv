@@ -20,8 +20,7 @@ module realigner
     output bus32_t data_o,
 
     // To CU
-    output logic req_next_32b_o
-
+    output logic keep_fetch_o
 );
 
     logic is_compressed[1:0]; // 1 -> bits 31..16; 0 -> bits 15..0
@@ -66,11 +65,12 @@ module realigner
 
         pc_o = current_pc;
 
-        //req_next_32b_o = current_pc[1] | (!current_pc[1] & !is_compressed[0]);
-        req_next_32b_o = (f1_valid_i & icache_valid_i) & !current_pc[1] & is_compressed[1] & is_compressed[0];
+        keep_fetch_o = (f1_valid_i && icache_valid_i) && 
+                            (!(|current_pc[1:0]) && is_compressed[0] && is_compressed[1]) ||
+                            (unaligned_d && !(&unaligned_data_d[1:0]))
+                       ; 
 
         unaligned_d = (f1_valid_i && icache_valid_i) ?
-//                            !is_compressed[1]:
                             ((current_pc[1]) ?
                                 ((unaligned_q) ? (&unaligned_data_q[1:0]) :
                                                  (!is_compressed[1])) :

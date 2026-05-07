@@ -296,7 +296,7 @@ module control_unit
                      step_inst_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
                      on_halt_state                              ||
-                     if2_cu_i.req_next_32b)  begin
+                     if2_cu_i.keep_fetch)  begin
                      
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin

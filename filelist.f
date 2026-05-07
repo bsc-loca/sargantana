@@ -85,6 +85,7 @@
 ./rtl/datapath/rtl/if_stage_2/rtl/realigner.sv
 ./rtl/datapath/rtl/if_stage_2/rtl/if_stage_2.sv
 ./rtl/datapath/rtl/id_stage/rtl/immediate.sv
+./rtl/datapath/rtl/id_stage/rtl/predecoder.sv
 ./rtl/datapath/rtl/id_stage/rtl/decoder.sv
 ./rtl/datapath/rtl/id_stage/rtl/vset_module.sv
 ./rtl/datapath/rtl/id_stage/rtl/vset_queue.sv

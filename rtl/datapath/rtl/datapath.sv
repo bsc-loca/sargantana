@@ -457,7 +457,7 @@ endfunction
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
         .stall_o(miss_icache),
-        .req_next_32b_o(if2_cu_int.req_next_32b)
+        .keep_fetch_o(if2_cu_int.keep_fetch)
     );
 
     assign if2_cu_int.valid_fetch = stage_if_1_if_2_q.valid;
@@ -477,13 +477,25 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     logic full_vset_queue_int, exception_enable;
     logic [VMAXELEM_LOG:0] vl_id_exe;
+
+    if_id_stage_t predecoded_data;
+
+    logic is_compressed;
+
+    predecoder predecoder_inst(
+        .fetched_i(stage_if_2_id_q),
+        .predecoded_o(predecoded_data),
+        .is_compressed_o(is_compressed)
+    );
+
     // ID Stage
     decoder id_decode_inst(
         .clk_i          (clk_i),
         .rstn_i         (rstn_i),
         .stall_i        (control_int.stall_id),
         .flush_i        (flush_int.flush_id),
-        .decode_i       (stage_if_2_id_q),
+        .decode_i       (predecoded_data),
+        .is_compressed_i(is_compressed),
         .priv_lvl_i     (csr_priv_lvl_i),
         .v_mode_i       (csr_v_mode_i),
         .frm_i          (csr_frm_i),

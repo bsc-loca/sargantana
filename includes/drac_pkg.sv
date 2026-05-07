@@ -127,10 +127,10 @@ typedef logic [4:0] gl_index_t;
 
 // Branch predictor
 // Least significative bit from address used to index
-parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 2;
+parameter LEAST_SIGNIFICATIVE_INDEX_BIT_BP = 1;
 
 // Most significative bit from address used to index
-parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 8;
+parameter MOST_SIGNIFICATIVE_INDEX_BIT_BP = 7;
 
 // Load Store Queue
 parameter LSQ_NUM_ENTRIES = 8;
@@ -495,6 +495,7 @@ typedef struct packed {
     logic valid;                        // Valid instruction
     addrPC_t pc;                        // PC of the instruction
     branch_pred_t bpred;                // Branch Prediciton
+    logic is_compressed;                // Compressed instruction
     logic ex_valid;                     // Exception valid
     reg_t rs1;                          // Register Source 1
     reg_t rs2;                          // Register Source 2
@@ -904,7 +905,7 @@ typedef struct packed {
 // Control Unit signals
 typedef struct packed {
     logic valid_fetch;      // Fetch is valid
-    logic req_next_32b;     // F1 has to fetch the next 32b
+    logic keep_fetch;       // Fetch again the line
 } if2_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {

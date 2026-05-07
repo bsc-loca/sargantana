@@ -145,6 +145,92 @@ typedef struct packed {
     logic [6:0]   opcode;
 } instruction_vstype_t;
 
+// Instruction encoding for compressed instructions
+//     Imm fields here are named based on the bit on the instruction and not
+//     on the total imm as instructions with the same encoding can map
+//     differently the imm
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:12] func4;
+    logic [11:7]  rd_rs1;
+    logic [6:2]   rs2;
+    logic [1:0]   op;
+} instruction_crtype_t;
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:12] imm12;
+    logic [11:7]  rd_rs1;
+    logic [6:2]   imm6;
+    logic [1:0]   op;
+} instruction_citype_t;
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:7]  imm12;
+    logic [6:2]   rs2;
+    logic [1:0]   op;
+} instruction_csstype_t;
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:5]  imm12;
+    logic [4:2]   rd;
+    logic [1:0]   op;
+} instruction_ciwtype_t;
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:10] imm12;
+    logic [9:7]   rs1;
+    logic [6:5]   imm6;
+    logic [4:2]   rd;
+    logic [1:0]   op;
+} instruction_cltype_t;
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:10] imm12;
+    logic [9:7]   rs1;
+    logic [6:5]   imm6;
+    logic [4:2]   rs2;
+    logic [1:0]   op;
+} instruction_cstype_t;
+
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:10] func6;
+    logic [9:7]   rd_rs1;
+    logic [6:5]   imm6;
+    logic [4:2]   rs2;
+    logic [1:0]   op;
+} instruction_catype_t;
+
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:10] offset12;
+    logic [9:7]   rd_rs1;
+    logic [6:2]   offset6;
+    logic [1:0]   op;
+} instruction_cbtype_t;
+
+
+typedef struct packed {
+    logic [31:16] empty;
+    logic [15:13] func3;
+    logic [12:2] jump_target;
+    logic [1:0]   op;
+} instruction_cjtype_t;
+
 // RISCV Instruction types
 typedef union packed {
     logic [INST_SIZE-1:0] bits;
@@ -160,6 +246,15 @@ typedef union packed {
     instruction_vtype_t   vtype;
     instruction_vltype_t  vltype;
     instruction_vstype_t  vstype;
+    instruction_crtype_t  crtype;
+    instruction_citype_t  citype;
+    instruction_csstype_t csstype;
+    instruction_ciwtype_t ciwtype;
+    instruction_cltype_t  cltype;
+    instruction_cstype_t  cstype;
+    instruction_catype_t  catype;
+    instruction_cbtype_t  cbtype;
+    instruction_cjtype_t  cjtype;
 } instruction_t;
 
 
@@ -189,6 +284,73 @@ typedef enum logic [6:0] {
     OP_FNMSUB    = 7'b1001011,
     OP_FNMADD    = 7'b1001111
 } op_inst_t;
+
+typedef enum logic [1:0] {
+    C0 = 2'b00,
+    C1 = 2'b01,
+    C2 = 2'b10
+} op_comp_inst_t;
+
+typedef enum logic [2:0] {
+    F3_CADDI4SPN = 3'b000,
+    F3_CFLD      = 3'b001,
+    F3_CLW       = 3'b010,
+    F3_CLD       = 3'b011,
+    F3_CFSD      = 3'b101,
+    F3_CSW       = 3'b110,
+    F3_CSD       = 3'b111
+} op_func3_comp_c0_t;
+
+typedef enum logic [2:0] {
+    F3_CNOP_CADDI     = 3'b000,
+    F3_CADDIW         = 3'b001,
+    F3_CLI            = 3'b010,
+    F3_CADDI16SP_CLUI = 3'b011,
+    F3_CARITHMETIC    = 3'b100,
+    F3_CJ             = 3'b101,
+    F3_CBEQZ          = 3'b110,
+    F3_CBNEZ          = 3'b111
+} op_func3_comp_c1_t;
+
+typedef enum logic [2:0] {
+    F3_CSLLI                      = 3'b000,
+    F3_CFLDSP                     = 3'b001,
+    F3_CLWSP                      = 3'b010,
+    F3_CLDSP                      = 3'b011,
+    F3_CJR_CMV_CEBREAK_CJALR_CADD = 3'b100,
+    F3_CFSDSP                     = 3'b101,
+    F3_CSWSP                      = 3'b110,
+    F3_CSDSP                      = 3'b111
+} op_func3_comp_c2_t;
+
+typedef enum logic [1:0] {
+    F2_CSRLI = 2'b00,
+    F2_CSRAI = 2'b01,
+    F2_CANDI = 2'b10,
+    F2_CALU  = 2'b11
+} op_func2_com_c1_arith_t;
+
+typedef enum logic {
+    BIT_CALU_64 = 1'b0,
+    BIT_CALU_32 = 1'b1
+} op_bit_func6_com_c1_calu_width_t;
+
+typedef enum logic [1:0] {
+    CALU_64_CSUB = 2'b00,
+    CALU_64_CXOR = 2'b01,
+    CALU_64_COR  = 2'b10,
+    CALU_64_CAND = 2'b11
+} op_imm6_com_c1_arith_calu64_t;
+
+typedef enum logic [1:0] {
+    CALU_32_CSUBW = 2'b00,
+    CALU_32_CADDW = 2'b01
+} op_imm6_com_c1_arith_calu32_t;
+
+typedef enum logic {
+    BIT_CJR_CMV            = 1'b0,
+    BIT_CEBREAK_CJALR_CADD = 1'b1
+} op_bit_func4_c2_cr_t;
 
 typedef enum logic [2:0] {
     F3_BEQ  = 3'b000,

@@ -39,7 +39,7 @@ module if_stage_2
     output if_id_stage_t        fetch_o,
     // stall fetch_1 if there are a miss
     output logic                stall_o,
-    output logic                req_next_32b_o
+    output logic                keep_fetch_o
 );
 
 logic ex_if_page_fault_int, ex_if_guest_page_fault_int;
@@ -127,7 +127,7 @@ resp_icache_cpu_t instr_data;
         .valid_o(realigner_valid),
         .data_o(fetch_o.inst),
         .pc_o(fetch_o.pc_inst),
-        .req_next_32b_o(req_next_32b_o)
+        .keep_fetch_o(keep_fetch_o)
     );
 
 // stall the pipeline in case of a cache miss 
