@@ -3349,14 +3349,23 @@ module decoder
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
-                            F5_FP_FCVT_F2I: begin // FP to Integer
-                                decode_instr_int.instr_type = FCVT_F2I;
-                                check_frm = 1'b1;
-                                decode_instr_int.use_fs2 = 1'b0;
-                                decode_instr_int.fregfile_we = 1'b0;
-                                decode_instr_int.regfile_we = 1'b1;
-                                // Check if FMT is FP32 then INT 32 then extens sign
-                                decode_instr_int.op_32   = !decode_instr_int.rs2[1];
+                             F5_FP_FCVT_F2I: begin // FP to Integer
+                                 if (decode_i.inst.fprtype.rs2 == 5'd8) begin
+                                     if (decode_i.inst.fprtype.rm == 3'd1) begin
+                                         decode_instr_int.instr_type = FCVTMOD;
+                                         check_frm = 1'b0;
+                                     end else begin
+                                         xcpt_illegal_instruction_int = 1'b1;
+                                     end
+                                 end else begin
+                                     decode_instr_int.instr_type = FCVT_F2I;
+                                     check_frm = 1'b1;
+                                 end
+                                 decode_instr_int.use_fs2 = 1'b0;
+                                 decode_instr_int.fregfile_we = 1'b0;
+                                 decode_instr_int.regfile_we = 1'b1;
+                                 // Check if FMT is FP32 then INT 32 then extens sign
+                                 decode_instr_int.op_32   = !decode_instr_int.rs2[1];
                                 // Check through rounding modes if illegal instr
                                 /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;

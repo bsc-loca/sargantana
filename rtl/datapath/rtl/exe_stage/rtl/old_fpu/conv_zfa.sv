@@ -131,9 +131,32 @@ import fpnew_pkg::*;
         endcase
     end
 
-    always_comb begin: fcvtmod
+logic sign;
+logic [31:0] abs_val_32;
+logic [31:0] res_32;
+integer e;
 
+always_comb begin: fcvtmod
+    sign = 1'b0;
+    abs_val_32 = 32'h0;
+
+    if (fmt_i == FP64) begin
+        sign = operand_i[63];
+        e = $signed({1'b0, operand_i[62:52]}) - 1023;
+
+        if (operand_i[62:52] != 11'h7FF && e > 0) begin
+            if (e > 52)
+                abs_val_32 = {1'b1, operand_i[51:0]} << (e - 52);
+            else
+                abs_val_32 = {1'b1, operand_i[51:0]} >> (52 - e);
+        end else if (operand_i[62:52] != 11'h7FF && e == 0) begin
+            abs_val_32 = 32'd1;
+        end
     end
+
+    res_32 = (sign == 0) ? abs_val_32 : -abs_val_32;
+    fcvtmod_result = {{32{res_32[31]}}, res_32};
+end
 
     always_comb begin : result_selection
         case (instruction_i.instr.instr_type)
