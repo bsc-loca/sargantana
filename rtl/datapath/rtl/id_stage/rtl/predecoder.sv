@@ -288,7 +288,7 @@ module predecoder
                         predecoded_inst.itype.imm = {3'b000, instr_citype.imm6[4:2], instr_citype.imm12, instr_citype[6:5], 3'b000};
                     end
                     F3_CLWSP: begin
-                        if (instr_cltype.rs1 == 5'b00000) begin
+                        if (instr_citype.rd_rs1 == 5'b00000) begin
                             // reserved
                             predecoded_inst = fetched_i.inst;
                         end else begin
@@ -300,7 +300,7 @@ module predecoder
                         end
                     end
                     F3_CLDSP: begin
-                         if (instr_cltype.rs1 == 5'b00000) begin
+                         if (instr_citype.rd_rs1 == 5'b00000) begin
                             // reserved
                             predecoded_inst = fetched_i.inst;
                         end else begin
