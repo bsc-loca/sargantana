@@ -48,12 +48,13 @@ module realigner
     assign current_pc = (unaligned_q) ? unaligned_addr_q : addr_i;
 
     always_comb begin
-        valid_o = (f1_valid_i && icache_valid_i) && (
-            // aligned
-            !(|current_pc[1:0]) || // if it is aligned and we have all inputs valid we will always have a valid instruction
-            // unaligned
-            is_compressed[1] || // if it is not aligned but we have a compressed it will always be valid
-            unaligned_q // if it is not aligned and is not a compressed we need to check if we have a previous data stored
+        valid_o = ((f1_valid_i && icache_valid_i) && (
+                // aligned
+                !(|current_pc[1:0]) || // if it is aligned and we have all inputs valid we will always have a valid instruction
+                // unaligned
+                is_compressed[1] || // if it is not aligned but we have a compressed it will always be valid
+                unaligned_q) // if it is not aligned and is not a compressed we need to check if we have a previous data stored
+            || (unaligned_q && !(&unaligned_data_q[1:0]))
         );
 
         data_o = !(|current_pc[1:0]) ? 
@@ -66,8 +67,8 @@ module realigner
         pc_o = current_pc;
 
         keep_fetch_o = (f1_valid_i && icache_valid_i) && 
-                            (!(|current_pc[1:0]) && is_compressed[0] && is_compressed[1]) ||
-                            (unaligned_d && !(&unaligned_data_d[1:0]))
+                            ((!(|current_pc[1:0]) && is_compressed[0] && is_compressed[1]) ||
+                            (unaligned_d && !(&unaligned_data_d[1:0])))
                        ; 
 
         unaligned_d = (f1_valid_i && icache_valid_i) ?
@@ -75,7 +76,7 @@ module realigner
                                 ((unaligned_q) ? (&unaligned_data_q[1:0]) :
                                                  (!is_compressed[1])) :
                                 is_compressed[0]) :
-                            unaligned_q;
+                            (unaligned_q && !valid_o);
 
         unaligned_addr_d = {addr_i[riscv_pkg::XLEN: 2], 2'b10};
 
@@ -90,7 +91,7 @@ module realigner
         end else begin
             if (flush_i) begin
                 unaligned_q <= 1'b0;
-            end else if (f1_valid_i & icache_valid_i) begin
+            end else if ((f1_valid_i & icache_valid_i) || (unaligned_q && valid_o)) begin
                 unaligned_q <= unaligned_d;
                 unaligned_addr_q <= unaligned_addr_d;
                 unaligned_data_q <= unaligned_data_d;
