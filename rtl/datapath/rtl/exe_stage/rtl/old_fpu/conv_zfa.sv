@@ -29,7 +29,7 @@ import fpnew_pkg::*;
     input logic [63:0]  operand_i,
     input rr_exe_fpu_instr_t instruction_i,
     input               fpnew_pkg::fp_format_e fmt_i,
-    input               valid_i,
+    input logic         valid_i,
     input               reg_t tag_i,
     input logic         stall_collision_i,
     output logic [63:0] result_o,
@@ -144,12 +144,12 @@ always_comb begin: fcvtmod
         sign = operand_i[63];
         e = $signed({1'b0, operand_i[62:52]}) - 1023;
 
-        if (operand_i[62:52] != 11'h7FF && e > 0) begin
+        if ((operand_i[62:52] != 11'h7FF) && e > 0) begin
             if (e > 52)
                 abs_val_32 = {1'b1, operand_i[51:0]} << (e - 52);
             else
                 abs_val_32 = {1'b1, operand_i[51:0]} >> (52 - e);
-        end else if (operand_i[62:52] != 11'h7FF && e == 0) begin
+        end else if ((operand_i[62:52] != 11'h7FF) && e == 0) begin
             abs_val_32 = 32'd1;
         end
     end
@@ -161,13 +161,16 @@ end
     always_comb begin : result_selection
         case (instruction_i.instr.instr_type)
             FLI:
-            case (fmt_i)
-                FP32: result_d = fli_result_fp32;
-                FP64: result_d = fli_result_fp64;
-                default: result_d = '0;
-            endcase
+                case (fmt_i)
+                    FP32: result_d = fli_result_fp32;
+                    FP64: result_d = fli_result_fp64;
+                    default: result_d = '0;
+                endcase
             FCVTMOD:
                 result_d = fcvtmod_result;
+            default:
+                result_d = '0;
+
         endcase
     end
 

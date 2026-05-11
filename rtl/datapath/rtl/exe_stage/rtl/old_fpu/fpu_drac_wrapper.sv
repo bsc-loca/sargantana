@@ -262,8 +262,10 @@ logic        valid_zfa_o;
 fpnew_pkg::status_t status_zfa;
 reg_t tag_zfa;
 
-assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops & !valid_zfhmin_i & !valid_zfa_i;
+logic collision_detected;
+assign collision_detected = ((valid_zfhmin_o == 1'b1) | (valid_zfa_o == 1'b1)) && (result_valid_int == 1'b1);
 
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops & !valid_zfhmin_i & !valid_zfa_i;
 
 logic pending_fp_op_queue_valid;
 assign pending_fp_op_queue_valid = (enable_fp_op_int & ready_fpu) | ((valid_zfhmin_i | valid_zfa_i) & !collision_detected);
@@ -285,6 +287,7 @@ reg_t pending_result_tag_int;
 assign pending_result_tag_int = result_valid_int ? result_tag_int : (valid_zfhmin_o ? tag_zfhmin : tag_zfa);
 
 logic stall_cvfpu;
+assign stall_cvfpu = ((valid_zfhmin_o == 1'b1) && (result_valid_int == 1'b1)) ? 1'b1 : 1'b0;
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
@@ -374,9 +377,6 @@ assign valid_zfa_i = ((instruction_i.instr.instr_type == drac_pkg::FLI) | (instr
        .out_valid_o(valid_zfhmin_o)
    );
 
-assign stall_cvfpu = ((valid_zfhmin_o == 1'b1) && (result_valid_int == 1'b1)) ? 1'b1 : 1'b0;
-logic collision_detected;
-assign collision_detected = (valid_zfhmin_o == 1'b1 | valid_zfa_o == 1'b1) && (result_valid_int == 1'b1);
 
 
 conv_zfa #(
@@ -395,6 +395,9 @@ conv_zfa #(
     .tag_o(tag_zfa),
     .out_valid_o(valid_zfa_o)
 );
+
+fpnew_pkg::status_t zfa_post_status;
+logic [63:0] zfa_post_result;
 
 
 zfa_post_process #(
