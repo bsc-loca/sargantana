@@ -37,6 +37,7 @@ module if_stage_2
     input logic                 flush_i,
     // fetch data output
     output if_id_stage_t        fetch_o,
+    output addrPC_t             next_pc_o,
     // stall fetch_1 if there are a miss
     output logic                stall_o,
     output logic                keep_fetch_o
@@ -116,6 +117,10 @@ resp_icache_cpu_t instr_data;
     assign instr_data = resp_icache_cpu_q.valid ? resp_icache_cpu_q.data : resp_icache_cpu_i.data;
     assign instr_valid = resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid;
 
+    logic branch_predicted;
+
+    assign branch_predicted = fetch_i.bpred.is_branch & (fetch_i.bpred.decision == PRED_TAKEN);
+
     realigner realigner_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -124,9 +129,11 @@ resp_icache_cpu_t instr_data;
         .data_i(instr_data),
         .f1_valid_i(fetch_i.valid),
         .addr_i(fetch_i.pc_inst),
+        .branch_predicted_i(branch_predicted),
         .valid_o(realigner_valid),
         .data_o(fetch_o.inst),
         .pc_o(fetch_o.pc_inst),
+        .next_pc_o(next_pc_o),
         .keep_fetch_o(keep_fetch_o)
     );
 

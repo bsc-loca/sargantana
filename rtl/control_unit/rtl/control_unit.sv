@@ -304,6 +304,10 @@ module control_unit
         end
     end
 
+    `ifdef SIM_KONATA_DUMP
+        assign cu_if_o.keep_fetch = if2_cu_i.keep_fetch;
+    `endif
+
     // logic to select which pc to use in fetch
     always_comb begin
         // if exception or eret select from csr

@@ -409,6 +409,8 @@ endfunction
     //////// FETCH                  STAGE                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    addrPC_t next_pc_from_f2;
+
     // IF Stage
     if_stage_1 #(
         .DracCfg(DracCfg)    
@@ -427,6 +429,8 @@ endfunction
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .pc_jump_i(pc_jump_if_int),
         .retry_fetch_i(retry_fetch),
+        .f2_valid_i(stage_if_2_id_d.valid),
+        .pc_from_f2_i(next_pc_from_f2),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_1_if_2_d),
         `ifdef SIM_KONATA_DUMP
@@ -456,6 +460,7 @@ endfunction
         .flush_i(flush_int.flush_if),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
+        .next_pc_o(next_pc_from_f2),
         .stall_o(miss_icache),
         .keep_fetch_o(if2_cu_int.keep_fetch)
     );

@@ -934,6 +934,9 @@ typedef struct packed {
 
 typedef struct packed {
     next_pc_sel_t next_pc;      // Select next PC
+    `ifdef SIM_KONATA_DUMP
+    logic keep_fetch;           // If F2 requests to keep fetching we have to increase id
+    `endif
 } cu_if_t;      // Control Unit to Fetch
 
 typedef struct packed {

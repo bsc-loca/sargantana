@@ -44,11 +44,7 @@ module if_stage_1
     input logic                 en_translation_i,
     input logic                 en_g_translation_i,
     // Signals from fetch 2 stage
-    // Instruction fetched is compressed: 0 -> add 4; 1 -> add 2
-    input logic                 compressed_on_f2_i,
-    // We maintain PC but need to fetch the next bytes to complete unaligned instruction
-    input logic                 fetch_next_32b_i,
-
+    
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
     // PC comming from commit/decode/ecall/debug
@@ -57,6 +53,9 @@ module if_stage_1
     input exe_if_branch_pred_t  exe_if_branch_pred_i,
     // Retry requesto to icache
     input logic                 retry_fetch_i,
+    // PC on F1 from F2
+    input logic                 f2_valid_i,
+    input addrPC_t              pc_from_f2_i,
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,  
     // fetch data output
@@ -85,7 +84,9 @@ module if_stage_1
 
     // Branch Predictor wires
     logic       branch_predict_is_branch;
+    logic       bp_branch_predict_is_branch;
     logic       branch_predict_taken;
+    logic       bp_branch_predict_taken;
     addrPC_t    branch_predict_addr;
 
     always_comb begin
@@ -93,7 +94,11 @@ module if_stage_1
             NEXT_PC_SEL_KEEP_PC: begin
                 next_pc = pc;
                 `ifdef SIM_KONATA_DUMP
-                next_id = id;
+                if (cu_if_i.keep_fetch) begin
+                    next_id = id + 1;
+                end else begin
+                    next_id = id;
+                end
                 `endif
             end
             NEXT_PC_SEL_BP_OR_PC_ADD: begin 
@@ -179,19 +184,41 @@ module if_stage_1
     assign fetch_o.id = id;
     `endif
 
+    // Required to predict correctly with the compressed instructions
+    addrPC_t BP_pc;
+
+    next_pc_sel_t last_pc_sel;
+
+    logic last_was_bp;
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (!rstn_i) begin
+            last_pc_sel <= NEXT_PC_SEL_KEEP_PC; // Just any that does not cause an overwrite
+            last_was_bp <= 1'b0;
+        end else begin
+            last_pc_sel <= cu_if_i.next_pc;
+            last_was_bp <= branch_predict_is_branch && branch_predict_taken;
+        end
+    end
+
+    assign BP_pc = ((last_pc_sel == NEXT_PC_SEL_BP_OR_PC_ADD) && (!last_was_bp)) ? pc_from_f2_i : pc;
+
     // Branch predictor and RAS
     branch_predictor brach_predictor_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .pc_fetch_i(pc),
+        .pc_fetch_i(BP_pc),
         .pc_execution_i(exe_if_branch_pred_i.pc_execution),
         .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
-        .branch_predict_is_branch_o(branch_predict_is_branch),
-        .branch_predict_taken_o(branch_predict_taken),
+        .branch_predict_is_branch_o(bp_branch_predict_is_branch),
+        .branch_predict_taken_o(bp_branch_predict_taken),
         .branch_predict_addr_o(branch_predict_addr)
     );
+
+    assign branch_predict_taken = bp_branch_predict_taken & f2_valid_i;
+    assign branch_predict_is_branch = bp_branch_predict_is_branch & f2_valid_i;
 
     // exceptions ordering
     always_comb begin
@@ -223,7 +250,7 @@ module if_stage_1
     // Pipeline branch prediction to exe stage
     assign fetch_o.bpred.is_branch = branch_predict_is_branch;
     assign fetch_o.bpred.decision  = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
-    assign fetch_o.bpred.pred_addr = branch_predict_addr;
+    assign fetch_o.bpred.pred_addr = (f2_valid_i) ? branch_predict_addr : '0;
     `ifdef SIM_KONATA_DUMP
     assign id_o = id;
     `endif
