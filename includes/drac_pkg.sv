@@ -375,7 +375,7 @@ typedef enum logic [8:0] {
    // Floating-Point Computational Instructions
    FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
    // Floating-point Zfa instructions
-   FMINM_MAXM, FLEQ_FLTQ, FROUND, FLI, FCVTMOD,
+   FMINM_MAXM, FLEQ_FLTQ, FROUND, FROUNDNX, FLI, FCVTMOD,
    // Floating-Point Conversion and Move Instructions
    FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
    // Floating-Point Compare Instructions

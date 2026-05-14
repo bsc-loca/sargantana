@@ -38,6 +38,12 @@ import fpnew_pkg::*;
     logic [31:0] fp32_post_in2fp;
     logic [63:0] fp64_post_in2fp;
 
+    logic [31:0] abs_result_i_32;
+    logic [63:0] abs_result_i_64;
+
+    assign abs_result_i_32 = result_i[31] ? (~result_i[31:0] + 1'b1) : result_i[31:0];
+    assign abs_result_i_64 = result_i[63] ? (~result_i[63:0] + 1'b1) : result_i[63:0];
+
     // Pass through by default
     fpnew_int2fp # (
         .AbsWidth(32),
@@ -45,7 +51,7 @@ import fpnew_pkg::*;
         .fmt(FP32)
     )
     fp32_rounding (
-        .abs_value_i(result_i[31:0]),
+        .abs_value_i(abs_result_i_32),
         .is_nan(is_nan_f32(result_i)),
         .sign_i(result_i[31]),
         .post_in2fp(fp32_post_in2fp)
@@ -57,7 +63,7 @@ import fpnew_pkg::*;
         .fmt(FP64)
     )
     fp64_rounding (
-        .abs_value_i(result_i),
+        .abs_value_i(abs_result_i_64),
         .is_nan(is_nan_f64(result_i)),
         .sign_i(result_i[63]),
         .post_in2fp(fp64_post_in2fp)
@@ -94,14 +100,56 @@ import fpnew_pkg::*;
                 end
             end
 
-        // FROUND
-        end else if (instruction_i.instr.instr_type == FROUND) begin
+        // FROUND/FROUNDNX
+        end else if ((instruction_i.instr.instr_type == FROUND) || (instruction_i.instr.instr_type == FROUNDNX)) begin
             if (instruction_i.instr.fmt == FP32) begin
-                result_o = fp32_post_in2fp;
-                status_o.NX = ~(fp32_post_in2fp == instruction_i.data_rs1[31:0]);
+                if (is_inf_f32(instruction_i.data_rs1[31:0])) begin
+                    result_o = {{32{1'b1}}, instruction_i.data_rs1[31:0]};
+                    status_o.NX = 1'b0;
+                    status_o.NV = 1'b0;
+                end else if (is_nan_f32(instruction_i.data_rs1[31:0])) begin
+                    result_o = { {32{1'b1}}, FP32_QNAN};
+                    if (is_snan_f32(instruction_i.data_rs1[31:0])) begin
+                        status_o.NV = 1'b1;
+                    end else begin
+                        status_o.NV = 1'b0;
+                    end
+                end else if (status_i.NV == 1'b1) begin // must be overflow or underflow as NaNs have already been dealt with
+                    result_o = instruction_i.data_rs1;
+                    status_o.NV = 1'b0; // OF/UF doesn't rise NV
+                end else begin
+                    if (instruction_i.data_rs1[31] == 1'b1) begin
+                        result_o = {{33{1'b1}}, fp32_post_in2fp[30:0]};
+                        status_o.NX = ~({1'b1, fp32_post_in2fp[30:0]} == instruction_i.data_rs1[31:0]) && (instruction_i.instr.instr_type == FROUNDNX);
+                    end else begin
+                        result_o = {{32{1'b1}}, fp32_post_in2fp};
+                        status_o.NX = (fp32_post_in2fp != instruction_i.data_rs1[31:0]) && (instruction_i.instr.instr_type == FROUNDNX);
+                    end
+                end
             end else begin // FP64
-                result_o = fp64_post_in2fp;
-                status_o.NX = ~(fp64_post_in2fp == instruction_i.data_rs1);
+                if (is_inf_f64(instruction_i.data_rs1[63:0])) begin
+                    result_o = instruction_i.data_rs1[63:0];
+                    status_o.NX = 1'b0;
+                    status_o.NV = 1'b0;
+                end else if (is_nan_f64(instruction_i.data_rs1[63:0])) begin
+                    result_o = { FP64_QNAN};
+                    if (is_snan_f64(instruction_i.data_rs1[63:0])) begin
+                        status_o.NV = 1'b1;
+                    end else begin
+                        status_o.NV = 1'b0;
+                    end
+                end else if (status_i.NV == 1'b1) begin // must be overflow or underflow as NaNs have already been dealt with
+                    result_o = instruction_i.data_rs1;
+                    status_o.NV = 1'b0; // OF/UF doesn't rise NV
+                end else begin
+                    if (instruction_i.data_rs1[63] == 1'b1) begin
+                        result_o = {1'b1, fp64_post_in2fp[62:0]};
+                        status_o.NX = ~({1'b1, fp64_post_in2fp[62:0]} == instruction_i.data_rs1[63:0]) && (instruction_i.instr.instr_type == FROUNDNX);
+                    end else begin
+                        result_o = fp64_post_in2fp;
+                        status_o.NX = (fp64_post_in2fp != instruction_i.data_rs1[63:0]) && (instruction_i.instr.instr_type == FROUNDNX);
+                    end
+                end
             end
         end
        end

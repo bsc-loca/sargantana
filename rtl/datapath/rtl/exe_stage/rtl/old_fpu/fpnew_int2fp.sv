@@ -68,7 +68,7 @@ module fpnew_int2fp #(
       final_exponent =(temp_final_exponent[EXP_BITS] ? {EXP_BITS{1'b1}}: temp_final_exponent[EXP_BITS-1:0]);
 
       // 6. Pack result
-      post_in2fp = is_nan ? {{AbsWidth-FP_WIDTH{1'b0}}, 1'b0, {EXP_BITS{1'b1}}, {1'b1, {MAN_BITS-1{1'b0}}}} : {{AbsWidth-FP_WIDTH{1'b0}}, sign_i, final_exponent[EXP_BITS-1:0], mantissa[MAN_BITS-1:0]};
+        post_in2fp = {{AbsWidth-FP_WIDTH{1'b0}}, sign_i, final_exponent[EXP_BITS-1:0], mantissa[MAN_BITS-1:0]};
     end
   end
 endmodule

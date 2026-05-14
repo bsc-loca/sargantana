@@ -3459,8 +3459,10 @@ module decoder
                             end
                             // D2S & S2D specific 
                             F5_FP_FCVT_SD: begin
-                                if (decode_i.inst.bits[22] == 1'b1) begin
+                                if (decode_i.inst.common.rs2 == 5'd4) begin
                                     decode_instr_int.instr_type = FROUND;
+                                end else if (decode_i.inst.common.rs2 == 5'd5) begin
+                                    decode_instr_int.instr_type = FROUNDNX;
                                 end else begin
                                     decode_instr_int.instr_type = FCVT_F2F;
                                 end

@@ -225,6 +225,11 @@ always_comb begin
          op_mod          = 0;
          src_fmt = (instruction_i.instr.fmt == 0) ? FP32 : FP64;
       end
+      drac_pkg::FROUNDNX: begin
+         op              = fpnew_pkg::F2I;
+         op_mod          = 0;
+         src_fmt = (instruction_i.instr.fmt == 0) ? FP32 : FP64;
+      end
       // FP to FP
        drac_pkg::FMV_X2F: begin
           op              = fpnew_pkg::SGNJ;
@@ -416,7 +421,7 @@ zfa_post_process #(
 
 // Output FPU
 assign instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;
-assign instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
+assign instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},zfa_post_result[31:0]} : zfa_post_result;
 assign instruction_o.pc              = finish_fp_op_int.instr.pc;
 assign instruction_o.bpred           = finish_fp_op_int.instr.bpred;
 assign instruction_o.rs1             = finish_fp_op_int.instr.rs1;
@@ -431,7 +436,7 @@ assign instruction_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_o.gl_index        = finish_fp_op_int.gl_index;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
-assign instruction_o.fp_status       = finish_fp_status_int;
+assign instruction_o.fp_status       = zfa_post_status;
 assign instruction_o.ex              = '0;
 `ifdef SIM_KONATA_DUMP
    assign instruction_o.id           = finish_fp_op_int.instr.id;
