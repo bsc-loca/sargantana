@@ -49,7 +49,7 @@ resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
 logic realigner_valid;
 
 logic instr_valid;
-resp_icache_cpu_t instr_data;
+bus32_t instr_data;
 
 // check exceptions instr page fault
     always_comb begin
