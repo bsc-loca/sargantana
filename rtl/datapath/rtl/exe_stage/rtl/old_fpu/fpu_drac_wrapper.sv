@@ -220,6 +220,7 @@ always_comb begin
          rnd_mode_sel    = 1'b1;
          opcode_rnd_mode = fpnew_pkg::RUP;
       end
+      // ZFA instructions
       drac_pkg::FROUND: begin
          op              = fpnew_pkg::F2I;
          op_mod          = 0;
@@ -230,14 +231,6 @@ always_comb begin
          op_mod          = 0;
          src_fmt = (instruction_i.instr.fmt == 0) ? FP32 : FP64;
       end
-      // FP to FP
-       drac_pkg::FMV_X2F: begin
-          op              = fpnew_pkg::SGNJ;
-          op_mod          = 1;
-          rnd_mode_sel    = 1'b1;
-          opcode_rnd_mode = fpnew_pkg::RUP;
-       end
-       // ZFA instructions
        drac_pkg::FLI: begin
           op              = fpnew_pkg::SGNJ;
            operands[0] = instruction_i.instr.imm;
