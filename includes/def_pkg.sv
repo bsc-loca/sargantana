@@ -80,7 +80,7 @@ package def_pkg;
 
     localparam logic [63:0] ISA_CODE = (RVA <<  0)  // A - Atomic Instructions extension
                                      | (1   <<  1)  // B - Bit Manipulation extension
-                                     | (0   <<  2)  // C - Compressed extension
+                                     | (1   <<  2)  // C - Compressed extension
                                      | (RVD <<  3)  // D - Double precsision floating-point extension
                                      | (RVF <<  5)  // F - Single precsision floating-point extension
                                      | (RVH <<  7)  // H - Hypervisor extension
