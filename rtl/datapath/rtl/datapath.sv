@@ -466,7 +466,7 @@ endfunction
     );
 
     assign if2_cu_int.valid_fetch = stage_if_1_if_2_q.valid;
-
+    assign if2_cu_int.valid_fetch_2 = stage_if_2_id_d.valid;
     // Register IF to ID
     register #($bits(if_id_stage_t)) reg_if_2_inst(
         .clk_i(clk_i),
@@ -499,6 +499,7 @@ endfunction
         .rstn_i         (rstn_i),
         .stall_i        (control_int.stall_id),
         .flush_i        (flush_int.flush_id),
+        .from_f2_i      (stage_if_2_id_q),
         .decode_i       (predecoded_data),
         .is_compressed_i(is_compressed),
         .priv_lvl_i     (csr_priv_lvl_i),
@@ -557,6 +558,8 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 assign free_list_read_src1_int = (debug_reg_i.rnm_read_en && debug_contr_o.parked)  ? debug_reg_i.rnm_read_reg : stage_iq_ir_q.instr.rs1;

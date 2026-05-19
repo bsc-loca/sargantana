@@ -28,6 +28,7 @@ module decoder
     input   logic            rstn_i,
     input   logic            flush_i,
     input   logic            stall_i,
+    input   if_id_stage_t    from_f2_i, // Needed to get the original instruction binary
     input   if_id_stage_t    decode_i,
     input   logic            is_compressed_i,
     input   logic [1:0]      priv_lvl_i,
@@ -186,7 +187,7 @@ module decoder
         decode_instr_int.stall_vset_fence = 1'b0;
 
         `ifdef SIM_COMMIT_LOG
-            decode_instr_int.inst = decode_i.inst;
+            decode_instr_int.inst = from_f2_i.inst;
         `endif
 
         decode_instr_int.mem_type = NOT_MEM;

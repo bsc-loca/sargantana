@@ -905,6 +905,7 @@ typedef struct packed {
 // Control Unit signals
 typedef struct packed {
     logic valid_fetch;      // Fetch is valid
+    logic valid_fetch_2;    // Fetch 2 is valid
     logic keep_fetch;       // Fetch again the line
 } if2_cu_t;      // Fetch to Control Unit
 

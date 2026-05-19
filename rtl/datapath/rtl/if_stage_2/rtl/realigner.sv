@@ -27,6 +27,7 @@ module realigner
     output logic keep_fetch_o
 );
 
+/*
     logic is_compressed[1:0]; // 1 -> bits 31..16; 0 -> bits 15..0
 
     always_comb begin
@@ -34,6 +35,11 @@ module realigner
             is_compressed[i] = !(&data_i[16*i +: 2]);
         end
     end
+    */
+
+    function is_compressed(input [15:0] instruction);
+        is_compressed = !(&instruction[1:0]);
+    endfunction
 
     /*
      * --------------------------------------------------------------------------------------------
@@ -45,6 +51,8 @@ module realigner
     logic [15:0] unaligned_data_d, unaligned_data_q;
     addrPC_t unaligned_addr_d, unaligned_addr_q;
 
+    logic valid_instruction;
+
     addrPC_t current_pc;
 
     // If we have unaligned data stored it means that we have data prom the
@@ -52,51 +60,23 @@ module realigner
     assign current_pc = (unaligned_q) ? unaligned_addr_q : addr_i;
 
     always_comb begin
-        valid_o = ((f1_valid_i & icache_valid_i) & (
-                // aligned
-                !(|current_pc[1:0]) | // if it is aligned and we have all inputs valid we will always have a valid instruction
-                // unaligned
-                is_compressed[1] | // if it is not aligned but we have a compressed it will always be valid
-                unaligned_q) // if it is not aligned and is not a compressed we need to check if we have a previous data stored
-            || (unaligned_q && !(&unaligned_data_q[1:0]))
+        valid_instruction = ((f1_valid_i & icache_valid_i) & (
+                            // aligned
+                            !(|current_pc[1:0]) | // if it is aligned and we have all inputs valid we will always have a valid instruction
+                            // unaligned
+                            is_compressed(data_i[31:16]) | // if it is not aligned but we have a compressed it will always be valid
+                            unaligned_q) // if it is not aligned and is not a compressed we need to check if we have a previous data stored
+                        || (unaligned_q && !(&unaligned_data_q[1:0]))
         );
-
-        data_o = !(|current_pc[1:0]) ? 
-                        ((is_compressed[0]) ? {16'b0, data_i[15:0]} :
-                                              data_i) :
-                        ((unaligned_q) ? ((&unaligned_data_q[1:0]) ? {data_i[15:0], unaligned_data_q} :
-                                                                     {16'b0, unaligned_data_q}) :
-                                         {16'b0, data_i[31:16]});
-
-        pc_o = current_pc;
-
-        if (unaligned_q) begin
-            if (&unaligned_data_q[1:0]) begin
-                next_pc_o = current_pc + 64'h04;
-            end else begin
-                next_pc_o = current_pc + 64'h02;
-            end
-        end else begin
-            if (is_compressed[current_pc[1]]) begin
-                next_pc_o = current_pc + 64'h02;
-            end else begin
-                next_pc_o = current_pc + 64'h04;
-            end
-        end
-
-        keep_fetch_o = (f1_valid_i & icache_valid_i) & 
-                            ((!(|current_pc[1:0]) & is_compressed[0] & is_compressed[1]) ||
-                            (unaligned_d & !(&unaligned_data_d[1:0])))
-                       ; 
 
         unaligned_d = ((f1_valid_i && icache_valid_i) ?
                             ((current_pc[1]) ?
                                 ((unaligned_q) ? (&unaligned_data_q[1:0]) :
-                                                 (!is_compressed[1])) :
-                                is_compressed[0]) :
-                            (unaligned_q & !valid_o)) & !branch_predicted_i;
+                                                 (!is_compressed(data_i[31:16]))) :
+                                is_compressed(data_i[15:0])) :
+                            (unaligned_q & !valid_instruction)) & !branch_predicted_i;
 
-        unaligned_addr_d = {addr_i[riscv_pkg::XLEN: 2], 2'b10};
+        unaligned_addr_d = {addr_i[riscv_pkg::XLEN-1: 2], 2'b10};
 
         unaligned_data_d = data_i[31:16];
     end
@@ -124,6 +104,39 @@ module realigner
      */
 
     always_comb begin
+        valid_o = valid_instruction;
+
+        data_o = !(|current_pc[1:0]) ? 
+                        ((is_compressed(data_i[15:0])) ? {16'b0, data_i[15:0]} :
+                                              data_i) :
+                        ((unaligned_q) ? ((&unaligned_data_q[1:0]) ? {data_i[15:0], unaligned_data_q} :
+                                                                     {16'b0, unaligned_data_q}) :
+                                         {16'b0, data_i[31:16]});
+
+        pc_o = current_pc;
+
+        keep_fetch_o = (f1_valid_i & icache_valid_i) & 
+                            ((!(|current_pc[1:0]) & is_compressed(data_i[15:0]) & is_compressed(data_i[31:16])) ||
+                            (unaligned_d & !(&unaligned_data_d[1:0])))
+                       ;
+
+
+        if (unaligned_q) begin
+            if (&unaligned_data_q[1:0]) begin
+                next_pc_o = current_pc + 64'h04;
+            end else begin
+                next_pc_o = current_pc + 64'h02;
+            end
+        end else begin
+            //if (is_compressed[current_pc[1]]) begin
+            if (is_compressed(data_i[16*current_pc[1] +: 16])) begin
+                next_pc_o = current_pc + 64'h02;
+            end else begin
+                next_pc_o = current_pc + 64'h04;
+            end
+        end
+
+
     end
 
 endmodule

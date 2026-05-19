@@ -9,20 +9,37 @@ module predecoder
 
     instruction_t predecoded_inst;
 
-    instruction_crtype_t instr_crtype = fetched_i.inst;
-    instruction_citype_t instr_citype = fetched_i.inst;
-    instruction_csstype_t instr_csstype = fetched_i.inst;
-    instruction_ciwtype_t instr_ciwtype = fetched_i.inst;
-    instruction_cltype_t instr_cltype = fetched_i.inst;
-    instruction_cstype_t instr_cstype = fetched_i.inst;
-    instruction_catype_t instr_catype = fetched_i.inst;
-    instruction_cbtype_t instr_cbtype = fetched_i.inst;
-    instruction_cjtype_t instr_cjtype = fetched_i.inst;
+    instruction_crtype_t instr_crtype;
+    assign instr_crtype = fetched_i.inst;
+
+    instruction_citype_t instr_citype;
+    assign instr_citype = fetched_i.inst;
+
+    instruction_csstype_t instr_csstype;
+    assign instr_csstype = fetched_i.inst;
+
+    instruction_ciwtype_t instr_ciwtype;
+    assign instr_ciwtype = fetched_i.inst;
+
+    instruction_cltype_t instr_cltype;
+    assign instr_cltype = fetched_i.inst;
+
+    instruction_cstype_t instr_cstype;
+    assign instr_cstype = fetched_i.inst;
+
+    instruction_catype_t instr_catype;
+    assign instr_catype = fetched_i.inst;
+
+    instruction_cbtype_t instr_cbtype;
+    assign instr_cbtype = fetched_i.inst;
+
+    instruction_cjtype_t instr_cjtype;
+    assign instr_cjtype = fetched_i.inst;
 
     assign is_compressed_o = fetched_i.inst[1:0] != 2'b11;
 
     always_comb begin
-        case (instr_crtype.op)
+        case (fetched_i.inst.bits[1:0])
             C0: begin
                 case (instr_citype.func3)
                     F3_CADDI4SPN: begin
