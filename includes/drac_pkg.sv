@@ -791,7 +791,6 @@ typedef struct packed {
     checkpoint_ptr chkp;                 // Checkpoint of branch
 
     gl_index_t gl_index;                // Graduation List entry
-    reg_t tag;                          // Tag for out-of-order execution
 } rr_exe_fpu_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
 
 typedef struct packed {

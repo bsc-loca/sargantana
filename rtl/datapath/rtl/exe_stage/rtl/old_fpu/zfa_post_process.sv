@@ -27,7 +27,6 @@ import fpnew_pkg::*;
     input  rr_exe_fpu_instr_t  instruction_i,
     input  logic [63:0]        result_i,
     input  fpnew_pkg::status_t status_i,
-    input  TagType             tag_i,
     input  logic               out_valid_i,
     output logic [63:0]        result_o,
     output fpnew_pkg::status_t status_o,
@@ -72,7 +71,6 @@ import fpnew_pkg::*;
 
     always_comb begin
         status_o    = status_i;
-        tag_o       = tag_i;
         out_valid_o = out_valid_i;
         result_o    = result_i;
 

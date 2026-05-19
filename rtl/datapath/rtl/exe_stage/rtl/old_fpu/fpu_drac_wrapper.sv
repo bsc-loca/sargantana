@@ -411,11 +411,9 @@ zfa_post_process #(
    .instruction_i ( finish_fp_op_int ),
    .result_i      ( finish_fp_op_int.data_rs3 ),
    .status_i      ( finish_fp_status_int ),
-   .tag_i        ( finish_fp_op_int.tag ),
    .out_valid_i  ( finish_fp_op_int.instr.valid ),
    .result_o    ( zfa_post_result ),
    .status_o    ( zfa_post_status ),
-   .tag_o       ( /* unused */ ),
    .out_valid_o ( /* unused */ )
 );
 
