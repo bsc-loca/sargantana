@@ -1,11 +1,4 @@
-/*
- * Copyright 2026 BSC*
- * *Barcelona Supercomputing Center (BSC)
- *
- * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
- *
- * Licensed under the Solderpad Hardware License v 2.1 (the "License"); you
- * may not use this file except in compliance with the License, or, at your
+/* * Copyright 2026 BSC* * *Barcelona Supercomputing Center (BSC) * * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1 * * Licensed under the Solderpad Hardware License v 2.1 (the "License"); you * may not use this file except in compliance with the License, or, at your
  * option, the Apache License version 2.0. You may obtain a copy of the
  * License at
  *
@@ -136,22 +129,26 @@ logic [31:0] abs_val_32;
 logic [31:0] res_32;
 integer e;
 
+logic [63:0] abs_val_ext;
+
 always_comb begin: fcvtmod
     sign = 1'b0;
     abs_val_32 = 32'h0;
+    abs_val_ext = '0;
 
-    if (fmt_i == FP64) begin
-        sign = operand_i[63];
-        e = $signed({1'b0, operand_i[62:52]}) - 1023;
+    sign = operand_i[63];
+    e = $signed({1'b0, operand_i[62:52]}) - 1023;
 
-        if ((operand_i[62:52] != 11'h7FF) && e > 0) begin
-            if (e > 52)
-                abs_val_32 = {1'b1, operand_i[51:0]} << (e - 52);
-            else
-                abs_val_32 = {1'b1, operand_i[51:0]} >> (52 - e);
-        end else if ((operand_i[62:52] != 11'h7FF) && e == 0) begin
-            abs_val_32 = 32'd1;
+    if ((operand_i[62:52] != 11'h7FF) && (e > 0)) begin
+        if (e > 52) begin
+            abs_val_ext = {11'b0, 1'b1, operand_i[51:0]} << (e - 52);
+            abs_val_32   = abs_val_ext[31:0];
+        end else begin
+            abs_val_ext = {11'b0, 1'b1, operand_i[51:0]} >> (32'sd52 - e);
+            abs_val_32   = abs_val_ext[31:0];
         end
+    end else if ((operand_i[62:52] != 11'h7FF) && (e == 0)) begin
+        abs_val_32 = 32'd1;
     end
 
     res_32 = (sign == 0) ? abs_val_32 : -abs_val_32;

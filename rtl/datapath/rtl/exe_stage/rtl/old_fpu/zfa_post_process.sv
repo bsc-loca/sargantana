@@ -30,7 +30,6 @@ import fpnew_pkg::*;
     input  logic               out_valid_i,
     output logic [63:0]        result_o,
     output fpnew_pkg::status_t status_o,
-    output TagType             tag_o,
     output logic               out_valid_o
 );
 
@@ -51,7 +50,7 @@ import fpnew_pkg::*;
     )
     fp32_rounding (
         .abs_value_i(abs_result_i_32),
-        .is_nan(is_nan_f32(result_i)),
+        .is_nan(is_nan_f32(result_i[31:0])),
         .sign_i(result_i[31]),
         .post_in2fp(fp32_post_in2fp)
     );
@@ -89,7 +88,7 @@ import fpnew_pkg::*;
         // FLEQ/FLTQ
         end else if (instruction_i.instr.instr_type == FLEQ_FLTQ) begin
             if (instruction_i.instr.fmt == FP32) begin
-                if (is_nan_f32(instruction_i.data_rs1) || is_nan_f32(instruction_i.data_rs2)) begin
+                if (is_nan_f32(instruction_i.data_rs1[31:0]) || is_nan_f32(instruction_i.data_rs2[31:0])) begin
                     status_o.NV = 1'b0;
                 end
             end else begin // FP64
