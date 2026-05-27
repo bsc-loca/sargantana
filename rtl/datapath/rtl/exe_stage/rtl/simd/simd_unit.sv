@@ -945,7 +945,7 @@ logic is_vfncvt_f_f;
 
 assign is_vfncvt_f_f = (instruction_i.instr.instr_type == VFNCVT_F_F) ? 1'b1 : 1'b0; 
 
-conv_zvfhmin conv_zfhmin_inst (
+conv_zvfhmin conv_zvfhmin_inst (
    .src_i(instruction_i.data_vs2),
    .valid_i(is_zvfhmin_conv(instruction_i)),
    .operation_i(is_vfncvt_f_f),

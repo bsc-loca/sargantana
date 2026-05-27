@@ -26,7 +26,7 @@ generate
     for (i = 0; i < (VLEN/32); i = i + 1) begin
         fp32_to_fp16 fp32_to_fp16_inst (
             .f32(src_i[(i * 32) +: 32]),
-            .frm(frm_i),
+            .frm(fpnew_pkg::roundmode_e'(frm_i)),
             .f16(fp32_to_fp16_o[(i * 16) +: 16]),
             .status_o(fp32_to_fp16_flags[i])
         );
