@@ -49,7 +49,7 @@ always_comb begin
         fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[k].OF | fp32_to_fp16_merged_flags.OF;
         fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[k].UF | fp32_to_fp16_merged_flags.UF;
 
-        fp16_to_fp32_merged_flags = fp16_to_fp32_nv_flag[k] | fp16_to_fp32_merged_flags;
+        fp16_to_fp32_merged_flags.NV = fp16_to_fp32_nv_flag[k] | fp16_to_fp32_merged_flags.NV;
     end
 
 
