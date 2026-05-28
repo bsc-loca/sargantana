@@ -475,13 +475,13 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         if (instruction_s1_q.instr.valid & is_STORE_AMO_or_CMO_s1_q & !flush_to_lsq) begin
             mem_gl_index_o  <= instruction_s1_q.gl_index;
         end
-        else if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo) begin
+        else if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo & !req_cpu_dcache_o.is_cmo_prefetch) begin
             store_on_fly    <= req_cpu_dcache_o.is_store; 
             amo_on_fly      <= req_cpu_dcache_o.is_amo;
             cmo_on_fly      <= req_cpu_dcache_o.is_cmo;
         end
         `else
-        if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo) begin
+        if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo & !req_cpu_dcache_o.is_cmo_prefetch) begin
             store_on_fly    <= req_cpu_dcache_o.is_store; 
             amo_on_fly      <= req_cpu_dcache_o.is_amo;
             cmo_on_fly      <= req_cpu_dcache_o.is_cmo;
