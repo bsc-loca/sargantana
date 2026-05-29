@@ -50,7 +50,7 @@ module fp32_to_fp64(
             frac64 = {frac32, {29{1'b0}}};
         end
         else begin
-            exp64  = {3'b0, (exp32 - 8'd127)} + 11'd1023;
+            exp64  = {3'b0, exp32} + 11'd896; // 896 = (1023 - 127) = (BIAS64 - BIAS32)
             frac64 = {frac32, {29{1'b0}}};
         end
 
