@@ -465,6 +465,7 @@ typedef struct packed {
     logic             is_store;        // Type of instruction is store
     logic               is_cmo;        // Type of instruction is cmo
     logic      is_cmo_prefetch;        // Type of instruction is cmo_prefetch
+    logic [1:0]           pbmt;        // Page-based memory type from Svpbmt (00=PMA, 01=NC, 10=IO)
 } req_cpu_dcache_t;
 
 // Fetch 1 Stage
@@ -681,6 +682,7 @@ typedef struct packed {
     checkpoint_ptr chkp;                // Checkpoint of branch
 
     logic translated;                   // Has been translated to a physical address
+    logic [1:0] pbmt;                   // Page-based memory type from Svpbmt (00=PMA, 01=NC, 10=IO)
     exception_t ex;
 
     `ifdef SIM_COMMIT_LOG
@@ -1732,6 +1734,8 @@ typedef struct packed {
     logic flush_hgatp;
     logic [63:0] mstatus;
     logic [63:0] vsstatus;
+    logic menvcfg_pbmte;
+    logic henvcfg_pbmte;
 } csr_ptw_comm_t;
 
 typedef struct packed {
