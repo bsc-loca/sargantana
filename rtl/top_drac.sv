@@ -141,6 +141,7 @@ logic [3:0] csr_h_cmo;
 logic [1:0] csr_s_pmm;
 logic [1:0] csr_h_pmm;
 logic [1:0] csr_hstatus_hupmm;
+logic menvcfg_pbmte, henvcfg_pbmte;
 logic en_ld_st_translation, en_ld_st_g_translation;
 logic en_translation, en_g_translation;
 logic csr_hu;
@@ -193,6 +194,8 @@ logic [drac_pkg::PPN_SIZE-1:0] csr_hgatp;
 assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
 assign csr_ptw_comm.vsatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_vsatp}; // PTW expects 64 bits
 assign csr_ptw_comm.hgatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_hgatp}; // PTW expects 64 bits
+assign csr_ptw_comm.menvcfg_pbmte = menvcfg_pbmte;
+assign csr_ptw_comm.henvcfg_pbmte = henvcfg_pbmte;
 
 `ifdef EXTERNAL_HPM_EVENT_NUM
 localparam HPM_EXT_NUM_EVENT = `EXTERNAL_HPM_EVENT_NUM;
@@ -435,6 +438,8 @@ csr_bsc #(
     .csr_m_cmo_cfg_o(csr_m_cmo),    // M mode cmo related flags (CBIE, CBCFE, CBZE)
     .csr_s_cmo_cfg_o(csr_s_cmo),    // S mode cmo related flags (CBIE, CBCFE, CBZE)
     .csr_h_cmo_cfg_o(csr_h_cmo),    // H extension cmo related flags (CBIE, CBCFE, CBZE)
+    .menvcfg_pbmte_o(menvcfg_pbmte),
+    .henvcfg_pbmte_o(henvcfg_pbmte),
 
     .csr_s_pmm_cfg_o(csr_s_pmm),
     .csr_h_pmm_cfg_o(csr_h_pmm),
