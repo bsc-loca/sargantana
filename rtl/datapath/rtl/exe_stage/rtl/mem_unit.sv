@@ -466,6 +466,7 @@ always_comb begin
     req_cpu_dcache_o.is_cmo              = instruction_to_dcache.is_cmo;
     req_cpu_dcache_o.is_cmo_prefetch     = instruction_to_dcache.is_cmo_prefetch;
     req_cpu_dcache_o.is_store            = instruction_to_dcache.is_store;
+    req_cpu_dcache_o.pbmt                = instruction_to_dcache.pbmt;
 end
 logic test;
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store
