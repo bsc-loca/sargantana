@@ -187,6 +187,7 @@ always_comb begin
     // Translation from TLB
     translated_instr.translated = translate_enable;
     translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, masked_addr[11:0]};
+    translated_instr.pbmt = dtlb_comm_i.resp.pbmt;
     
     // Exception treatment
     if ((ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index)) begin // a previous request of the same instruction generated an exception
@@ -376,8 +377,8 @@ always_comb begin
 end
 
 
-// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
-assign io_address_space = is_inside_IO_sections(DracCfg, control_table[head].data_rs1);
+// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1 or Svpbmt IO (pbmt=10) override.
+assign io_address_space = is_inside_IO_sections(DracCfg, control_table[head].data_rs1) | (control_table[head].pbmt == 2'b10);
 
 always_comb begin
     blocked_store_o = 1'b1;
