@@ -231,18 +231,28 @@ always_comb begin
     end
 end
 
+/* Detection of overflow
+ * 
+ * The only case where the saturation needs to be done is when the
+ * multiplication calculates -2^(N-1) * -2^(N-1) (INT_MIN * INT_MIN) that
+ * gives as result +2^(2N-2), being the only case where there is a single bit
+ * for the sign at the result as the spec says (The RISC-V Instruction Set
+ * Manual, Volume I version 20260120 section 31.12.3).
+ *
+ * By following this we can detect the overflow by performing an XOR operation
+ * on the two most significant bits as this detects if the bits are different
+ * or equal.
+ */
+
 logic [7:0] overflow;
-/* Since we are only adding 1 (if adding) we can only get the case of overflow
- * of passing from 0x7F... to 0x80...
- * For an easy detect we can just compare if the most significant bit is different
- * between input element and output element and the result most significant bit is 1
-*/
 
 always_comb begin
-    for (int i = 0; i < 8; ++i) begin
-        overflow[i] = ((data_shifted[i][7] != results[i][7]) && (results[i][7] == 1'b1));
+    for (int i = 0; i < 8; i++) begin
+        overflow[i] = data_i[16*i + 14] ^ data_i[16*i + 15];
     end
 end
+
+
 
 /* Saturation and output
 */
