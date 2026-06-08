@@ -475,13 +475,13 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         if (instruction_s1_q.instr.valid & is_STORE_AMO_or_CMO_s1_q & !flush_to_lsq) begin
             mem_gl_index_o  <= instruction_s1_q.gl_index;
         end
-        else if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo) begin
+        else if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo & !req_cpu_dcache_o.is_cmo_prefetch) begin
             store_on_fly    <= req_cpu_dcache_o.is_store; 
             amo_on_fly      <= req_cpu_dcache_o.is_amo;
             cmo_on_fly      <= req_cpu_dcache_o.is_cmo;
         end
         `else
-        if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo) begin
+        if (instruction_s1_d.instr.valid & req_cpu_dcache_o.is_amo_store_or_cmo & !req_cpu_dcache_o.is_cmo_prefetch) begin
             store_on_fly    <= req_cpu_dcache_o.is_store; 
             amo_on_fly      <= req_cpu_dcache_o.is_amo;
             cmo_on_fly      <= req_cpu_dcache_o.is_cmo;
@@ -1023,6 +1023,17 @@ always_comb begin
     end
 end
 
+logic [63:0] wb_result_boxed;
+
+always_comb begin
+    case (instruction_to_wb.instr.instr_type)
+        FLH: wb_result_boxed = {{48{1'b1}}, data_to_wb[15:0]};
+        FLW: wb_result_boxed = {{32{1'b1}}, data_to_wb[31:0]};
+        default: wb_result_boxed = data_to_wb[63:0];
+    endcase
+end
+
+
 // Output Instruction
 // Prefetch instructions do not get a response, we can directly commit them
 assign instruction_scalar_o.valid         = (instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we) || instruction_to_wb.is_cmo_prefetch; 
@@ -1046,7 +1057,7 @@ assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
 assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
-assign instruction_scalar_o.result        = data_to_wb[63:0];
+assign instruction_scalar_o.result        = wb_result_boxed;
 assign instruction_scalar_o.ex            = instruction_to_wb.is_cmo_prefetch ? 0 : instruction_to_wb.ex; // CMO prefetch does not propagate
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
@@ -1076,7 +1087,7 @@ assign instruction_fp_o.chkp              = instruction_to_wb.chkp;
 assign instruction_fp_o.gl_index          = instruction_to_wb.gl_index;
 assign instruction_fp_o.branch_taken      = 1'b0;
 assign instruction_fp_o.result_pc         = 0;
-assign instruction_fp_o.result            = (instruction_to_wb.instr.instr_type == FLW) ? {32'hFFFFFFFF, data_to_wb[31:0]} : data_to_wb[63:0];
+assign instruction_fp_o.result            = wb_result_boxed;
 assign instruction_fp_o.ex                = instruction_to_wb.ex;
 assign instruction_fp_o.fp_status         = 'h0;
 

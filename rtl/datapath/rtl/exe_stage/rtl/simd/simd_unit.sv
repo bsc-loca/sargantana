@@ -31,6 +31,7 @@ module simd_unit
     output exe_wb_scalar_instr_t  instruction_scalar_o,   // Out instruction
     output exe_wb_simd_instr_t    instruction_simd_o,     // Out instruction
     output logic                  stall_prev_o,
+    output logic                  stall_post_o,
     output exe_wb_fp_instr_t      instruction_fp_o        // Out instruction
 );
 
@@ -444,7 +445,7 @@ always_comb begin
                 simd_pipe_d[i][j].simd_instr = '0; // Implicitly sets SEW_8
             end else if (j==0) begin
                 if (simd_exe_stages == i) begin
-                    simd_pipe_d[i][0].valid = instruction_i.instr.valid & (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type));
+                    simd_pipe_d[i][0].valid = instruction_i.instr.valid & (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type) || is_zvfhmin_conv(instruction_i));
                     simd_pipe_d[i][0].simd_instr = instruction_i;
                 end else begin
                     simd_pipe_d[i][0].valid = 1'b0;
@@ -511,7 +512,7 @@ end
 always_comb begin
     if (valid_found && (instr_score_board.instr.vl != 'h0)) begin
         instr_to_out_integer = instr_score_board;
-    end else if ((instruction_i.exe_stages == 1) && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type))) begin
+    end else if ((instruction_i.exe_stages == 1) && (!drac_pkg::is_vfpnew(instruction_i.instr.instr_type) || is_zvfhmin_conv(instruction_i))) begin
         instr_to_out_integer = instruction_i;
     end else begin
         instr_to_out_integer = '0;
@@ -936,13 +937,32 @@ vfredoladder #(
     .status_o       (vfredoladderflags)
 );
 
+// Zvfhmin conversions
+
+bus_simd_t conv_zvfhmin_vd;
+fpnew_pkg::status_t conv_zvfhmin_flags;
+logic is_vfncvt_f_f;
+
+assign is_vfncvt_f_f = (instruction_i.instr.instr_type == VFNCVT_F_F) ? 1'b1 : 1'b0; 
+
+conv_zvfhmin conv_zvfhmin_inst (
+   .src_i(instruction_i.data_vs2),
+   .valid_i(is_zvfhmin_conv(instruction_i)),
+   .operation_i(is_vfncvt_f_f),
+   .frm_i(instruction_i.instr.frm),
+   .res_o(conv_zvfhmin_vd),
+   .status_o(conv_zvfhmin_flags)
+);
+
 // Main vectorial FPU instantiation
 
 logic   is_collision;
 logic   fpnew_stall;
 assign  is_collision = fpnew_out_instruction.instr.valid & (instr_to_out_integer.instr.valid &
                                                            (instr_to_out_integer.instr.unit == UNIT_SIMD));
-assign  stall_prev_o = is_collision | fpnew_stall;
+
+assign stall_prev_o = (is_collision & (simd_exe_stages == 1'd1)) | fpnew_stall;
+assign stall_post_o = is_collision | fpnew_stall;
 
 vfpu_drac_wrapper vectorial_fpu_inst (
     .clk_i,
@@ -979,6 +999,8 @@ always_comb begin
         result_data_vd = red_data_vd;
     end else if (instr_to_out.instr.instr_type == VIOTA) begin
         result_data_vd = data_viota_vd;
+    end else if (is_zvfhmin_conv(instr_to_out)) begin
+        result_data_vd = conv_zvfhmin_vd;
     end else if (instr_to_out.instr.instr_type == VMV_S_X) begin
         case (instr_to_out.instr.sew)
             SEW_8: begin
@@ -1804,6 +1826,8 @@ always_comb begin
         flags_merged = vfredoladderflags;
     end else if (is_vf_approx(instr_to_out.instr.instr_type)) begin
         flags_merged = status_vf7;
+    end else if (is_zvfhmin_conv(instr_to_out)) begin
+        flags_merged = conv_zvfhmin_flags;
     end else begin
         flags_merged = '0;
     end

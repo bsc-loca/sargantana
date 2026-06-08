@@ -46,8 +46,12 @@ logic enable_fp_op_int;
 rr_exe_fpu_instr_t finish_fp_op_int;
 
 always_comb begin : decide_FMT
-   if (instruction_i.instr.fmt) begin
+   if (instruction_i.instr.fmt == riscv_pkg::FMT_S) begin
+      dst_fmt = FP32;
+   end else if (instruction_i.instr.fmt == riscv_pkg::FMT_D) begin
       dst_fmt = FP64;
+   end else if (instruction_i.instr.fmt == riscv_pkg::FMT_H) begin
+      dst_fmt = FP16;
    end else begin
       dst_fmt = FP32;
    end
@@ -153,9 +157,31 @@ always_comb begin
          op          = fpnew_pkg::MINMAX;
          op_mod      = 0;
       end 
+      drac_pkg::FMINM_MAXM: begin
+         op          = fpnew_pkg::MINMAX;
+         op_mod      = 0;
+         rnd_mode_sel    = 1'b1;
+
+         if (instruction_i.instr.frm == fpnew_pkg::RDN) begin
+             opcode_rnd_mode = RNE;
+         end else begin
+             opcode_rnd_mode = RTZ;
+         end
+      end
       drac_pkg::FCMP: begin
          op          = fpnew_pkg::CMP;
          op_mod      = 0;
+      end
+      drac_pkg::FLEQ_FLTQ: begin
+         op          = fpnew_pkg::CMP;
+         op_mod      = 0;
+          rnd_mode_sel = 1'b1;
+
+         if (instruction_i.instr.frm == fpnew_pkg::RMM) begin
+             opcode_rnd_mode = RNE;
+         end else begin
+             opcode_rnd_mode = RTZ;
+         end
       end
       drac_pkg::FCLASS: begin
          op          = fpnew_pkg::CLASSIFY;
@@ -183,7 +209,9 @@ always_comb begin
       drac_pkg::FCVT_F2F: begin
          op              = fpnew_pkg::F2F;
          op_mod          = 0;
-         src_fmt         = instruction_i.instr.rs2[0] ? FP64 : FP32;
+         src_fmt         = (instruction_i.instr.rs2[1:0] == 2'b00) ? FP32 :
+                           ((instruction_i.instr.rs2[1:0] == 2'b10) ? FP16 :
+                           FP64);
       end
       // FP to FP
       drac_pkg::FMV_X2F: begin
@@ -192,7 +220,27 @@ always_comb begin
          rnd_mode_sel    = 1'b1;
          opcode_rnd_mode = fpnew_pkg::RUP;
       end
-      default: begin 
+      // ZFA instructions
+      drac_pkg::FROUND: begin
+         op              = fpnew_pkg::F2I;
+         op_mod          = 0;
+         src_fmt = (instruction_i.instr.fmt == 0) ? FP32 : FP64;
+      end
+      drac_pkg::FROUNDNX: begin
+         op              = fpnew_pkg::F2I;
+         op_mod          = 0;
+         src_fmt = (instruction_i.instr.fmt == 0) ? FP32 : FP64;
+      end
+       drac_pkg::FLI: begin
+          op              = fpnew_pkg::SGNJ;
+           operands[0] = instruction_i.instr.imm;
+          op_mod          = 0;
+       end
+       drac_pkg::FCVTMOD: begin
+          op              = fpnew_pkg::SGNJ;
+          op_mod          = 0;
+       end
+       default: begin
          op     = operation_e'('1); // don't care
          op_mod = DONT_CARE;        // don't care
       end
@@ -200,13 +248,44 @@ always_comb begin
 
 end
 
-assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops;
+logic [63:0] result_zfhmin;
+logic        valid_zfhmin_i;
+logic        valid_zfhmin_o;
+fpnew_pkg::status_t status_zfhmin;
+reg_t tag_zfhmin;
+
+logic [63:0] result_zfa;
+logic        valid_zfa_i;
+logic        valid_zfa_o;
+fpnew_pkg::status_t status_zfa;
+reg_t tag_zfa;
+
+logic collision_detected;
+assign collision_detected = ((valid_zfhmin_o == 1'b1) | (valid_zfa_o == 1'b1)) && (result_valid_int == 1'b1);
+
+assign enable_fp_op_int = instruction_i.instr.valid & (instruction_i.instr.unit == UNIT_FPU) & !stall_pending_fp_ops & !valid_zfhmin_i & !valid_zfa_i;
 
 logic pending_fp_op_queue_valid;
-assign pending_fp_op_queue_valid = enable_fp_op_int & ready_fpu;
+assign pending_fp_op_queue_valid = (enable_fp_op_int & ready_fpu) | ((valid_zfhmin_i | valid_zfa_i) & !collision_detected);
 
 logic pending_fp_op_queue_advance_head;
 assign pending_fp_op_queue_advance_head = finish_fp_op_int.instr.valid & !stall_wb_i;
+
+bus64_t pending_result_int;
+
+assign pending_result_int = result_valid_int ? result_int : (valid_zfhmin_o ? result_zfhmin : result_zfa);
+
+fpnew_pkg::status_t pending_fp_status_int;
+assign pending_fp_status_int = result_valid_int ? result_fp_status_int : (valid_zfhmin_o ? status_zfhmin : status_zfa);
+
+logic pending_result_valid_int;
+assign pending_result_valid_int = valid_zfhmin_o | valid_zfa_o | result_valid_int;
+
+reg_t pending_result_tag_int;
+assign pending_result_tag_int = result_valid_int ? result_tag_int : (valid_zfhmin_o ? tag_zfhmin : tag_zfa);
+
+logic stall_cvfpu;
+assign stall_cvfpu = ((valid_zfhmin_o == 1'b1) && (result_valid_int == 1'b1)) ? 1'b1 : 1'b0;
 
 pending_fp_ops_queue pending_fp_ops_queue_inst (
     .clk_i(clk_i),              // Clock Singal
@@ -214,10 +293,10 @@ pending_fp_ops_queue pending_fp_ops_queue_inst (
     .flush_i(flush_i),          // Flush all entries
     .valid_i(pending_fp_op_queue_valid),                // Valid instruction 
     .instruction_i(instruction_i),          // All instruction input signals
-    .result_valid_i(result_valid_int),         // Result valid
-    .result_tag_i(result_tag_int),           // Instruction that finishes
-    .result_data_i(result_int),          // Result asociated data
-    .result_fp_status_i(result_fp_status_int),
+    .result_valid_i(pending_result_valid_int),         // Result valid
+    .result_tag_i(pending_result_tag_int),           // Instruction that finishes
+    .result_data_i(pending_result_int),          // Result asociated data
+    .result_fp_status_i(pending_fp_status_int),
     .advance_head_i(pending_fp_op_queue_advance_head),         // Advance head pointer one position
     .finish_instr_fp_o(finish_fp_op_int),      // Next Instruction to Write Back FP
     .finish_fp_status_o(finish_fp_status_int),  // FP_STATUS
@@ -254,7 +333,7 @@ fpnew_top #(
    .vectorial_op_i ( '0 ),
    .tag_i          ( tag_current_instr_int ),
    .in_valid_i     ( enable_fp_op_int),
-   .out_ready_i    ( 1'b1 ),
+   .out_ready_i    ( !stall_cvfpu ),
    // Outputs
    .in_ready_o     ( ready_fpu ),
    .result_o       ( result_int ),
@@ -265,9 +344,75 @@ fpnew_top #(
    .early_valid_o  ( /* unsued */ )
 );
 
+
+
+
+assign valid_zfhmin_i = ((op == fpnew_pkg::F2F) & ((src_fmt == fpnew_pkg::FP16) | (dst_fmt == fpnew_pkg::FP16))) |
+                         ((op == fpnew_pkg::SGNJ) & ((src_fmt == fpnew_pkg::FP16) & (dst_fmt == fpnew_pkg::FP16)));
+
+
+assign valid_zfa_i = ((instruction_i.instr.instr_type == drac_pkg::FLI) | (instruction_i.instr.instr_type == drac_pkg::FCVTMOD));
+
+
+   logic is_move_zfhmin;
+   assign is_move_zfhmin = (op == fpnew_pkg::SGNJ) & (src_fmt == fpnew_pkg::FP16) & (dst_fmt == fpnew_pkg::FP16);
+
+   conv_zfhmin #(
+       .TagType	   ( reg_t )
+   ) conv_zfhmin_inst (
+       .clk_i(clk_i),
+       .rstn_i(rstn_i),
+       .operand_i(operands[0]),
+       .src_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(src_fmt))),
+       .dst_fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(dst_fmt))),
+       .rnd_mode_i(rnd_mode),
+       .is_move_i(is_move_zfhmin),
+       .valid_i(valid_zfhmin_i),
+       .tag_i(tag_current_instr_int),
+       .result_o(result_zfhmin),
+       .status_o(status_zfhmin),
+       .tag_o(tag_zfhmin),
+       .out_valid_o(valid_zfhmin_o)
+   );
+
+
+
+conv_zfa #(
+    .TagType	   ( reg_t )
+) conv_zfa_inst (
+    .clk_i(clk_i),
+    .rstn_i(rstn_i),
+    .instruction_i(instruction_i),
+    .operand_i(operands[0]),
+    .fmt_i(fpnew_pkg::fp_format_e'(W3_logic'(src_fmt))),
+    .valid_i(valid_zfa_i & !collision_detected),
+    .tag_i(tag_current_instr_int),
+    .stall_collision_i(collision_detected),
+    .result_o(result_zfa),
+    .status_o(status_zfa),
+    .tag_o(tag_zfa),
+    .out_valid_o(valid_zfa_o)
+);
+
+fpnew_pkg::status_t zfa_post_status;
+logic [63:0] zfa_post_result;
+
+
+zfa_post_process #(
+   .TagType ( reg_t )
+) i_zfa_post_process_queue (
+   .instruction_i ( finish_fp_op_int ),
+   .result_i      ( finish_fp_op_int.data_rs3 ),
+   .status_i      ( finish_fp_status_int ),
+   .out_valid_i  ( finish_fp_op_int.instr.valid ),
+   .result_o    ( zfa_post_result ),
+   .status_o    ( zfa_post_status ),
+   .out_valid_o ( /* unused */ )
+);
+
 // Output FPU
 assign instruction_o.valid           = finish_fp_op_int.instr.valid & finish_fp_op_int.instr.fregfile_we;
-assign instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},finish_fp_op_int.data_rs3[31:0]} : finish_fp_op_int.data_rs3;
+assign instruction_o.result          = finish_fp_op_int.instr.op_32 ? {{32{1'b1}},zfa_post_result[31:0]} : zfa_post_result;
 assign instruction_o.pc              = finish_fp_op_int.instr.pc;
 assign instruction_o.bpred           = finish_fp_op_int.instr.bpred;
 assign instruction_o.rs1             = finish_fp_op_int.instr.rs1;
@@ -282,7 +427,7 @@ assign instruction_o.chkp            = finish_fp_op_int.chkp;
 assign instruction_o.gl_index        = finish_fp_op_int.gl_index;
 assign instruction_o.branch_taken    = 1'b0;
 assign instruction_o.result_pc       = 0;
-assign instruction_o.fp_status       = finish_fp_status_int;
+assign instruction_o.fp_status       = zfa_post_status;
 assign instruction_o.ex              = '0;
 `ifdef SIM_KONATA_DUMP
    assign instruction_o.id           = finish_fp_op_int.instr.id;
@@ -290,7 +435,7 @@ assign instruction_o.ex              = '0;
 
 
 // Stall if the FPU is not ready or there is a fp instruction on flight
-assign stall_o = (!ready_fpu | stall_pending_fp_ops);
+assign stall_o = ((!ready_fpu & !valid_zfhmin_i & !valid_zfa_i) | stall_pending_fp_ops | collision_detected);
 
 
 // Output FPU scalar

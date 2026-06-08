@@ -1258,7 +1258,6 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .vleff_vl_o(vleff_vl_int),
         .vl_id_exe_i(vl_id_exe),
 
-        .resp_icache_guest_ppn_i(resp_icache_cpu_i.guest_ppn),
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
         .flush_i(flush_int.flush_exe),
         .commit_store_or_amo_i(commit_store_or_amo_int),

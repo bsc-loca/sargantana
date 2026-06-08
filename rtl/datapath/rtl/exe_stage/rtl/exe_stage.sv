@@ -37,7 +37,6 @@
 
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
-    input logic [drac_pkg::PPN_SIZE-1:0] resp_icache_guest_ppn_i,      // guest_ppn from icache interface
     input resp_dcache_cpu_t             resp_dcache_cpu_i,      // Response from dcache interface
     input logic [VMAXELEM_LOG:0]        vl_i,
     input vxrm_t                        vxrm_i,
@@ -126,6 +125,7 @@ logic stall_int;
 logic stall_simd;
 logic stall_simd_int;
 logic fpnew_stall_simd;
+logic fpnew_stall_simd_next;
 logic stall_fpu_int;
 logic stall_fpu;
 logic empty_mem;
@@ -220,7 +220,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
         fpnew_stall_simd_old <= 1'b0;
     end else begin
-        fpnew_stall_simd_old <= fpnew_stall_simd;
+        fpnew_stall_simd_old <= fpnew_stall_simd_next;
     end
 end
 
@@ -359,7 +359,6 @@ div_unit div_unit_inst (
 );
 
 branch_unit branch_unit_inst (
-    .resp_icache_guest_ppn_i(resp_icache_guest_ppn_i),
     .en_translation_i (en_translation_i),
     .en_g_translation_i (en_g_translation_i),
     .priv_lvl_i(priv_lvl_i),
@@ -378,7 +377,8 @@ simd_unit simd_unit_inst (
     .instruction_scalar_o (simd_to_scalar_wb),
     .instruction_fp_o (simd_to_fp_wb),
     .instruction_simd_o  (simd_to_simd_wb),
-    .stall_prev_o   (fpnew_stall_simd)
+    .stall_prev_o   (fpnew_stall_simd),
+    .stall_post_o   (fpnew_stall_simd_next)
 );
 
 //forood: why is VL_I removed from up there
@@ -399,6 +399,7 @@ assign simd_to_scalar_wb.valid = 1'b0;
 assign simd_to_simd_wb.valid = 1'b0;
 assign simd_to_fp_wb.valid = 1'b0;
 assign fpnew_stall_simd = 1'b0;
+assign fpnew_stall_simd_next = 1'b0;
 `endif
 
 `ifndef DISABLE_SIMD

@@ -110,7 +110,7 @@ MaskType        data_vm     ;
 logic           is_opvf     ; // uses the scalar operand
 
 assign instr_type      = instruction_i.instr.instr_type                                                     ;
-assign instr_valid     = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type)    ; 
+assign instr_valid     = instruction_i.instr.valid & (drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !drac_pkg::is_zvfhmin_conv(instruction_i))  ; 
 assign sew             = instruction_i.instr.sew                                                            ;
 assign is_opvf         = instruction_i.instr.is_opvf                                                        ;
 assign data_rs1        = instruction_i.data_rs1                                                             ;
@@ -1115,10 +1115,10 @@ logic               advance_head;
 logic               pending_queue_valid;
 logic               in_ready;
 
-assign enable_vfp_op = instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !stall_pending_vfp;
+assign enable_vfp_op = instruction_i.instr.valid & (drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !drac_pkg::is_zvfhmin_conv(instruction_i)) & !stall_pending_vfp;
 assign pending_queue_valid = enable_vfp_op & in_ready;
 assign advance_head = finish_vfp_instr.instr.valid & out_ready_i;
-assign stall_o = (instruction_i.instr.valid & drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & (!in_ready | stall_pending_vfp));
+assign stall_o = (instruction_i.instr.valid & (drac_pkg::is_vfpnew(instruction_i.instr.instr_type) & !drac_pkg::is_zvfhmin_conv(instruction_i)) & (!in_ready | stall_pending_vfp));
 
 assign instruction_o = finish_vfp_instr;
 assign status_o = finish_vfp_status;

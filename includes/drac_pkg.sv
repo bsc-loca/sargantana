@@ -371,9 +371,11 @@ typedef enum logic [8:0] {
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
    // Floating-Point Load and Store Instructions
-   FLD, FLW, FSD, FSW, // FLH, FLB, FSD, FSW, FSH, FSB,
+   FLD, FLW, FSD, FSW, FLH, FSH, //FLB, FSD, FSW, FSB,
    // Floating-Point Computational Instructions
    FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
+   // Floating-point Zfa instructions
+   FMINM_MAXM, FLEQ_FLTQ, FROUND, FROUNDNX, FLI, FCVTMOD,
    // Floating-Point Conversion and Move Instructions
    FCVT_F2I, FCVT_I2F, FCVT_F2F, FSGNJ, FMV_F2X, FMV_X2F,
    // Floating-Point Compare Instructions
@@ -520,7 +522,7 @@ typedef struct packed {
     
     // FP instructions only
     reg_t rs3;                          // Register Source 3 for fused ops
-    logic fmt;                          // FMT mode (0:S, 1:D)
+    logic [1:0] fmt;                          // FMT mode (0:S, 1:D, 2: H)
     logic use_fs1;                      // Instruction uses fregister source 1
     logic use_fs2;                      // Instruction uses fregister source 2
     logic use_fs3;                      // Instruction uses fregister source 2
@@ -1487,6 +1489,11 @@ function automatic logic is_vf_redo (input instr_type_t instr);
                   (instr == VFWREDOSUM) ) ? 1'b1 : 1'b0;
 endfunction
 
+function automatic logic is_zvfhmin_conv (input rr_exe_simd_instr_t instr);
+    is_zvfhmin_conv = ((instr.instr.sew == SEW_16) && 
+                    ((instr.instr.instr_type == VFNCVT_F_F) || (instr.instr.instr_type == VFWCVT_F_F))     ) ? 1'b1 : 1'b0;
+endfunction
+
 // depends on inner implementation of vfred modules
 parameter int DELAY_SUM_FP32    = 2;
 parameter int DELAY_SUM_FP64    = 2;
@@ -1649,6 +1656,18 @@ endfunction
 
 function automatic logic is_subnorm_f32(input logic [31:0] fp32);
     is_subnorm_f32 = !(|fp32[30:23]) && (|fp32[22:0]);
+endfunction
+
+function automatic logic is_nan_f16(input logic [15:0] fp16);
+    is_nan_f16 = (&fp16[14:10]) && (|fp16[9:0]);
+endfunction
+
+function automatic logic is_qnan_f16(input logic [15:0] fp16);
+    is_qnan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b1);
+endfunction
+
+function automatic logic is_snan_f16(input logic [15:0] fp16);
+    is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
 endfunction
 
 // --------------------------------------------------------------------

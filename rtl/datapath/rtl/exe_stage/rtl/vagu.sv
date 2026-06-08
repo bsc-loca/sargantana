@@ -712,7 +712,11 @@ always_comb begin
     memp_instr_o.velem_id = velem_cnt_q[MAX_VELEM_LOG-1:0];
     memp_instr_o.load_mask = load_mask;
     memp_instr_o.velem_off = velem_off[DCACHE_RESP_DATA_LOG-3:0];
-    memp_instr_o.velem_incr = trunc_max_velem_log_sum(acum_velem_incr_q[MAX_VELEM_LOG:0] + velem_incr[DCACHE_RESP_DATA_LOG-3:0]);
+    if (vmem_ops_state_q != SCALAR) begin
+        memp_instr_o.velem_incr = trunc_max_velem_log_sum(acum_velem_incr_q[MAX_VELEM_LOG:0] + velem_incr[DCACHE_RESP_DATA_LOG-3:0]);
+    end else begin
+        memp_instr_o.velem_incr = velem_incr[DCACHE_RESP_DATA_LOG-3:0];
+    end
 end
 
 always_ff @(posedge clk_i, negedge rstn_i) begin

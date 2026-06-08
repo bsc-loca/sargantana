@@ -57,6 +57,7 @@ module decoder
 	localparam [5:0] F7_NORMAL_AUX = F7_NORMAL >> 1;
     bus64_t imm_value;
     logic xcpt_illegal_instruction_int;
+    logic xcpt_illegal_c_instr_int;
     logic xcpt_virtual_instruction_int;
     logic xcpt_addr_misaligned_int;
     addrPC_t ras_pc_int;
@@ -101,6 +102,7 @@ module decoder
      
     always_comb begin
         xcpt_illegal_instruction_int = 1'b0;
+        xcpt_illegal_c_instr_int = 1'b0;
         xcpt_virtual_instruction_int = 1'b0;
         xcpt_addr_misaligned_int     = 1'b0;
 
@@ -465,7 +467,7 @@ module decoder
                         end
                         F3_ORI: begin
                             // CMO prefetch 
-                            /*if(decode_i.inst.itype.rd == '0) begin
+                            if(decode_i.inst.itype.rd == '0) begin
                                 unique case(decode_i.inst.itype.imm[24:20])
                                     F5_CMO_PREFETCH_I : begin // FIXME: For now do nothing, it does not make sense to send prefetch request if we only have one port in icache
                                         decode_instr_int.instr_type = ADD;
@@ -487,9 +489,9 @@ module decoder
                                     end
                                 endcase
                             end
-                            else begin // ORI*/
+                            else begin // ORI
                                 decode_instr_int.instr_type = OR_INST;
-                            //end
+                            end
                         end
                         F3_ANDI: begin
                             decode_instr_int.instr_type = AND_INST;
@@ -842,6 +844,14 @@ module decoder
                     decode_instr_int.unit = UNIT_MEM;
                     decode_instr_int.use_rs1    = 1'b1;
                     case (decode_i.inst.itype.func3)
+                        F3_FLH: begin
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FLH;
+                                decode_instr_int.fregfile_we = 1'b1;
+                            end
+                        end
                         F3_FLW: begin
                             if (csr_fs_i == 2'b00) begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -934,6 +944,14 @@ module decoder
                     decode_instr_int.use_imm = 1'b0;
                     decode_instr_int.use_rs1 = 1'b1;
                     case (decode_i.inst.stype.func3)
+                        F3_FLH: begin
+                            if (csr_fs_i == 2'b00) begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end else begin
+                                decode_instr_int.instr_type = FSH;
+                                decode_instr_int.use_fs2    = 1'b1;
+                            end
+                        end
                         F3_FLW: begin
                             //decode_instr_int.regfile_src = FPU_RF;
                             if (csr_fs_i == 2'b00) begin
@@ -1169,7 +1187,8 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
                                         decode_instr_int.instr_type = VRGATHEREI16;
-                                        if((vl > (VLEN/16)) || ((sew == SEW_8) && (decode_instr_int.vs1[0]) && (~vlmul_int[2]))) begin // vs1 can not be odd with SEW8 if EMUL>1
+                                        if((vl > (VLEN/16)) || ((sew == SEW_8) && (((decode_instr_int.vs1[0]) && (~vlmul_int[2])) || // vs1 can not be odd with SEW8 if EMUL>1
+                                                                                   ((decode_instr_int.vs1[4:1] == decode_instr_int.vd[4:1]) && (decode_instr_int.vd[0]))))) begin 
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                         else begin
@@ -2878,7 +2897,7 @@ module decoder
                             decode_instr_int.instr_type = FENCE_I;
                             decode_instr_int.stall_csr_fence = 1'b1;
                         end
-                        /*F3_CBO: begin //Zicbom extension (CMO instructions) -> // TODO: Hypervisor cmo config with CSRs
+                        F3_CBO: begin //Zicbom extension (CMO instructions) -> // TODO: Hypervisor cmo config with CSRs
                             decode_instr_int.use_rs1 = 1'b1;
                             decode_instr_int.mem_type = CMO_CBO; // CMO Cache Block Operations (flush, inval, clean, zero)
                             decode_instr_int.unit = UNIT_MEM;
@@ -2970,7 +2989,7 @@ module decoder
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             endcase
-                        end*/
+                        end
                         default: begin
                             xcpt_illegal_instruction_int = 1'b1;
                         end
@@ -3237,10 +3256,13 @@ module decoder
                         // we only support the first two modes (S,D)
                         case (decode_i.inst.r4type.fmt)
                             FMT_S: begin
-                                decode_instr_int.fmt = 1'b0;
+                                decode_instr_int.fmt = 2'b00;
                             end
                             FMT_D: begin
-                                decode_instr_int.fmt = 1'b1;
+                                decode_instr_int.fmt = 2'b01;
+                            end
+                            FMT_H: begin
+                                decode_instr_int.fmt = 2'b10;
                             end
                             default: begin
                                 xcpt_illegal_instruction_int = 1'b1;
@@ -3317,20 +3339,34 @@ module decoder
                                 end
                             end
                             F5_FP_FMIN_MAX: begin
-                                decode_instr_int.instr_type = FMIN_MAX;
+                                if (decode_i.inst.bits[13] == 1'b0) begin
+                                    decode_instr_int.instr_type = FMIN_MAX;
+                                end else begin
+                                    decode_instr_int.instr_type = FMINM_MAXM;
+                                end
+
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b001]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b011]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
-                            F5_FP_FCVT_F2I: begin // FP to Integer
-                                decode_instr_int.instr_type = FCVT_F2I;
-                                check_frm = 1'b1;
-                                decode_instr_int.use_fs2 = 1'b0;
-                                decode_instr_int.fregfile_we = 1'b0;
-                                decode_instr_int.regfile_we = 1'b1;
-                                // Check if FMT is FP32 then INT 32 then extens sign
-                                decode_instr_int.op_32   = !decode_instr_int.rs2[1];
+                             F5_FP_FCVT_F2I: begin // FP to Integer
+                                 if (decode_i.inst.fprtype.rs2 == 5'd8) begin
+                                     if (decode_i.inst.fprtype.rm == 3'd1) begin
+                                         decode_instr_int.instr_type = FCVTMOD;
+                                         check_frm = 1'b0;
+                                     end else begin
+                                         xcpt_illegal_instruction_int = 1'b1;
+                                     end
+                                 end else begin
+                                     decode_instr_int.instr_type = FCVT_F2I;
+                                     check_frm = 1'b1;
+                                 end
+                                 decode_instr_int.use_fs2 = 1'b0;
+                                 decode_instr_int.fregfile_we = 1'b0;
+                                 decode_instr_int.regfile_we = 1'b1;
+                                 // Check if FMT is FP32 then INT 32 then extens sign
+                                 decode_instr_int.op_32   = !decode_instr_int.rs2[1];
                                 // Check through rounding modes if illegal instr
                                 /*if (!(decode_i.inst.fprtype.rs2 inside {[5'b00000:5'b00011]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
@@ -3342,9 +3378,12 @@ module decoder
                                 decode_instr_int.use_fs2 = 1'b0;
                                 case (decode_i.inst.fprtype.rm)
                                     3'b000: begin
-                                        if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                        if (decode_i.inst.fprtype.fmt == FMT_S) begin
                                             decode_instr_int.instr_type    = ADDW;
                                             decode_instr_int.op_32         = 1'b1;
+                                        end else if (decode_i.inst.fprtype.fmt == FMT_H) begin
+                                            decode_instr_int.instr_type    = SEXTH;
+                                            decode_instr_int.op_32         = 1'b1;  // TODO fix this, add a wider field and support H and Q.
                                         end else begin
                                             decode_instr_int.instr_type    = ADD;
                                             decode_instr_int.op_32         = 1'b0;
@@ -3369,11 +3408,17 @@ module decoder
                                 endcase
                             end
                             F5_FP_FCMP: begin // FP comp
-                                decode_instr_int.instr_type = FCMP;
                                 decode_instr_int.fregfile_we = 1'b0;
                                 decode_instr_int.regfile_we = 1'b1;
+
+                                if (decode_i.inst.bits[14] == 1'b0) begin
+                                    decode_instr_int.instr_type = FCMP;
+                                end else begin
+                                    decode_instr_int.instr_type = FLEQ_FLTQ;
+                                end
+
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b000:3'b010]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b110], [3'b000:3'b010]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
@@ -3397,7 +3442,7 @@ module decoder
                                 decode_instr_int.use_rs1 = 1'b1;
                                 decode_instr_int.use_rs2 = 1'b0;
                                 // Check if FMT is FP32 then INT 32 then extens sign
-                                if (decode_i.inst.fprtype.fmt == FMT_FP_S) begin
+                                if (decode_i.inst.fprtype.fmt == FMT_S) begin
                                     decode_instr_int.op_32   = 1'b1;
                                 end else begin
                                     decode_instr_int.op_32   = 1'b0;
@@ -3405,10 +3450,24 @@ module decoder
                                 if (decode_i.inst.fprtype.rm != 3'b000) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
+
+                                if (decode_i.inst.bits[24:20] == 5'd1) begin // rs2=1
+                                    decode_instr_int.use_imm = 1'b1;
+                                    decode_instr_int.instr_type = FLI;
+                                end else begin
+                                    decode_instr_int.instr_type = FMV_X2F;
+                                end
                             end
                             // D2S & S2D specific 
                             F5_FP_FCVT_SD: begin
-                                decode_instr_int.instr_type = FCVT_F2F;
+                                if (decode_i.inst.common.rs2 == 5'd4) begin
+                                    decode_instr_int.instr_type = FROUND;
+                                end else if (decode_i.inst.common.rs2 == 5'd5) begin
+                                    decode_instr_int.instr_type = FROUNDNX;
+                                end else begin
+                                    decode_instr_int.instr_type = FCVT_F2F;
+                                end
+
                                 decode_instr_int.use_fs2 = 1'b0;
                                 check_frm = 1'b1;
                             end
@@ -3418,11 +3477,14 @@ module decoder
                         endcase
 
                         unique case (decode_i.inst.fprtype.fmt)
-                            FMT_FP_S: begin
+                            FMT_S: begin
                                 decode_instr_int.fmt = FMT_S;
                             end
-                            FMT_FP_D: begin
+                            FMT_D: begin
                                 decode_instr_int.fmt = FMT_D;
+                            end
+                            FMT_H: begin
+                                decode_instr_int.fmt = FMT_H;
                             end
                             default: begin
                                 xcpt_illegal_instruction_int = 1'b0;
@@ -3458,7 +3520,12 @@ module decoder
                 end
                 default: begin
                     // By default this is not a valid instruction
-                    xcpt_illegal_instruction_int = 1'b1;
+                    if (decode_i.inst.common.opcode[1:0] != 2'b11) begin
+                        // This is a compressed instruction, but we do not support it
+                        xcpt_illegal_c_instr_int = 1'b1;
+                    end else begin
+                        xcpt_illegal_instruction_int = 1'b1;
+                    end
                 end
             endcase
         end
@@ -3538,6 +3605,14 @@ module decoder
                 decode_instr_o.ex.tinst  = 'h0;
                 decode_instr_o.ex.gva    = 'h0;
                 decode_instr_o.instr.ex_valid = 1'b1; 
+            end else if (xcpt_illegal_c_instr_int) begin
+                decode_instr_o.ex.valid  = 1'b1;
+                decode_instr_o.ex.cause  = ILLEGAL_INSTR;
+                decode_instr_o.ex.origin = {48'd0, decode_i.inst.bits[15:0]};
+                decode_instr_o.ex.origin2 = 'h0;
+                decode_instr_o.ex.tinst  = 'h0;
+                decode_instr_o.ex.gva    = 'h0;
+                decode_instr_o.instr.ex_valid = 1'b1;
             end else if (xcpt_illegal_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = ILLEGAL_INSTR;
@@ -3549,7 +3624,7 @@ module decoder
             end else if (xcpt_virtual_instruction_int) begin
                 decode_instr_o.ex.valid  = 1'b1;
                 decode_instr_o.ex.cause  = VIRTUAL_INSTRUCTION;
-                decode_instr_o.ex.origin = 'h0;
+                decode_instr_o.ex.origin = {32'd0, decode_i.inst};
                 decode_instr_o.ex.origin2 = 'h0;
                 decode_instr_o.ex.tinst  = 'h0;
                 decode_instr_o.ex.gva    = v_mode_i;

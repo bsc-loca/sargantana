@@ -820,7 +820,7 @@ typedef enum logic [1:0] {
 } op_fmt_fp_t;
 
 typedef enum logic [2:0] {
-    F3_UNIMP2 = 3'b001,
+    F3_FLH    = 3'b001,
     F3_FLW    = 3'b010,
     F3_FLD    = 3'b011,
     F3_V8B    = 3'b000,
@@ -1000,6 +1000,60 @@ typedef struct packed {
     logic [13:0] vmid;
     logic [43:0] ppn;
 } hgatp_t;
+typedef struct packed {
+    logic        se;
+    logic        envcfg;
+    logic        wpri1;
+    logic        csrind;    // Smcsrind/Sscsrind extensions not implemented, read-only zero
+    logic        aia;       // Ssaia extension not implemented, read-only zero
+    logic        imsic;     // Ssaia extension not implemented, read-only zero
+    logic        cntext;    // Sdtrig extension not implemented, read-only zero
+    logic        p1p13;     // controls access to the hedelegh which is a RV32-only register, read-only zero
+    logic        srmcfg;    // Ssqosid extension not implemented, read-only zero
+    logic        ctr;       // Smctr extension not implemented, read-only zero
+    logic [50:0] wpri0;
+    logic        jvt;       // Zcmt extension not implemented, read-only zero
+    logic        fcsr;      // misa.F is always 1, read-only zero
+    logic        c;         // no custom state controlled by this bit, read-only zero
+} mstateen0_t;
+typedef struct packed {
+    logic        se;
+    logic        envcfg;
+    logic        wpri2;
+    logic        csrind;    // Smcsrind/Sscsrind extensions not implemented, read-only zero
+    logic        aia;       // Ssaia extension not implemented, read-only zero
+    logic        imsic;     // Ssaia extension not implemented, read-only zero
+    logic        cntext;    // Sdtrig extension not implemented, read-only zero
+    logic [1:0]  wpri1;
+    logic        ctr;       // Smctr extension not implemented, read-only zero
+    logic [50:0] wpri0;
+    logic        jvt;       // Zcmt extension not implemented, read-only zero
+    logic        fcsr;      // misa.F is always 1, read-only zero
+    logic        c;         // no custom state controlled by this bit, read-only zero
+} hstateen0_t;
+typedef struct packed {
+    logic [28:0] wpri0;
+    logic        jvt;       // Zcmt extension not implemented, read-only zero
+    logic        fcsr;      // misa.F is always 1, read-only zero
+    logic        c;         // no custom state controlled by this bit, read-only zero
+} sstateen0_t;
+typedef struct packed {
+    logic        se;
+    logic [62:0] reserved;
+} mstateen1_t;
+typedef mstateen1_t mstateen2_t;
+typedef mstateen1_t mstateen3_t;
+typedef struct packed {
+    logic        se;
+    logic [62:0] reserved;
+} hstateen1_t;
+typedef hstateen1_t hstateen2_t;
+typedef hstateen1_t hstateen3_t;
+typedef struct packed {
+    logic [31:0] reserved;
+} sstateen1_t;
+typedef sstateen1_t sstateen2_t;
+typedef sstateen1_t sstateen3_t;
 
 localparam int unsigned IRQ_S_SOFT  = 1;
 localparam int unsigned IRQ_VS_SOFT = 2;    //Added for H ext
@@ -1067,6 +1121,10 @@ typedef enum logic [11:0] {
     CSR_SIP            = 12'h144,
     CSR_SATP           = 12'h180,
     CSR_SCOUNTOVF      = 12'hDA0,
+    CSR_SSTATEEN0      = 12'h10C, // Supervisor State Enable 0 Register
+    CSR_SSTATEEN1      = 12'h10D, // Supervisor State Enable 1 Register
+    CSR_SSTATEEN2      = 12'h10E, // Supervisor State Enable 2 Register
+    CSR_SSTATEEN3      = 12'h10F, // Supervisor State Enable 3 Register
     // Supervisor Mode CSRs
     CSR_VSSTATUS       = 12'h200,
     CSR_VSIE           = 12'h204,
@@ -1092,6 +1150,10 @@ typedef enum logic [11:0] {
     CSR_HTIMEDELTA     = 12'h605,
     CSR_HGATP          = 12'h680,
     CSR_HGEIP          = 12'hE12,
+    CSR_HSTATEEN0      = 12'h60C, // Hypervisor State Enable 0 Register
+    CSR_HSTATEEN1      = 12'h60D, // Hypervisor State Enable 1 Register
+    CSR_HSTATEEN2      = 12'h60E, // Hypervisor State Enable 2 Register
+    CSR_HSTATEEN3      = 12'h60F, // Hypervisor State Enable 3 Register
     // Machine Mode CSRs
     CSR_MSTATUS        = 12'h300,
     CSR_MISA           = 12'h301,
@@ -1101,6 +1163,8 @@ typedef enum logic [11:0] {
     CSR_MTVEC          = 12'h305,
     CSR_MCOUNTEREN     = 12'h306,
     CSR_MCOUNTINHIBIT  = 12'h320,
+    CSR_MCYCLECFG      = 12'h321,  //Machine cycle counter configuration
+    CSR_MINSTRETCFG    = 12'h322,  //Machine instruction retired counter configuration
     CSR_MHPM_EVENT_3   = 12'h323,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_4   = 12'h324,  //Machine performance monitoring Event Selector
     CSR_MHPM_EVENT_5   = 12'h325,  //Machine performance monitoring Event Selector
@@ -1148,6 +1212,10 @@ typedef enum logic [11:0] {
     `endif
     CSR_MCYCLE         = 12'hB00,
     CSR_MINSTRET       = 12'hB02,
+    CSR_MSTATEEN0      = 12'h30C, // Machine State Enable 0 Register
+    CSR_MSTATEEN1      = 12'h30D, // Machine State Enable 1 Register
+    CSR_MSTATEEN2      = 12'h30E, // Machine State Enable 2 Register
+    CSR_MSTATEEN3      = 12'h30F, // Machine State Enable 3 Register
     // Performance counters (Machine Mode)
     CSR_MHPM_COUNTER_3  = 12'hB03,
     CSR_MHPM_COUNTER_4  = 12'hB04,
@@ -1369,6 +1437,53 @@ localparam logic [63:0] HSTATUS_VTW    = 64'h00200000;
 localparam logic [63:0] HSTATUS_VTSR   = 64'h00400000;
 localparam logic [63:0] HSTATUS_VSXL   = 64'h0000000300000000;
 localparam logic [63:0] HSTATUS_WPRI   = 64'hFFFFFFFCFF8C0C1F;
+
+
+localparam logic [31:0] SSTATEEN0_C     = 32'h00000001;
+localparam logic [31:0] SSTATEEN0_FCSR  = 32'h00000002;
+localparam logic [31:0] SSTATEEN0_JVT   = 32'h00000004;
+localparam logic [31:0] SSTATEEN0_WPRI  = 32'hFFFFFFF8;
+localparam logic [31:0] SSTATEEN1_WPRI  = 32'hFFFFFFFF;
+localparam logic [31:0] SSTATEEN2_WPRI  = 32'hFFFFFFFF;
+localparam logic [31:0] SSTATEEN3_WPRI  = 32'hFFFFFFFF;
+
+localparam logic [63:0] MSTATEEN0_C         = 64'h00000001;
+localparam logic [63:0] MSTATEEN0_FCSR      = 64'h00000002;
+localparam logic [63:0] MSTATEEN0_JVT       = 64'h00000004;
+localparam logic [63:0] MSTATEEN0_WPRI      = 64'h203FFFFFFFFFFFF8;
+localparam logic [63:0] MSTATEEN0_CTR       = 64'h0040000000000000;
+localparam logic [63:0] MSTATEEN0_SRMCFG    = 64'h0080000000000000;
+localparam logic [63:0] MSTATEEN0_P1P13     = 64'h0100000000000000;
+localparam logic [63:0] MSTATEEN0_CONTEXT   = 64'h0200000000000000;
+localparam logic [63:0] MSTATEEN0_IMSIC     = 64'h0400000000000000;
+localparam logic [63:0] MSTATEEN0_AIA       = 64'h0800000000000000;
+localparam logic [63:0] MSTATEEN0_CSRIND    = 64'h1000000000000000;
+localparam logic [63:0] MSTATEEN0_ENVCFG    = 64'h4000000000000000;
+localparam logic [63:0] MSTATEEN0_SE        = 64'h8000000000000000;
+localparam logic [63:0] MSTATEEN1_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] MSTATEEN1_SE        = 64'h8000000000000000;
+localparam logic [63:0] MSTATEEN2_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] MSTATEEN2_SE        = 64'h8000000000000000;
+localparam logic [63:0] MSTATEEN3_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] MSTATEEN3_SE        = 64'h8000000000000000;
+
+localparam logic [63:0] HSTATEEN0_C         = 64'h00000001;
+localparam logic [63:0] HSTATEEN0_FCSR      = 64'h00000002;
+localparam logic [63:0] HSTATEEN0_JVT       = 64'h00000004;
+localparam logic [63:0] HSTATEEN0_WPRI      = 64'h21BFFFFFFFFFFFF8;
+localparam logic [63:0] HSTATEEN0_CTR       = 64'h0040000000000000;
+localparam logic [63:0] HSTATEEN0_CONTEXT   = 64'h0200000000000000;
+localparam logic [63:0] HSTATEEN0_IMSIC     = 64'h0400000000000000;
+localparam logic [63:0] HSTATEEN0_AIA       = 64'h0800000000000000;
+localparam logic [63:0] HSTATEEN0_CSRIND    = 64'h1000000000000000;
+localparam logic [63:0] HSTATEEN0_ENVCFG    = 64'h4000000000000000;
+localparam logic [63:0] HSTATEEN0_SE        = 64'h8000000000000000;
+localparam logic [63:0] HSTATEEN1_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] HSTATEEN1_SE        = 64'h8000000000000000;
+localparam logic [63:0] HSTATEEN2_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] HSTATEEN2_SE        = 64'h8000000000000000;
+localparam logic [63:0] HSTATEEN3_WPRI      = 64'h7FFFFFFFFFFFFFFF;
+localparam logic [63:0] HSTATEEN3_SE        = 64'h8000000000000000;
 
 // decoded CSR address
 typedef struct packed {

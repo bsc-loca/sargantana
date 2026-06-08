@@ -71,6 +71,7 @@ module immediate
             end
             riscv_pkg::OP_LOAD_FP: begin
                 case (instr_i.stype.func3)
+                    F3_FLH,
                     F3_FLW,
                     F3_FLD: begin
                         imm_o = {sign_extended,imm_itype};
@@ -109,8 +110,12 @@ module immediate
             riscv_pkg::OP_BRANCH: begin
                 imm_o = {sign_extended,imm_btype};
             end
+            riscv_pkg::OP_FP: begin
+                imm_o = {{28 {1'b0}},instr_i.bits[19:15]};
+            end
             riscv_pkg::OP_STORE_FP: begin
                 case (instr_i.stype.func3)
+                    F3_FLH,
                     F3_FLW,
                     F3_FLD: begin
                         imm_o = {sign_extended,imm_stype};
@@ -127,7 +132,7 @@ module immediate
                 case (instr_i.itype.func3)
                     F3_OPIVI: begin
                         case (instr_i.vtype.func6)
-                            F6_VSLL, F6_VSRL, F6_VSRA, F6_VNSRL, F6_VNSRA, F6_VSLIDEUP, F6_VSLIDEDOWN, F6_VRGATHER: imm_o = imm_uvtype;
+                            F6_VSLL, F6_VSRL, F6_VSRA, F6_VNSRL, F6_VNSRA, F6_VSLIDEUP, F6_VSLIDEDOWN, F6_VRGATHER, F6_VNCLIPU, F6_VNCLIP: imm_o = imm_uvtype;
                             F6_VROR: imm_o = imm_uvrtype;
                             default: imm_o = imm_vtype;
                         endcase

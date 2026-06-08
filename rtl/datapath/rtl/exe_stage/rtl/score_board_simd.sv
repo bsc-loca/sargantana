@@ -292,7 +292,7 @@ always_comb begin
                 `endif
             end else if (j==0) begin
                 if (simd_exe_stages == (trunc_stages(i))) begin
-                    simd_pipe_d[i][0].valid = (!drac_pkg::is_vfpnew(instr_entry_i.instr.instr_type)) & ~stall_from_vfp & ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
+                    simd_pipe_d[i][0].valid = (!(drac_pkg::is_vfpnew(instr_entry_i.instr.instr_type)) | drac_pkg::is_zvfhmin_conv(instr_entry_i)) & ~stall_from_vfp & ~stall_simd & ready_i & (instr_entry_i.instr.unit == UNIT_SIMD);
                     `ifdef VERILATOR
                     simd_pipe_d[i][0].simd_instr_type = instr_entry_i.instr.instr_type;
                     `endif
