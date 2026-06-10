@@ -959,6 +959,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
                         (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA) ||
                         (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA) ||
+                        (stage_ir_rr_q.instr.instr_type == SINVAL_VMA) ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_W_INVAL) ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_INVAL_IR) ||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_VVMA) ||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_GVMA) ||
                         (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
                         (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
                         (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
@@ -1624,12 +1629,20 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                   (instruction_to_commit[0].instr_type == FENCE)     || 
                                   (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
                                   (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA));
+                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA))|| 
+                                  (instruction_to_commit[0].instr_type == SINVAL_VMA)|| 
+                                  (instruction_to_commit[0].instr_type == SFENCE_W_INVAL)|| 
+                                  (instruction_to_commit[0].instr_type == SFENCE_INVAL_IR)|| 
+                                  (instruction_to_commit[0].instr_type == HINVAL_VVMA)|| 
+                                  (instruction_to_commit[0].instr_type == HINVAL_GVMA);
     // tell cu there is a fence i to flush the icache
     assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
                                     (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
                                     (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA));
+                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA))|| 
+                                    (instruction_to_commit[0].instr_type == SINVAL_VMA)|| 
+                                    (instruction_to_commit[0].instr_type == HINVAL_VVMA)|| 
+                                    (instruction_to_commit[0].instr_type == HINVAL_GVMA);
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
