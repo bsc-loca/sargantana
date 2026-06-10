@@ -3187,6 +3187,37 @@ module decoder
                                             decode_instr_int.instr_type = HFENCE_GVMA;
                                             decode_instr_int.stall_csr_fence = 1'b1;
                                         end
+                                        F7_SINVAL_VMA:begin
+                                            decode_instr_int.instr_type = SINVAL_VMA;
+                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                        end
+                                        F7_HINVAL_VVMA:begin
+                                            decode_instr_int.instr_type = GINVAL_VVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                        end
+                                        F7_HINVAL_GVMA:begin
+                                            decode_instr_int.instr_type = HINVAL_GVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                        end
+                                        F7_SFENCE_W_INVAL_SFENCE_INVAL_IR: begin
+                                            if (decode_i.inst.itype.rs1 != 'h0) begin
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            end else begin
+                                                case (decode_i.inst.rtype.rs2)
+                                                    RS2_ECALL_ERET: begin  // rs2 = 5'b00000
+                                                        decode_instr_int.instr_type = SFENCE_W_INVAL;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
+                                                    RS2_EBREAK_SFENCEVM: begin  // rs2 = 5'b00001
+                                                        decode_instr_int.instr_type = SFENCE_INVAL_IR;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
+                                                    default: begin
+                                                        xcpt_illegal_instruction_int = 1'b1;
+                                                    end
+                                                endcase
+                                            end
+                                        end
                                         default: begin // check illegal instruction
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
