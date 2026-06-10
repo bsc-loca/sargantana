@@ -926,6 +926,10 @@ typedef enum logic [6:0] {
     F7_SFENCE_VM            = 7'b0001001,
     F7_HFENCE_VVMA          = 7'b0010001,
     F7_HFENCE_GVMA          = 7'b0110001,
+    F7_SINVAL_VMA           = 7'b0001011,
+    F7_SFENCE_W_INVAL_SFENCE_INVAL_IR = 7'b0001100,
+    F7_HINVAL_VVMA          = 7'b0010011,
+    F7_HINVAL_GVMA          = 7'b0110011,
     F7_MRET_MRTS            = 7'b0011000
 } op_func7_system_t; // The first 7 bits of func7
 
