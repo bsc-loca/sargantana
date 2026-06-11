@@ -391,7 +391,7 @@ module predecoder
                         predecoded_inst.stype.rs1 = 5'b00010;
                         predecoded_inst.stype.rs2 = instr_csstype.rs2;
                         predecoded_inst.stype.imm0 = {instr_csstype.imm12[11:9], 2'b00};
-                        predecoded_inst.stype.imm5 = {4'b0000, instr_csstype.imm12[12], instr_csstype.imm12[8:7]};
+                        predecoded_inst.stype.imm5 = {4'b0000, instr_csstype.imm12[8:7], instr_csstype.imm12[12]};
                     end
                     F3_CSDSP: begin
                         predecoded_inst.stype.opcode = OP_STORE;

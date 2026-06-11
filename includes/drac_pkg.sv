@@ -910,6 +910,10 @@ typedef struct packed {
 } if2_cu_t;      // Fetch to Control Unit
 
 typedef struct packed {
+    logic branch_pred;      // Branch predicted
+} if1_cu_t;
+
+typedef struct packed {
     logic valid;                        // Valid instruction
     logic valid_jal;                    // JAL is valid
     logic stall_csr_fence;              // CSR or fenceEPI_RV64D

@@ -94,6 +94,7 @@ endfunction
     pipeline_ctrl_t control_int;
     pipeline_flush_t flush_int;
     cu_if_t cu_if_int;
+    if1_cu_t if1_cu_int;
     if2_cu_t if2_cu_int;
     addrPC_t pc_jump_if_int;
     addrPC_t pc_evec_q;
@@ -356,6 +357,7 @@ endfunction
         .miss_icache_i(miss_icache),
         .ready_icache_i(req_icache_ready_i),
         //.if2_cu_valid_i(),
+        .if1_cu_i(if1_cu_int),
         .if2_cu_i(if2_cu_int),
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
@@ -439,6 +441,8 @@ endfunction
         .exe_if_branch_pred_i(exe_if_branch_pred_int)
     );
 
+    assign if1_cu_int.branch_pred = stage_if_1_if_2_d.bpred.is_branch && (stage_if_1_if_2_d.bpred.decision == PRED_TAKEN);
+
     // Register IF1 to IF2
     register #($bits(if_1_if_2_stage_t)) reg_if_1_inst(
         .clk_i(clk_i),
@@ -448,6 +452,8 @@ endfunction
         .input_i(stage_if_1_if_2_d),
         .output_o(stage_if_1_if_2_q)
     );
+
+    logic if2_keep_fetch;
 
     if_stage_2 if_stage_2_inst(
         .clk_i(clk_i),
@@ -462,9 +468,10 @@ endfunction
         .fetch_o(stage_if_2_id_d),
         .next_pc_o(next_pc_from_f2),
         .stall_o(miss_icache),
-        .keep_fetch_o(if2_cu_int.keep_fetch)
+        .keep_fetch_o(if2_keep_fetch)
     );
 
+    assign if2_cu_int.keep_fetch = if2_keep_fetch & (!if1_cu_int.branch_pred) & !(stage_if_2_id_d.bpred.is_branch && (stage_if_2_id_d.bpred.decision == PRED_TAKEN));
     assign if2_cu_int.valid_fetch = stage_if_1_if_2_q.valid;
     assign if2_cu_int.valid_fetch_2 = stage_if_2_id_d.valid;
     // Register IF to ID

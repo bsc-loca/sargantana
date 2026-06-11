@@ -89,6 +89,13 @@ module if_stage_1
     logic       bp_branch_predict_taken;
     addrPC_t    branch_predict_addr;
 
+    // Required to predict correctly with the compressed instructions
+    addrPC_t BP_pc;
+
+    next_pc_sel_t last_pc_sel;
+
+    logic last_was_bp;
+
     always_comb begin
         priority case (cu_if_i.next_pc)
             NEXT_PC_SEL_KEEP_PC: begin
@@ -102,7 +109,7 @@ module if_stage_1
                 `endif
             end
             NEXT_PC_SEL_BP_OR_PC_ADD: begin 
-                if (branch_predict_is_branch && branch_predict_taken) 
+                if (branch_predict_is_branch && branch_predict_taken && !(last_was_bp && BP_pc[1])) 
                     next_pc = branch_predict_addr;
                 else
                     next_pc = trunc_pc_sum({pc[riscv_pkg::XLEN-1:2], 2'b00} + 64'h04);
@@ -170,7 +177,24 @@ module if_stage_1
     //    end
     end
 
-    // logic for icache access: if not misaligned 
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (!rstn_i) begin
+            last_pc_sel <= NEXT_PC_SEL_KEEP_PC; // Just any that does not cause an overwrite
+            last_was_bp <= 1'b0;
+        end else if ((!stall_i) && (!stall_debug_i)) begin
+            last_pc_sel <= cu_if_i.next_pc;
+            last_was_bp <= branch_predict_is_branch && branch_predict_taken;
+        end
+    end
+
+    assign BP_pc = ((last_pc_sel == NEXT_PC_SEL_BP_OR_PC_ADD) && (!last_was_bp)) ? pc_from_f2_i : pc;
+
+    //logic kill_fetch;
+
+    //assign kill_fetch = (branch_predict_is_branch & branch_predict_taken) & (pc[PHY_VIRT_MAX_ADDR_SIZE-1:2] != BP_pc[PHY_VIRT_MAX_ADDR_SIZE-1:2]) && f2_valid_i;
+
+    // logic for icache access: if not misaligned
+    //assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !ex_if_guest_page_fault_int && !stall_debug_i && !stall_i && !kill_fetch;
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !ex_if_guest_page_fault_int && !stall_debug_i && !stall_i;
     assign req_cpu_icache_o.vaddr = {pc[PHY_VIRT_MAX_ADDR_SIZE-1:2], {2'b00}};
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
@@ -179,29 +203,11 @@ module if_stage_1
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
+    //assign fetch_o.valid   = !stall_debug_i && !stall_i && !kill_fetch;  // valid if the response of the cache is valid or xcpt
     assign fetch_o.valid   = !stall_debug_i && !stall_i;  // valid if the response of the cache is valid or xcpt
     `ifdef SIM_KONATA_DUMP
     assign fetch_o.id = id;
     `endif
-
-    // Required to predict correctly with the compressed instructions
-    addrPC_t BP_pc;
-
-    next_pc_sel_t last_pc_sel;
-
-    logic last_was_bp;
-
-    always_ff @(posedge clk_i, negedge rstn_i) begin
-        if (!rstn_i) begin
-            last_pc_sel <= NEXT_PC_SEL_KEEP_PC; // Just any that does not cause an overwrite
-            last_was_bp <= 1'b0;
-        end else begin
-            last_pc_sel <= cu_if_i.next_pc;
-            last_was_bp <= branch_predict_is_branch && branch_predict_taken;
-        end
-    end
-
-    assign BP_pc = ((last_pc_sel == NEXT_PC_SEL_BP_OR_PC_ADD) && (!last_was_bp)) ? pc_from_f2_i : pc;
 
     // Branch predictor and RAS
     branch_predictor brach_predictor_inst (

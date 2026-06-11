@@ -5,6 +5,7 @@ module realigner
     input logic clk_i,
     input logic rstn_i,
     input logic flush_i,
+    input logic stall_i,
 
     // From I$
     input logic icache_valid_i,
@@ -16,6 +17,7 @@ module realigner
 
     // From F2
     input logic branch_predicted_i,
+    input logic prev_branch_predicted_i,
 
     // To D
     output logic valid_o,
@@ -37,7 +39,7 @@ module realigner
     end
     */
 
-    function is_compressed(input [15:0] instruction);
+    function automatic logic is_compressed(logic [15:0] instruction);
         is_compressed = !(&instruction[1:0]);
     endfunction
 
@@ -68,13 +70,32 @@ module realigner
                             unaligned_q) // if it is not aligned and is not a compressed we need to check if we have a previous data stored
                         || (unaligned_q && !(&unaligned_data_q[1:0]))
         );
+    end 
 
-        unaligned_d = ((f1_valid_i && icache_valid_i) ?
-                            ((current_pc[1]) ?
-                                ((unaligned_q) ? (&unaligned_data_q[1:0]) :
-                                                 (!is_compressed(data_i[31:16]))) :
-                                is_compressed(data_i[15:0])) :
-                            (unaligned_q & !valid_instruction)) & !branch_predicted_i;
+    logic is_compressed_31_16;
+    logic is_compressed_15_0;
+
+    assign is_compressed_31_16 = is_compressed(data_i[31:16]);
+    assign is_compressed_15_0 = is_compressed(data_i[15:0]);
+
+    logic computed_unaligned;
+
+    always_comb begin
+        if (f1_valid_i && icache_valid_i) begin
+            if (current_pc[1] == 1'b1) begin
+                if (unaligned_q) begin
+                    computed_unaligned = &unaligned_data_q[1:0];
+                end else begin
+                    computed_unaligned = !is_compressed_31_16;
+                end
+            end else begin
+                computed_unaligned = is_compressed_15_0;
+            end
+        end else begin
+            computed_unaligned = (unaligned_q & !valid_instruction);
+        end
+
+        unaligned_d = computed_unaligned & !(branch_predicted_i && !(prev_branch_predicted_i && !valid_instruction));
 
         unaligned_addr_d = {addr_i[riscv_pkg::XLEN-1: 2], 2'b10};
 
@@ -89,7 +110,7 @@ module realigner
         end else begin
             if (flush_i) begin
                 unaligned_q <= 1'b0;
-            end else if ((f1_valid_i & icache_valid_i) || (unaligned_q && valid_o)) begin
+            end else if (((f1_valid_i & icache_valid_i) || (unaligned_q && valid_o)) && !stall_i) begin
                 unaligned_q <= unaligned_d;
                 unaligned_addr_q <= unaligned_addr_d;
                 unaligned_data_q <= unaligned_data_d;
@@ -117,8 +138,7 @@ module realigner
 
         keep_fetch_o = (f1_valid_i & icache_valid_i) & 
                             ((!(|current_pc[1:0]) & is_compressed(data_i[15:0]) & is_compressed(data_i[31:16])) ||
-                            (unaligned_d & !(&unaligned_data_d[1:0])))
-                       ;
+                            (unaligned_d & !(&unaligned_data_d[1:0])));
 
 
         if (unaligned_q) begin

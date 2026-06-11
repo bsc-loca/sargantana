@@ -28,6 +28,7 @@ module control_unit
     input logic             miss_icache_i,
     input logic             ready_icache_i,
     //input logic             if2_cu_valid_i,
+    input if1_cu_t          if1_cu_i,
     input if2_cu_t          if2_cu_i,
     input id_cu_t           id_cu_i,
     input ir_cu_t           ir_cu_i,
@@ -296,7 +297,7 @@ module control_unit
                      step_inst_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
                      on_halt_state                              ||
-                     if2_cu_i.keep_fetch)  begin
+                     if2_cu_i.keep_fetch && !if1_cu_i.branch_pred)  begin
                      
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin
@@ -456,7 +457,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;              
-        end else if (miss_icache_i && !(if2_cu_i.valid_fetch_2)) begin
+        end else if (miss_icache_i/* && !(if2_cu_i.valid_fetch_2)*/) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;

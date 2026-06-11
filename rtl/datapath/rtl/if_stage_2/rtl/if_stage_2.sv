@@ -118,18 +118,31 @@ bus32_t instr_data;
     assign instr_valid = resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid;
 
     logic branch_predicted;
+    logic prev_branch_predicted;
 
     assign branch_predicted = fetch_i.bpred.is_branch & (fetch_i.bpred.decision == PRED_TAKEN);
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (!rstn_i) begin
+            prev_branch_predicted <= 1'b0;
+        end else begin
+            if (realigner_valid) begin
+                prev_branch_predicted <= branch_predicted;
+            end
+        end
+    end
 
     realigner realigner_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_i),
+        .stall_i(stall_i),
         .icache_valid_i(instr_valid),
         .data_i(instr_data),
         .f1_valid_i(fetch_i.valid),
         .addr_i(fetch_i.pc_inst),
         .branch_predicted_i(branch_predicted),
+        .prev_branch_predicted_i(prev_branch_predicted),
         .valid_o(realigner_valid),
         .data_o(fetch_o.inst),
         .pc_o(fetch_o.pc_inst),
@@ -139,7 +152,7 @@ bus32_t instr_data;
 
 // stall the pipeline in case of a cache miss 
     assign stall_o         = fetch_i.valid && !(resp_icache_cpu_i.valid || fetch_i.ex.valid || resp_icache_cpu_q.valid); 
-    assign fetch_o.valid   = realigner_valid || (fetch_i.valid && fetch_i.ex.valid);
+    assign fetch_o.valid   = (realigner_valid && !stall_i) || (fetch_i.valid && fetch_i.ex.valid);
 
 //bypassing wires
     //assign fetch_o.pc_inst = fetch_i.pc_inst;
