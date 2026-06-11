@@ -3192,7 +3192,7 @@ module decoder
                                             decode_instr_int.stall_csr_fence = 1'b1;
                                         end
                                         F7_HINVAL_VVMA:begin
-                                            decode_instr_int.instr_type = GINVAL_VVMA;
+                                            decode_instr_int.instr_type = HINVAL_VVMA;
                                             decode_instr_int.stall_csr_fence = 1'b1;
                                         end
                                         F7_HINVAL_GVMA:begin

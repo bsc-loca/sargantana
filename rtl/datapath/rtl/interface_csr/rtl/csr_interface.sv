@@ -165,7 +165,7 @@ assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    (((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    ((((((((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
