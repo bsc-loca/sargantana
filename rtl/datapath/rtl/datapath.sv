@@ -949,31 +949,30 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign instruction_decode_gl.ex_valid = stage_ir_rr_q.ex.valid | resp_csr_cpu_i.csr_interrupt;
     assign ex_gl_in_int = (!stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt) ? interrupt_ex : stage_ir_rr_q.ex ;
 
-    assign is_csr_int =((stage_ir_rr_q.instr.instr_type == ECALL)      ||
-                        (stage_ir_rr_q.instr.instr_type == SRET)       ||
-                        (stage_ir_rr_q.instr.instr_type == MRET)       ||
-                        (stage_ir_rr_q.instr.instr_type == URET)       ||
-                        (stage_ir_rr_q.instr.instr_type == WFI)        ||
-                        (stage_ir_rr_q.instr.instr_type == EBREAK)     ||
-                        (stage_ir_rr_q.instr.instr_type == FENCE)      ||
-                        (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
-                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == SINVAL_VMA) ||
-                        (stage_ir_rr_q.instr.instr_type == SFENCE_W_INVAL) ||
-                        (stage_ir_rr_q.instr.instr_type == SFENCE_INVAL_IR) ||
-                        (stage_ir_rr_q.instr.instr_type == HINVAL_VVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == HINVAL_GVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRC)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRWI)     ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRSI)     ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRCI)     ||
-                        (stage_ir_rr_q.instr.instr_type == VSETVL)     ||
-                        (stage_ir_rr_q.instr.instr_type == VSETVLI)    ||
-                        (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
+    assign is_csr_int =((stage_ir_rr_q.instr.instr_type == ECALL)          ||
+                        (stage_ir_rr_q.instr.instr_type == SRET)           ||
+                        (stage_ir_rr_q.instr.instr_type == MRET)           ||
+                        (stage_ir_rr_q.instr.instr_type == URET)           ||
+                        (stage_ir_rr_q.instr.instr_type == WFI)            ||
+                        (stage_ir_rr_q.instr.instr_type == EBREAK)         ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE)          ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_VMA)     ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == SINVAL_VMA)     ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_INVAL_IR)||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_VVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_GVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE_I)        ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRW)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRS)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRC)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRWI)         ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRSI)         ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRCI)         ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVL)         ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVLI)        ||
+                        (stage_ir_rr_q.instr.instr_type == VSETIVLI)       );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     assign gl_is_vector_vl_0 = ((((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
                                 (stage_ir_rr_q.instr.regfile_we == 1'b0) && (stage_ir_rr_q.instr.fregfile_we == 1'b0)) || 
@@ -1625,24 +1624,18 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                         (instruction_to_commit[0].instr_type == EBREAK) );
 
     // tell cu that there is a fence or fence_i
-    assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                  (instruction_to_commit[0].instr_type == FENCE)     || 
-                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
-                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA))|| 
-                                  (instruction_to_commit[0].instr_type == SINVAL_VMA)|| 
-                                  (instruction_to_commit[0].instr_type == SFENCE_W_INVAL)|| 
-                                  (instruction_to_commit[0].instr_type == SFENCE_INVAL_IR)|| 
-                                  (instruction_to_commit[0].instr_type == HINVAL_VVMA)|| 
-                                  (instruction_to_commit[0].instr_type == HINVAL_GVMA);
+    assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   ||
+                                  (instruction_to_commit[0].instr_type == FENCE)     ||
+                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)||
+                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)||
+                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA)||
+                                  (instruction_to_commit[0].instr_type == SFENCE_W_INVAL));
     // tell cu there is a fence i to flush the icache
-    assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
-                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA))|| 
-                                    (instruction_to_commit[0].instr_type == SINVAL_VMA)|| 
-                                    (instruction_to_commit[0].instr_type == HINVAL_VVMA)|| 
-                                    (instruction_to_commit[0].instr_type == HINVAL_GVMA);
+    assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   ||
+                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)||
+                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)||
+                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA)||
+                                    (instruction_to_commit[0].instr_type == SFENCE_INVAL_IR));
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
