@@ -3189,15 +3189,15 @@ module decoder
                                         end
                                         F7_SINVAL_VMA:begin
                                             decode_instr_int.instr_type = SINVAL_VMA;
-                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
                                         end
                                         F7_HINVAL_VVMA:begin
                                             decode_instr_int.instr_type = HINVAL_VVMA;
-                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
                                         end
                                         F7_HINVAL_GVMA:begin
                                             decode_instr_int.instr_type = HINVAL_GVMA;
-                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
                                         end
                                         F7_SFENCE_W_INVAL_SFENCE_INVAL_IR: begin
                                             if (decode_i.inst.itype.rs1 != 'h0) begin
@@ -3206,7 +3206,7 @@ module decoder
                                                 case (decode_i.inst.rtype.rs2)
                                                     RS2_ECALL_ERET: begin  // rs2 = 5'b00000
                                                         decode_instr_int.instr_type = SFENCE_W_INVAL;
-                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                        decode_instr_int.stall_csr_fence = 1'b0;
                                                     end
                                                     RS2_EBREAK_SFENCEVM: begin  // rs2 = 5'b00001
                                                         decode_instr_int.instr_type = SFENCE_INVAL_IR;
