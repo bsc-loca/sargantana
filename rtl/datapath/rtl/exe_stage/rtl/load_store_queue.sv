@@ -223,12 +223,12 @@ always_comb begin
         translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     `ifdef SIM_COMMIT_LOG
-    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) ||
+    end else if (((en_ld_st_translation_i) && (masked_addr[VIRT_ADDR_SIZE-1] ? !(&masked_addr[63:VIRT_ADDR_SIZE]) : | masked_addr[63:VIRT_ADDR_SIZE])) ||
+                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, masked_addr) || (masked_addr >= PHISIC_MEM_LIMIT))) ||
                   ((en_ld_st_translation_i) && translate_enable && (~is_inside_mapped_sections(DracCfg, translated_instr.data_rs1) || (translated_instr.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
-    `else 
-    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin
+    `else
+    end else if (((en_ld_st_translation_i) && (masked_addr[VIRT_ADDR_SIZE-1] ? !(&masked_addr[63:VIRT_ADDR_SIZE]) : | masked_addr[63:VIRT_ADDR_SIZE])) ||
+                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, masked_addr) || (masked_addr >= PHISIC_MEM_LIMIT)))) begin
     `endif
         translated_instr.ex.cause  = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
         translated_instr.ex.origin = instr_to_translate.data_rs1;
