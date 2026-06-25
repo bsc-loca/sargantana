@@ -1085,10 +1085,19 @@ typedef enum logic [1:0] {
     PMM_XLEN_48  = 2'b11
 } pmm_warl_t;
 
+typedef enum logic [4:0] {
+    PMLEN_DISABLED = 5'b00000,
+    PMLEN_7  = 5'b00111,
+    PMLEN_16 = 5'b10000
+} pmlen_t;
+
 typedef enum logic [63:0] {
-    PMM_MASK_DISABLED = 64'hFFFF_FFFF_FFFF_FFFF,
-    PMM_MASK_XLEN_57  = 64'h01FF_FFFF_FFFF_FFFF,
-    PMM_MASK_XLEN_48  = 64'h0000_FFFF_FFFF_FFFF
+    PMM_PMASK_DISABLED = 64'hFFFF_FFFF_FFFF_FFFF,
+    PMM_PMASK_XLEN_57  = 64'h01FF_FFFF_FFFF_FFFF,
+    PMM_PMASK_XLEN_48  = 64'h0000_FFFF_FFFF_FFFF,
+    PMM_VMASK_DISABLED = 64'h0000_0000_0000_0000,
+    PMM_VMASK_XLEN_57  = 64'hFE00_0000_0000_0000,
+    PMM_VMASK_XLEN_48  = 64'hFFFF_0000_0000_0000
 } pmm_mask_t;
 
 typedef struct packed {
