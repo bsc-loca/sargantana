@@ -137,7 +137,8 @@ always_comb begin
     logic is_load_reserved;
     logic is_hlvx_inst;
     logic [1:0] active_pmm_mode;
-    logic [63:0] pmm_mask;
+    logic [63:0] physical_mask;
+    logic [63:0] virtual_mask;
 
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
@@ -157,13 +158,31 @@ always_comb begin
     end
 
     unique case (active_pmm_mode)
-        riscv_pkg::PMM_DISABLED: pmm_mask = riscv_pkg::PMM_MASK_DISABLED;
-        riscv_pkg::PMM_XLEN_57: pmm_mask = riscv_pkg::PMM_MASK_XLEN_57;
-        riscv_pkg::PMM_XLEN_48: pmm_mask = riscv_pkg::PMM_MASK_XLEN_48;
-        default : pmm_mask = riscv_pkg::PMM_MASK_DISABLED;
+        riscv_pkg::PMM_DISABLED: begin
+            virtual_mask = riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_DISABLED;
+        end
+        riscv_pkg::PMM_XLEN_57:  begin
+            virtual_mask = instr_to_translate.data_rs1[riscv_pkg::XLEN-riscv_pkg::PMLEN_7-1] ? riscv_pkg::PMM_VMASK_XLEN_57 : riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_XLEN_57;
+        end
+        riscv_pkg::PMM_XLEN_48:  begin
+            virtual_mask = instr_to_translate.data_rs1[riscv_pkg::XLEN-riscv_pkg::PMLEN_16-1] ? riscv_pkg::PMM_VMASK_XLEN_48 : riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_XLEN_48;
+        end
+        default: begin
+            virtual_mask = riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_DISABLED;
+        end
     endcase
-
-    masked_addr = is_hlvx_inst ? instr_to_translate.data_rs1 : (instr_to_translate.data_rs1 & pmm_mask);
+ 
+    if (is_hlvx_inst) begin
+        masked_addr = instr_to_translate.data_rs1;
+    end else if (ld_st_v_mode_i) begin
+        masked_addr = (instr_to_translate.data_rs1 & physical_mask) | virtual_mask;
+    end else begin
+        masked_addr = instr_to_translate.data_rs1 & physical_mask;
+    end
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
