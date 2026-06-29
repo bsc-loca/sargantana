@@ -466,7 +466,11 @@ always_comb begin
 
     // division_instruction_d = division_instruction_q;
     for (int j = 0; j < (DIV_STAGES - 1); j++) begin
-        if (j==0) begin
+        if (flush_i) begin
+            division_pipe_d[j] = '0;
+            division_instruction_d = '0;
+        end
+        else if (j==0) begin
 
             if(is_vdiv(instruction_i) && (simd_exe_stages == 6'd32) && instruction_i.instr.valid) begin
                 division_pipe_d[0]      = instruction_i.instr.valid;
