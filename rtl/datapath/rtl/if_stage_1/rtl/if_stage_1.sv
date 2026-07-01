@@ -223,8 +223,8 @@ module if_stage_1
         .branch_predict_addr_o(branch_predict_addr)
     );
 
-    assign branch_predict_taken = bp_branch_predict_taken & f2_valid_i;
-    assign branch_predict_is_branch = bp_branch_predict_is_branch & f2_valid_i;
+    assign branch_predict_taken = bp_branch_predict_taken & f2_valid_i & !(last_was_bp && BP_pc[1]);
+    assign branch_predict_is_branch = bp_branch_predict_is_branch & f2_valid_i & !(last_was_bp && BP_pc[1]);
 
     // exceptions ordering
     always_comb begin
