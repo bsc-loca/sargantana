@@ -76,6 +76,58 @@ module predecoder
                         predecoded_inst.itype.rs1 = {2'b1, instr_cltype.rs1};
                         predecoded_inst.itype.imm = {4'b0000, instr_cltype.imm6, instr_cltype.imm12, 3'b000};
                     end
+                    F3_ZCB_MEM: begin
+                        case (instr_cltype.imm12)
+                            F12_LBU: begin
+                                predecoded_inst.itype.opcode = OP_LOAD;
+                                predecoded_inst.itype.rd = {2'b01, instr_cltype.rd};
+                                predecoded_inst.itype.func3 = F3_LBU;
+                                predecoded_inst.itype.rs1 = {2'b1, instr_cltype.rs1};
+                                predecoded_inst.itype.imm = {10'b0, instr_cltype.imm6};
+                            end
+                            F12_LH: begin
+                                case (instr_cltype.imm6[6])
+                                    1'b0: begin
+                                        predecoded_inst.itype.opcode = OP_LOAD;
+                                        predecoded_inst.itype.rd = {2'b01, instr_cltype.rd};
+                                        predecoded_inst.itype.func3 = F3_LHU;
+                                        predecoded_inst.itype.rs1 = {2'b1, instr_cltype.rs1};
+                                        predecoded_inst.itype.imm = {10'b0, instr_cltype.imm6[5], 1'b0};
+                                    end
+                                    1'b1: begin
+                                        predecoded_inst.itype.opcode = OP_LOAD;
+                                        predecoded_inst.itype.rd = {2'b01, instr_cltype.rd};
+                                        predecoded_inst.itype.func3 = F3_LH;
+                                        predecoded_inst.itype.rs1 = {2'b1, instr_cltype.rs1};
+                                        predecoded_inst.itype.imm = {10'b0, instr_cltype.imm6[5], 1'b0};
+                                    end
+                                endcase
+                            end
+                            F12_SB: begin
+                                predecoded_inst.stype.opcode = OP_STORE;
+                                predecoded_inst.stype.func3 = F3_SB;
+                                predecoded_inst.stype.rs1 = {2'b01, instr_cstype.rs1};
+                                predecoded_inst.stype.rs2 = {2'b01, instr_cstype.rs2};
+                                predecoded_inst.stype.imm0 = {3'b000, instr_cstype.imm6};
+                                predecoded_inst.stype.imm5 = {7'b0};
+                            end
+                            F12_SH: begin
+                                case (instr_cltype.imm6[6])
+                                    1'b0: begin
+                                        predecoded_inst.stype.opcode = OP_STORE;
+                                        predecoded_inst.stype.func3 = F3_SH;
+                                        predecoded_inst.stype.rs1 = {2'b01, instr_cstype.rs1};
+                                        predecoded_inst.stype.rs2 = {2'b01, instr_cstype.rs2};
+                                        predecoded_inst.stype.imm0 = {3'b000, instr_cstype.imm6[5], 1'b0};
+                                        predecoded_inst.stype.imm5 = {7'b0};
+                                    end
+                                    1'b1: begin
+                                        predecoded_inst = fetched_i.inst;
+                                    end
+                                endcase
+                            end
+                        endcase
+                    end
                     F3_CFSD: begin
                         predecoded_inst.stype.opcode = OP_STORE_FP;
                         predecoded_inst.stype.func3 = F3_SD;
@@ -239,6 +291,64 @@ module predecoder
                                                 predecoded_inst.rtype.rs1 = {2'b01, instr_catype.rd_rs1};
                                                 predecoded_inst.rtype.rs2 = {2'b01, instr_catype.rs2};
                                                 predecoded_inst.rtype.func7 = 7'b0000000;
+                                            end
+                                            CALU_MUL: begin
+                                                predecoded_inst.rtype.opcode = OP_ALU;
+                                                predecoded_inst.rtype.rd = {2'b01, instr_catype.rd_rs1};
+                                                predecoded_inst.rtype.func3 = F3_MUL;
+                                                predecoded_inst.rtype.rs1 = {2'b01, instr_catype.rd_rs1};
+                                                predecoded_inst.rtype.rs2 = {2'b01, instr_catype.rs2};
+                                                predecoded_inst.rtype.func7 = F7_MUL_DIV;
+                                            end
+                                            CALU_Z_SEXT: begin
+                                                 case (instr_catype.rs2)
+                                                    CZEXTB: begin // Equivalent to an ANDI operation with 0xFF
+                                                        predecoded_inst.itype.opcode = OP_ALU_I;
+                                                        predecoded_inst.itype.rd = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.func3 = F3_AND;
+                                                        predecoded_inst.itype.rs1 = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.imm = {4'b0, 8'b11111111};
+                                                    end
+                                                    CSEXTB: begin
+                                                        predecoded_inst.itype.opcode = OP_ALU_I;
+                                                        predecoded_inst.itype.rd = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.func3 = F3_CLZ_CTZ_CPOP_SEXTB_SEXTH;
+                                                        predecoded_inst.itype.rs1 = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.imm = {12'b011000000100};
+                                                    end
+                                                    CZEXTH: begin
+                                                        predecoded_inst.itype.opcode = OP_ALU_W;
+                                                        predecoded_inst.itype.rd = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.func3 = F3_ZEXTH;
+                                                        predecoded_inst.itype.rs1 = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.imm = {12'b000010000000};
+                                                    end
+                                                    CSEXTH: begin
+                                                        predecoded_inst.itype.opcode = OP_ALU_I;
+                                                        predecoded_inst.itype.rd = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.func3 = F3_CLZ_CTZ_CPOP_SEXTB_SEXTH;
+                                                        predecoded_inst.itype.rs1 = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.imm = {12'b011000000101};
+                                                    end
+                                                    CZEXTW: begin
+                                                        predecoded_inst.rtype.opcode = OP_ALU_W;
+                                                        predecoded_inst.rtype.rd = {2'b01, instr_catype.rd_rs1};
+                                                        predecoded_inst.rtype.func3 = F3_ADD_SUB;
+                                                        predecoded_inst.rtype.rs1 = {2'b01, instr_catype.rd_rs1};
+                                                        predecoded_inst.rtype.rs2 = 5'b00000;
+                                                        predecoded_inst.rtype.func7 = 7'b0000100;
+                                                    end
+                                                    CNOT: begin
+                                                        predecoded_inst.itype.opcode = OP_ALU_I;
+                                                        predecoded_inst.itype.rd = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.func3 = F3_XORI;
+                                                        predecoded_inst.itype.rs1 = {2'b01, instr_cbtype.rd_rs1};
+                                                        predecoded_inst.itype.imm = {12'b111111111111};
+                                                    end
+                                                    default: begin
+                                                        predecoded_inst = fetched_i.inst;
+                                                    end
+                                                 endcase
                                             end
                                             default: begin
                                                 // Reserved

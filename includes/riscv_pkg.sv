@@ -296,10 +296,18 @@ typedef enum logic [2:0] {
     F3_CFLD      = 3'b001,
     F3_CLW       = 3'b010,
     F3_CLD       = 3'b011,
+    F3_ZCB_MEM   = 3'b100,
     F3_CFSD      = 3'b101,
     F3_CSW       = 3'b110,
     F3_CSD       = 3'b111
 } op_func3_comp_c0_t;
+
+typedef enum logic [2:0] {
+    F12_LBU      = 3'b000,
+    F12_LH       = 3'b001,
+    F12_SB       = 3'b010,
+    F12_SH       = 3'b011
+} op_imm12_comp_zcb_c0_t;
 
 typedef enum logic [2:0] {
     F3_CNOP_CADDI     = 3'b000,
@@ -344,8 +352,19 @@ typedef enum logic [1:0] {
 
 typedef enum logic [1:0] {
     CALU_32_CSUBW = 2'b00,
-    CALU_32_CADDW = 2'b01
+    CALU_32_CADDW = 2'b01,
+    CALU_MUL      = 2'b10,
+    CALU_Z_SEXT   = 2'b11
 } op_imm6_com_c1_arith_calu32_t;
+
+typedef enum logic [2:0] {
+    CZEXTB = 3'b000,
+    CSEXTB = 3'b001,
+    CZEXTH = 3'b010,
+    CSEXTH = 3'b011,
+    CZEXTW = 3'b100,
+    CNOT   = 3'b101
+} op_rs2_com_c1_z_sext_t;
 
 typedef enum logic {
     BIT_CJR_CMV            = 1'b0,
