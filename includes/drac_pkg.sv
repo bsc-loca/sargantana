@@ -414,6 +414,8 @@ typedef enum logic [8:0] {
    VCNT,
    // Vectorial bit-manipulation
    VANDN, VBREV, VBREV8, VREV8, VCLZ, VCTZ, VCPOP, VROL, VROR, VWSLL,
+   // Vectorial carryless multiplication
+   VCLMUL, VCLMULH,
    // Zba bit-manip
    ADDUW, SH1ADD, SH1ADDUW, SH2ADD, SH2ADDUW, SH3ADD, SH3ADDUW, SLLIUW, ZEXTW,
    // Zbb bit-manip

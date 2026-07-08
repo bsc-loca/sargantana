@@ -49,6 +49,8 @@ bus64_t result_vcpop;
 bus64_t result_vczeros;
 bus64_t result_vbrev;
 
+bus64_t result_clmul;
+
 bus64_t data1_vaddsub_i;
 bus64_t data2_vaddsub_i;
 
@@ -274,6 +276,17 @@ vbrev vbrev_inst(
     .data_vd_o     (result_vbrev)
 );
 
+/*
+ * Vector carry-less multiplier. This unit implements the vclmul[h].[vv|vx]
+ * instructions defined by the Zvbc extension.
+ */
+vclmul clmul_inst(
+    .instr_type_i  (instruction_i.instr.instr_type),
+    .data_vs1_i    (data_vs1_i),
+    .data_vs2_i    (data_vs2_i),
+    .data_vd_o     (result_clmul)
+);
+
 always_comb begin
     sat_ovf_o = '0;
     data_vd_o = '0;
@@ -460,6 +473,9 @@ always_comb begin
         end
         VCLZ, VCTZ: begin
             data_vd_o = result_vczeros;
+        end
+        VCLMUL, VCLMULH: begin
+            data_vd_o = result_clmul;
         end
         default: begin
             data_vd_o = 64'b0;

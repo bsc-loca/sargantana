@@ -537,7 +537,8 @@ typedef enum logic [5:0] {
     F6_VAADD     = 6'b001001,
     F6_VASUBU    = 6'b001010,
     F6_VASUB     = 6'b001011,
-    F6_VEXT      = 6'b001100, //Goes unused in v1.0, but the encoding is still available. Why?? //Todo: check to delete
+    F6_VCLMUL    = 6'b001100,
+    F6_VCLMULH   = 6'b001101,
     F6_VRWXUNARY0 = 6'b010000,
     F6_VCNT       = 6'b010001, //Custom instruction
     F6_BITMANIP_VXUNARY0 = 6'b010010,

@@ -2030,6 +2030,26 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREM;
                                     end
+                                    F6_VCLMUL: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCLMUL;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmul.vv is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VCLMULH: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCLMULH;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmulh.vv is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
 
 
                                     default: begin
@@ -2253,6 +2273,22 @@ module decoder
                                     F6_VASUB: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VASUB;
+                                    end
+                                    F6_VCLMUL: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VCLMUL;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmul.vx is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VCLMULH: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VCLMULH;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmulh.vx is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     end
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
