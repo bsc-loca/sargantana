@@ -83,7 +83,7 @@ module predecoder
                                 predecoded_inst.itype.rd = {2'b01, instr_cltype.rd};
                                 predecoded_inst.itype.func3 = F3_LBU;
                                 predecoded_inst.itype.rs1 = {2'b1, instr_cltype.rs1};
-                                predecoded_inst.itype.imm = {10'b0, instr_cltype.imm6};
+                                predecoded_inst.itype.imm = {10'b0, instr_cltype.imm6[5], instr_cltype.imm6[6]};
                             end
                             F12_LH: begin
                                 case (instr_cltype.imm6[6])
@@ -108,7 +108,7 @@ module predecoder
                                 predecoded_inst.stype.func3 = F3_SB;
                                 predecoded_inst.stype.rs1 = {2'b01, instr_cstype.rs1};
                                 predecoded_inst.stype.rs2 = {2'b01, instr_cstype.rs2};
-                                predecoded_inst.stype.imm0 = {3'b000, instr_cstype.imm6};
+                                predecoded_inst.stype.imm0 = {3'b000, instr_cstype.imm6[5], instr_cstype.imm6[6]};
                                 predecoded_inst.stype.imm5 = {7'b0};
                             end
                             F12_SH: begin
