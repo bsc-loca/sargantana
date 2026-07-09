@@ -2030,6 +2030,7 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREM;
                                     end
+                                    `ifndef DISABLE_ZVBC
                                     F6_VCLMUL: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
@@ -2050,7 +2051,7 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
-
+                                    `endif // DISABLE_ZVBC
 
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -2274,6 +2275,7 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VASUB;
                                     end
+                                    `ifndef DISABLE_ZVBC
                                     F6_VCLMUL: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VCLMUL;
@@ -2290,6 +2292,8 @@ module decoder
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
                                     end
+                                    `endif // DISABLE_ZVBC
+
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
