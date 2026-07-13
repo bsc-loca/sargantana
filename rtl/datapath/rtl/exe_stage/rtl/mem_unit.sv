@@ -422,7 +422,8 @@ always_comb begin
                     // Advance LSQ when a transaction is performed OR if the instruction has an exception
                     read_next_lsq = (req_cpu_dcache_valid_int & resp_dcache_cpu_i.ready & ~stall_after_flush_lsq)
                                   | (instruction_to_dcache.ex.valid & (((~store_on_fly) & (~amo_on_fly)) | (mem_gl_index_o == instruction_to_dcache.gl_index)))
-                                  | ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid & req_cpu_dcache_o.is_amo_store_or_cmo & ~instruction_to_dcache.load_mask[0]);
+                                  | ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid & req_cpu_dcache_o.is_amo_store_or_cmo & ~instruction_to_dcache.load_mask[0])
+                                                                                           & ~full_pmrq_q & ~vstore_packer_full;
                 end
             end
         endcase
