@@ -29,25 +29,40 @@ module vclmul
 
 localparam int unsigned DW = $bits(bus64_t);
 
-logic [DW-1:0][2*DW-1:0] partials;
+logic [DW-1:0] a, b;
+logic [DW-1:0] y;
 
-genvar i;
-generate
-    for (i = 0; i < DW; i++) begin : gen_partials
-        assign partials[i] = data_vs2_i[i] ? {{DW{1'b0}}, data_vs1_i} << i : 'b0;
-    end
-endgenerate
-
+// Reverse input bits on clmulh
 always_comb begin
-    data_vd_o = '0;
-    for (int unsigned j = 0; j < DW; j++) begin
-        if (instr_type_i == VCLMUL) begin
-            data_vd_o ^= partials[j][DW-1:0];
-        end else if (instr_type_i == VCLMULH) begin
-            data_vd_o ^= partials[j][2*DW-1:DW];
-        end else begin
-            data_vd_o ^= 'b0;
-        end
+    if (instr_type_i == VCLMUL) begin
+        a = data_vs1_i;
+        b = data_vs2_i;
+    end else if (instr_type_i == VCLMULH) begin
+        a = {<<{data_vs1_i}};
+        b = {<<{data_vs2_i}};
+    end else begin
+        a = 'b0;
+        b = 'b0;
+    end
+end
+
+// Half-tree carry-less multiplication
+always_comb begin
+    y = 'b0;
+    for (int unsigned i = 0; i < DW; i++) begin
+        // NOTE: a << i will chop-off bits above WIDTH. That's on purpose: we
+        // only want the lower half of the full 2*WIDTH-bit carry-less tree.
+        if (b[i]) y ^= (a << i);
+    end
+end
+
+// Reverse output bits on clmulh
+always_comb begin
+    if (instr_type_i == VCLMULH) begin
+        data_vd_o = {<<{y}};
+        data_vd_o >>= 1;
+    end else begin
+        data_vd_o = y;
     end
 end
 
