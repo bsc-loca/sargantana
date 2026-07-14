@@ -421,7 +421,7 @@ module control_unit
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i.empty_free_list || ir_cu_i.simd_empty_free_list || ir_cu_i.fp_empty_free_list) begin
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
@@ -487,7 +487,7 @@ module control_unit
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i.empty_free_list || ir_cu_i.simd_empty_free_list || ir_cu_i.fp_empty_free_list) begin
             pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;

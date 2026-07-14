@@ -923,6 +923,8 @@ typedef struct packed {
     logic simd_out_of_checkpoints;      // SIMD Rename out of checkpoints
     logic fp_out_of_checkpoints;        // FP Rename out of checkpoints
     logic empty_free_list;              // Free list out of registers
+    logic simd_empty_free_list;         // SIMD free list out of registers
+    logic fp_empty_free_list;           // FP free list out of registers
     logic is_branch;                    // Rename instruction is a branch
 } ir_cu_t;      // Rename to Control Unit
 

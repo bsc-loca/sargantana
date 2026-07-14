@@ -616,10 +616,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .new_register_o         (simd_free_register_to_rename),
         .checkpoint_o           (simd_checkpoint_free_list),
         .out_of_checkpoints_o   (simd_out_of_checkpoints_free_list),
-        .empty_o                (simd_free_list_empty) // TODO not connected
+        .empty_o                (simd_free_list_empty)
     );
     `else
     assign simd_free_register_to_rename = 'h0;
+    assign simd_free_list_empty = 1'b0;
     `endif
 
     free_list #(
@@ -640,7 +641,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .new_register_o         (fp_free_register_to_rename),
         .checkpoint_o           (fp_checkpoint_free_list),
         .out_of_checkpoints_o   (fp_out_of_checkpoints_free_list),
-        .empty_o                (fp_free_list_empty) // TODO not connected
+        .empty_o                (fp_free_list_empty)
     );
 
     // Rename Table
@@ -768,6 +769,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     // Signals for Control Unit
     assign ir_cu_int.valid                   = stage_iq_ir_q.instr.valid;
     assign ir_cu_int.empty_free_list         = free_list_empty;
+    assign ir_cu_int.simd_empty_free_list    = simd_free_list_empty;
+    assign ir_cu_int.fp_empty_free_list      = fp_free_list_empty;
     assign ir_cu_int.out_of_checkpoints      = out_of_checkpoints_rename;
     assign ir_cu_int.simd_out_of_checkpoints = simd_out_of_checkpoints_rename;
     assign ir_cu_int.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
