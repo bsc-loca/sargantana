@@ -41,6 +41,7 @@ Each of the 29 generic performance counters can be configured to count events fr
 37. DCache uncached request
 38. DCache read request miss
 39. DCache write request miss
+40. Stalls of Register Rename
 
 **This mapping is done in the file top_drac.sv**
 
