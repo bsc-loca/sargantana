@@ -131,20 +131,23 @@ always_comb begin : collision_detector
     collision = 1'b0;
     for (integer j = 0; j < ST_BUF_NUM_ENTRIES; j++) begin
         if (valid_table[j]) begin
-            if ((load_size_i == 4'b1010) || (instruction_table[j].instr.mem_size == 4'b1010)) begin
-                collision |= instruction_table[j].data_rs1[11:6] == load_addr_i[11:6];
-            end else if ((load_size_i == 4'b1001) || (instruction_table[j].instr.mem_size == 4'b1001)) begin
-                collision |= instruction_table[j].data_rs1[11:5] == load_addr_i[11:5];
-            end else if ((load_size_i == 4'b1000) || (instruction_table[j].instr.mem_size == 4'b1000)) begin
-                collision |= instruction_table[j].data_rs1[11:4] == load_addr_i[11:4];
-            end else if ((load_size_i == 4'b0011) || (instruction_table[j].instr.mem_size == 4'b0011)) begin
-                collision |= instruction_table[j].data_rs1[11:3] == load_addr_i[11:3];
-            end else if ((load_size_i[1:0] == 2'b10) || (instruction_table[j].instr.mem_size[1:0] == 2'b10)) begin
-                collision |= instruction_table[j].data_rs1[11:2] == load_addr_i[11:2];
-            end else if ((load_size_i[1:0] == 2'b01) || (instruction_table[j].instr.mem_size[1:0] == 2'b01)) begin
-                collision |= instruction_table[j].data_rs1[11:1] == load_addr_i[11:1];
-            end else if ((load_size_i[1:0] == 2'b00) || (instruction_table[j].instr.mem_size[1:0] == 2'b00)) begin
-                collision |= instruction_table[j].data_rs1[11:0] == load_addr_i[11:0];
+            // Check that physical page numbers match to prevent false collisions
+            if (instruction_table[j].data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12] == load_addr_i[PHY_VIRT_MAX_ADDR_SIZE-1:12]) begin
+                if ((load_size_i == 4'b1010) || (instruction_table[j].instr.mem_size == 4'b1010)) begin
+                    collision |= instruction_table[j].data_rs1[11:6] == load_addr_i[11:6];
+                end else if ((load_size_i == 4'b1001) || (instruction_table[j].instr.mem_size == 4'b1001)) begin
+                    collision |= instruction_table[j].data_rs1[11:5] == load_addr_i[11:5];
+                end else if ((load_size_i == 4'b1000) || (instruction_table[j].instr.mem_size == 4'b1000)) begin
+                    collision |= instruction_table[j].data_rs1[11:4] == load_addr_i[11:4];
+                end else if ((load_size_i == 4'b0011) || (instruction_table[j].instr.mem_size == 4'b0011)) begin
+                    collision |= instruction_table[j].data_rs1[11:3] == load_addr_i[11:3];
+                end else if ((load_size_i[1:0] == 2'b10) || (instruction_table[j].instr.mem_size[1:0] == 2'b10)) begin
+                    collision |= instruction_table[j].data_rs1[11:2] == load_addr_i[11:2];
+                end else if ((load_size_i[1:0] == 2'b01) || (instruction_table[j].instr.mem_size[1:0] == 2'b01)) begin
+                    collision |= instruction_table[j].data_rs1[11:1] == load_addr_i[11:1];
+                end else if ((load_size_i[1:0] == 2'b00) || (instruction_table[j].instr.mem_size[1:0] == 2'b00)) begin
+                    collision |= instruction_table[j].data_rs1[11:0] == load_addr_i[11:0];
+                end
             end
         end
     end
