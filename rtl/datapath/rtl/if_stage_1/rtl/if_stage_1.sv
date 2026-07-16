@@ -182,6 +182,8 @@ module if_stage_1
         .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
+        // [NEW FIX] Wire up the false-prediction signal from EX stage into the BTB invalidator
+        .mispredict_not_a_branch_EX_i(exe_if_branch_pred_i.mispredict_not_a_branch_exe),
         .branch_predict_is_branch_o(branch_predict_is_branch),
         .branch_predict_taken_o(branch_predict_taken),
         .branch_predict_addr_o(branch_predict_addr)

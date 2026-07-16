@@ -715,7 +715,15 @@ assign exe_if_branch_pred_o.is_branch_exe = ((from_rr_i.instr.instr_type == BLT)
                                              (from_rr_i.instr.instr_type == JAL)  |
                                              (from_rr_i.instr.instr_type == JALR)) &
                                              arith_instr.instr.valid;
-assign exe_if_branch_pred_o.vset_index = from_rr_i.instr.vset_index;   
+assign exe_if_branch_pred_o.vset_index = from_rr_i.instr.vset_index;
+
+// [NEW FIX] Detect a false prediction: the frontend said "this is a branch" 
+// but the EX stage now confirms it is NOT a branch (aliasing/BTB pollution).
+// This signal will be used to clear (invalidate) the bad BTB entry.
+assign exe_if_branch_pred_o.mispredict_not_a_branch_exe =
+    from_rr_i.instr.bpred.is_branch &&        // Frontend predicted: "this is a branch"
+    !exe_if_branch_pred_o.is_branch_exe &&    // EX confirms:        "this is NOT a branch"
+    from_rr_i.instr.valid;                    // Only when a valid instruction is in EX
 
                                              
 
