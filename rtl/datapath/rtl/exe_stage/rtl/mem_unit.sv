@@ -581,11 +581,11 @@ always_comb begin
     if (instruction_s2_q.instr.valid && resp_dcache_cpu_q.valid && (resp_dcache_cpu_q.rd == tag_id_s2_q) || instruction_s1_q.is_cmo_prefetch) begin // Prefetches don't issue responses
         flush_store         = is_STORE_s2_q;
         flush_cmo           = is_CMO_s2_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q; 
+        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q & !instruction_s2_q.is_cmo_prefetch; 
     end else if (instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin 
         instruction_to_pmrq =  'h0;
         flush_store         = is_STORE_s2_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q;
+        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q & !instruction_s1_q.is_cmo_prefetch;
         flush_cmo           = is_CMO_s2_q;
     end else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_AMO_or_CMO_s2_q) begin
         instruction_to_pmrq =  'h0;
@@ -603,11 +603,11 @@ always_comb begin
     if ((instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && (resp_dcache_cpu_i.rd == tag_id_s1_q)) || instruction_s1_q.is_cmo_prefetch) begin // Prefetches don't issue responses
         flush_store         = is_STORE_s1_q;
         flush_cmo           = is_CMO_s1_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q;  
+        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q & !instruction_s1_q.is_cmo_prefetch;
     end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
         instruction_to_pmrq =  'h0;
         flush_store         = is_STORE_s1_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q; 
+        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q & !instruction_s1_q.is_cmo_prefetch; 
         flush_cmo           = is_CMO_s1_q;
     end else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_AMO_or_CMO_s1_q) begin
         instruction_to_pmrq =  'h0;
