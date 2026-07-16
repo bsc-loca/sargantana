@@ -397,9 +397,6 @@ endfunction
             pc_jump_if_int = jal_id_if_int.jump_addr;
         end else begin
             pc_jump_if_int = 64'h0;
-            `ifdef ASSERTIONS
-                assert (1 == 0);
-            `endif
         end
     end
 
@@ -756,12 +753,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
     
     // Check two structures output the same
-    /*always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
+    `ifdef ASSERTIONS
+    always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
     always @(posedge clk_i) assert (simd_out_of_checkpoints_rename == simd_out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (simd_checkpoint_rename == simd_checkpoint_free_list);
     always @(posedge clk_i) assert (fp_out_of_checkpoints_rename == fp_out_of_checkpoints_free_list);
-    always @(posedge clk_i) assert (fp_checkpoint_rename == fp_checkpoint_free_list); */
+    always @(posedge clk_i) assert (fp_checkpoint_rename == fp_checkpoint_free_list);
+    `endif
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 

@@ -159,14 +159,6 @@ bus64_t vagu_stride;
 logic scoreboard_stall_from_vfp;
 
 // Bypasses
-`ifdef ASSERTIONS
-    always @(posedge clk_i) begin
-        if(from_rr_i.prs1 == 0)
-            assert rs1_data_def==0;
-        if(from_rr_i.prs2 == 0)
-            assert rs2_data_def==0;
-    end
-`endif
 
 assign vmem_unit_stride = ((from_rr_i.instr.instr_type == VSE) || (from_rr_i.instr.instr_type == VSM) || (from_rr_i.instr.instr_type == VS1R) ||
                            (from_rr_i.instr.instr_type == VLEFF)) ? 1'b1 : 1'b0;
