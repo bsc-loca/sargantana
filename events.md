@@ -43,6 +43,25 @@ Each of the 29 generic performance counters can be configured to count events fr
 39. DCache write request miss
 40. Stalls of Register Rename
 
+When the `EXTERNAL_HPM_EVENT_NUM` compile-time macro is defined, the following
+additional events are available depending on its value (supported
+configurations are `4`, `6`, and `10`):
+
+| Event | Available when `EXTERNAL_HPM_EVENT_NUM` is | Source |
+| --- | --- | --- |
+| 41 | 4, 6, or 10 | L2 miss |
+| 42 | 4, 6, or 10 | L2 access |
+| 43 | 4, 6, or 10 | L1.5 miss |
+| 44 | 4, 6, or 10 | L1.5 access |
+| 45 | 6 | NOC-S flit valid |
+| 46 | 6 | NOC-S stall |
+| 45 | 10 | NOC flit valid, channel 0 |
+| 46 | 10 | NOC flit valid, channel 1 |
+| 47 | 10 | NOC flit valid, channel 2 |
+| 48 | 10 | NOC stall, channel 0 |
+| 49 | 10 | NOC stall, channel 1 |
+| 50 | 10 | NOC stall, channel 2 |
+
 **This mapping is done in the file top_drac.sv**
 
 Event 0 is hardwired to always zero, as per the spec.
