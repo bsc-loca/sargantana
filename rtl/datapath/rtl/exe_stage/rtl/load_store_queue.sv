@@ -373,7 +373,7 @@ assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
 assign dtlb_comm_o.req.asid = '0;
 assign dtlb_comm_o.req.vmid = '0;
-assign dtlb_comm_o.req.store = instr_to_translate.is_amo_store_or_cmo; // TODO: Check this, might not be exactly right...
+assign dtlb_comm_o.req.store = instr_to_translate.is_store | instr_to_translate.is_amo | instr_to_translate.is_cmo | (instr_to_translate.instr.instr_type == CMO_PREFETCH_W);
 
 assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);
 `ifdef SARG_BYPASS_LSQ
