@@ -42,7 +42,7 @@ parameter ICACHE_VPN_BITS_SIZE = PHY_VIRT_MAX_ADDR_SIZE - ICACHE_IDX_BITS_SIZE;
 parameter ICACHELINE_SIZE = 512;
 parameter DATA_SIZE = 64;
 parameter VELEMENTS = riscv_pkg::VLEN/DATA_SIZE;
-parameter logic [6:0] VMAXELEM = riscv_pkg::VLEN/8;
+parameter logic [6:0] VMAXELEM = 7'(riscv_pkg::VLEN/8);
 parameter VMAXELEM_LOG = $clog2(VMAXELEM);
 // TODO (Arnau): I don't think this is the best way of implementing this, but
 //               making it fully parametrizable would introduce a *lot* of changes...
@@ -52,9 +52,9 @@ parameter DCACHE_BUS_WIDTH = `CONF_SARGANTANA_DCACHE_BUS_WIDTH;
 `elsif CONF_HPDCACHE_REQ_WORDS
 parameter DCACHE_BUS_WIDTH = `CONF_HPDCACHE_REQ_WORDS * 64;
 `else
-parameter DCACHE_BUS_WIDTH = 10'd512;
+parameter DCACHE_BUS_WIDTH = 512;
 `endif
-parameter logic [6:0] DCACHE_MAXELEM = DCACHE_BUS_WIDTH/8;
+parameter logic [6:0] DCACHE_MAXELEM = 7'(DCACHE_BUS_WIDTH/8);
 parameter DCACHE_MAXELEM_LOG = $clog2(DCACHE_MAXELEM);
 parameter REGFILE_WIDTH = 5;
 parameter VREGFILE_WIDTH = 5;
@@ -1291,18 +1291,18 @@ typedef struct packed {
 
 localparam drac_cfg_t DracDefaultConfig = '{
     NIOSections: 1, // number of IO space sections
-    InitIOBase:  {40'h40000000}, // IO base 0 address after reset
-    InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
+    InitIOBase:  (NrMaxRules*PHY_ADDR_SIZE)'({PHY_ADDR_SIZE'(64'h40000000)}), // IO base 0 address after reset
+    InitIOEnd:  (NrMaxRules*PHY_ADDR_SIZE)'({PHY_ADDR_SIZE'(64'h80000000)}), // IO end 0 address after reset
 
     NMappedSections: 3, // number of Memory space sections
-    InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000010000}, // Memory base address after reset
-    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000010020}, // Memory end 0 address after reset
+    InitMappedBase: (NrMaxRules*PHY_ADDR_SIZE)'({PHY_ADDR_SIZE'(64'h0040000000), PHY_ADDR_SIZE'(64'h0000000100), PHY_ADDR_SIZE'(64'h0000010000)}), // Memory base address after reset
+    InitMappedEnd: (NrMaxRules*PHY_ADDR_SIZE)'({PHY_ADDR_SIZE'(64'h3fffffffff), PHY_ADDR_SIZE'(64'h000000ffff), PHY_ADDR_SIZE'(64'h0000010020)}), // Memory end 0 address after reset
 
-    InitBROMBase: 40'h0000000100,
-    InitBROMEnd: 40'h000000ffff,
+    InitBROMBase: PHY_ADDR_SIZE'(64'h0000000100),
+    InitBROMEnd: PHY_ADDR_SIZE'(64'h000000ffff),
 
-    DebugProgramBufferBase: 40'h0000010000,
-    DebugProgramBufferEnd:  40'h0000010020,
+    DebugProgramBufferBase: PHY_ADDR_SIZE'(64'h0000010000),
+    DebugProgramBufferEnd:  PHY_ADDR_SIZE'(64'h0000010020),
 
     // DCache Config
     DCacheNumSets: 128,
