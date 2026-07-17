@@ -26,6 +26,12 @@ cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_branch_predictor
 (./runtest.sh -c ) 2>&1 | tee -a $artifact
 echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
 
+# return_address_stack.sv
+echo "*** results of file: return_address_stack.sv" 2>&1 | tee -a $artifact
+cd $TOP/rtl/datapath/rtl/if_stage_1/tb/tb_return_address_stack
+(./runtest.sh -c ) 2>&1 | tee -a $artifact
+echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+
 # exe_stage.sv
 echo "*** results of file: exe_stage.sv" 2>&1 | tee -a $artifact
 cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_top/
