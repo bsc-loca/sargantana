@@ -50,16 +50,23 @@ for (genvar i = 0; (i < (VLEN/32)); i++) begin : GEN_VF7
     bus64_t source_operand;
     bus64_t result;
 
-    always_comb begin
-        source_operand = '0;
-        result = '0;
-        if (sew_i == SEW_64) begin
-            if (i < (VLEN/64)) begin
-                // continous assignment here allowed
+    if (i < (VLEN/64)) begin : GEN_LOW_SECTOR
+        always_comb begin
+            source_operand = '0;
+            result = '0;
+            if (sew_i == SEW_64) begin
                 source_operand = src_i[(i*64) +: 64];
-            end 
-        end else begin
-            source_operand = src_i[i*32 +: 32];
+            end else begin
+                source_operand = {32'd0, src_i[i*32 +: 32]};
+            end
+        end
+    end else begin : GEN_HIGH_SECTOR
+        always_comb begin
+            source_operand = '0;
+            result = '0;
+            if (sew_i != SEW_64) begin
+                source_operand = {32'd0, src_i[i*32 +: 32]};
+            end
         end
     end
 
