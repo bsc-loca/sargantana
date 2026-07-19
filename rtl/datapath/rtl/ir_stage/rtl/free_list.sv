@@ -129,10 +129,10 @@ begin
         checkpoint_o <= 'b0;            // Current checkpoint 
         for (j = 0; j < NUM_CHECKPOINTS ; j = j + 1) begin
             head[j] <= 'b0;                 // Current head in position
-            num_registers[j]  <= 6'b100000; // Number of free registers 32
+            num_registers[j]  <= NUM_ENTRIES; // Number of free registers
         end 
         for(i = 0; i < NUM_ENTRIES ; i = i + 1) begin
-            register_table[i] <= 6'b100000 + i;
+            register_table[i] <= reg_type'(NUM_ISA_REGISTERS + i);
         end
     end
     else if (commit_roll_back_i) begin
@@ -140,7 +140,7 @@ begin
         num_checkpoints <= 'b0;         // No checkpoints
         version_tail <= 'b0;            // Last reserved pointer
         head[0] <= tail;                // Current head in position
-        num_registers[0]  <= 6'b100000; // Number of free registers 32
+        num_registers[0]  <= NUM_ENTRIES; // Number of free registers
         checkpoint_o <= 'b0;            // Current checkpoint 
     end
     else begin
