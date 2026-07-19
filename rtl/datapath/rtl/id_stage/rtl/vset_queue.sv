@@ -103,7 +103,7 @@ begin
     if (~rstn_i) begin
         for (int i = 0; i < VSET_QUEUE_NUM_ENTRIES; ++i) begin
             vset_buffer[i].vl <= 1'b0;
-            vset_buffer[i].vtype <= {1'b1, 7'b0};
+            vset_buffer[i].vtype <= {1'b1, 8'b0};
             vset_buffer[i].vnarrow_wide_en <= 1'b0;
             vset_buffer[i].vlmax <= 1'b0;
         end
