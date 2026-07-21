@@ -2871,6 +2871,7 @@ module decoder
                                     decode_instr_int.instr_type = VSETIVLI;
                                     decode_instr_int.vl = vl_short;
                                     decode_instr_int.use_imm = 1'b1;
+                                    decode_instr_int.use_rs1 = 1'b0;
                                 end else begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
