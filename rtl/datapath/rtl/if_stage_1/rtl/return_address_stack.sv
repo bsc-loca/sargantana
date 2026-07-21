@@ -55,7 +55,7 @@ module return_address_stack
                 address_stack[i] <= 'h0;
             end
         end else if (push_i && pop_i) begin
-            address_stack[head_pointer] <= pc_execution_i;
+            address_stack[output_pointer] <= pc_execution_i;
         end else if(push_i) begin
             address_stack[head_pointer] <= pc_execution_i;
             head_pointer <= trunc_ras_sum(head_pointer + 1);
