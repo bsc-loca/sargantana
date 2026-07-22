@@ -3487,7 +3487,10 @@ module decoder
                                 decode_instr_int.fmt = FMT_H;
                             end
                             default: begin
-                                xcpt_illegal_instruction_int = 1'b0;
+                                // FMT_Q is not implemented by this core.  It is a
+                                // reserved encoding here and must not be executed
+                                // using the default FP format.
+                                xcpt_illegal_instruction_int = 1'b1;
                             end
                         endcase
 
