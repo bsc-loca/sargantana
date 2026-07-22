@@ -3326,10 +3326,10 @@ module decoder
                                 decode_instr_int.instr_type = FSQRT;
                                 check_frm = 1'b1;
                                 decode_instr_int.use_fs2 = 1'b0;
-                                // TODO (guillemlp) not sure if the following is required
-                                /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
+                                // rs2 is reserved for FSQRT and must be zero.
+                                if (decode_i.inst.rtype.rs2 != 5'b0) begin
                                     xcpt_illegal_instruction_int = 1'b1;
-                                end*/
+                                end
                             end
                             F5_FP_FSGNJ: begin
                                 decode_instr_int.instr_type = FSGNJ;
