@@ -718,6 +718,19 @@ module tb_decoder();
             tmp=tmp+differ;
             half_tick();
 
+            // FSQRT reserves rs2.  A non-zero rs2 field must be rejected.
+            tb_decode_i.inst = {F5_FP_FSQRT, FMT_D, 5'd3, 5'd2, FRM_RNE, 5'd1, OP_FP};
+            half_tick();
+            checkIllegalInstr(differ);
+            tmp=tmp+differ;
+            checkValidInst(1,differ);
+            tmp=tmp+differ;
+            checkWENA(0,differ);
+            tmp=tmp+differ;
+            checkSamePC(tb_decode_i.pc_inst,differ);
+            tmp=tmp+differ;
+            half_tick();
+
             // FADD.Q is unsupported: FMT_Q must raise an illegal-instruction
             // exception rather than falling through to the default FP format.
             tb_decode_i.inst = {F5_FP_FADD, FMT_Q, 5'd3, 5'd2, 3'b000, 5'd1, OP_FP};
