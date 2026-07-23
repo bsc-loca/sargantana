@@ -2963,7 +2963,7 @@ module decoder
                                     end
                                     else
                                     begin
-                                        decode_instr_int.instr_type = CBO_CLEAN;
+                                        decode_instr_int.instr_type = CBO_FLUSH;
                                     end
                                 end
                                 IMM_CBO_ZERO: begin
