@@ -3122,8 +3122,13 @@ module decoder
                                             end else begin
                                                 case (decode_i.inst.rtype.rs2)
                                                     RS2_URET_SRET_MRET: begin
-                                                        decode_instr_int.instr_type = SRET;
-                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                        // RISC-V Priv ISA §3.3.2: SRET is illegal below S-mode
+                                                        if (priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
+                                                            xcpt_illegal_instruction_int = 1'b1;
+                                                        end else begin
+                                                            decode_instr_int.instr_type = SRET;
+                                                            decode_instr_int.stall_csr_fence = 1'b1;
+                                                        end
                                                     end
                                                     RS2_WFI: begin
                                                         decode_instr_int.instr_type = WFI;
