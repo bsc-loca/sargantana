@@ -1794,7 +1794,8 @@ module decoder
                                     F6_BITMANIP_VXUNARY0: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs2 = 1'b1;
-                                        if (decode_instr_int.vd == decode_instr_int.vs2) begin
+                                        if ((decode_instr_int.vd == decode_instr_int.vs2) &&
+                                            (decode_i.inst.vtype.vs1 inside {VS1_ZEXT_VF8, VS1_SEXT_VF8, VS1_ZEXT_VF4, VS1_SEXT_VF4, VS1_ZEXT_VF2, VS1_SEXT_VF2})) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             if (decode_i.inst.vtype.vs1 == VS1_ZEXT_VF8) begin
