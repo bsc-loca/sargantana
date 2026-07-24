@@ -155,7 +155,7 @@ module if_stage_1
 
     // check addr fault fetch
     always_comb begin
-        if ((!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i)
+        if ((!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i & !en_g_translation_i)
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;
     end
