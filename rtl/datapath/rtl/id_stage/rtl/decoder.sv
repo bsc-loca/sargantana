@@ -3129,12 +3129,6 @@ module decoder
                                                         decode_instr_int.instr_type = WFI;
                                                         decode_instr_int.stall_csr_fence = 1'b1;
                                                     end
-                                                    RS2_EBREAK_SFENCEVM: begin
-                                                        // SFENCE here is old ISA
-                                                        // TODO (guillemlp): check and delete this option 
-                                                        decode_instr_int.instr_type = SFENCE_VMA;
-                                                        decode_instr_int.stall_csr_fence = 1'b1;
-                                                    end
                                                     default: begin
                                                         xcpt_illegal_instruction_int = 1'b1;
                                                     end 
