@@ -3418,7 +3418,7 @@ module decoder
                                 end
 
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b110], [3'b000:3'b010]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b101], [3'b000:3'b010]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
