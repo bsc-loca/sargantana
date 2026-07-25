@@ -3020,46 +3020,42 @@ module decoder
                       end
                       case (decode_i.inst.common.func7)
                         F7_HLV_B_BU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_B;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_BU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_B;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_BU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_B: begin
                           decode_instr_int.instr_type = HSV_B;
                         end
                         F7_HLV_H_HU_XHU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_H;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_HU;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLVX) begin
-                            decode_instr_int.instr_type = HLVX_HU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_H;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_HU;
+                            RS2_HLVX:       decode_instr_int.instr_type = HLVX_HU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_H: begin
                           decode_instr_int.instr_type = HSV_H;
                         end
                         F7_HLV_W_WU_XWU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_W;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_WU;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLVX) begin
-                            decode_instr_int.instr_type = HLVX_WU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_W;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_WU;
+                            RS2_HLVX:       decode_instr_int.instr_type = HLVX_WU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_W: begin
                           decode_instr_int.instr_type = HSV_W;
                         end
                         F7_HLV_D: begin
-                          decode_instr_int.instr_type = HLV_D;
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_D;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_D: begin
                           decode_instr_int.instr_type = HSV_D;
