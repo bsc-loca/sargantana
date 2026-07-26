@@ -1945,7 +1945,7 @@ assign instruction_fp_o.chkp            = instr_to_out.chkp;
 assign instruction_fp_o.gl_index        = instr_to_out.gl_index;
 assign instruction_fp_o.branch_taken    = 1'b0;
 assign instruction_fp_o.result_pc       = 0;
-assign instruction_fp_o.fp_status       = fpnew_pkg::status_t'('0); //finish_fp_status_int;
+assign instruction_fp_o.fp_status       = flags_merged;
 assign instruction_fp_o.ex              = '0;
 `ifdef SIM_KONATA_DUMP
    assign instruction_fp_o.id           = instr_to_out.instr.id;
