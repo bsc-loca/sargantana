@@ -178,6 +178,7 @@ bus_simd_t vdata_to_wb;
 logic [VMAXELEM_LOG:0] vl_to_dcache;
 logic [VMAXELEM_LOG:0] vl_s1;
 logic [VMAXELEM_LOG:0] vl_to_wb;
+logic [VMAXELEM_LOG:0] vl_scalar;
 logic [VMAXELEM_LOG:0] vleff_vl_int;
 gl_index_t vleff_gl_index;
 
@@ -226,6 +227,8 @@ assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instructio
 assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (instruction_to_wb.vl[VMAXELEM_LOG:0] + 'd7) >> 3 :
                       ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_wb.sew) :
                         instruction_to_wb.vl[VMAXELEM_LOG:0];
+assign vl_scalar =    ((instruction_to_wb.instr.instr_type == LB) || (instruction_to_wb.instr.instr_type == LH) || (instruction_to_wb.instr.instr_type == LW) || (instruction_to_wb.instr.instr_type == LD) ||
+                      (instruction_to_wb.instr.instr_type == LBU) || (instruction_to_wb.instr.instr_type == LHU) || (instruction_to_wb.instr.instr_type == LWU)) ? 'd8 : vl_to_wb;
 
 assign is_cmo_prefetch = instruction_i.instr.mem_type == CMO_PREFETCH ;
 
@@ -775,10 +778,18 @@ assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
-    vdata_to_wb = (instruction_to_wb.instr.vta) ? '1 : instruction_to_wb.data_old_vd;
+    case (instruction_to_wb.instr.instr_type)
+        LB, LH, LW, LD, LBU, LHU, LWU: begin
+            vdata_to_wb = 'h0;
+        end
+        default: begin
+            vdata_to_wb = (instruction_to_wb.instr.vta) ? '1 : instruction_to_wb.data_old_vd;
+        end
+    endcase
     packed_velems = 'h0;
     for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
-        if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
+        if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && 
+            (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we) &&
             (vload_packer_nelem_q[i] != '1)) begin
             vdata_to_wb = vload_packer_q[i];
         end
@@ -804,7 +815,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_scalar <= i)) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end
@@ -829,7 +840,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if ((instruction_to_wb.data_vm[i]) || (vl_to_wb <= i)) begin
+                if ((instruction_to_wb.data_vm[i]) || (vl_scalar <= i)) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
                 end
             end
@@ -854,7 +865,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_scalar <= i)) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
                 end
             end
@@ -879,7 +890,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_scalar <= i)) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
                 end
             end
@@ -941,7 +952,9 @@ always_comb begin
         vload_packer_complete = 1'b1;
         vstore_packer_complete = 1'b1;
     end else begin
-        if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_to_dcache)) begin
+        if (instruction_s1_d.instr.valid && 
+        (instruction_s1_d.instr.vregfile_we || instruction_s1_d.instr.regfile_we || instruction_s1_d.instr.fregfile_we) 
+        && !(instruction_s1_d.velem_incr >= vl_to_dcache)) begin
             for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
                 if ((vload_packer_id_q[i] == instruction_s1_d.gl_index) && !vload_packer_write_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_write_hit = 1'b1;
@@ -970,9 +983,11 @@ always_comb begin
             end
         end
         
-        if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
+        if (instruction_to_wb.instr.valid && 
+        (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we) 
+        && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
             vload_packer_complete = 1'b1;
-        end else if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we) begin
+        end else if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we)) begin
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                 if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;
@@ -1035,16 +1050,16 @@ logic [63:0] wb_result_boxed;
 
 always_comb begin
     case (instruction_to_wb.instr.instr_type)
-        FLH: wb_result_boxed = {{48{1'b1}}, data_to_wb[15:0]};
-        FLW: wb_result_boxed = {{32{1'b1}}, data_to_wb[31:0]};
-        default: wb_result_boxed = data_to_wb[63:0];
+        FLH: wb_result_boxed = {{48{1'b1}}, masked_data_to_wb[15:0]};
+        FLW: wb_result_boxed = {{32{1'b1}}, masked_data_to_wb[31:0]};
+        default: wb_result_boxed = masked_data_to_wb[63:0];
     endcase
 end
 
 
 // Output Instruction
 // Prefetch instructions do not get a response, we can directly commit them
-assign instruction_scalar_o.valid         = (instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we) || instruction_to_wb.is_cmo_prefetch; 
+assign instruction_scalar_o.valid         = (instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we && (vload_packer_complete | instruction_to_wb.ex.valid)) || instruction_to_wb.is_cmo_prefetch; 
 assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
 assign instruction_scalar_o.bpred         = instruction_to_wb.instr.bpred;
 assign instruction_scalar_o.rs1           = instruction_to_wb.instr.rs1;
@@ -1065,7 +1080,7 @@ assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
 assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
-assign instruction_scalar_o.result        = wb_result_boxed;
+assign instruction_scalar_o.result        = masked_data_to_wb[63:0];
 assign instruction_scalar_o.ex            = instruction_to_wb.is_cmo_prefetch ? 0 : instruction_to_wb.ex; // CMO prefetch does not propagate
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
@@ -1074,7 +1089,7 @@ assign instruction_scalar_o.sew            = instruction_to_wb.instr.sew;
 assign instruction_scalar_o.lmul          = instruction_to_wb.instr.lmul;
 
 // Output Float Instruction
-assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we; //fp_instr;
+assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we && (vload_packer_complete | instruction_to_wb.ex.valid); //fp_instr;
 assign instruction_fp_o.pc                = instruction_to_wb.instr.pc;
 assign instruction_fp_o.bpred             = instruction_to_wb.instr.bpred;
 assign instruction_fp_o.rs1               = instruction_to_wb.instr.rs1;

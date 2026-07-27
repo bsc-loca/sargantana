@@ -412,13 +412,7 @@ assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
 assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
                   ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE)) ? 3'b011 : 3'b000;
-assign vagu_store_data_valid = mem_instr.instr.valid && 
-                            ((mem_instr.instr.instr_type == VSE)
-                            || (mem_instr.instr.instr_type == VSM)
-                            || (mem_instr.instr.instr_type == VS1R)
-                            || (mem_instr.instr.instr_type == VSSE) 
-                            || (mem_instr.instr.instr_type == VSXE)) 
-                            && !stall_vagu;
+assign vagu_store_data_valid = mem_instr.instr.valid && !stall_vagu;
 
 always_comb begin
     vagu_mask = 'h0;

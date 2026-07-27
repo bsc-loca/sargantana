@@ -110,7 +110,7 @@ endfunction
 
 req_vmem_ops_t vmem_ops_state_d, vmem_ops_state_q;
 
-bus64_t vaddr_d, vaddr_q, vaddr_incr;
+bus64_t vaddr_d, vaddr_q, vaddr_incr, vaddr_scalar;
 logic [6:0] velem_incr, velem_off, velem_off_neg; // [DCACHE_RESP_DATA_LOG-3:0]
 logic [6:0] velem_cnt_d, velem_cnt_q; // [MAX_VELEM_LOG:0], truncated at output
 logic [(MAX_VELEM*9)-1:0] mask_buffer;
@@ -119,6 +119,7 @@ logic masked_op_d, masked_op_q;
 logic [63:0] stride_d, stride_q, stride_neg;
 logic [3:0] log_stride_d, log_stride_q;
 logic [MAX_VELEM-1:0] load_mask;
+logic [8-1:0] scalar_load_mask;
 logic [MAX_VELEM_LOG-1:0] req_tag_d, req_tag_q;
 logic end_int;
 rr_exe_mem_instr_t memp_instr_d, memp_instr_q; 
@@ -128,6 +129,7 @@ logic [6:0] acum_velem_incr_d, acum_velem_incr_q;
 logic group_d, group_q, group_neg_d, group_neg_q;
 logic neg_stride_d, neg_stride_q;
 logic [MAX_VELEM-1:0] vl_mask, group_mask;
+logic scalar_unsigned_d, scalar_unsigned_q;
 
 logic make_req;
 logic misalign_xcpt_int;
@@ -140,6 +142,7 @@ assign is_vector = ((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.inst
 
 always_comb begin
     vaddr_incr = 'h0;
+    vaddr_scalar = trunc_64_sum(memp_instr_i.data_rs1 + memp_instr_i.instr.imm);
     velem_incr = 'h0;
     velem_off  = 'h0;
     velem_off_neg = 'h0;
@@ -149,11 +152,14 @@ always_comb begin
     masked_op_d = masked_op_q;
     stride_d = stride_q;
     load_mask = {MAX_VELEM{1'b1}};
+    scalar_load_mask = {8{1'b1}};
     memp_instr_o.agu_req_tag = req_tag_q;
     memp_instr_o.neg_stride = 1'b0;
     memp_instr_d = memp_instr_q;
     vl_d = vl_q;
     vsew_d = vsew_q;
+    vaddr_d = vaddr_q;
+    velem_cnt_d = velem_cnt_q;
     make_req = 1'b0;
     misalign_xcpt_int = 1'b0;
     log_stride_d = log_stride_q;
@@ -163,6 +169,7 @@ always_comb begin
     group_d = group_q;
     group_neg_d = group_neg_q;
     neg_stride_d = neg_stride_q;
+    scalar_unsigned_d = scalar_unsigned_q;
     case (vmem_ops_state_q)
         VL_UNIT: begin
             // Requests always aligned to 128 bits
@@ -181,6 +188,9 @@ always_comb begin
                     vaddr_incr = velem_incr << 1;
                     memp_instr_o.sew = SEW_16;
                     misalign_xcpt_int = vaddr_q[0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 4'b0110: begin
                     velem_off  = vaddr_q[DCACHE_RESP_DATA_LOG-3-1:2];
@@ -189,6 +199,9 @@ always_comb begin
                     vaddr_incr = velem_incr << 2; 
                     memp_instr_o.sew = SEW_32;
                     misalign_xcpt_int = |vaddr_q[1:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
+                    end
                 end
                 4'b0111: begin // SEW_64
                     velem_off  = vaddr_q[DCACHE_RESP_DATA_LOG-3-1:3];
@@ -197,14 +210,21 @@ always_comb begin
                     vaddr_incr = velem_incr << 3;
                     memp_instr_o.sew = SEW_64;
                     misalign_xcpt_int = |vaddr_q[2:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid & ~flush_i & ~stall_i;
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid & ~flush_i & ~stall_i & ~misalign_xcpt_int;
             memp_instr_o.instr.mem_size = 4'b1000 | 4'(DCACHE_RESP_DATA_WIDTH >> 8);
             memp_instr_o.data_rs1 = (misalign_xcpt_int) ? vaddr_q : trunc_68_64(vaddr_q & ({64{1'b1}} << (DCACHE_RESP_DATA_LOG - 3)));
-            vaddr_d     = trunc_64_sum(vaddr_q     + vaddr_incr);
-            velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_UNIT;
+            if (misalign_xcpt_int) begin
+                memp_instr_d.instr.mem_size = 4'b0000;
+            end else begin
+                vaddr_d     = trunc_64_sum(vaddr_q     + vaddr_incr);
+                velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
+            end
+            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VL_UNIT;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             req_tag_d = (memp_instr_q.instr.valid & ~flush_i) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             load_mask = (((mask_buffer[MAX_VELEM-1:0] & vl_mask) != 'h0) || (~masked_op_q)) ? ({MAX_VELEM{1'b1}} >> (MAX_VELEM - velem_incr)) : 'h0;
@@ -273,6 +293,9 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     memp_instr_o.sew = SEW_16;
                     misalign_xcpt_int = vaddr_q[0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 4'b0110: begin
                     if (((velem_cnt_q + (DCACHE_RESP_MAXELEM >> 2)) <= vl_q) && (vaddr_q[DCACHE_RESP_DATA_LOG-3-1:0] == 'h0)) begin
@@ -299,6 +322,9 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     memp_instr_o.sew = SEW_32;
                     misalign_xcpt_int = |vaddr_q[1:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
+                    end
                 end
                 4'b0111: begin
                     if (((velem_cnt_q + (DCACHE_RESP_MAXELEM >> 3)) <= vl_q) && (vaddr_q[DCACHE_RESP_DATA_LOG-3-1:0] == 'h0)) begin
@@ -321,13 +347,20 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     memp_instr_o.sew = SEW_64;
                     misalign_xcpt_int = |vaddr_q[2:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid & ~flush_i & ~stall_i;
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid & ~flush_i & ~stall_i & ~misalign_xcpt_int;
             memp_instr_o.data_rs1 = vaddr_q;
-            vaddr_d     = trunc_64_sum(vaddr_q     + vaddr_incr);
-            velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VS_UNIT;
+            if (misalign_xcpt_int) begin
+                memp_instr_d.instr.mem_size = 4'b0000;
+            end else begin
+                vaddr_d     = trunc_64_sum(vaddr_q     + vaddr_incr);
+                velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
+            end
+            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VS_UNIT;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             req_tag_d = (memp_instr_q.instr.valid & ~flush_i) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
         end
@@ -370,7 +403,8 @@ always_comb begin
                         velem_incr = 1'b1;
                         memp_instr_o.instr.mem_size = 4'b0000;
                         memp_instr_o.data_rs1 = vaddr_q;
-                        load_mask = {63'd0, make_req};
+                        load_mask = ((memp_instr_q.instr.instr_type == LB) || (memp_instr_q.instr.instr_type == LH) || (memp_instr_q.instr.instr_type == LW) || (memp_instr_q.instr.instr_type == LD)
+                                     || (memp_instr_q.instr.instr_type == LBU) || (memp_instr_q.instr.instr_type == LHU) || (memp_instr_q.instr.instr_type == LWU)) ? scalar_load_mask : {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
                     end 
                     memp_instr_o.sew = SEW_8;
@@ -414,6 +448,9 @@ always_comb begin
                     end 
                     memp_instr_o.sew = SEW_16;
                     misalign_xcpt_int = vaddr_q[0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 4'b0110: begin
                     if (group_q && (log_stride_q >= 'h2)) begin
@@ -454,6 +491,9 @@ always_comb begin
                     end
                     memp_instr_o.sew = SEW_32;
                     misalign_xcpt_int = |vaddr_q[1:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
+                    end
                 end
                 4'b0111: begin
                      if (group_q && (log_stride_q >= 'h3)) begin
@@ -494,19 +534,27 @@ always_comb begin
                     end
                     memp_instr_o.sew = SEW_64;
                     misalign_xcpt_int = |vaddr_q[2:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
             // Do not generate requests for masked elements, if it is a masked operation check that we have an available mask
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i &&
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int &&
                                        (make_req || ((velem_cnt_q + velem_incr) >= vl_q) || (memp_instr_o.instr.mem_size[3] == 1'b1));
-            vaddr_d = trunc_64_sum(vaddr_q + vaddr_incr);
-            velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d >= vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_STRIDED;
+            if (misalign_xcpt_int) begin
+                memp_instr_d.instr.mem_size = 4'b0000;
+                group_d = 1'b0;
+                group_neg_d = 1'b0;
+                memp_instr_o.data_rs1 = vaddr_q;
+            end else begin
+                vaddr_d = trunc_64_sum(vaddr_q + vaddr_incr);
+                velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
+            end
+            vmem_ops_state_d = ((velem_cnt_d >= vl_q) || flush_i) ? SCALAR : VL_STRIDED;
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
-            if (misalign_xcpt_int) begin
-                memp_instr_o.data_rs1 = vaddr_q;
-            end
+            memp_instr_o.instr.mem_size = scalar_unsigned_q ? 4'b0100 : memp_instr_o.instr.mem_size;
         end
         VS_STRIDED: begin
             case (memp_instr_q.instr.mem_size) //vsew_q
@@ -522,6 +570,9 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-2:0] << 4);
                     misalign_xcpt_int = vaddr_q[0];
                     memp_instr_o.sew = SEW_16;
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 4'b0110: begin
                     memp_instr_o.instr.instr_type = SW;
@@ -529,6 +580,9 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-3:0] << 5);
                     misalign_xcpt_int = |vaddr_q[1:0];
                     memp_instr_o.sew = SEW_32;
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
+                    end
                 end
                 4'b0111: begin
                     memp_instr_o.instr.instr_type = SD;
@@ -536,14 +590,21 @@ always_comb begin
                     memp_instr_o.data_rs2 = vstore_buffer_q >> padd_dcachedatalog_plus1(velem_cnt_q[DCACHE_RESP_DATA_LOG-3-4:0] << 6);
                     misalign_xcpt_int = |vaddr_q[2:0];
                     memp_instr_o.sew = SEW_64;
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i;
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int;
             memp_instr_o.data_rs1 = vaddr_q;
-            velem_incr = 1'b1;
-            vaddr_d     = (neg_stride_q) ? trunc_64_sum(vaddr_q - stride_q) : trunc_64_sum(vaddr_q + stride_q);
+            if (misalign_xcpt_int) begin
+                memp_instr_d.instr.mem_size = 4'b0000;
+            end else begin
+                velem_incr = 1'b1;
+                vaddr_d     = (neg_stride_q) ? trunc_64_sum(vaddr_q - stride_q) : trunc_64_sum(vaddr_q + stride_q);
+            end
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VS_STRIDED;
+            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VS_STRIDED;
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -566,6 +627,10 @@ always_comb begin
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
+                    misalign_xcpt_int = memp_instr_o.data_rs1[0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = LW;
@@ -576,6 +641,10 @@ always_comb begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                    end
+                    misalign_xcpt_int = |memp_instr_o.data_rs1[1:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
                     end
                 end
                 default: begin
@@ -590,13 +659,21 @@ always_comb begin
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end
+                    misalign_xcpt_int = |memp_instr_o.data_rs1[2:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && (((velem_cnt_q + 1'b1) >= vl_q) || (mask_buffer[velem_cnt_q]));
-            vaddr_d = vaddr_q;
-            velem_incr = 1'b1;
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int && (((velem_cnt_q + 1'b1) >= vl_q) || (mask_buffer[velem_cnt_q]));
+            if (misalign_xcpt_int) begin
+                vsew_d = SEW_8;
+            end else begin
+                vaddr_d = vaddr_q;
+                velem_incr = 1'b1;
+            end
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VL_INDEXED;
+            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VL_INDEXED;
             load_mask = {63'd0, mask_buffer[velem_cnt_q]};
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
@@ -621,6 +698,10 @@ always_comb begin
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end
+                    misalign_xcpt_int = memp_instr_o.data_rs1[0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 1;
+                    end
                 end
                 SEW_32: begin
                     memp_instr_o.instr.instr_type = SW;
@@ -632,6 +713,10 @@ always_comb begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {48'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*16)+MAX_VELEM))+:16]});
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {32'b0, mask_buffer[(trunc_dcachedatalog_shift4((velem_cnt_q*32)+MAX_VELEM))+:32]});
+                    end
+                    misalign_xcpt_int = |memp_instr_o.data_rs1[1:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 2;
                     end
                 end
                 default: begin
@@ -647,13 +732,21 @@ always_comb begin
                     end else begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + mask_buffer[(trunc_dcachedatalog_shift5((velem_cnt_q*64)+MAX_VELEM))+:64]);
                     end
+                    misalign_xcpt_int = |memp_instr_o.data_rs1[2:0];
+                    if (misalign_xcpt_int) begin
+                        vl_d = vl_q << 3;
+                    end
                 end
             endcase
-            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i;
-            vaddr_d = vaddr_q;
-            velem_incr = 1'b1;
+            memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int;
+            if (misalign_xcpt_int) begin
+                vsew_d = SEW_8;
+            end else begin
+                vaddr_d = vaddr_q;
+                velem_incr = 1'b1;
+            end
             velem_cnt_d = trunc_8_7(velem_cnt_q + velem_incr);
-            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i || misalign_xcpt_int) ? SCALAR : VS_INDEXED;
+            vmem_ops_state_d = ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VS_INDEXED;
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
             acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
@@ -664,7 +757,50 @@ always_comb begin
             memp_instr_o = memp_instr_i;
             velem_cnt_d = 0;
             vaddr_d = memp_instr_i.data_rs1;
-            if ((memp_instr_i.instr.valid) && (vl_i != 'h0)) begin
+            vl_d = vl_i;
+            memp_instr_d = memp_instr_i;
+            stride_d = (stride_i[63]) ? stride_neg : stride_i;
+            neg_stride_d = stride_i[63];
+            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && (~|(stride_i[5:0] & (stride_i[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
+                group_d = 1'b1;
+                group_neg_d = 1'b0;
+            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && (~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
+                group_d = 1'b0;
+                group_neg_d = 1'b1;
+            end else begin
+                group_d = 1'b0;
+                group_neg_d = 1'b0;
+            end
+            if (memp_instr_i.instr.valid && memp_instr_i.instr.unit == UNIT_MEM && (~is_vector)) begin
+                case (memp_instr_i.instr.mem_size)
+                    4'b0001,4'b0101: begin
+                        vmem_ops_state_d = (vaddr_scalar[0]) ? (memp_instr_i.is_store ? VS_UNIT : VL_STRIDED) : SCALAR;
+                        vl_d = 2;
+                        memp_instr_d.vl = 2;
+                    end
+                    4'b0010,4'b0110: begin
+                        vmem_ops_state_d = (vaddr_scalar[1:0]) ? (memp_instr_i.is_store ? VS_UNIT : VL_STRIDED) : SCALAR;
+                        vl_d = 4;
+                        memp_instr_d.vl = 4;
+                    end
+                    4'b0011,4'b0111: begin
+                        vmem_ops_state_d = (vaddr_scalar[2:0]) ? (memp_instr_i.is_store ? VS_UNIT : VL_STRIDED) : SCALAR;
+                        vl_d = 8;
+                        memp_instr_d.vl = 8;
+                    end
+                    default: begin
+                        vmem_ops_state_d = SCALAR;
+                    end
+                endcase
+                vaddr_d = vaddr_scalar;
+                memp_instr_d.instr.mem_size = 4'b0000;
+                group_d = 1'b0;
+                group_neg_d = 1'b0;
+                stride_d = 1'b1;
+                neg_stride_d = 1'b0;
+                memp_instr_d.instr.imm = 'h0;
+                scalar_unsigned_d = memp_instr_i.instr.mem_size[2] ? 1'b1 : 1'b0;
+            end else if ((memp_instr_i.instr.valid) && (vl_i != 'h0)) begin
                 vmem_ops_state_d = (((memp_instr_i.instr.instr_type == VLE) || (memp_instr_i.instr.instr_type == VLM) || (memp_instr_i.instr.instr_type == VL1R))) ? VL_UNIT :
                                    (((memp_instr_i.instr.instr_type == VSE) || (memp_instr_i.instr.instr_type == VSM) || (memp_instr_i.instr.instr_type == VS1R)) && !masked_op_i) ? VS_UNIT :
                                    (((memp_instr_i.instr.instr_type == VLSE)|| (memp_instr_i.instr.instr_type == VLEFF)) && ((mop_i[0] == 1'b0) && (mop_i[2] == 1'b0)))   ? VL_STRIDED :
@@ -681,26 +817,12 @@ always_comb begin
             end
             vstore_buffer_d = vstore_data_i;
             masked_op_d = masked_op_i;
-            stride_d = (stride_i[63]) ? stride_neg : stride_i;
-            neg_stride_d = stride_i[63];
             memp_instr_o.data_rs1 = memp_instr_i.data_rs1;
             end_int = 1'b0;
-            memp_instr_o.instr.valid = memp_instr_i.instr.valid && (~is_vector);
-            memp_instr_d = memp_instr_i;
-            vl_d = vl_i;
+            memp_instr_o.instr.valid = memp_instr_i.instr.valid && (~is_vector) && (vmem_ops_state_d == SCALAR);
             vsew_d = memp_instr_i.sew;
             acum_velem_incr_d = 'h0;
             velem_incr = '1;
-            if ((stride_i <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_i[5:0] != 'h0) && (~|(stride_i[5:0] & (stride_i[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
-                group_d = 1'b1;
-                group_neg_d = 1'b0;
-            end else if ((stride_neg <= (DCACHE_RESP_DATA_WIDTH >> 4)) && (stride_neg[5:0] != 'h0) && (~|(stride_neg[5:0] & (stride_neg[5:0] - 1'b1))) && (memp_instr_i.instr.instr_type != VLEFF)) begin
-                group_d = 1'b0;
-                group_neg_d = 1'b1;
-            end else begin
-                group_d = 1'b0;
-                group_neg_d = 1'b0;
-            end
             for (int i = 0; i < 6; ++i) begin
                 if (stride_d[i] == 1'b1) begin
                     log_stride_d = i;
@@ -709,13 +831,14 @@ always_comb begin
         end
     endcase
     memp_instr_o.vmisalign_xcpt = misalign_xcpt_int;
-    memp_instr_o.velem_id = velem_cnt_q[MAX_VELEM_LOG-1:0];
     memp_instr_o.load_mask = load_mask;
     memp_instr_o.velem_off = velem_off[DCACHE_RESP_DATA_LOG-3:0];
     if (vmem_ops_state_q != SCALAR) begin
         memp_instr_o.velem_incr = trunc_max_velem_log_sum(acum_velem_incr_q[MAX_VELEM_LOG:0] + velem_incr[DCACHE_RESP_DATA_LOG-3:0]);
+        memp_instr_o.velem_id = velem_cnt_q[MAX_VELEM_LOG-1:0];
     end else begin
         memp_instr_o.velem_incr = velem_incr[DCACHE_RESP_DATA_LOG-3:0];
+        memp_instr_o.velem_id = 'h0;
     end
 end
 
@@ -737,6 +860,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         log_stride_q <= 'h0;
         neg_stride_q <= 1'b0;
         mask_buffer <= 'h0;
+        scalar_unsigned_q <= 1'b0;
     end else begin
         if (stall_i && !flush_i) begin
             vmem_ops_state_q <= vmem_ops_state_q;
@@ -753,6 +877,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             group_neg_q <= group_neg_q;
             log_stride_q <= log_stride_q;
             neg_stride_q <= neg_stride_q;
+            scalar_unsigned_q <= scalar_unsigned_d;
         end else begin
             vmem_ops_state_q <= vmem_ops_state_d;
             vaddr_q <= vaddr_d;
@@ -768,6 +893,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
             group_neg_q <= group_neg_d;
             log_stride_q <= log_stride_d;
             neg_stride_q <= neg_stride_d;
+            scalar_unsigned_q <= scalar_unsigned_d;
         end
         // Read Mask
         if (ovi_mask_idx_valid_i) begin
@@ -775,7 +901,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         end
         // Read vstore data
         if (vstore_data_valid_i) begin
-            vstore_buffer_q <= vstore_data_i;
+            vstore_buffer_q <= (is_vector) ? vstore_data_i : {64'b0, stride_i}; // Scalar store instructions use the stride as the data to be stored
         end else begin
             vstore_buffer_q <= vstore_buffer_d;
         end

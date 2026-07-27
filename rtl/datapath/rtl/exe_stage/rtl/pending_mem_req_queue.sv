@@ -140,6 +140,7 @@ begin
             instruction_table[tail].velem_off           <= instruction_i.velem_off; 
             instruction_table[tail].velem_incr          <= instruction_i.velem_incr;  
             instruction_table[tail].neg_stride          <= instruction_i.neg_stride;
+            instruction_table[tail].instr.vl            <= instruction_i.vl;
             `ifdef SIM_COMMIT_LOG
             instruction_table[tail].vaddr               <= instruction_i.vaddr;
             `endif
