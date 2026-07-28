@@ -615,12 +615,10 @@ always_comb begin
             //We asume the granularity always depends on the SEW
             //(vlxe instructions only)
                 SEW_8: begin
-                    memp_instr_o.instr.instr_type = LB;
                     memp_instr_o.instr.mem_size = 4'b0000;
                     memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
                 end
                 SEW_16: begin
-                    memp_instr_o.instr.instr_type = LH;
                     memp_instr_o.instr.mem_size = 4'b0001;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
@@ -633,7 +631,6 @@ always_comb begin
                     end
                 end
                 SEW_32: begin
-                    memp_instr_o.instr.instr_type = LW;
                     memp_instr_o.instr.mem_size = 4'b0010;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
@@ -648,7 +645,6 @@ always_comb begin
                     end
                 end
                 default: begin
-                    memp_instr_o.instr.instr_type = LD;
                     memp_instr_o.instr.mem_size = 4'b0011;
                     if (memp_instr_q.instr.mem_size == 4'b0000) begin
                         memp_instr_o.data_rs1 = trunc_64_sum(vaddr_q + {56'b0, mask_buffer[(trunc_dcachedatalog_shift3((velem_cnt_q*8)+MAX_VELEM))+:8]});
@@ -771,6 +767,7 @@ always_comb begin
                 group_d = 1'b0;
                 group_neg_d = 1'b0;
             end
+            scalar_unsigned_d = 1'b0;
             if (memp_instr_i.instr.valid && memp_instr_i.instr.unit == UNIT_MEM && (~is_vector)) begin
                 case (memp_instr_i.instr.mem_size)
                     4'b0001,4'b0101: begin
