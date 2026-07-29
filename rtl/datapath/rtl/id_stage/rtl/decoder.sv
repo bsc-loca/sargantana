@@ -469,10 +469,18 @@ module decoder
                             // CMO prefetch 
                             if(decode_i.inst.itype.rd == '0) begin
                                 unique case(decode_i.inst.itype.imm[24:20])
-                                    F5_CMO_PREFETCH_I : begin // FIXME: For now do nothing, it does not make sense to send prefetch request if we only have one port in icache
-                                        decode_instr_int.instr_type = ADD;
+                                    F5_CMO_PREFETCH_I: begin
+                                        // Zicbop instruction-prefetch hint: architecturally a no-op
+                                        // (rd=x0). Decoded consistently with PREFETCH_R/W as a
+                                        // memory-unit no-op rather than a real ADD. Actual I-cache
+                                        // prefetch issue is deferred — core_tile's icache currently
+                                        // exposes a single port.
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.mem_type   = CMO_PREFETCH;
+                                        decode_instr_int.unit       = UNIT_MEM;
+                                        decode_instr_int.instr_type = CMO_PREFETCH_I;
                                     end
-                                    F5_CMO_PREFETCH_R: begin
+                                    H_R: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.mem_type = CMO_PREFETCH;
                                         decode_instr_int.unit = UNIT_MEM;
