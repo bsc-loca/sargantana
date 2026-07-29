@@ -734,6 +734,9 @@ module decoder
                                         RS2_CPOPW: begin
                                             decode_instr_int.instr_type = CPOPW;
                                         end
+                                        default: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     endcase;
                                 end
                                 default: begin
