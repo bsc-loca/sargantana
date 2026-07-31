@@ -81,6 +81,8 @@ module decoder
     logic v_2sew_en_int;
     logic wide_overlap_1_2;
     logic wide_overlap_2;
+    logic perm_overlap_2;
+    logic perm_overlap_1_2;
 
     bus64_t avl_value_if_zero_int, avl_value_int;
     logic [3:0] rw_cmd_int;
@@ -1182,7 +1184,11 @@ module decoder
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_1_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
@@ -1371,13 +1377,21 @@ module decoder
                                     end
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDEUP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDEUP;
+                                        end
                                     end
                                     F6_VSLIDEDOWN: begin
                                         decode_instr_int.instr_type = VSLIDEDOWN;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     F6_VMV1R_VSMUL: begin
                                         decode_instr_int.instr_type = VSMUL;
@@ -1524,13 +1538,21 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_vs1 = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDEUP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDEUP;
+                                        end
                                     end
                                     F6_VSLIDEDOWN: begin
                                         decode_instr_int.instr_type = VSLIDEDOWN;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     {F6_VROR[5:1], 1'b0}, {F6_VROR[5:1], 1'b1}: begin // VROR on vi has func6 of 5 bits and the bit 0 is part of uimm
                                         decode_instr_int.instr_type = VROR;
@@ -1975,7 +1997,11 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VCOMPRESS;
+                                        if (perm_overlap_1_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VCOMPRESS;
+                                        end
                                     end
                                     F6_VAADDU: begin
                                         decode_instr_int.regfile_we = 1'b0;
@@ -2226,7 +2252,11 @@ module decoder
                                     F6_VSLIDE1UP: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         // decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDE1UP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDE1UP;
+                                        end
                                     end
                                     F6_VSLIDE1DOWN: begin
                                         decode_instr_int.regfile_we = 1'b0;
@@ -3590,6 +3620,10 @@ module decoder
     assign wide_overlap_1_2 = (vlmul_int[2] && ((decode_instr_int.vd == decode_instr_int.vs1) || 
                                                 (decode_instr_int.vd == decode_instr_int.vs2))) ? 1'b1 : 1'b0;
     assign wide_overlap_2   = (vlmul_int[2] &&  (decode_instr_int.vd == decode_instr_int.vs2))  ? 1'b1 : 1'b0;
+    // RVV permute ops: vd may not overlap a vector source, at any LMUL.
+    assign perm_overlap_2   = (decode_instr_int.vd == decode_instr_int.vs2) ? 1'b1 : 1'b0;
+    assign perm_overlap_1_2 = ((decode_instr_int.vd == decode_instr_int.vs2) ||
+                               (decode_instr_int.vd == decode_instr_int.vs1)) ? 1'b1 : 1'b0;
 
     
 
