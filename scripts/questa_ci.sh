@@ -7,90 +7,64 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'       
 NC='\033[0m' # No Color  
 TOP=$PWD
+
+# A failed `cd` leaves the shell in the previous testbench directory, so the next
+# runtest.sh re-runs the test that already passed and its output is logged under
+# this step's name. Report the step as missing and keep going, then exit nonzero.
+missing=0
+run_tb() {
+    local dir="$1" label="$2"
+    echo "*** results of file: $label" 2>&1 | tee -a $artifact
+    if cd "$TOP/$dir" 2>/dev/null; then
+        (./runtest.sh -c ) 2>&1 | tee -a $artifact
+    else
+        echo "MISSING TESTBENCH DIRECTORY: $dir" 2>&1 | tee -a $artifact
+        missing=$((missing + 1))
+    fi
+    echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+}
 #register.sv TODO: fix $random warnings
 :'
-echo "*** results of file: register.sv" 2>&1 | tee -a $artifact
-cd $TOP/tb/tb_register
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "tb/tb_register" "register.sv"
 '
 #top.sv
-echo "*** results of file: top.sv" 2>&1 | tee -a $artifact
-cd $TOP/tb/tb_top
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "tb/tb_top" "top.sv"
 
 # bimodal_predict.sv branch_predictor.sv
-echo "*** results of file: bimodal_predict.sv branch_predictor.sv " 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_branch_predictor
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/if_stage/tb/tb_branch_predictor" "bimodal_predict.sv branch_predictor.sv "
 
 # exe_stage.sv
-echo "*** results of file: exe_stage.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_top/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/exe_stage/tb/tb_top" "exe_stage.sv"
 
 # mul_unit.sv
 # ** multidriven and does not reach end of test
-echo "*** results of file: mul_unit.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_mul_unit/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/exe_stage/tb/tb_mul_unit" "mul_unit.sv"
 
 # div_unit.sv div_4bits.sv
-echo "*** results of file: div_unit.sv div_4bits.sv " 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_div_unit/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/exe_stage/tb/tb_div_unit" "div_unit.sv div_4bits.sv "
 # datapath.sv
-echo "*** results of file: datapath.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/tb/tb_datapath/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/tb/tb_datapath" "datapath.sv"
 
 #if_stage.sv
-echo "*** results of file: if_stage.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/if_stage/tb/tb_if_stage/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/if_stage/tb/tb_if_stage" "if_stage.sv"
 
 #alu.sv
-echo "*** results of file: alu.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_alu/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/exe_stage/tb/tb_alu" "alu.sv"
 
 #branch_unit.sv
-echo "*** results of file: branch_unit.sv" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/exe_stage/tb/tb_branch_unit/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/exe_stage/tb/tb_branch_unit" "branch_unit.sv"
 
 #interface_dcache.sv
-echo "*** results of file: interface_dcache" 2>&1 | tee -a $artifact
-cd $TOP/rtl/interface_dcache/tb/tb_interface_dcache/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/interface_dcache/tb/tb_interface_dcache" "interface_dcache"
 
 # decoder.sv
-echo "*** results of file: decoder" 2>&1 | tee -a $artifact
-cd $TOP/rtl/datapath/rtl/id_stage/tb/tb_decoder/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/datapath/rtl/id_stage/tb/tb_decoder" "decoder"
 
 # icache_interface.sv
-echo "*** results of file: icache_interface" 2>&1 | tee -a $artifact
-cd $TOP/interface_icache/tb/tb_icache_interface/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "interface_icache/tb/tb_icache_interface" "icache_interface"
 
 # control_unit.sv
-echo "*** results of file: control_unit" 2>&1 | tee -a $artifact
-cd $TOP/rtl/control_unit/tb/tb_control_unit/
-(./runtest.sh -c ) 2>&1 | tee -a $artifact
-echo "******** questasim test has finish for this file **********" 2>&1 | tee -a $artifact
+run_tb "rtl/control_unit/tb/tb_control_unit" "control_unit"
 
 
 #if this is not empty CI yellow tick
@@ -163,6 +137,14 @@ if [ $rval -ne 0 ]; then
     echo "No pass messages detected"
     echo -e "$NC"
 	ret_val+=5
+fi
+
+echo "missing_testbench_dirs"
+if [ "$missing" -gt 0 ]; then
+  	echo -e "$RED"
+    echo "$missing testbench directories were missing"
+    echo -e "$NC"
+	ret_val+=6
 fi
 
 echo $ret_val
