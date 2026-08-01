@@ -2582,6 +2582,18 @@ module decoder
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             end
                                         endcase
+                                        // Widening/narrowing FP conversions obey the same register
+                                        // alignment as the integer widen/narrow ops: the wide operand
+                                        // (vd for vfwcvt, vs2 for vfncvt) must be aligned to 2*LMUL
+                                        // when LMUL >= 1. vs1 is declared [19:15], so vs1[19:18] is the
+                                        // conversion-kind field: 01 = widening, 10 = narrowing.
+                                        if (!xcpt_illegal_instruction_int) begin
+                                            if ((decode_i.inst.vtype.vs1[19:18] == 2'b01) &&
+                                                ((decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2))
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            else if ((decode_i.inst.vtype.vs1[19:18] == 2'b10) && decode_instr_int.vs2[0] && (~vlmul_int[2]))
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     end
                                     F6_VFREDUSUM: begin
                                         decode_instr_int.instr_type = VFREDUSUM;
