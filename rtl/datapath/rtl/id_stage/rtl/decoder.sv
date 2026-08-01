@@ -1214,7 +1214,7 @@ module decoder
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_1_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
@@ -1392,7 +1392,7 @@ module decoder
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
@@ -1536,7 +1536,7 @@ module decoder
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
