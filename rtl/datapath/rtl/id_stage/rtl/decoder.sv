@@ -2588,7 +2588,8 @@ module decoder
                                         // when LMUL >= 1. vs1 is declared [19:15], so vs1[19:18] is the
                                         // conversion-kind field: 01 = widening, 10 = narrowing.
                                         if (!xcpt_illegal_instruction_int) begin
-                                            if ((decode_i.inst.vtype.vs1[19:18] == 2'b01) && decode_instr_int.vd[0] && (~vlmul_int[2]))
+                                            if ((decode_i.inst.vtype.vs1[19:18] == 2'b01) &&
+                                                ((decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2))
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             else if ((decode_i.inst.vtype.vs1[19:18] == 2'b10) && decode_instr_int.vs2[0] && (~vlmul_int[2]))
                                                 xcpt_illegal_instruction_int = 1'b1;
