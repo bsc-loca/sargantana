@@ -67,6 +67,7 @@ module decoder
     logic ras_link_rs1_int;
 
     logic check_frm;
+    logic vector_fp_csr_illegal;
 
     vreg_t emul_mask; 
 
@@ -87,8 +88,10 @@ module decoder
     logic [11:0] vtype_int;
     logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_int;
 
-
-
+    assign vector_fp_csr_illegal = (csr_fs_i == 2'b00) ||
+                                   (frm_i == FRM_INV_1) ||
+                                   (frm_i == FRM_INV_2) ||
+                                   (frm_i == FRM_DYN);
 
     // Truncate Function
     function [63:0] trunc_65_64(input [64:0] val_in);
@@ -2454,8 +2457,9 @@ module decoder
                                                 end else begin
                                                     decode_instr_int.instr_type = VFNCVT_F_F;
 
-                                                    if (sew == SEW_16)
-                                                        xcpt_illegal_instruction_int = 1'b0;
+                                                    if (sew == SEW_16) begin
+                                                        xcpt_illegal_instruction_int = vector_fp_csr_illegal;
+                                                    end
                                                 end
                                             end
                                             VS1_VFNCVT_F_X: begin
@@ -2520,8 +2524,9 @@ module decoder
                                                 end else begin
                                                     decode_instr_int.instr_type = VFWCVT_F_F;
 
-                                                    if (sew == SEW_16)
-                                                        xcpt_illegal_instruction_int = 1'b0;
+                                                    if (sew == SEW_16) begin
+                                                        xcpt_illegal_instruction_int = vector_fp_csr_illegal;
+                                                    end
                                                 end
 
                                             end
