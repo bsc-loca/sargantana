@@ -138,6 +138,7 @@ endfunction
     logic free_list_empty;
     logic simd_free_list_empty;
     logic fp_free_list_empty;
+    logic iq_empty;                 // Instruction Queue is empty
 
     phreg_t  free_register_to_rename;
     phvreg_t simd_free_register_to_rename;
@@ -572,7 +573,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .read_head_i    (~control_int.stall_iq),
         .instruction_o  (stage_iq_ir_q),
         .full_o         (ir_cu_int.full_iq),
-        .empty_o        ()
+        .empty_o        (iq_empty)
     );
 
     // Free List
@@ -1868,6 +1869,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
     assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
     assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
+    assign pmu_flags_o.empty_iq        = iq_empty;
 
     /*
     (* keep="TRUE" *) (* mark_debug="TRUE" *) gl_instruction_t [1:0] instruction_to_commit_reg;
