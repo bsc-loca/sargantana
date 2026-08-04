@@ -41,6 +41,12 @@ Each of the 29 generic performance counters can be configured to count events fr
 37. DCache uncached request
 38. DCache read request miss
 39. DCache write request miss
+40. Stalls by IQ Rename stage (stall_ir)
+
+The `empty_iq` signal (Instruction Queue empty / front-end starved) is exposed through
+`pmu_flags_o.empty_iq` in `datapath.sv`. It is available for use as a future HPM event
+counter by bumping `HPM_NUM_EVENTS` and wiring `hpm_events_d[41] = pmu_flags.empty_iq`
+in `top_drac.sv`.
 
 **This mapping is done in the file top_drac.sv**
 

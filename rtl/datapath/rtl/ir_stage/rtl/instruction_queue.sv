@@ -30,7 +30,7 @@ module instruction_queue
 
     output id_ir_stage_t   instruction_o,    // All intruction output signals
     output logic           full_o,           // IQ is full
-    output logic           empty_o           // IQ is empty TODO: check if empty signal is necessary
+    output logic           empty_o           // IQ is empty; wired to pmu_flags_o.empty_iq in datapath.sv
 );
 
 function [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES):0] trunc_iq_num_sum(input [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)+1:0] val_in);

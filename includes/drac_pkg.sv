@@ -1064,6 +1064,7 @@ typedef struct packed {
     logic free_list_empty;     // stall due to free list empty
     logic exe_load;            // Load send to dCache
     logic exe_store;           // Store send to dCache
+    logic empty_iq;            // Instruction Queue empty (front-end starved)
 } to_PMU_t;  // Control signals to PMU counters
 
 // CSR output
