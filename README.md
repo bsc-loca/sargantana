@@ -27,6 +27,13 @@ To perform RTL simulations and/or emulating the design, please refer to the [cor
 
 ![Sargantana Pipeline](doc/sargantana_pipeline.svg)
 
+### Vector Extension
+
+The vector unit currently supports LMUL <= 1. Widening and narrowing operations
+carry a further restriction that software has no way to discover at run time: at
+non-fractional LMUL they require `vl <= VLMAX/2`. See
+[doc/vector_limitations.md](doc/vector_limitations.md).
+
 ## 3. License
 
 This work is licensed under the Solderpad Hardware License v2.1.
