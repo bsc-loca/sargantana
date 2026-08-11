@@ -126,6 +126,8 @@ module predecoder
                                     end
                                 endcase
                             end
+                            default:
+                                predecoded_inst = fetched_i.inst;
                         endcase
                     end
                     F3_CFSD: begin
