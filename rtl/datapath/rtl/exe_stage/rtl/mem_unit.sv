@@ -228,7 +228,8 @@ assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instructi
                       ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_wb.sew) :
                         instruction_to_wb.vl[VMAXELEM_LOG:0];
 assign vl_scalar =    ((instruction_to_wb.instr.instr_type == LB) || (instruction_to_wb.instr.instr_type == LH) || (instruction_to_wb.instr.instr_type == LW) || (instruction_to_wb.instr.instr_type == LD) ||
-                      (instruction_to_wb.instr.instr_type == LBU) || (instruction_to_wb.instr.instr_type == LHU) || (instruction_to_wb.instr.instr_type == LWU)) ? 'd8 : vl_to_wb;
+                      (instruction_to_wb.instr.instr_type == LBU) || (instruction_to_wb.instr.instr_type == LHU) || (instruction_to_wb.instr.instr_type == LWU) ||
+                      (instruction_to_wb.instr.instr_type == FLW) || (instruction_to_wb.instr.instr_type == FLD) || (instruction_to_wb.instr.instr_type == FLH) ) ? 'd8 : vl_to_wb;
 
 assign is_cmo_prefetch = instruction_i.instr.mem_type == CMO_PREFETCH ;
 
@@ -779,7 +780,7 @@ assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
     case (instruction_to_wb.instr.instr_type)
-        LB, LH, LW, LD, LBU, LHU, LWU: begin
+        LB, LH, LW, LD, LBU, LHU, LWU, FLW, FLD, FLH: begin
             vdata_to_wb = 'h0;
         end
         default: begin
@@ -987,7 +988,7 @@ always_comb begin
         (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we) 
         && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
             vload_packer_complete = 1'b1;
-        end else if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we)) begin
+        end else if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we)) begin
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                 if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;

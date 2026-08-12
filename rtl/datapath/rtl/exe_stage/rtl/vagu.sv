@@ -416,7 +416,9 @@ always_comb begin
                         memp_instr_o.instr.mem_size = 4'b0000;
                         memp_instr_o.data_rs1 = vaddr_q;
                         load_mask = ((memp_instr_q.instr.instr_type == LB) || (memp_instr_q.instr.instr_type == LH) || (memp_instr_q.instr.instr_type == LW) || (memp_instr_q.instr.instr_type == LD)
-                                     || (memp_instr_q.instr.instr_type == LBU) || (memp_instr_q.instr.instr_type == LHU) || (memp_instr_q.instr.instr_type == LWU)) ? scalar_load_mask : {63'd0, make_req};
+                                     || (memp_instr_q.instr.instr_type == LBU) || (memp_instr_q.instr.instr_type == LHU) || (memp_instr_q.instr.instr_type == LWU)
+                                     || (memp_instr_q.instr.instr_type == FLW) || (memp_instr_q.instr.instr_type == FLD) || (memp_instr_q.instr.instr_type == FLH)
+                                     ) ? scalar_load_mask : {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
                     end 
                     memp_instr_o.sew = SEW_8;
@@ -813,7 +815,7 @@ always_comb begin
                 group_neg_d = 1'b0;
             end
             scalar_unsigned_d = 1'b0;
-            if (memp_instr_i.instr.valid && memp_instr_i.instr.unit == UNIT_MEM && (~is_vector)) begin
+            if (memp_instr_i.instr.valid && (memp_instr_i.instr.unit == UNIT_MEM) && (~is_vector) && (~(memp_instr_i.instr.mem_type == AMO))) begin
                 case (memp_instr_i.instr.mem_size)
                     4'b0001,4'b0101: begin
                         vmem_ops_state_d = (vaddr_scalar[0]) ? (memp_instr_i.is_store ? VS_UNIT : VL_STRIDED) : SCALAR;
