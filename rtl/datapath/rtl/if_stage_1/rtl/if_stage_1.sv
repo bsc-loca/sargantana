@@ -81,6 +81,7 @@ module if_stage_1
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
     logic ex_if_guest_page_fault_int;
+    logic ex_if_page_fault_int;
 
     // Branch Predictor wires
     logic       branch_predict_is_branch;
@@ -154,8 +155,7 @@ module if_stage_1
 
     // check addr fault fetch
     always_comb begin
-        if ((!(((&pc[63:VIRT_ADDR_SIZE-1])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-1])==1'b0)) & en_translation_i) | 
-            (!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i)
+        if ((!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i)
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;
     end
@@ -166,6 +166,14 @@ module if_stage_1
         if ((|pc[63:PHY_VIRT_MAX_ADDR_SIZE-1]) & (en_g_translation_i & ~en_translation_i))
              ex_if_guest_page_fault_int = 1'b1;
         else ex_if_guest_page_fault_int = 1'b0;
+    end
+
+    // check instr page fault
+    // Address bits 63:39 must be the same as 38
+    always_comb begin
+        if ((!(((&pc[63:VIRT_ADDR_SIZE-4])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-4])==1'b0)) & en_translation_i))
+             ex_if_page_fault_int = 1'b1;
+        else ex_if_page_fault_int = 1'b0;
     end
     
     // check misaligned fetch not needed as C extension disables this exceptions
@@ -235,6 +243,10 @@ module if_stage_1
         end else 
         if (ex_if_addr_fault_int) begin
             fetch_o.ex.cause = INSTR_ACCESS_FAULT;
+            fetch_o.ex.valid = 1'b1;
+        end else
+        if (ex_if_page_fault_int) begin
+            fetch_o.ex.cause = INSTR_PAGE_FAULT;
             fetch_o.ex.valid = 1'b1;
         end else
         if (ex_if_guest_page_fault_int) begin
