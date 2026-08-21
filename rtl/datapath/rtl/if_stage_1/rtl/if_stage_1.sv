@@ -169,9 +169,9 @@ module if_stage_1
     end
 
     // check instr page fault
-    // Address bits 63:39 must be the same as 38
+    // Address bits 63:39 must be the same as 38 (39-bit virtual address canonical)
     always_comb begin
-        if ((!(((&pc[63:VIRT_ADDR_SIZE-4])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-4])==1'b0)) & en_translation_i))
+        if ((!(((&pc[63:VIRT_ADDR_SIZE-3])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-3])==1'b0)) & en_translation_i))
              ex_if_page_fault_int = 1'b1;
         else ex_if_page_fault_int = 1'b0;
     end
