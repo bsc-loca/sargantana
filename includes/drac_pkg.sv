@@ -1532,6 +1532,7 @@ parameter logic [31:0] FP32_NINF        = 32'hFF800000;
 parameter logic [63:0] FP64_PINF        = 64'h7FF0000000000000;
 parameter logic [63:0] FP64_NINF        = 64'hFFF0000000000000;
 
+parameter logic [15:0] FP16_QNAN        = 16'h7E00;
 parameter logic [31:0] FP32_QNAN        = 32'h7FC00000;
 parameter logic [63:0] FP64_QNAN        = 64'h7FF8000000000000;
 parameter logic [31:0] FP32_SNAN        = 32'h7FA00000;
@@ -1620,6 +1621,22 @@ function automatic logic is_snan_f32(input logic [31:0] fp32);
     is_snan_f32 = is_nan_f32(fp32) && (fp32[22] == 1'b0);
 endfunction
 
+function automatic logic is_boxed_f32(input logic [63:0] fp64);
+    is_boxed_f32 = (fp64[63:32] == 32'hFFFFFFFF);
+endfunction
+
+function automatic logic is_nan_arch_f32(input logic [63:0] fp64);
+    is_nan_arch_f32 = !is_boxed_f32(fp64) || is_nan_f32(fp64[31:0]);
+endfunction
+
+function automatic logic is_qnan_arch_f32(input logic [63:0] fp64);
+    is_qnan_arch_f32 = !is_boxed_f32(fp64) || is_qnan_f32(fp64[31:0]);
+endfunction
+
+function automatic logic is_snan_arch_f32(input logic [63:0] fp64);
+    is_snan_arch_f32 = is_boxed_f32(fp64) && is_snan_f32(fp64[31:0]);
+endfunction
+
 function automatic logic is_pos_f32(input logic [31:0] fp32);
     is_pos_f32 = fp32[31] == 1'b0;
 endfunction
@@ -1682,6 +1699,14 @@ endfunction
 
 function automatic logic is_snan_f16(input logic [15:0] fp16);
     is_snan_f16 = is_nan_f16(fp16) && (fp16[9] == 1'b0);
+endfunction
+
+function automatic logic is_inf_f16(input logic [15:0] fp16);
+    is_inf_f16 = (&fp16[14:10]) && !(|fp16[9:0]);
+endfunction
+
+function automatic logic is_subnorm_f16(input logic [15:0] fp16);
+    is_subnorm_f16 = !(|fp16[14:10]) && (|fp16[9:0]);
 endfunction
 
 // --------------------------------------------------------------------

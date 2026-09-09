@@ -461,7 +461,7 @@ assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
-assign instruction_scalar_o.fp_status       = finish_fp_status_int;
+assign instruction_scalar_o.fp_status       = zfa_post_status;
 assign instruction_scalar_o.ex              = '0;
 assign instruction_scalar_o.mem_type        = NOT_MEM;
 
