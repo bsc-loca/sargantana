@@ -16,8 +16,8 @@ genvar i;
 bus_simd_t fp32_to_fp16_o;
 bus_simd_t fp16_to_fp32_o;
 
-fpnew_pkg::status_t fp32_to_fp16_flags [(VLEN/32):0];
-fpnew_pkg::status_t fp16_to_fp32_flags [(VLEN/32):0];
+fpnew_pkg::status_t fp32_to_fp16_flags [(VLEN/32)-1:0];
+fpnew_pkg::status_t fp16_to_fp32_flags [(VLEN/32)-1:0];
 
 fpnew_pkg::status_t fp32_to_fp16_merged_flags;
 fpnew_pkg::status_t fp16_to_fp32_merged_flags;

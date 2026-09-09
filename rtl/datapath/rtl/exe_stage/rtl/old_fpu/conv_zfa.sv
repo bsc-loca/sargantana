@@ -126,6 +126,7 @@ import fpnew_pkg::*;
 
 logic sign;
 logic [31:0] res_32;
+logic [32:0] res_32_ext;
 integer e;
 
 logic [83:0] fcvtmod_fixedpoint;
@@ -136,6 +137,7 @@ fpnew_pkg::status_t fcvtmod_status;
 always_comb begin: fcvtmod
     sign              = 1'b0;
     res_32            = 32'h0;
+    res_32_ext        = '0;
     fcvtmod_fixedpoint = '0;
     fcvtmod_integer   = 32'h0;
     fcvtmod_fraction  = 52'h0;
@@ -158,7 +160,8 @@ always_comb begin: fcvtmod
         fcvtmod_fixedpoint = {31'd0, 1'b1, operand_i[51:0]} << e;
         fcvtmod_integer    = fcvtmod_fixedpoint[83:52];
         fcvtmod_fraction   = fcvtmod_fixedpoint[51:0];
-        res_32 = (sign == 1'b1) ? (~fcvtmod_integer + 1'b1) : fcvtmod_integer;
+        res_32_ext = (sign == 1'b1) ? (~fcvtmod_integer + 32'h1) : fcvtmod_integer;
+        res_32 = res_32_ext[31:0];
         if (e > 31) begin
             fcvtmod_status.NV = 1'b1;
         end else if (fcvtmod_integer > ((sign == 1'b1) ? 32'h8000_0000 : 32'h7FFF_FFFF)) begin

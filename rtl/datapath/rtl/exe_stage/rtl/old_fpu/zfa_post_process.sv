@@ -39,8 +39,14 @@ import fpnew_pkg::*;
     logic [31:0] abs_result_i_32;
     logic [63:0] abs_result_i_64;
 
-    assign abs_result_i_32 = result_i[31] ? (~result_i[31:0] + 1'b1) : result_i[31:0];
-    assign abs_result_i_64 = result_i[63] ? (~result_i[63:0] + 1'b1) : result_i[63:0];
+    logic [32:0] abs_result_ext_32;
+    logic [64:0] abs_result_ext_64;
+
+    assign abs_result_ext_32 = result_i[31] ? (~result_i[31:0] + 32'h1) : result_i[31:0];
+    assign abs_result_ext_64 = result_i[63] ? (~result_i[63:0] + 64'h1) : result_i[63:0];
+
+    assign abs_result_i_32 = abs_result_ext_32[31:0];
+    assign abs_result_i_64 = abs_result_ext_64[63:0];
 
     // Pass through by default
     fpnew_int2fp # (

@@ -92,6 +92,10 @@ module fp_cvt
             logic [DST_MAN_WIDTH+SRC_MAN_WIDTH-1:0] frac_src_shifted_ext;
             logic [SRC_MAN_WIDTH:0]                 frac_src_shifted;
 
+            logic [31:0]                            exp_src_ext;
+            logic [32:0]                            exp_dst_ext;
+            logic [DST_MAN_WIDTH:0]                 frac_dst_ext;
+
             logic                                   nv_flag;
 
             logic [DST_WIDTH-1:0]                   converted_val;
@@ -126,9 +130,14 @@ module fp_cvt
                 frac_src_shifted_ext = '0;
                 frac_src_shifted = '0;
 
+                exp_src_ext = '0;
+                exp_dst_ext = '0;
+                frac_dst_ext = '0;
+
                 sign = operand_i[SRC_WIDTH-1];
                 exp_src = operand_i[SRC_WIDTH-2 -: SRC_EXP_WIDTH];
                 frac_src = operand_i[SRC_WIDTH-2-SRC_EXP_WIDTH -: SRC_MAN_WIDTH];
+                exp_src_ext = exp_src;
 
                 nv_flag = is_snan(operand_i);
 
@@ -142,10 +151,12 @@ module fp_cvt
                         frac_src_shifted_ext = {{DST_MAN_WIDTH-SRC_MAN_WIDTH {1'b0}}, frac_src } << (shift_amount + 1);
                         frac_src_shifted = frac_src_shifted_ext[SRC_MAN_WIDTH-1:0];
 
-                        frac_dst = {frac_src_shifted, {DST_MAN_WIDTH-SRC_MAN_WIDTH {1'b0} }};
+                        frac_dst_ext = {frac_src_shifted, {DST_MAN_WIDTH-SRC_MAN_WIDTH {1'b0} }};
+                        frac_dst = frac_dst_ext[DST_MAN_WIDTH-1:0];
                     end
                 end else begin
-                    exp_dst = (exp_src - bias(SRC_FMT)) + bias(DST_FMT);
+                    exp_dst_ext = (exp_src_ext - bias(SRC_FMT)) + bias(DST_FMT);
+                    exp_dst = exp_dst_ext[DST_EXP_WIDTH-1:0];
                     frac_dst = {frac_src, {DST_MAN_WIDTH-SRC_MAN_WIDTH {1'b0}}};
                 end
 
@@ -179,12 +190,16 @@ module fp_cvt
             logic [DST_MAN_WIDTH:0] frac_dst_ext;
             logic [DST_MAN_WIDTH-1:0] final_frac_dst;
             logic [DST_EXP_WIDTH-1:0] final_exp_dst;
-            logic [DST_EXP_WIDTH:0] exp_dst_biased_ext;
+            logic [31:0] exp_dst_biased_ext;
 
             localparam int signed MIN_NORM_EXP = 1 - signed'(DST_BIAS);
 
-            logic signed [SRC_EXP_WIDTH:0] exp_unbiased_ext;
+            logic signed [32:0] exp_unbiased_ext;
             logic signed [SRC_EXP_WIDTH-1:0] exp_unbiased;
+
+            logic signed [31:0] exp_src_ext;
+            logic [31:0] shift_amt_ext;
+            logic [32:0] rshift_amt_ext;
 
             logic [SRC_MAN_WIDTH:0] significand;
             logic [SRC_MAN_WIDTH:0] shifted_sig;
@@ -209,9 +224,14 @@ module fp_cvt
                 round = 1'b0;
                 sticky = 1'b0;
 
+                exp_src_ext = '0;
+                shift_amt_ext = '0;
+                rshift_amt_ext = '0;
+
                 sign = operand_i[SRC_WIDTH-1];
                 exp_src = operand_i[SRC_WIDTH-2 -: SRC_EXP_WIDTH];
                 frac_src = operand_i[SRC_WIDTH-2-SRC_EXP_WIDTH -: SRC_MAN_WIDTH];
+                exp_src_ext = $signed({1'b0, exp_src});
 
                 if (is_nan(operand_i)) begin // NaN
                     exp_dst = '1;
@@ -221,7 +241,7 @@ module fp_cvt
                 end else if (is_inf(operand_i)) begin // inf
                     exp_dst = '1;
                     frac_dst = '0;
-                end else if (operand_i == '0 || (operand_i == {1'b1, {(SRC_WIDTH-1) {1'b0}}})) begin // zero
+                end else if ((operand_i == '0) || (operand_i == {1'b1, {(SRC_WIDTH-1) {1'b0}}})) begin // zero
                     exp_dst = '0;
                     frac_dst = '0;
                 end else if (is_sub(operand_i)) begin // subnormal
@@ -230,7 +250,7 @@ module fp_cvt
                     sticky = 1'b1;
                     is_tiny = 1'b1;
                 end else begin // regular path
-                    exp_unbiased_ext = $signed({1'b0, exp_src}) - signed'(bias(SRC_FMT));
+                    exp_unbiased_ext = exp_src_ext - signed'(bias(SRC_FMT));
                     exp_unbiased = exp_unbiased_ext[SRC_EXP_WIDTH-1:0];
 
                     if (exp_unbiased > signed'(DST_BIAS)) begin
@@ -254,13 +274,15 @@ module fp_cvt
                         is_tiny = 1'b1;
                         exp_dst = '0;
 
-                        shift_amt = (MIN_NORM_EXP - $signed(exp_unbiased));
+                        shift_amt_ext = (MIN_NORM_EXP - $signed(exp_unbiased));
+                        shift_amt = shift_amt_ext[$clog2(MAX_SHIFT + 1)-1:0];
 
                         significand = {1'b1, frac_src};
                         shifted_sig = significand >> shift_amt;
 
                         if (shift_amt < (SRC_MAN_WIDTH + 1)) begin
-                            rshift_amt = (SRC_MAN_WIDTH + 1) - shift_amt;
+                            rshift_amt_ext = (SRC_MAN_WIDTH + 1) - shift_amt_ext;
+                            rshift_amt = rshift_amt_ext[$clog2(SRC_MAN_WIDTH + 2)-1:0];
                             sticky_mask = {(SRC_MAN_WIDTH+1){1'b1}} >> rshift_amt;
                             sticky_shifted_out = |(significand & sticky_mask);
                         end else begin
