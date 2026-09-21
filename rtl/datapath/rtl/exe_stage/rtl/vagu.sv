@@ -815,7 +815,7 @@ always_comb begin
                 group_neg_d = 1'b0;
             end
             scalar_unsigned_d = 1'b0;
-            if (memp_instr_i.instr.valid && (memp_instr_i.instr.unit == UNIT_MEM) && (~is_vector) && (~(memp_instr_i.instr.mem_type == AMO))) begin
+            if (memp_instr_i.instr.valid && (memp_instr_i.instr.unit == UNIT_MEM) && (~is_vector) && (~((memp_instr_i.instr.mem_type == AMO) || (memp_instr_i.instr.mem_type == CMO_CBO)))) begin
                 case (memp_instr_i.instr.mem_size)
                     4'b0001,4'b0101: begin
                         vmem_ops_state_d = (vaddr_scalar[0]) ? (memp_instr_i.is_store ? VS_UNIT : VL_STRIDED) : SCALAR;
