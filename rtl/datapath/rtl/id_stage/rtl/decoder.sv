@@ -3155,6 +3155,14 @@ module decoder
                                                         decode_instr_int.instr_type = URET;
                                                         decode_instr_int.stall_csr_fence = 1'b1;
                                                     end
+                                                    RS2_WRS_NTO: begin
+                                                        decode_instr_int.instr_type = WRS_NTO;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
+                                                    RS2_WRS_STO: begin
+                                                        decode_instr_int.instr_type = WRS_STO;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
                                                     default: begin
                                                         xcpt_illegal_instruction_int = 1'b1;
                                                     end   

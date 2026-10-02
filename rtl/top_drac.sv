@@ -124,7 +124,12 @@ module top_drac
     input  logic                 time_irq_i, // timer interrupt
     input  logic [1:0]           irq_i,      // external interrupt in
     input  logic                 soft_irq_i, // software interrupt
-    input  logic [63:0]          time_i     // time passed since the core is reset
+    input  logic [63:0]          time_i,     // time passed since the core is reset
+
+//-----------------------------------------------------------------------------
+// Zawrs RESERVATION-LOST (WRS wakeup, level from L1.5 adapter)
+//-----------------------------------------------------------------------------
+    input  logic                 rs_lost_i
 
 );
 
@@ -403,6 +408,8 @@ csr_bsc #(
     .time_irq_i(time_irq_i),                                                          // timer interrupt
     .irq_i(irq_i),                                                                    // external interrupt in
     .m_soft_irq_i(soft_irq_i),
+    // Zawrs reservation-lost level (WRS wakeup)
+    .rs_lost_i(rs_lost_i),
     .interrupt_o(resp_csr_interface_datapath.csr_interrupt),                          // Inerruption wire to the core
     .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),              // Interruption cause
 

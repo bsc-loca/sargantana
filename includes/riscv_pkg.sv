@@ -968,7 +968,10 @@ typedef enum logic [4:0] {
     RS2_ECALL_ERET      = 5'b00000,
     RS2_EBREAK_SFENCEVM = 5'b00001,
     RS2_URET_SRET_MRET  = 5'b00010,
-    RS2_WFI             = 5'b00101
+    RS2_WFI             = 5'b00101,
+    // Zawrs instructions:
+    RS2_WRS_NTO         = 5'b01101,
+    RS2_WRS_STO         = 5'b11101
     //RS2_MRTS            = 5'b00101 //Old ISA
 } op_rs2_system_t; // the next 5 bits after func7
 

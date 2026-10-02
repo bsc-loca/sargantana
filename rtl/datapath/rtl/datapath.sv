@@ -954,6 +954,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == MRET)           ||
                         (stage_ir_rr_q.instr.instr_type == URET)           ||
                         (stage_ir_rr_q.instr.instr_type == WFI)            ||
+                        (stage_ir_rr_q.instr.instr_type == WRS_NTO)        ||
+                        (stage_ir_rr_q.instr.instr_type == WRS_STO)        ||
                         (stage_ir_rr_q.instr.instr_type == EBREAK)         ||
                         (stage_ir_rr_q.instr.instr_type == FENCE)          ||
                         (stage_ir_rr_q.instr.instr_type == SFENCE_VMA)     ||
