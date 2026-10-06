@@ -293,6 +293,7 @@ typedef struct packed {
     inst_t  data;                // Word of 32 bits from Icache
     logic [PPN_SIZE-1:0] guest_ppn;
     logic   instr_page_fault;    // Page Fault from TLB
+    logic   instr_access_fault;  // Instruction access fault after translation
     logic   instr_guest_page_fault; // Guest Page Fault from TLB
 } resp_icache_cpu_t;
 

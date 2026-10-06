@@ -43,7 +43,7 @@ module if_stage_2
     output logic                keep_fetch_o
 );
 
-logic ex_if_page_fault_int, ex_if_guest_page_fault_int;
+logic ex_if_page_fault_int, ex_if_guest_page_fault_int, ex_if_access_fault_int;
 resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
 
 logic realigner_valid;
@@ -61,6 +61,18 @@ bus32_t instr_data;
             ex_if_page_fault_int = 1'b1;
         end else begin
             ex_if_page_fault_int = 1'b0;
+        end
+    end
+// check exceptions instr access fault
+    always_comb begin
+        if (resp_icache_cpu_q.valid && 
+                    resp_icache_cpu_q.instr_access_fault) begin
+            ex_if_access_fault_int = 1'b1;
+        end else if (resp_icache_cpu_i.valid && 
+                    resp_icache_cpu_i.instr_access_fault) begin
+            ex_if_access_fault_int = 1'b1;
+        end else begin
+            ex_if_access_fault_int = 1'b0;
         end
     end
 // check exceptions instr guest page fault
@@ -96,6 +108,11 @@ bus32_t instr_data;
                                         (({resp_icache_cpu_i.guest_ppn, fetch_i.pc_inst[11:0]}) >> 2)) :
                                     (fetch_i.pc_inst >> 2); //GVA = GPA in G-stage only translations
             fetch_o.ex.tinst = fetch_i.ex.tinst;
+            fetch_o.ex.valid = 1'b1;
+        end else if (ex_if_access_fault_int) begin
+            fetch_o.ex.cause = INSTR_ACCESS_FAULT;
+            fetch_o.ex.origin2 = '0;
+            fetch_o.ex.tinst = '0;
             fetch_o.ex.valid = 1'b1;
         end else begin
             fetch_o.ex.cause = INSTR_ADDR_MISALIGNED;
@@ -171,18 +188,21 @@ bus32_t instr_data;
             resp_icache_cpu_d.data = 32'b0;
             resp_icache_cpu_d.guest_ppn = '0;
             resp_icache_cpu_d.instr_page_fault = 1'b0;
+            resp_icache_cpu_d.instr_access_fault = 1'b0;
             resp_icache_cpu_d.instr_guest_page_fault = 1'b0;
         end else if (resp_icache_cpu_i.valid && stall_i) begin
             resp_icache_cpu_d.valid = 1'b1;
             resp_icache_cpu_d = resp_icache_cpu_i;
             resp_icache_cpu_d.guest_ppn = resp_icache_cpu_i.guest_ppn;
             resp_icache_cpu_d.instr_page_fault = resp_icache_cpu_i.instr_page_fault;
+            resp_icache_cpu_d.instr_access_fault = resp_icache_cpu_i.instr_access_fault;
             resp_icache_cpu_d.instr_guest_page_fault = resp_icache_cpu_i.instr_guest_page_fault;
         end else if (resp_icache_cpu_q.valid && !stall_i) begin
             resp_icache_cpu_d.valid = 1'b0;
             resp_icache_cpu_d.data = 32'b0;
             resp_icache_cpu_d.guest_ppn = '0;
             resp_icache_cpu_d.instr_page_fault = 1'b0;
+            resp_icache_cpu_d.instr_access_fault = 1'b0;
             resp_icache_cpu_d.instr_guest_page_fault = 1'b0;
         end else begin
             resp_icache_cpu_d = resp_icache_cpu_q;
@@ -195,6 +215,7 @@ bus32_t instr_data;
             resp_icache_cpu_q.data <= 32'b0;
             resp_icache_cpu_q.guest_ppn <= '0;
             resp_icache_cpu_q.instr_page_fault <= 1'b0;
+            resp_icache_cpu_q.instr_access_fault <= 1'b0;
             resp_icache_cpu_q.instr_guest_page_fault <= 1'b0;
         end else begin 
             resp_icache_cpu_q <= resp_icache_cpu_d;
