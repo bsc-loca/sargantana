@@ -140,6 +140,10 @@ logic reg_valid_req;
 logic reg_ready_resp;
 logic killed_dcache_req_d;
 logic killed_dcache_req_q;
+logic killed_dcache_req;
+bus64_t     pend_data_rs1_q;
+logic [3:0] pend_mem_size_q;
+logic [1:0] pend_pbmt_q;
 logic req_cpu_dcache_valid_int;
 logic stall_after_flush_lsq;
 
@@ -437,6 +441,20 @@ end
 assign killed_dcache_req_d = ~reg_ready_resp & reg_valid_req & ~req_cpu_dcache_valid_int;
 assign req_cpu_dcache_o.valid = req_cpu_dcache_valid_int | killed_dcache_req_d | killed_dcache_req_q;
 
+ assign killed_dcache_req = (killed_dcache_req_d | killed_dcache_req_q) & ~req_cpu_dcache_valid_int;
+
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if(~rstn_i) begin
+        pend_data_rs1_q <= '0;
+        pend_mem_size_q <= '0;
+        pend_pbmt_q     <= '0;
+    end else if (req_cpu_dcache_valid_int) begin
+        pend_data_rs1_q <= instruction_to_dcache.data_rs1;
+        pend_mem_size_q <= instruction_to_dcache.instr.mem_size;
+        pend_pbmt_q     <= instruction_to_dcache.pbmt;
+    end
+end
+
 // Update State Machine and Stored Instruction
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
@@ -461,17 +479,18 @@ end
 
 //// Select source to DCACHE interface
 always_comb begin
-    req_cpu_dcache_o.data_rs1            = instruction_to_dcache.data_rs1;
+    req_cpu_dcache_o.data_rs1            = (killed_dcache_req) ? pend_data_rs1_q : instruction_to_dcache.data_rs1;
     req_cpu_dcache_o.data_rs2            = instruction_to_dcache.data_rs2;
-    req_cpu_dcache_o.instr_type          = (killed_dcache_req_d) ? ADD : instruction_to_dcache.instr.instr_type;
-    req_cpu_dcache_o.mem_size            = instruction_to_dcache.instr.mem_size;
+    // A killed request is always sent as a plain load (ADD maps to a dcache load)
+    req_cpu_dcache_o.instr_type          = (killed_dcache_req) ? ADD : instruction_to_dcache.instr.instr_type;
+    req_cpu_dcache_o.mem_size            = (killed_dcache_req) ? pend_mem_size_q : instruction_to_dcache.instr.mem_size;
     req_cpu_dcache_o.rd                  = tag_id;
     req_cpu_dcache_o.is_amo_store_or_cmo = instruction_to_dcache.is_amo_store_or_cmo;
     req_cpu_dcache_o.is_amo              = instruction_to_dcache.is_amo;
     req_cpu_dcache_o.is_cmo              = instruction_to_dcache.is_cmo;
     req_cpu_dcache_o.is_cmo_prefetch     = instruction_to_dcache.is_cmo_prefetch;
     req_cpu_dcache_o.is_store            = instruction_to_dcache.is_store;
-    req_cpu_dcache_o.pbmt                = instruction_to_dcache.pbmt;
+    req_cpu_dcache_o.pbmt                = (killed_dcache_req) ? pend_pbmt_q : instruction_to_dcache.pbmt;
 end
 logic test;
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store
