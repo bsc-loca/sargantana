@@ -180,7 +180,11 @@ module decoder
         decode_instr_int.signed_op = 1'b0;
 
         jal_id_if_o.valid = 1'b0;
-        jal_id_if_o.jump_addr = trunc_65_64(decode_i.pc_inst + 64'h04);
+        // Default redirect target, used when a non-branch was predicted as a taken branch (a phantom:
+        // the predictor's is-branch table is tagged with the virtual PC only, so another address space
+        // or older code at the same VA trains it): fetch continues with the next instruction, which is
+        // 2 bytes ahead for a compressed instruction. pc + 4 skipped the next compressed instruction.
+        jal_id_if_o.jump_addr = trunc_65_64(decode_i.pc_inst + (is_compressed_i ? 64'h02 : 64'h04));
 
         // Signal that tells whether it is a csr or fence
         decode_instr_int.stall_csr_fence = 1'b0;
@@ -3731,7 +3735,7 @@ module decoder
     return_address_stack return_address_stack_inst(
         .rstn_i(rstn_i),
         .clk_i(clk_i),
-        .pc_execution_i(decode_instr_int.pc + 64'h4),
+        .pc_execution_i(decode_instr_int.pc + (is_compressed_i ? 64'h2 : 64'h4)),   // link address: pc + 2 for c.jalr
         .push_i(ras_push_int && !stall_i && !flush_i),
         .pop_i(ras_pop_int && !stall_i && !flush_i),
         .return_address_o(ras_pc_int),
