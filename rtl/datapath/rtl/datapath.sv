@@ -447,13 +447,27 @@ endfunction
 
     assign if1_cu_int.branch_pred = stage_if_1_if_2_d.bpred.is_branch && (stage_if_1_if_2_d.bpred.decision == PRED_TAKEN);
 
+    // IF1 redirects fetch to a taken prediction only when the control unit selects
+    // NEXT_PC_SEL_BP_OR_PC_ADD. In other cycles (NEXT_PC_SEL_KEEP_PC for the second compressed
+    // instruction of the fetched word, a jump) fetch does not go to the predicted address, so the
+    // instruction entering IF2 must not be marked as predicted taken: decode and execute trust the
+    // mark and do not redirect, and a compressed jump or taken branch right after another compressed
+    // instruction in the same word was not taken at all (c.addi; c.jr ra: the return fell through).
+    // Gated here, at the register input, because the control unit itself reads IF1's prediction.
+    if_1_if_2_stage_t stage_if_1_if_2_reg_in;
+    always_comb begin
+        stage_if_1_if_2_reg_in = stage_if_1_if_2_d;
+        if (cu_if_int.next_pc != NEXT_PC_SEL_BP_OR_PC_ADD)
+            stage_if_1_if_2_reg_in.bpred.decision = PRED_NOT_TAKEN;
+    end
+
     // Register IF1 to IF2
     register #($bits(if_1_if_2_stage_t)) reg_if_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
         .load_i(!control_int.stall_if_2),
-        .input_i(stage_if_1_if_2_d),
+        .input_i(stage_if_1_if_2_reg_in),
         .output_o(stage_if_1_if_2_q)
     );
 

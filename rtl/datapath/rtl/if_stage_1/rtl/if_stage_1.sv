@@ -96,6 +96,7 @@ module if_stage_1
     next_pc_sel_t last_pc_sel;
 
     logic last_was_bp;
+    logic bp_followed;
 
     always_comb begin
         priority case (cu_if_i.next_pc)
@@ -191,7 +192,7 @@ module if_stage_1
             last_was_bp <= 1'b0;
         end else if ((!stall_i) && (!stall_debug_i)) begin
             last_pc_sel <= cu_if_i.next_pc;
-            last_was_bp <= branch_predict_is_branch && branch_predict_taken;
+            last_was_bp <= bp_followed;
         end
     end
 
@@ -232,6 +233,11 @@ module if_stage_1
     );
 
     assign branch_predict_taken = bp_branch_predict_taken & f2_valid_i & !(last_was_bp && BP_pc[1]) & !stall_i & !stall_debug_i;
+
+    // A taken prediction is only acted on when the control unit selects NEXT_PC_SEL_BP_OR_PC_ADD (see
+    // the IF1/IF2 register input in datapath.sv, which marks the instruction accordingly). last_was_bp
+    // records whether fetch was actually redirected by the predictor.
+    assign bp_followed = branch_predict_is_branch & branch_predict_taken & (cu_if_i.next_pc == NEXT_PC_SEL_BP_OR_PC_ADD);
     assign branch_predict_is_branch = bp_branch_predict_is_branch & f2_valid_i & !(last_was_bp && BP_pc[1]) & !stall_i & !stall_debug_i;
 
     // exceptions ordering
