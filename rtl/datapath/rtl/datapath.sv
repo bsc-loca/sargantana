@@ -1115,6 +1115,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     assign stage_rr_exe_d.data_vm = stage_ir_rr_q.instr.use_mask ? rr_vmask_reg[VMAXELEM-1:0] : '1;
 
+    `else
+    // No vector register file: drive the vector operands. data_vm is the element mask applied by the
+    // mem_unit to every load result, including scalar ones; left undriven (0), every scalar load
+    // returned data_old_vd (also undriven, 0) instead of the loaded value.
+    assign stage_rr_exe_d.data_vm     = '1;
+    assign stage_rr_exe_d.data_old_vd = '0;
+    assign stage_rr_exe_d.data_vs1    = '0;
+    assign stage_rr_exe_d.data_vs2    = '0;
     `endif
 
     // Decide from which Regfile to Read FP
