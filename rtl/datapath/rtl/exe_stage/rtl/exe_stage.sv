@@ -401,7 +401,10 @@ assign fpnew_stall_simd = 1'b0;
 assign fpnew_stall_simd_next = 1'b0;
 `endif
 
-`ifndef DISABLE_SIMD
+// The vagu is also the scalar memory path (it splits unaligned scalar loads and stores into
+// element accesses), so it stays with DISABLE_SIMD: only the SIMD unit, its scoreboard and the
+// vector register renaming go. The DISABLE_SIMD bypass that replaced it lost scalar store data
+// (a no-SIMD core loaded 0 for a saved ra in the bootrom and jumped to 0).
 assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (from_rr_i.instr.vl[VMAXELEM_LOG:0] + 'd7) >> 3 : 
                  ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
                  from_rr_i.instr.vl[VMAXELEM_LOG:0];
@@ -475,17 +478,6 @@ vagu #(
     .load_mask_o(),
     .memp_instr_o(vagu_mem_instr)
 );
-`else // `ifndef DISABLE_SIMD
-    assign stall_vagu = 1'b0;
-    always_comb begin
-        vagu_mem_instr = mem_instr;
-        vagu_mem_instr.vmisalign_xcpt = 1'b0;
-        vagu_mem_instr.velem_id = 'h0;
-        vagu_mem_instr.load_mask = '1;
-        vagu_mem_instr.velem_off = 'h0;
-        vagu_mem_instr.velem_incr = '1; 
-    end
-`endif
 
 mem_unit #(
     .DracCfg(DracCfg)
