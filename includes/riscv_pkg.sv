@@ -20,7 +20,13 @@
 package riscv_pkg;
 
 parameter XLEN = 64; 
+// Vector register length in bits; set with +define+SARG_VLEN=<bits>.
+// 512 is the largest the RTL supports (exe_stage checks it).
+`ifdef SARG_VLEN
+parameter VLEN = `SARG_VLEN;
+`else
 parameter VLEN = 128;
+`endif
 parameter MLEN = VLEN/8;
 parameter OPCODE_WIDTH = 6;
 parameter REG_WIDTH = 5;

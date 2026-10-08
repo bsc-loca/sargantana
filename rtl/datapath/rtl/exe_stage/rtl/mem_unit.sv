@@ -792,7 +792,7 @@ always_comb begin
         4'b0110: data_to_wb = data_word;
         4'b0111: data_to_wb = data_dword;
         4'b1000: data_to_wb = data_qword;
-        4'b1001: data_to_wb = data_8word[VLEN-1:0];
+        4'b1001: data_to_wb = bus_simd_t'(data_8word);
         default: data_to_wb = data_dcache[VLEN-1:0];
     endcase
 end

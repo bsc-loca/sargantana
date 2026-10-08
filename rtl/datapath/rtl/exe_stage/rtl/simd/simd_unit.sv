@@ -35,6 +35,12 @@ module simd_unit
     output exe_wb_fp_instr_t      instruction_fp_o        // Out instruction
 );
 
+// The vector datapath supports VLEN up to 512: VMAXELEM is 7 bits, vagu counts
+// elements in 7 bits and mask operations use the low 64 bits of a register.
+if (riscv_pkg::VLEN > 512) begin : g_vlen_check
+    $error("VLEN=%0d is not supported (maximum 512)", riscv_pkg::VLEN);
+end
+
 // MAX_STAGES has been defined as parameter in drac_pkg
 // to avoid duplicity with score_board_simd ex-localparams
 localparam int DIV_STAGES = 32;             // number of clocks a DIV/REM instruction takes

@@ -1372,7 +1372,7 @@ localparam fpnew_pkg::fpu_implementation_t EPI_INIT = '{
 // --------------------------------------------------------------------
 
 localparam fpnew_pkg::fpu_features_t SARG_RV64DV = '{
-    Width:         128,         // 128 bits on Sargantana's SIMD unit
+    Width:         riscv_pkg::VLEN, // one vector register per operation
     EnableVectors: 1'b1,        // enable vector support
     EnableNanBox:  1'b1,
     FpFmtMask:     5'b11000,    // [FP128, FP64, FP32, BF16, FP16]

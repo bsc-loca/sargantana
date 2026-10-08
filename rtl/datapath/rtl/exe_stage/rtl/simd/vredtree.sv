@@ -557,23 +557,29 @@ logic [NUM_STAGES_LOG-1:0] stage_to_out;
 
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
 
+// The tree halves the number of elements per stage, starting from SEW=8, so
+// the reduction of SEW-wide elements is complete at stage log2(VLEN/SEW). For
+// widening reductions sew_to_out is the result SEW and the operands are half
+// as wide. This equals simd_exe_stages - 2 (see simd_unit).
+localparam int STAGE_SEW8 = $clog2(VLEN / 8);
+
 always_comb begin
     case (sew_to_out)
-        SEW_8:    stage_to_out = 'd4;
+        SEW_8:    stage_to_out = trunc_stage_to_out(STAGE_SEW8);
         SEW_16:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd4;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8);
                   end else begin
-                     stage_to_out = 'd3;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 1);
                   end
         SEW_32:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd3;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 1);
                   end else begin
-                     stage_to_out = 'd2;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 2);
                   end
         SEW_64:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = 'd2;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 2);
                   end else begin
-                     stage_to_out = 'd1;
+                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 3);
                   end
         default:  stage_to_out = 'd0;
     endcase

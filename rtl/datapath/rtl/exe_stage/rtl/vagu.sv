@@ -106,10 +106,6 @@ function [DCACHE_RESP_DATA_LOG:0] padd_dcachedatalog_plus1(input [DCACHE_RESP_DA
   padd_dcachedatalog_plus1 = {1'b0, val_in};
 endfunction
 
-function [15:0] trunc_129_16(input [128:0] val_in);
-  trunc_129_16 = val_in[15:0];
-endfunction
-
 req_vmem_ops_t vmem_ops_state_d, vmem_ops_state_q, misaligned_prev_state_d, misaligned_prev_state_q;
 
 bus64_t vaddr_d, vaddr_q, vaddr_incr, vaddr_scalar, misaligned_addr_d, misaligned_addr_q;
@@ -979,7 +975,7 @@ assign end_o = end_int;
 assign load_mask_o = load_mask;
 assign misalign_xcpt_o = misalign_xcpt_int;
 assign vl_mask = ({MAX_VELEM{1'b1}} >> (MAX_VELEM - vl_q));
-assign group_mask = (mask_buffer[MAX_VELEM-1:0] >> velem_cnt_q) & trunc_129_16((16'b1 << velem_incr) - 1'b1);
+assign group_mask = (mask_buffer[MAX_VELEM-1:0] >> velem_cnt_q) & ({MAX_VELEM{1'b1}} >> (MAX_VELEM - velem_incr));
 
 endmodule
 
