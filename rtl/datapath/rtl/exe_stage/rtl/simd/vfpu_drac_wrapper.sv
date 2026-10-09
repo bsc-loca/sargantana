@@ -1124,13 +1124,22 @@ assign instruction_o = finish_vfp_instr;
 assign status_o = finish_vfp_status;
 assign data_vd_o = finish_vfp_result;
 
+// The pending queue keeps the instruction until its result is written back.
+// data_vs2 is only read in simd_unit for VMERGE/VFMERGE and VMADD/VNMSUB,
+// which never enter this queue
+rr_exe_simd_instr_t pfpq_instruction;
+always_comb begin
+    pfpq_instruction          = instruction_i;
+    pfpq_instruction.data_vs2 = '0;
+end
+
 pending_vfp_ops_queue pending_vfp_ops_queue_inst (
     .clk_i,
     .rstn_i,
     .flush_i,
 
     .valid_i            (pending_queue_valid),
-    .instruction_i,
+    .instruction_i      (pfpq_instruction),
 
     .result_valid_i     (fpnew_out_valid),
     .result_tag_i       (fpnew_out_tag),

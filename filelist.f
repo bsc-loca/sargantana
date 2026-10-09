@@ -49,6 +49,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vpopc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/viota.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vperm.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfirst.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmsb_i_o_f.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vcpop.sv
