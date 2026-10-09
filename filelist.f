@@ -45,6 +45,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/functional_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vcomp.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree_alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vpopc.sv
