@@ -153,6 +153,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/conv_zvfhmin.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f64.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vfred_fpadd.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredoladder.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vclmul.sv
