@@ -868,10 +868,13 @@ generate
                 fp32_metadata_d[i].status.NX = fp32_metadata_q[i-1].status.NX || statusred.NX;
                 fp32_metadata_d[i].status.NV = fp32_metadata_q[i-1].status.NV || statusred.NV;
             end else begin // if propagation cycle only maintain the value
-                fp32_metadata_d[i].status.OF = fp32_metadata_d[i-1].status.OF;
-                fp32_metadata_d[i].status.UF = fp32_metadata_d[i-1].status.UF;
-                fp32_metadata_d[i].status.NX = fp32_metadata_d[i-1].status.NX;
-                fp32_metadata_d[i].status.NV = fp32_metadata_d[i-1].status.NV;
+                // from the register, as the FP64 chain does: reading fp32_metadata_d[i-1]
+                // made the flags skip a register per tree level and land on the previous
+                // instruction in synthesis (Verilator simulated it as a register)
+                fp32_metadata_d[i].status.OF = fp32_metadata_q[i-1].status.OF;
+                fp32_metadata_d[i].status.UF = fp32_metadata_q[i-1].status.UF;
+                fp32_metadata_d[i].status.NX = fp32_metadata_q[i-1].status.NX;
+                fp32_metadata_d[i].status.NV = fp32_metadata_q[i-1].status.NV;
             end
         end // always_comb
 
