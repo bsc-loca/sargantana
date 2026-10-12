@@ -403,6 +403,16 @@ always_comb begin
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d        = 'h0;
+                    end else if ((!req_cpu_dcache_o.is_amo_store_or_cmo | req_cpu_dcache_o.is_cmo_prefetch) & amo_on_fly) begin
+                        // A load must not access the L1D while an AMO is in flight. The AMO is
+                        // performed at the L2 and a load sent behind it can hit a stale line, so
+                        // the load is performed before the AMO: this breaks .aq (lock acquire:
+                        // litmus ISA03, the critical section reads stale data) and .aqrl (AMO as a
+                        // full fence: litmus AMO-FENCE, store->load reordering across it). The
+                        // decoder drops the aq/rl bits, so every AMO is treated as .aq.
+                        req_cpu_dcache_valid_int = 1'b0;
+                        mem_commit_stall_s0    = 1'b0;
+                        instruction_s1_d = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_store_or_cmo | req_cpu_dcache_o.is_cmo_prefetch) begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid & ~stall_after_flush_lsq; // Don't send new request before sending the killed one
@@ -1267,6 +1277,20 @@ assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 assign pmu_exe_load_o  = req_cpu_dcache_o.valid & ~req_cpu_dcache_o.is_amo_store_or_cmo;
 assign pmu_exe_store_o = req_cpu_dcache_o.valid & req_cpu_dcache_o.is_store;
+
+`ifdef SIMULATION
+    // AMOLOAD (simulation only): loads sent to the L1D while an AMO is in flight. Such a load can be
+    // performed before the AMO (litmus ISA03 / AMO-FENCE on the 2x2 FPGA); with the amo_on_fly
+    // load stall above there must be none.
+    longint unsigned amoload_cnt;
+    always_ff @(posedge clk_i) begin
+        if (rstn_i && req_cpu_dcache_valid_int && !req_cpu_dcache_o.is_amo_store_or_cmo && amo_on_fly) begin
+            amoload_cnt++;
+            if (amoload_cnt <= 5) $display("AMOLOAD %0t load sent to the L1D while an AMO is in flight", $time);
+        end
+    end
+    final $display("AMOLOAD summary: %0d loads sent while an AMO was in flight", amoload_cnt);
+`endif
 
 endmodule
 
