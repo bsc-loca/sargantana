@@ -140,6 +140,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt_radix16_with_sqrt.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_top.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/cvw/fma/fmalza.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_mf.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfpu_drac_wrapper.sv
