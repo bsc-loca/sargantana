@@ -137,7 +137,7 @@ bus32_t instr_data;
     logic branch_predicted;
     logic prev_branch_predicted;
 
-    assign branch_predicted = fetch_i.bpred.is_branch & (fetch_i.bpred.decision == PRED_TAKEN);
+    assign branch_predicted = fetch_i.valid & fetch_i.bpred.is_branch & (fetch_i.bpred.decision == PRED_TAKEN);
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if (!rstn_i) begin
@@ -173,8 +173,8 @@ bus32_t instr_data;
 
 //bypassing wires
     //assign fetch_o.pc_inst = fetch_i.pc_inst;
-    assign fetch_o.bpred.is_branch = fetch_i.bpred.is_branch;
-    assign fetch_o.bpred.decision  = fetch_i.bpred.decision;
+    assign fetch_o.bpred.is_branch = fetch_i.valid & fetch_i.bpred.is_branch;
+    assign fetch_o.bpred.decision  = fetch_i.valid ? fetch_i.bpred.decision : PRED_NOT_TAKEN;
     assign fetch_o.bpred.pred_addr = fetch_i.bpred.pred_addr;
     `ifdef SIM_KONATA_DUMP
     assign fetch_o.id = fetch_i.id;
