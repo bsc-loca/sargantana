@@ -54,6 +54,9 @@ module top_drac
     output req_cpu_icache_t     req_cpu_icache_o,
     output logic                en_translation_o,
     output logic                en_g_translation_o,
+    output logic [15:0]         csr_satp_asid_o,
+    output logic [15:0]         csr_vsatp_asid_o,
+    output logic [13:0]         csr_hgatp_vmid_o,
     output logic [1:0]          priv_lvl_o,
     output logic                v_mode_o,
     input  resp_icache_cpu_t    resp_icache_cpu_i,
@@ -160,6 +163,9 @@ assign en_translation_o = en_translation;
 assign en_g_translation_o = en_g_translation;
 assign priv_lvl_o = csr_priv_lvl;
 assign v_mode_o = csr_v_mode;
+assign csr_satp_asid_o = csr_satp.asid;
+assign csr_vsatp_asid_o = csr_vsatp.asid;
+assign csr_hgatp_vmid_o = csr_hgatp.vmid;
 
 addr_t dcache_addr;
 
@@ -193,12 +199,12 @@ end
 req_cpu_csr_t req_datapath_csr_interface;
 
 csr_ptw_comm_t csr_ptw_comm;
-logic [drac_pkg::PPN_SIZE-1:0] csr_satp;
-logic [drac_pkg::PPN_SIZE-1:0] csr_vsatp;
-logic [drac_pkg::PPN_SIZE-1:0] csr_hgatp;
-assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp}; // PTW expects 64 bits
-assign csr_ptw_comm.vsatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_vsatp}; // PTW expects 64 bits
-assign csr_ptw_comm.hgatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_hgatp}; // PTW expects 64 bits
+riscv_pkg::satp_t csr_satp;
+riscv_pkg::satp_t csr_vsatp;
+riscv_pkg::hgatp_t csr_hgatp;
+assign csr_ptw_comm.satp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_satp.ppn}; // PTW expects 64 bits
+assign csr_ptw_comm.vsatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_vsatp.ppn}; // PTW expects 64 bits
+assign csr_ptw_comm.hgatp = {{(riscv_pkg::XLEN-PHY_ADDR_SIZE){1'b0}}, csr_hgatp.ppn}; // PTW expects 64 bits
 assign csr_ptw_comm.menvcfg_pbmte = menvcfg_pbmte;
 assign csr_ptw_comm.henvcfg_pbmte = henvcfg_pbmte;
 
@@ -346,6 +352,9 @@ datapath #(
     .csr_frm_i(fcsr_rm),
     .csr_fs_i(fcsr_fs),
     .csr_vs_i(vcsr_vs),
+    .csr_satp_asid_i(csr_satp.asid),
+    .csr_vsatp_asid_i(csr_vsatp.asid),
+    .csr_hgatp_vmid_i(csr_hgatp.vmid),
     .csr_m_cmo_i(csr_m_cmo),
     .csr_s_cmo_i(csr_s_cmo),
     .csr_h_cmo_i(csr_h_cmo),
@@ -472,9 +481,9 @@ csr_bsc #(
     .en_g_translation_o(en_g_translation),//
     .csr_hu_o(csr_hu),
 
-    .satp_ppn_o(csr_satp),                 // Page table base pointer for the PTW
-    .vsatp_ppn_o(csr_vsatp),                 // Page table base pointer for the PTW
-    .hgatp_ppn_o(csr_hgatp),                 // Page table base pointer for the PTW
+    .satp_o(csr_satp),                 // Page table base pointer for the PTW
+    .vsatp_o(csr_vsatp),                 // Page table base pointer for the PTW
+    .hgatp_o(csr_hgatp),                 // Page table base pointer for the PTW
 
     .evec_o(resp_csr_interface_datapath.csr_evec),                      // virtual address of the PC to execute after a Interrupt or exception
 

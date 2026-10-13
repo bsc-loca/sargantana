@@ -47,6 +47,9 @@ module load_store_queue
 
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [15:0] csr_satp_asid_i,
+    input logic [15:0] csr_vsatp_asid_i,
+    input logic [13:0] csr_hgatp_vmid_i,
     input logic [1:0] csr_s_pmm_i,
     input logic [1:0] csr_h_pmm_i,
     input logic [1:0] csr_hstatus_hupmm_i,
@@ -432,8 +435,8 @@ assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
 assign dtlb_comm_o.req.vpn = masked_addr[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
-assign dtlb_comm_o.req.asid = '0;
-assign dtlb_comm_o.req.vmid = '0;
+assign dtlb_comm_o.req.asid = (en_ld_st_translation_i && ld_st_v_mode_i) ? csr_vsatp_asid_i[drac_pkg::ASID_SIZE-1:0] : csr_satp_asid_i[drac_pkg::ASID_SIZE-1:0];
+assign dtlb_comm_o.req.vmid = (en_ld_st_g_translation_i && ld_st_v_mode_i) ? csr_hgatp_vmid_i[drac_pkg::ASID_SIZE-2-1:0] : '0;
 assign dtlb_comm_o.req.store = instr_to_translate.is_amo_store_or_cmo; // TODO: Check this, might not be exactly right...
 
 assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);
