@@ -479,5 +479,19 @@ store_buffer store_buffer_inst(
 );
 
 
+`ifdef SIMULATION
+    // AMOBYPASS (simulation only): loads issued while an AMO waits in the store buffer, i.e. performed
+    // before an older AMO (litmus ISA03 / AMO-FENCE on the 2x2 FPGA). With the AMO collision in
+    // store_buffer there must be none.
+    longint unsigned amobypass_cnt;
+    always_ff @(posedge clk_i) begin
+        if (rstn_i && read_enable && is_next_load && !st_buff_collision && store_buffer_inst.has_amo_dbg) begin
+            amobypass_cnt++;
+            if (amobypass_cnt <= 5) $display("AMOBYPASS %0t load issued past an AMO waiting in the store buffer", $time);
+        end
+    end
+    final $display("AMOBYPASS summary: %0d loads issued past an AMO in the store buffer", amobypass_cnt);
+`endif
+
 endmodule
 

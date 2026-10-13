@@ -131,7 +131,13 @@ always_comb begin : collision_detector
     collision = 1'b0;
     for (integer j = 0; j < ST_BUF_NUM_ENTRIES; j++) begin
         if (valid_table[j]) begin
-            if ((load_size_i == 4'b1010) || (instruction_table[j].instr.mem_size == 4'b1010)) begin
+            // A load must not bypass an AMO (or LR/SC) waiting here for commit: it would be performed
+            // before the AMO, which breaks .aq (lock acquire, litmus ISA03) and .aqrl (AMO as a full
+            // fence, litmus AMO-FENCE); the decoder drops aq/rl, so every AMO is treated as .aqrl.
+            // The load waits until the AMO has left (and mem_unit holds it until the AMO completes).
+            if (instruction_table[j].instr.mem_type == AMO) begin
+                collision = 1'b1;
+            end else if ((load_size_i == 4'b1010) || (instruction_table[j].instr.mem_size == 4'b1010)) begin
                 collision |= instruction_table[j].data_rs1[11:6] == load_addr_i[11:6];
             end else if ((load_size_i == 4'b1001) || (instruction_table[j].instr.mem_size == 4'b1001)) begin
                 collision |= instruction_table[j].data_rs1[11:5] == load_addr_i[11:5];
@@ -151,6 +157,16 @@ always_comb begin : collision_detector
 end
 
 assign collision_o = collision;
+
+`ifdef SIMULATION
+// for the AMOBYPASS check in load_store_queue: an AMO is waiting in the store buffer
+logic has_amo_dbg;
+always_comb begin
+    has_amo_dbg = 1'b0;
+    for (integer j = 0; j < ST_BUF_NUM_ENTRIES; j++)
+        has_amo_dbg |= valid_table[j] & (instruction_table[j].instr.mem_type == AMO);
+end
+`endif
 
 assign finish_instr_o = ((num > 0)) ? instruction_table[head] : 'h0;
 
