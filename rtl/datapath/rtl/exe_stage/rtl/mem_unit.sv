@@ -1076,6 +1076,22 @@ always_comb begin
     endcase
 end
 
+// Misaligned scalar loads are packed byte by byte, and the bytes may arrive out of order
+// (e.g. crossing a cache line with a miss on the low line), so extend the result once complete
+logic [63:0] wb_result_scalar;
+
+always_comb begin
+    case (instruction_to_wb.instr.instr_type)
+        LB, HLV_B:            wb_result_scalar = {{56{masked_data_to_wb[7]}},  masked_data_to_wb[7:0]};
+        LH, HLV_H:            wb_result_scalar = {{48{masked_data_to_wb[15]}}, masked_data_to_wb[15:0]};
+        LW, HLV_W:            wb_result_scalar = {{32{masked_data_to_wb[31]}}, masked_data_to_wb[31:0]};
+        LBU, HLV_BU:          wb_result_scalar = {56'b0, masked_data_to_wb[7:0]};
+        LHU, HLV_HU, HLVX_HU: wb_result_scalar = {48'b0, masked_data_to_wb[15:0]};
+        LWU, HLV_WU, HLVX_WU: wb_result_scalar = {32'b0, masked_data_to_wb[31:0]};
+        default:              wb_result_scalar = masked_data_to_wb[63:0];
+    endcase
+end
+
 
 // Output Instruction
 // Prefetch instructions do not get a response, we can directly commit them
@@ -1100,7 +1116,7 @@ assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
 assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
-assign instruction_scalar_o.result        = masked_data_to_wb[63:0];
+assign instruction_scalar_o.result        = wb_result_scalar;
 assign instruction_scalar_o.ex            = instruction_to_wb.is_cmo_prefetch ? 0 : instruction_to_wb.ex; // CMO prefetch does not propagate
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;

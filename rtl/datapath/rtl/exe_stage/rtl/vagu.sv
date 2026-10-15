@@ -121,7 +121,6 @@ logic masked_op_d, masked_op_q;
 logic [63:0] stride_d, stride_q, stride_neg;
 logic [3:0] log_stride_d, log_stride_q;
 logic [MAX_VELEM-1:0] load_mask;
-logic [8-1:0] scalar_load_mask;
 logic [MAX_VELEM_LOG-1:0] req_tag_d, req_tag_q;
 logic end_int;
 rr_exe_mem_instr_t memp_instr_d, memp_instr_q; 
@@ -158,7 +157,6 @@ always_comb begin
     masked_op_d = masked_op_q;
     stride_d = stride_q;
     load_mask = {MAX_VELEM{1'b1}};
-    scalar_load_mask = {8{1'b1}};
     memp_instr_o.agu_req_tag = req_tag_q;
     memp_instr_o.neg_stride = 1'b0;
     memp_instr_d = memp_instr_q;
@@ -415,10 +413,7 @@ always_comb begin
                         velem_incr = 1'b1;
                         memp_instr_o.instr.mem_size = 4'b0000;
                         memp_instr_o.data_rs1 = vaddr_q;
-                        load_mask = ((memp_instr_q.instr.instr_type == LB) || (memp_instr_q.instr.instr_type == LH) || (memp_instr_q.instr.instr_type == LW) || (memp_instr_q.instr.instr_type == LD)
-                                     || (memp_instr_q.instr.instr_type == LBU) || (memp_instr_q.instr.instr_type == LHU) || (memp_instr_q.instr.instr_type == LWU)
-                                     || (memp_instr_q.instr.instr_type == FLW) || (memp_instr_q.instr.instr_type == FLD) || (memp_instr_q.instr.instr_type == FLH)
-                                     ) ? scalar_load_mask : {63'd0, make_req};
+                        load_mask = {63'd0, make_req};
                         acum_velem_incr_d = (make_req) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
                     end 
                     memp_instr_o.sew = SEW_8;
