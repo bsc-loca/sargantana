@@ -212,14 +212,18 @@ always_comb begin
         translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_store_or_cmo & ~is_load_reserved & ((!instr_to_translate.is_cmo) | (instr_to_translate.instr.instr_type == CBO_ZERO)) ) begin // Page fault store, only CBO Zero 
-        translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
+        // A walk that failed on a page-table read outside mapped memory is an access fault.
+        translated_instr.ex.cause       = dtlb_comm_i.resp.access_fault ? ST_AMO_ACCESS_FAULT : ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
         translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
     end else if ((~is_hlvx_inst && dtlb_comm_i.resp.xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.xcpt.fetch)) begin // Page fault load
-        translated_instr.ex.cause       = instr_to_translate.is_cmo ? ST_AMO_PAGE_FAULT : LD_PAGE_FAULT;
+        // A walk that failed on a page-table read outside mapped memory is an access fault.
+        translated_instr.ex.cause       = dtlb_comm_i.resp.access_fault
+                                        ? (instr_to_translate.is_cmo ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT)
+                                        : (instr_to_translate.is_cmo ? ST_AMO_PAGE_FAULT   : LD_PAGE_FAULT);
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;

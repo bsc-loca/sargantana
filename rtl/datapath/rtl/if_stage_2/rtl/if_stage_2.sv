@@ -43,7 +43,7 @@ module if_stage_2
     output logic                keep_fetch_o
 );
 
-logic ex_if_page_fault_int, ex_if_guest_page_fault_int, ex_if_access_fault_int;
+logic ex_if_page_fault_int, ex_if_access_fault_int, ex_if_guest_page_fault_int;
 resp_icache_cpu_t resp_icache_cpu_d, resp_icache_cpu_q;
 
 logic realigner_valid;
@@ -52,15 +52,19 @@ logic instr_valid;
 bus32_t instr_data;
 
 // check exceptions instr page fault
+// (access fault if the walk failed on a PTE read outside the mapped sections)
     always_comb begin
         if (resp_icache_cpu_q.valid && 
                     resp_icache_cpu_q.instr_page_fault) begin
             ex_if_page_fault_int = 1'b1;
+            ex_if_access_fault_int = resp_icache_cpu_q.instr_access_fault;
         end else if (resp_icache_cpu_i.valid && 
                     resp_icache_cpu_i.instr_page_fault) begin
             ex_if_page_fault_int = 1'b1;
+            ex_if_access_fault_int = resp_icache_cpu_i.instr_access_fault;
         end else begin
             ex_if_page_fault_int = 1'b0;
+            ex_if_access_fault_int = 1'b0;
         end
     end
 // check exceptions instr access fault
@@ -96,7 +100,7 @@ bus32_t instr_data;
             fetch_o.ex.tinst = fetch_i.ex.tinst;
             fetch_o.ex.valid = 1'b1;
         end else if (ex_if_page_fault_int) begin
-            fetch_o.ex.cause = INSTR_PAGE_FAULT;
+            fetch_o.ex.cause = ex_if_access_fault_int ? INSTR_ACCESS_FAULT : INSTR_PAGE_FAULT;
             fetch_o.ex.origin2 = '0;
             fetch_o.ex.tinst = '0;
             fetch_o.ex.valid = 1'b1;
