@@ -1306,20 +1306,20 @@ typedef struct packed {
 
 localparam drac_cfg_t DracDefaultConfig = '{
     NIOSections: 1, // number of IO space sections
-    // Each section is a PHY_ADDR_SIZE-wide element: use indexed assignment
-    // patterns, a concatenation of narrower literals would misalign them.
-    InitIOBase: '{0: 40'h0040000000, default: '0}, // IO base address after reset
-    InitIOEnd:  '{0: 40'h0080000000, default: '0}, // IO end address after reset
+    // Each section is a PHY_ADDR_SIZE-wide element: cast every literal to
+    // PHY_ADDR_SIZE so the concatenation stays aligned for any address size.
+    // Elements are listed from the highest index down to index 0.
+    // (Indexed assignment patterns on these packed arrays are rejected by DC.)
+    InitIOBase: {PHY_ADDR_SIZE'(40'h0040000000)}, // IO base address after reset
+    InitIOEnd:  {PHY_ADDR_SIZE'(40'h0080000000)}, // IO end address after reset
 
     NMappedSections: 3, // number of Memory space sections
-    InitMappedBase: '{0: 40'h0000010000,  // Debug program buffer
-                      1: 40'h0000000100,  // BROM
-                      2: 40'h0040000000,  // IO + DRAM
-                      default: '0},       // Memory base address after reset
-    InitMappedEnd:  '{0: 40'h0000010020,
-                      1: 40'h000000ffff,
-                      2: 40'h3fffffffff,
-                      default: '0},       // Memory end address after reset
+    InitMappedBase: {PHY_ADDR_SIZE'(40'h0040000000),   // [2] IO + DRAM
+                     PHY_ADDR_SIZE'(40'h0000000100),   // [1] BROM
+                     PHY_ADDR_SIZE'(40'h0000010000)},  // [0] Debug program buffer
+    InitMappedEnd:  {PHY_ADDR_SIZE'(40'h3fffffffff),
+                     PHY_ADDR_SIZE'(40'h000000ffff),
+                     PHY_ADDR_SIZE'(40'h0000010020)},
 
     InitBROMBase: 40'h0000000100,
     InitBROMEnd: 40'h000000ffff,
