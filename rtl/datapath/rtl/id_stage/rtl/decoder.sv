@@ -3046,7 +3046,7 @@ module decoder
                     
                 end
                 OP_SYSTEM: begin
-                  if(decode_i.inst.common.func3 == F3_HLV_HSV) begin // Hypervisor Virtual-Machine Load and Store Instructions
+                  if((decode_i.inst.common.func3 == F3_HLV_HSV_ZIMOP) && (decode_i.inst.common.func7[31:28] == 4'b0110)) begin // Hypervisor Virtual-Machine Load and Store Instructions
                     if(v_mode_i == 1'b1) begin
                       xcpt_virtual_instruction_int = 1'b1;
                     end else if(((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_hu_i == 1'b0))) begin
@@ -3291,6 +3291,31 @@ module decoder
                             decode_instr_int.use_rs1 = 1'b1;
                             decode_instr_int.instr_type = CSRRC;
                             decode_instr_int.stall_csr_fence = 1'b1;             
+                        end
+                        F3_HLV_HSV_ZIMOP: begin
+                            if (decode_i.inst.common.func7[31] == 1'b1 && decode_i.inst.common.func7[29:28] == 2'b00) begin
+                                decode_instr_int.use_imm    = 1'b0;
+                                decode_instr_int.regfile_we = 1'b1;
+                                decode_instr_int.unit = UNIT_ALU;
+                                decode_instr_int.stall_csr_fence = 1'b0;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                decode_instr_int.use_rs2 = 1'b0;
+                                decode_instr_int.rs1 = 5'b00000;
+                                decode_instr_int.rs2 = 5'b00000;
+
+                                case (decode_i.inst.common.func7[25])
+                                    1'b0: begin
+                                        if (decode_i.inst.common.rs2[24:22] != 3'b111) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    1'b1: begin
+                                        decode_instr_int.use_rs2 = 1'b1;
+                                    end
+                                endcase
+                            end else begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
                         end
                         F3_CSRRWI: begin
                             decode_instr_int.instr_type = CSRRWI;

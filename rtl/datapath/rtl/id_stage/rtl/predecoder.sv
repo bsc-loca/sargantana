@@ -165,7 +165,7 @@ module predecoder
                         if (instr_citype.rd_rs1 == 5'b0) begin
                             predecoded_inst.itype.opcode = OP_ALU_I;
                             predecoded_inst.itype.rd = '0;
-                    predecoded_inst.itype.func3 = F3_ADDI;
+                            predecoded_inst.itype.func3 = F3_ADDI;
                             predecoded_inst.itype.rs1 = '0;
                             predecoded_inst.itype.imm = '0;
                         end else begin
@@ -194,9 +194,19 @@ module predecoder
                         predecoded_inst.itype.rs1 = '0;
                         predecoded_inst.itype.imm = {{7{instr_citype.imm12}}, instr_citype.imm6};
                     end
-                    F3_CADDI16SP_CLUI: begin
+                    F3_CADDI16SP_CLUI_ZCMOP: begin
                         if (instr_citype.imm12 == 1'b0 && instr_citype.imm6 == '0) begin
-                            predecoded_inst = fetched_i.inst;
+                            if ((instr_citype.rd_rs1[11] == 1'b1) || (instr_citype.rd_rs1[7] == 1'b0)) begin
+                                // Zcmop instructions need bit 11 to 0 and 7 to 1
+                                predecoded_inst = fetched_i.inst;
+                            end else begin
+                                // Translated to a NOP as it does not write anywhere
+                                predecoded_inst.itype.opcode = OP_ALU_I;
+                                predecoded_inst.itype.rd = '0;
+                                predecoded_inst.itype.func3 = F3_ADDI;
+                                predecoded_inst.itype.rs1 = '0;
+                                predecoded_inst.itype.imm = '0;
+                            end
                         end else begin
                             if (instr_citype.rd_rs1 == 5'b00010) begin // C.ADDI16SP
                                 predecoded_inst.itype.opcode = OP_ALU_I;

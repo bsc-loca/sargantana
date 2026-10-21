@@ -310,14 +310,14 @@ typedef enum logic [2:0] {
 } op_imm12_comp_zcb_c0_t;
 
 typedef enum logic [2:0] {
-    F3_CNOP_CADDI     = 3'b000,
-    F3_CADDIW         = 3'b001,
-    F3_CLI            = 3'b010,
-    F3_CADDI16SP_CLUI = 3'b011,
-    F3_CARITHMETIC    = 3'b100,
-    F3_CJ             = 3'b101,
-    F3_CBEQZ          = 3'b110,
-    F3_CBNEZ          = 3'b111
+    F3_CNOP_CADDI           = 3'b000,
+    F3_CADDIW               = 3'b001,
+    F3_CLI                  = 3'b010,
+    F3_CADDI16SP_CLUI_ZCMOP = 3'b011,
+    F3_CARITHMETIC          = 3'b100,
+    F3_CJ                   = 3'b101,
+    F3_CBEQZ                = 3'b110,
+    F3_CBNEZ                = 3'b111
 } op_func3_comp_c1_t;
 
 typedef enum logic [2:0] {
@@ -426,10 +426,10 @@ typedef enum logic [2:0] {
     F3_CSRRW             = 3'b001,
     F3_CSRRS             = 3'b010,
     F3_CSRRC             = 3'b011,
+    F3_HLV_HSV_ZIMOP     = 3'b100,
     F3_CSRRWI            = 3'b101,
     F3_CSRRSI            = 3'b110,
-    F3_CSRRCI            = 3'b111,
-    F3_HLV_HSV           = 3'b100
+    F3_CSRRCI            = 3'b111
 } op_func3_system_t;
 
 
