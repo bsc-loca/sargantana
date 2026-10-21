@@ -180,7 +180,6 @@ module fp_cvt
 
             logic round_up;
 
-            logic is_tiny;
             logic overflow;
             logic underflow;
 
@@ -218,7 +217,6 @@ module fp_cvt
                 inexact = 1'b0;
                 overflow = 1'b0;
                 underflow = 1'b0;
-                is_tiny = 1'b0;
 
                 guard = 1'b0;
                 round = 1'b0;
@@ -248,7 +246,6 @@ module fp_cvt
                     exp_dst = '0;
                     frac_dst = '0;
                     sticky = 1'b1;
-                    is_tiny = 1'b1;
                 end else begin // regular path
                     exp_unbiased_ext = exp_src_ext - signed'(bias(SRC_FMT));
                     exp_unbiased = exp_unbiased_ext[SRC_EXP_WIDTH-1:0];
@@ -271,7 +268,6 @@ module fp_cvt
                         sticky = |frac_src[SRC_MAN_WIDTH-DST_MAN_WIDTH-3:0];
 
                     end else begin
-                        is_tiny = 1'b1;
                         exp_dst = '0;
 
                         shift_amt_ext = (MIN_NORM_EXP - $signed(exp_unbiased));
@@ -297,8 +293,6 @@ module fp_cvt
                 end
 
                 inexact = (guard || round || sticky);
-
-                underflow = is_tiny && inexact && (operand_i != '0);
 
                 case (frm)
                     riscv_pkg::FRM_RNE: round_up = guard && (round || sticky || frac_dst[0]);
@@ -330,6 +324,11 @@ module fp_cvt
                     final_exp_dst = exp_dst;
                     final_frac_dst = frac_dst;
                 end
+
+                // Tininess is detected after rounding: a tiny pre-round
+                // value that rounds up to the smallest normal is inexact
+                // (NX) but does not set underflow (UF).
+                underflow = (final_exp_dst == '0) && inexact && (operand_i != '0);
 
                 result_o = {sign, final_exp_dst, final_frac_dst};
 
