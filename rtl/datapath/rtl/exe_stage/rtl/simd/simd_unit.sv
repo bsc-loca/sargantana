@@ -885,6 +885,8 @@ vf7_wrapper vf7_wrapper_inst (
     .sew_i       ( instruction_i.instr.sew                          ),
     .operation_i ( instruction_i.instr.instr_type == VFRSQRT7       ), // 0: VFREC7, 1: VFRSQRT7
     .src_i       ( instruction_i.data_vs2                           ),
+    .vl_i        ( instruction_i.instr.vl                           ),
+    .data_vm_i   ( instruction_i.data_vm                            ),
     .frm_i       ( fpnew_pkg::roundmode_e'(instruction_i.instr.frm) ),
     .res_o       ( data_vf7_vd                                      ),
     .valid_o     (                                                  ), // to be asumed it will be the same cycle, carefull when enabling VF7_MF_OUTREG
