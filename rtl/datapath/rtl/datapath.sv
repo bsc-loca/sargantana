@@ -967,6 +967,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                         (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA)    ||
                         (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA)    ||
                         (stage_ir_rr_q.instr.instr_type == SINVAL_VMA)     ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_W_INVAL) ||
                         (stage_ir_rr_q.instr.instr_type == SFENCE_INVAL_IR)||
                         (stage_ir_rr_q.instr.instr_type == HINVAL_VVMA)    ||
                         (stage_ir_rr_q.instr.instr_type == HINVAL_GVMA)    ||
