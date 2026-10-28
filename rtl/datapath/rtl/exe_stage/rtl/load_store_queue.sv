@@ -107,6 +107,7 @@ logic translate_enable;
 logic translate_incoming;
 gl_index_t ex_gl_index;
 logic ex_reg;
+logic ex_same_vleff;
 logic [63:0] masked_addr;
 
 logic io_address_space;
@@ -193,7 +194,9 @@ always_comb begin
     translated_instr.pbmt = dtlb_comm_i.resp.pbmt;
     
     // Exception treatment
-    if ((ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index)) begin // a previous request of the same instruction generated an exception
+    ex_same_vleff = (ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index) &&
+                    (translated_instr.instr.instr_type == VLEFF) && (translated_instr.velem_id != 'h0);
+    if (ex_same_vleff) begin // a previous request of the same instruction generated an exception
         translated_instr.ex.valid       = 1'b1;
     end else if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
         translated_instr.ex = 0;
@@ -291,7 +294,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         if ((translated_instr.ex.valid == 1'b1) && (translated_instr.instr.instr_type == VLEFF) && (translated_instr.velem_id != 'h0)) begin
             ex_gl_index <= translated_instr.gl_index;
             ex_reg <= 1'b1;
-        end else if ((translated_instr.instr.valid == 1'b1) && (translated_instr.gl_index != ex_gl_index)) begin
+        end else if ((translated_instr.instr.valid == 1'b1) && !ex_same_vleff) begin
             ex_gl_index <= 'h0;
             ex_reg <= 1'b0;
         end
