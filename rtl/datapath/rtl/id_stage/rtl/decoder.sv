@@ -47,6 +47,8 @@ module decoder
     input   logic            recover_commit_exception_i,
     input   logic            recover_last_misspredict_i,
     input   logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_misspredict_i,    
+    input   logic            vleff_update_i,
+    input   logic [VMAXELEM_LOG:0] vleff_vl_i,
     input   logic            debug_mode_en_i,
     output  logic [VMAXELEM_LOG:0] vl_short_o,
     output  logic [VTYPE_LENGTH:0] prev_vtype_o,     // First uncommitted vtype
@@ -3728,6 +3730,8 @@ module decoder
         .recover_commit_exception_i(recover_commit_exception_i),
         .recover_last_misspredict_i(recover_last_misspredict_i),
         .vset_index_misspredict_i(vset_index_misspredict_i),
+        .vleff_update_i(vleff_update_i),
+        .vleff_vl_i(vleff_vl_i),
         
         .vl_o(vl),
         .vl_short_o(vl_short),

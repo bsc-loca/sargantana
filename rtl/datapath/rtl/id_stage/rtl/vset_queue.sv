@@ -34,6 +34,8 @@ module vset_queue
     input logic [VTYPE_LENGTH:0]    vtype_i,              // Sew value
     input logic                     vnarrow_wide_en_i,  // Vector Narrowing Wide enable
     input logic [VMAXELEM_LOG:0]            vlmax_i,
+    input logic                     vleff_update_i,
+    input logic [VMAXELEM_LOG:0]    vleff_vl_i,
 
     output logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_o,
     output sew_t                    sew_o,             // Sew value
@@ -108,6 +110,9 @@ begin
             vset_buffer[i].vlmax <= 1'b0;
         end
     end else begin
+        if (vleff_update_i) begin
+            vset_buffer[index_last_vset].vl <= vleff_vl_i;
+        end
         if (write_new_vset_enable) begin
             vset_buffer[tail].vl <= vl_i;
             vset_buffer[tail].vtype <= vtype_i;

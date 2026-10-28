@@ -340,6 +340,7 @@ endfunction
     reg_t   [drac_pkg::NUM_FP_WB-1:0] fp_write_vaddr;
 
     logic is_vsetvl_to_commit;
+    logic is_vleff_trimmed_to_commit;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// IO ADDRESS SPACE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -529,6 +530,8 @@ endfunction
         .recover_commit_exception_i (exception_enable),
         .recover_last_misspredict_i(~correct_branch_pred_wb),
         .vset_index_misspredict_i(vset_index_int_wb),
+        .vleff_update_i (is_vleff_trimmed_to_commit),
+        .vleff_vl_i     (vleff_vl_int),
         .debug_mode_en_i(debug_contr_o.halted),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int),
@@ -1666,6 +1669,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                          (instruction_to_commit[0].instr_type == CSRRCI));
 
     // tell cu that commit needs to write there is a fence
+    assign is_vleff_trimmed_to_commit = retire_inst_gl[0] & (instruction_to_commit[0].instr_type == VLEFF) & (vleff_vl_int != 'h0);
+
     assign is_vsetvl_to_commit = retire_inst_gl[0] & ((instruction_to_commit[0].instr_type == VSETVL)  ||
                                          (instruction_to_commit[0].instr_type == VSETVLI) ||
                                          (instruction_to_commit[0].instr_type == VSETIVLI));                                       
