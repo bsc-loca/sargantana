@@ -1009,11 +1009,8 @@ always_comb begin
             end
         end
         
-        if (instruction_to_wb.instr.valid && 
-        (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we) 
-        && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
-            vload_packer_complete = 1'b1;
-        end else if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we)) begin
+        if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we)) begin
+            // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                 if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;
@@ -1027,12 +1024,16 @@ always_comb begin
                     end
                 end
             end
+            if (!vload_packer_read_hit && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
+                vload_packer_complete = 1'b1;
+            end
         end
         `ifdef REGISTER_HPDC_OUTPUT
         if (flush_store) begin
-            if ((instruction_s2_q.velem_incr >= instruction_s2_q.vl[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
+            if (instruction_s2_q.instr.instr_type == VSM) begin
                 vstore_packer_complete = 1'b1;
             end else begin
+                // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s2_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
@@ -1045,13 +1046,15 @@ always_comb begin
                         end
                     end
                 end
+                if (!vstore_packer_read_hit && (instruction_s2_q.velem_incr >= instruction_s2_q.vl[VMAXELEM_LOG:0])) begin
+                    vstore_packer_complete = 1'b1;
+                end
             end
         end
         `else
         if (flush_store) begin
-            if (instruction_s1_q.velem_incr >= vl_s1) begin
-                vstore_packer_complete = 1'b1;
-            end else begin
+            begin
+                // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s1_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
@@ -1063,6 +1066,9 @@ always_comb begin
                             vstore_packer_nelem_d[i] = trunc_sum_vmaxelem_log(vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr);
                         end
                     end
+                end
+                if (!vstore_packer_read_hit && (instruction_s1_q.velem_incr >= vl_s1)) begin
+                    vstore_packer_complete = 1'b1;
                 end
             end
         end
