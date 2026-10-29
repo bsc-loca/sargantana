@@ -49,6 +49,12 @@ wire is_signed_unsigned_0 = ((instr_type_i == VMULHSU) || (instr_type_i == VWMUL
 wire is_unsigned_signed_0 = ((instr_type_i == VWMACCSU));
 wire is_widened_0 = ((instr_type_i == VWMUL) || (instr_type_i == VWMULU) || (instr_type_i == VWMULSU) ||
                      (instr_type_i == VWMACC) || (instr_type_i == VWMACCU) || (instr_type_i == VWMACCSU) || (instr_type_i == VWMACCUS));
+// vmul sees every instruction: only a SEW=64 multiplication may take the
+// output from stage 2 (e.g. a vsetivli still carries the previous SEW)
+wire is_mul64_0 = (sew_i == SEW_64) &&
+                  ((instr_type_i == VMUL) || (instr_type_i == VMULH) || (instr_type_i == VMULHU) || (instr_type_i == VMULHSU) ||
+                   (instr_type_i == VSMUL) || (instr_type_i == VMADD) || (instr_type_i == VNMSUB) ||
+                   (instr_type_i == VMACC) || (instr_type_i == VNMSAC));
 
 // A signed source is sign-extended, an unsigned one zero-extended
 wire src1_signed_0 = (is_signed_0 ^ is_signed_unsigned_0);
@@ -61,6 +67,7 @@ wire src2_signed_0 = (is_signed_0 ^ is_unsigned_signed_0);
 sew_t sew_1;
 
 logic is_mulh_1;
+logic is_mul64_1;
 logic is_widened_1;
 logic src1_signed_1;
 logic src2_signed_1;
@@ -72,6 +79,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_1                    <= SEW_8;
         is_mulh_1                <= 1'b0;
+        is_mul64_1               <= 1'b0;
         is_widened_1             <= 1'b0;
         src1_signed_1            <= 1'b0;
         src2_signed_1            <= 1'b0;
@@ -81,6 +89,7 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     else begin
         sew_1                    <= sew_i;
         is_mulh_1                <= is_mulh_0;
+        is_mul64_1               <= is_mul64_0;
         is_widened_1             <= is_widened_0;
         src1_signed_1            <= src1_signed_0;
         src2_signed_1            <= src2_signed_0;
@@ -139,6 +148,7 @@ end
 sew_t sew_2;
 
 logic is_mulh_2;
+logic is_mul64_2;
 
 bus128_t product_64b_2;
 
@@ -146,11 +156,13 @@ always_ff@(posedge clk_i, negedge rstn_i) begin
     if(~rstn_i) begin
         sew_2                    <= SEW_8;
         is_mulh_2                <= 1'b0;
+        is_mul64_2               <= 1'b0;
         product_64b_2            <= 128'd0;
     end
     else begin
         sew_2                    <= sew_1;
         is_mulh_2                <= is_mulh_1;
+        is_mul64_2               <= is_mul64_1;
         product_64b_2            <= product_64b_1[127:0];
     end
 end
@@ -229,7 +241,7 @@ always_comb begin
 end
 
 // Needed for multiplication + add/subtract
-assign data_vd_o = (sew_2 == SEW_64) ? data_vd_o2 : data_vd_o1;
-assign full_data_o = (sew_2 == SEW_64) ? full_data_o2 : full_data_o1;
+assign data_vd_o = (is_mul64_2) ? data_vd_o2 : data_vd_o1;
+assign full_data_o = (is_mul64_2) ? full_data_o2 : full_data_o1;
 
 endmodule

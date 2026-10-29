@@ -29,13 +29,11 @@ module vredtree (
     input  logic [VMAXELEM_LOG:0] vl_i,         // Current vector lenght in elements
     /* verilator lint_off UNUSEDSIGNAL */
     input  bus_simd_t data_vs1_i,               // 128-bit from vs1, only vs1[63:0] is used
-    /* verilator lint_on UNUSEDSIGNAL */
-    input  bus_simd_t data_vs2_i,               // 128-bit source operand 
-    input  bus_simd_t data_old_vd,              // Backup of previous vector destination value
+    input  bus_simd_t data_vs2_i,               // 128-bit source operand
+    input  bus_simd_t data_old_vd,              // Backup of previous vector destination value, [7:0] is always overwritten
     input  bus_mask_t data_vm_i,                // Vector mask of VLEN/8 size
     input  instr_type_t instr_to_out_i,         // Instruction to output
-    input  logic [VMAXELEM_LOG:0] vl_to_out_i,  // Vector Lenght to output
-    input  sew_t sew_to_out_i,                  // SEW indication for output 
+    input  sew_t sew_to_out_i,                  // SEW indication for output
     output bus_simd_t red_data_vd_o             // 128-bit result (only cares last element)
 );
 
