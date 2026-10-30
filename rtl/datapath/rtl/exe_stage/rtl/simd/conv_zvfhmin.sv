@@ -27,6 +27,9 @@ import mmu_pkg::*;
     input logic valid_i,
     input logic operation_i, // 0: widening, 1: narrowing
     input  op_frm_fp_t frm_i,
+    input logic [VMAXELEM_LOG:0] vl_i,
+    input bus_mask_t data_vm_i,
+    input logic use_mask_i,
     output bus_simd_t res_o,
     output fpnew_pkg::status_t status_o
 );
@@ -71,12 +74,14 @@ always_comb begin
     fp16_to_fp32_merged_flags = '0;
 
     for (int k = 0; k < (VLEN/32); k = k + 1) begin
-        fp32_to_fp16_merged_flags.NV = fp32_to_fp16_flags[k].NV | fp32_to_fp16_merged_flags.NV;
-        fp32_to_fp16_merged_flags.NX = fp32_to_fp16_flags[k].NX | fp32_to_fp16_merged_flags.NX;
-        fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[k].OF | fp32_to_fp16_merged_flags.OF;
-        fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[k].UF | fp32_to_fp16_merged_flags.UF;
+        if ((k < vl_i) && (data_vm_i[k] || !use_mask_i)) begin
+            fp32_to_fp16_merged_flags.NV = fp32_to_fp16_flags[k].NV | fp32_to_fp16_merged_flags.NV;
+            fp32_to_fp16_merged_flags.NX = fp32_to_fp16_flags[k].NX | fp32_to_fp16_merged_flags.NX;
+            fp32_to_fp16_merged_flags.OF = fp32_to_fp16_flags[k].OF | fp32_to_fp16_merged_flags.OF;
+            fp32_to_fp16_merged_flags.UF = fp32_to_fp16_flags[k].UF | fp32_to_fp16_merged_flags.UF;
 
-        fp16_to_fp32_merged_flags.NV = fp16_to_fp32_flags[k].NV | fp16_to_fp32_merged_flags.NV;
+            fp16_to_fp32_merged_flags.NV = fp16_to_fp32_flags[k].NV | fp16_to_fp32_merged_flags.NV;
+        end
     end
 
 end

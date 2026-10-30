@@ -1115,6 +1115,9 @@ conv_zvfhmin conv_zvfhmin_inst (
    .valid_i(is_zvfhmin_conv(instruction_i)),
    .operation_i(is_vfncvt_f_f),
    .frm_i(instruction_i.instr.frm),
+   .vl_i(instruction_i.instr.vl),
+   .data_vm_i(instruction_i.data_vm),
+   .use_mask_i(instruction_i.instr.use_mask),
    .res_o(conv_zvfhmin_vd),
    .status_o(conv_zvfhmin_flags)
 );
