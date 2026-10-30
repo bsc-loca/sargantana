@@ -73,6 +73,7 @@ module decoder
 
     logic check_frm;
     logic vector_fp_csr_illegal;
+    logic [4:0] fp_rs2;
 
     vreg_t emul_mask; 
 
@@ -171,6 +172,7 @@ module decoder
         decode_instr_int.fmt     = FMT_S;
         decode_instr_int.frm     = op_frm_fp_t'(decode_i.inst.fprtype.rm);
         check_frm              = 1'b0;
+        fp_rs2                 = decode_i.inst.bits[24:20];
 
         decode_instr_int.instr_type = ADD;
         `ifdef SIM_KONATA_DUMP
@@ -3439,10 +3441,9 @@ module decoder
                             FMT_D: begin
                                 decode_instr_int.fmt = 2'b01;
                             end
-                            FMT_H: begin
-                                decode_instr_int.fmt = 2'b10;
-                            end
                             default: begin
+                                // Half and quad precision fused operations are
+                                // not implemented by this core.
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         endcase
@@ -3694,6 +3695,74 @@ module decoder
                                 end
                                 default: begin
                                     decode_instr_int.frm = op_frm_fp_t'(decode_i.inst.fprtype.rm);
+                                end
+                            endcase
+                        end
+
+                        // Only the floating-point formats and encodings that
+                        // this core implements may reach the FPU. Everything
+                        // else is a reserved encoding or belongs to an
+                        // extension that is not implemented.
+                        if (decode_i.inst.fprtype.fmt == FMT_H) begin
+                            // Zfhmin half-precision subset: FMV.X.H, FMV.H.X,
+                            // FCVT.S.H, FCVT.H.S, FCVT.D.H and FCVT.H.D.
+                            case (decode_i.inst.fprtype.func5)
+                                F5_FP_FCVT_SD: begin
+                                    if (fp_rs2 > 5'd1) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_F2I_FCLASS: begin
+                                    if ((fp_rs2 != 5'd0) ||
+                                        (decode_i.inst.fprtype.rm != 3'b000)) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_I2F: begin
+                                    if (fp_rs2 != 5'd0) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                default: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
+                        end else begin
+                            case (decode_i.inst.fprtype.func5)
+                                F5_FP_FCVT_SD: begin
+                                    if ((fp_rs2 != 5'd4) && (fp_rs2 != 5'd5)) begin
+                                        if ((fp_rs2[4:2] != 3'b000) ||
+                                            (fp_rs2[1:0] == 2'b11) ||
+                                            (fp_rs2[1:0] == decode_i.inst.fprtype.fmt)) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                end
+                                F5_FP_FCVT_F2I: begin
+                                    if (fp_rs2 == 5'd8) begin
+                                        if (decode_i.inst.fprtype.fmt != FMT_D) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end else if (fp_rs2[4:2] != 3'b000) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FCVT_I2F: begin
+                                    if (fp_rs2[4:2] != 3'b000) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_I2F: begin
+                                    if ((fp_rs2 != 5'd0) && (fp_rs2 != 5'd1)) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_F2I_FCLASS: begin
+                                    if (fp_rs2 != 5'd0) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                default: begin
                                 end
                             endcase
                         end
