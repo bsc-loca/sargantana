@@ -781,10 +781,12 @@ always_comb begin
             acum_velem_incr_d = (vmem_ops_state_d != VL_MISALIGNED) ? 'h0 : acum_velem_incr_q;
         end
         VS_MISALIGNED: begin
+            // VSXE/VSSE are not store operations for the dcache, only their element requests are
+            memp_instr_o.instr.instr_type = SB;
             memp_instr_o.instr.mem_size = 4'b0000;
             memp_instr_o.sew = SEW_8;
             memp_instr_o.data_rs1 = trunc_64_sum(misaligned_addr_q + misaligned_counter_q);
-            memp_instr_o.data_rs2 = misaligned_data_q >> misaligned_counter_q;
+            memp_instr_o.data_rs2 = misaligned_data_q >> ({3'b0, misaligned_counter_q} << 3);
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i;
             vmem_ops_state_d = ((trunc_5_4(misaligned_counter_q + 1'b1) == misaligned_vl_q) || flush_i) ? (((velem_cnt_d == vl_q) || flush_i) ? SCALAR : misaligned_prev_state_q) : VS_MISALIGNED;
             end_int = (vmem_ops_state_d != VS_MISALIGNED) ? 1'b1 : 1'b0;
@@ -886,6 +888,12 @@ always_comb begin
         VL_MISALIGNED, VS_MISALIGNED: begin
             memp_instr_o.velem_incr = velem_incr[DCACHE_RESP_DATA_LOG-3:0];
             memp_instr_o.velem_id = misaligned_id_q;
+            case (misaligned_vl_q)
+                4'd2: memp_instr_o.velem_sew = SEW_16;
+                4'd4: memp_instr_o.velem_sew = SEW_32;
+                4'd8: memp_instr_o.velem_sew = SEW_64;
+                default: memp_instr_o.velem_sew = SEW_8;
+            endcase
         end
         default: begin
             memp_instr_o.velem_incr = trunc_max_velem_log_sum(acum_velem_incr_q[MAX_VELEM_LOG:0] + velem_incr[DCACHE_RESP_DATA_LOG-3:0]);

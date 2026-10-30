@@ -282,6 +282,7 @@ assign instruction_to_lsq.is_cmo          = instruction_i.is_cmo;
 assign instruction_to_lsq.is_cmo_prefetch = instruction_i.is_cmo_prefetch;
 
 assign instruction_to_lsq.vmisalign_xcpt = instruction_i.vmisalign_xcpt;
+assign instruction_to_lsq.velem_sew = instruction_i.velem_sew;
 assign instruction_to_lsq.velem_id = instruction_i.velem_id;
 assign instruction_to_lsq.load_mask = instruction_i.load_mask;
 assign instruction_to_lsq.velem_off = instruction_i.velem_off;
@@ -752,7 +753,8 @@ always_comb begin
         instruction_to_wb.ex              = instruction_from_pmrq.ex;
         instruction_to_wb.gl_index        = instruction_from_pmrq.gl_index;        
         instruction_to_wb.agu_req_tag     = instruction_from_pmrq.agu_req_tag;
-        instruction_to_wb.vmisalign_xcpt  = instruction_from_pmrq.vmisalign_xcpt;  
+        instruction_to_wb.vmisalign_xcpt  = instruction_from_pmrq.vmisalign_xcpt;
+        instruction_to_wb.velem_sew       = instruction_from_pmrq.velem_sew;
         instruction_to_wb.velem_id        = instruction_from_pmrq.velem_id;  
         instruction_to_wb.load_mask       = instruction_from_pmrq.load_mask;     
         instruction_to_wb.velem_off       = instruction_from_pmrq.velem_off; 
@@ -841,7 +843,8 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_scalar <= i)) begin
+                // Byte requests split from a misaligned element use the mask and vl of that element
+                if (instruction_to_wb.data_vm[i >> instruction_to_wb.velem_sew] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_scalar <= (i >> instruction_to_wb.velem_sew))) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end

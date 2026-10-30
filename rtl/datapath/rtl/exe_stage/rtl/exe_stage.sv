@@ -273,7 +273,8 @@ always_comb begin
     mem_instr.is_cmo_prefetch     = (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.vl                  = from_rr_i.instr.vl;
     mem_instr.agu_req_tag = '0;
-    mem_instr.vmisalign_xcpt = 0;              
+    mem_instr.vmisalign_xcpt = 0;
+    mem_instr.velem_sew = SEW_8;
     mem_instr.velem_id = '0;  
     mem_instr.load_mask = '0;     
     mem_instr.velem_off = '0;
