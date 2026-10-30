@@ -3134,6 +3134,9 @@ module decoder
                         decode_instr_int.regfile_we = 1'b0;
                         decode_instr_int.use_rs2 = 1'b1;
                         decode_instr_int.mem_size = {1'b0,decode_i.inst.bits[28:26]};
+                        if(decode_i.inst.common.rd != 'h0) begin
+                          xcpt_illegal_instruction_int = 1'b1;
+                        end
                       end else begin
                         decode_instr_int.mem_type = LOAD;
                         decode_instr_int.regfile_we = 1'b1;
