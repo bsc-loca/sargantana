@@ -264,6 +264,43 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
         .ge_o       ()
     );
 
+`ifdef LEGACY_VFRED
+    logic [2:0][63:0] fp32_fpnew_operands;
+    always_comb begin
+        fp32_fpnew_operands[1] = {32'h0000_0000, fp32srca};
+        fp32_fpnew_operands[2] = {32'h0000_0000, fp32srcb};
+        fp32_fpnew_operands[0] = 64'h0000_0000_0000_0000;
+    end
+    
+    fpnew_top #(
+       .Features       ( SARG_ADDMUL_RV64D ),
+       .Implementation ( SARG_ADDMUL_ONLY  )
+    ) f32_fpnew (
+           .clk_i          ( clk_i ),
+           .rst_ni         ( rstn_i ),
+           .flush_i        ( '0 ),
+           // Input
+           .operands_i     ( fp32_fpnew_operands ),
+           .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp32_metadata_d[FP32_NODE_LEVEL*DELAY_SUM_FP32].frm)) ),
+           .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
+           .op_mod_i       ( 1'b0 ),
+           .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
+           .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
+           .int_fmt_i      ( fpnew_pkg::int_format_e'(INT32) ),
+           .simd_mask_i    ( '0 ),
+           .vectorial_op_i ( '0 ),
+           .tag_i          ( '0 ),
+           .in_valid_i     ( 1'b1 ),
+           .out_ready_i    ( 1'b1 ),
+           // Outputs
+           .in_ready_o     (  ),
+           .result_o       ( fp32resdp2 ),
+           .status_o       ( fpnewstatus ),
+           .tag_o          (  ),
+           .out_valid_o    (  ),
+           .busy_o         (  )
+        );
+`else
     vfred_fpadd #(
        .FpFormat   ( fpnew_pkg::FP32 )
     ) f32_fpnew (
@@ -275,6 +312,7 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
        .result_o   ( fp32resdp2 ),
        .status_o   ( fpnewstatus )
     );
+`endif
 end
 endgenerate
 
@@ -349,6 +387,43 @@ maxmin_f32 lastfp32comparator (
     .ge_o       ()
 );
 
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] lastfp32_fpnew_operands;
+always_comb begin
+    lastfp32_fpnew_operands[1] = {32'h0000_0000, lastfp32srca};
+    lastfp32_fpnew_operands[2] = {32'h0000_0000, lastfp32srcb};
+    lastfp32_fpnew_operands[0] = 64'h0000_0000_0000_0000;
+end
+
+fpnew_top #(
+.Features       ( SARG_ADDMUL_RV64D ),
+.Implementation ( SARG_ADDMUL_ONLY  )
+) f32_fpnew_last (
+    .clk_i          ( clk_i ),
+    .rst_ni         ( rstn_i ),
+    .flush_i        ( '0 ),
+    // Input
+    .operands_i     ( lastfp32_fpnew_operands ),
+    .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp32_metadata_d[($clog2(VLEN/32))*DELAY_SUM_FP32].frm)) ),
+    .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
+    .op_mod_i       ( 1'b0 ),
+    .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
+    .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP32) ),
+    .int_fmt_i      ( fpnew_pkg::int_format_e'(INT32) ),
+    .simd_mask_i    ( '0 ),
+    .vectorial_op_i ( '0 ),
+    .tag_i          ( '0 ),
+    .in_valid_i     ( 1'b1 ),
+    .out_ready_i    ( 1'b1 ),
+    // Outputs
+    .in_ready_o     (  ),
+    .result_o       ( lastfp32resdp2 ),
+    .status_o       ( lastfp32fpnewstatus ),
+    .tag_o          (  ),
+    .out_valid_o    (  ),
+    .busy_o         (  )
+);
+`else
 vfred_fpadd #(
    .FpFormat   ( fpnew_pkg::FP32 )
 ) f32_fpnew_last (
@@ -360,6 +435,7 @@ vfred_fpadd #(
    .result_o   ( lastfp32resdp2 ),
    .status_o   ( lastfp32fpnewstatus )
 );
+`endif
 
 // --------------------------------------------------------------------------------------
 // for the vector widening reductions for FP64, we must also ensure that
@@ -429,6 +505,43 @@ for (i = 0; i < ((VLEN/32)/2); i++) begin : fp64_wide_adders
         fp64widesignals[(VLEN/32)+i] = fp64wideresdp2;
     end
 
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] fp64wide_fpnew_operands;
+    always_comb begin
+        fp64wide_fpnew_operands[1] = fp64widesrca;
+        fp64wide_fpnew_operands[2] = fp64widesrcb;
+        fp64wide_fpnew_operands[0] = 64'h0000_0000_0000_0000;
+    end
+
+    fpnew_top #(
+       .Features       ( SARG_ADDMUL_RV64D ),
+       .Implementation ( SARG_ADDMUL_ONLY  )
+    ) fp64_fpnew (
+       .clk_i          ( clk_i ),
+       .rst_ni         ( rstn_i ),
+       .flush_i        ( '0 ),
+       // Input
+       .operands_i     ( fp64wide_fpnew_operands ),
+       .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(frm_i)) ),
+       .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
+       .op_mod_i       ( 1'b0 ),
+       .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+       .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+       .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
+       .simd_mask_i    ( '0 ),
+       .vectorial_op_i ( '0 ),
+       .tag_i          ( '0 ),
+       .in_valid_i     ( 1'b1 ),
+       .out_ready_i    ( 1'b1 ),
+       // Outputs
+       .in_ready_o     (  ),
+       .result_o       ( fp64wideresdp2 ),
+       .status_o       ( fpnewstatus ),
+       .tag_o          (  ),
+       .out_valid_o    (  ),
+       .busy_o         (  )
+    );
+`else
     vfred_fpadd #(
        .FpFormat   ( fpnew_pkg::FP64 )
     ) fp64_fpnew (
@@ -440,6 +553,7 @@ for (i = 0; i < ((VLEN/32)/2); i++) begin : fp64_wide_adders
        .result_o   ( fp64wideresdp2 ),
        .status_o   ( fpnewstatus )
     );
+ `endif
 end
 endgenerate
 
@@ -548,6 +662,43 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
         .ge_o       ()
     );
 
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] fp64_fpnew_operands;
+    always_comb begin
+        fp64_fpnew_operands[1] = fp64srca;
+        fp64_fpnew_operands[2] = fp64srcb;
+        fp64_fpnew_operands[0] = 64'h0000_0000_0000_0000;
+    end
+
+    fpnew_top #(
+       .Features       ( SARG_ADDMUL_RV64D ),
+       .Implementation ( SARG_ADDMUL_ONLY  )
+    ) fp64_fpnew (
+       .clk_i          ( clk_i ),
+       .rst_ni         ( rstn_i ),
+       .flush_i        ( '0 ),
+       // Input
+       .operands_i     ( fp64_fpnew_operands ),
+       .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata_d[FP64_NODE_LEVEL*DELAY_SUM_FP64].frm)) ),
+       .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
+       .op_mod_i       ( 1'b0 ),
+       .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+       .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+       .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
+       .simd_mask_i    ( '0 ),
+       .vectorial_op_i ( '0 ),
+       .tag_i          ( '0 ),
+       .in_valid_i     ( 1'b1 ),
+       .out_ready_i    ( 1'b1 ),
+       // Outputs
+       .in_ready_o     (  ),
+       .result_o       ( fp64resdp2 ),
+       .status_o       ( fpnewstatus ),
+       .tag_o          (  ),
+       .out_valid_o    (  ),
+       .busy_o         (  )
+    );
+`else
     vfred_fpadd #(
        .FpFormat   ( fpnew_pkg::FP64 )
     ) fp64_fpnew (
@@ -559,6 +710,7 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
        .result_o   ( fp64resdp2 ),
        .status_o   ( fpnewstatus )
     );
+`endif
 
 end
 endgenerate
@@ -634,6 +786,43 @@ maxmin_f64 lastfp64comparator (
 ); 
 
 // the result of the reduction must be added with the last element of the 2nd operand
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] lastfp64_fpnew_operands;
+always_comb begin
+    lastfp64_fpnew_operands[1] = lastfp64srca;
+    lastfp64_fpnew_operands[2] = lastfp64srcb;
+    lastfp64_fpnew_operands[0] = 64'h0000_0000_0000_0000;
+end
+
+fpnew_top #(
+   .Features       ( SARG_ADDMUL_RV64D ),
+   .Implementation ( SARG_ADDMUL_ONLY  )
+) fp64_fpnew_last (
+   .clk_i          ( clk_i ),
+   .rst_ni         ( rstn_i ),
+   .flush_i        ( '0 ),
+   // Input
+   .operands_i     ( lastfp64_fpnew_operands ),
+   .rnd_mode_i     ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata_d[($clog2(VLEN/64))*DELAY_SUM_FP64].frm)) ),
+   .op_i           ( fpnew_pkg::operation_e'(W4_logic'(fpnew_pkg::ADD)) ),
+   .op_mod_i       ( 1'b0 ),
+   .src_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+   .dst_fmt_i      ( fpnew_pkg::fp_format_e'(FP64) ),
+   .int_fmt_i      ( fpnew_pkg::int_format_e'(INT64) ),
+   .simd_mask_i    ( '0 ),
+   .vectorial_op_i ( '0 ),
+   .tag_i          ( '0 ),
+   .in_valid_i     ( 1'b1 ),
+   .out_ready_i    ( 1'b1 ),
+   // Outputs
+   .in_ready_o     (  ),
+   .result_o       ( lastfp64resdp2 ),
+   .status_o       ( lastfp64fpnewstatus ),
+   .tag_o          (  ),
+   .out_valid_o    (  ),
+   .busy_o         (  )
+);
+`else
 vfred_fpadd #(
    .FpFormat   ( fpnew_pkg::FP64 )
 ) fp64_fpnew_last (
@@ -645,6 +834,7 @@ vfred_fpadd #(
    .result_o   ( lastfp64resdp2 ),
    .status_o   ( lastfp64fpnewstatus )
 );
+`endif
 
 // --------------------------------------------------------------------------------------
 
