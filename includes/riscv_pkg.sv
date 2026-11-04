@@ -1601,7 +1601,7 @@ typedef enum logic [11:0] {
     ,
     CSR_DYN_MEM_LATENCY = 12'h801
     `endif
-    `ifndef HPIC_DISABLE
+    `ifndef VIDRIOL_DISABLE
     ,
     CSR_IPREF = 12'h802
     `endif

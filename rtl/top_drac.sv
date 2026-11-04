@@ -117,8 +117,8 @@ module top_drac
 `ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
     output logic [63:0]                     dyn_fpga_mem_latency_o,
 `endif // CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
-`ifndef HPIC_DISABLE
-    output logic[15:0] hpic_degree_o,
+`ifndef VIDRIOL_DISABLE
+    output logic[15:0] vidriol_degree_o,
 `endif
 
 //-----------------------------------------------------------------------------
@@ -439,8 +439,8 @@ csr_bsc #(
 `ifdef CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
     .dyn_fpga_mem_latency_o(dyn_fpga_mem_latency_o),
 `endif // CONF_SARGANTANA_ENABLE_DYN_FPGA_MEM_LATENCY
-`ifndef HPIC_DISABLE
-    .hpic_degree_o(hpic_degree_o),
+`ifndef VIDRIOL_DISABLE
+    .vidriol_degree_o(vidriol_degree_o),
 `endif
     .freg_modified_i(req_datapath_csr_interface.freg_modified),
     .fcsr_flags_valid_i(fcsr_flags_valid),
