@@ -132,8 +132,9 @@ module immediate
                 case (instr_i.itype.func3)
                     F3_OPIVI: begin
                         case (instr_i.vtype.func6)
-                            F6_VSLL, F6_VSRL, F6_VSRA, F6_VNSRL, F6_VNSRA, F6_VSLIDEUP, F6_VSLIDEDOWN, F6_VRGATHER, F6_VNCLIPU, F6_VNCLIP: imm_o = imm_uvtype;
-                            F6_VROR: imm_o = imm_uvrtype;
+                            F6_VSLL, F6_VSRL, F6_VSRA, F6_VSSRL, F6_VSSRA, F6_VNSRL, F6_VNSRA, F6_VSLIDEUP, F6_VSLIDEDOWN,
+                            F6_VRGATHER, F6_VNCLIPU, F6_VNCLIP, F6_VWSLL: imm_o = imm_uvtype;
+                            {F6_VROR[5:1], 1'b0}, {F6_VROR[5:1], 1'b1}: imm_o = imm_uvrtype; // bit 0 of func6 is uimm[5]
                             default: imm_o = imm_vtype;
                         endcase
                     end

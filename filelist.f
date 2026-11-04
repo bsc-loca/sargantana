@@ -45,6 +45,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/functional_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vcomp.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree_alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vpopc.sv
@@ -152,6 +153,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/conv_zvfhmin.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f64.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vfred_fpadd.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredoladder.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vclmul.sv

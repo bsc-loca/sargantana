@@ -27,18 +27,58 @@ module vredtree (
     input  instr_type_t instr_type_i,           // Instruction type
     input  sew_t sew_i,                         // SEW: 00 for 8 bits, 01 for 16 bits, 10 for 32 bits, 11 for 64 bits
     input  logic [VMAXELEM_LOG:0] vl_i,         // Current vector lenght in elements
-    input  bus_simd_t data_vs1_i,               // 128-bit from vs1
-    input  bus_simd_t data_vs2_i,               // 128-bit source operand 
-    input  bus_simd_t data_old_vd,              // Backup of previous vector destination value
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  bus_simd_t data_vs1_i,               // 128-bit from vs1, only vs1[63:0] is used
+    input  bus_simd_t data_vs2_i,               // 128-bit source operand
+    input  bus_simd_t data_old_vd,              // Backup of previous vector destination value, [7:0] is always overwritten
     input  bus_mask_t data_vm_i,                // Vector mask of VLEN/8 size
     input  instr_type_t instr_to_out_i,         // Instruction to output
-    input  logic [VMAXELEM_LOG:0] vl_to_out_i,  // Vector Lenght to output
-    input  sew_t sew_to_out_i,                  // SEW indication for output 
+    input  sew_t sew_to_out_i,                  // SEW indication for output
     output bus_simd_t red_data_vd_o             // 128-bit result (only cares last element)
 );
 
-localparam int NUM_STAGES = $clog2(VLEN / 8) + 1;      // Number of stages based on the minimum SEW
-localparam int NUM_STAGES_LOG = $clog2(NUM_STAGES);
+// Integer reduction tree
+//
+// Stage s of the tree holds, for every block of 2^s consecutive elements of
+// vs2, the reduction of its active elements (data_vm_i and index < vl_i;
+// elements past VLEN/SEW are never active) and a mask bit telling whether
+// the block has any. A block without active elements is 0. All operations
+// are associative and commutative, so a block only depends on which elements
+// it covers, not on the order they are combined in. The reduction of
+// SEW-wide elements is complete at stage log2(VLEN/SEW), and the output only
+// reads the low bits of stages STAGE_SEW8-3 .. STAGE_SEW8. The tree has two
+// parts:
+//
+// - Lane stages 1 .. LANE_STAGES (= STAGE_SEW8-3): element c*NUM_WORDS+w is
+//   placed in lane c of the 128-bit double word w, so each double word holds
+//   one element of every chunk of NUM_WORDS consecutive elements. Stage s
+//   combines double words w and w+NUM_WORDS/2^s lane by lane, and after the
+//   last one lane c holds chunk c, which is block c of stage STAGE_SEW8-3 in
+//   its original position. Widening reductions are extended to 2*SEW when
+//   placed; single-width ones only use the low 64 bits (the high lanes stay
+//   inactive), so the high half of each double word only needs an adder.
+// - Stages STAGE_SEW8-2 .. STAGE_SEW8 combine blocks 2j and 2j+1 into block
+//   j on the 64, 32 and 16 low bits that the output reads.
+//
+// All stages use the same SEW-segmented ALU (vredtree_alu).
+
+localparam int STAGE_SEW8  = $clog2(VLEN / 8);      // Last stage, result of SEW=8 reductions
+localparam int NUM_WORDS   = VLEN / 64;             // 64-bit words in a vector register
+localparam int NUM_DW      = NUM_WORDS / 2;         // 128-bit double words after stage 1
+localparam int LANE_STAGES = $clog2(NUM_WORDS);     // Lane stages, the last one is STAGE_SEW8-3
+
+// Reduction operation, op[2:0] is the vredtree_alu operation
+typedef enum logic [3:0] {
+    RED_NONE = 4'b0000,     // Not an integer reduction
+    RED_SUM  = 4'b1000,     // VREDSUM, VWREDSUM, VWREDSUMU
+    RED_AND  = 4'b1001,
+    RED_OR   = 4'b1010,
+    RED_XOR  = 4'b1011,
+    RED_MAX  = 4'b1100,
+    RED_MAXU = 4'b1101,
+    RED_MIN  = 4'b1110,
+    RED_MINU = 4'b1111
+} red_op_t;
 
 function sew_t increase_sew_size(sew_t sew);
     case (sew)
@@ -53,507 +93,290 @@ function logic is_vw(input instr_type_t instr);
     is_vw = (instr inside {VWREDSUM, VWREDSUMU}) ? 1'b1 : 1'b0;
 endfunction
 
-function [7:0] trunc_8bits(input [8:0] val_in);
-    trunc_8bits = val_in[7:0];
+function red_op_t red_op(input instr_type_t instr);
+    case (instr)
+        VREDSUM, VWREDSUM, VWREDSUMU: red_op = RED_SUM;
+        VREDAND:  red_op = RED_AND;
+        VREDOR:   red_op = RED_OR;
+        VREDXOR:  red_op = RED_XOR;
+        VREDMAX:  red_op = RED_MAX;
+        VREDMAXU: red_op = RED_MAXU;
+        VREDMIN:  red_op = RED_MIN;
+        VREDMINU: red_op = RED_MINU;
+        default:  red_op = RED_NONE;
+    endcase
 endfunction
 
-function [15:0] trunc_16bits(input [16:0] val_in);
-    trunc_16bits = val_in[15:0];
-endfunction
-
-function [31:0] trunc_32bits(input [32:0] val_in);
-    trunc_32bits = val_in[31:0];
-endfunction
-
-function [63:0] trunc_64bits(input [64:0] val_in);
-    trunc_64bits = val_in[63:0];
-endfunction
-
-function [NUM_STAGES_LOG-1:0]  trunc_stage_to_out(input [31:0] val_in);
-    trunc_stage_to_out = val_in[NUM_STAGES_LOG-1:0];
-endfunction
-
-// Intermediate vector declaration with a generate block
+// Fields that travel with the instruction through every stage
 typedef struct packed {
-    sew_t sew;
-    bus_mask_t mask;
-    instr_type_t instr_type;
-    bus_simd_t data_vs1;
-    logic [VLEN-1:0] intermediate;
-} node_t;
+    sew_t        sew;           // SEW of the tree elements (result SEW for widening)
+    red_op_t     op;            // Reduction operation
+    logic [63:0] data_vs1;      // vs1[0], only the low SEW bits are used
+} ctrl_t;
 
-node_t gen_intermediate_d [NUM_STAGES-1:0];
-node_t gen_intermediate_q [NUM_STAGES-1:0];
+// Operands registered in stage 0
+typedef struct packed {
+    logic        vw;            // Widening reduction
+    logic        vw_signed;     // VWREDSUM: sign-extend the source elements
+    bus_mask_t   mask;          // Active elements
+    bus_simd_t   data;          // vs2
+} stage0_t;
+
+ctrl_t        ctrl_d [STAGE_SEW8:0];
+ctrl_t        ctrl_q [STAGE_SEW8:0];
+stage0_t      stage0_d;
+stage0_t      stage0_q;
+logic [127:0] lane_data_d [LANE_STAGES:1][NUM_DW-1:0];   // Lane stages
+logic [127:0] lane_data_q [LANE_STAGES:1][NUM_DW-1:0];
+logic [15:0]  lane_mask_d [LANE_STAGES:1][NUM_DW-1:0];   // One bit per byte
+logic [15:0]  lane_mask_q [LANE_STAGES:1][NUM_DW-1:0];
+logic [63:0]  tail_data_d [2:0];                         // Stage STAGE_SEW8-2+t, 64, 32 and 16 bits
+logic [63:0]  tail_data_q [2:0];
+logic [7:0]   tail_mask_d [2:0];                         // One bit per byte
+logic [7:0]   tail_mask_q [2:0];
 
 always_ff @(posedge clk_i, negedge rstn_i) begin
     if (~rstn_i) begin
-        for (int i = 0; i < NUM_STAGES; i++) begin 
-            gen_intermediate_q[i] <= '0;
+        for (int i = 0; i <= STAGE_SEW8; i++) begin
+            ctrl_q[i] <= '0;
+        end
+        stage0_q <= '0;
+        for (int s = 1; s <= LANE_STAGES; s++) begin
+            for (int w = 0; w < NUM_DW; w++) begin
+                lane_data_q[s][w] <= '0;
+                lane_mask_q[s][w] <= '0;
+            end
+        end
+        for (int t = 0; t < 3; t++) begin
+            tail_data_q[t] <= '0;
+            tail_mask_q[t] <= '0;
         end
     end else begin
-        for (int i = 0; i < NUM_STAGES; i++) begin
-            gen_intermediate_q[i] <= gen_intermediate_d[i];
+        for (int i = 0; i <= STAGE_SEW8; i++) begin
+            ctrl_q[i] <= ctrl_d[i];
         end
-    end
-end
-
-// Vector Mask Managment for LMUL<1 cases
-bus_mask_t data_vm;
-always_comb begin
-    for (int i = 0; i < $size(data_vm); i++) begin
-        if (i < vl_i) begin
-            data_vm[i] = data_vm_i[i];
-        end else begin
-            data_vm[i] = 1'b0;
-        end
-    end
-end
-
-always_comb begin
-    for (int i = 0; i < NUM_STAGES; i++) begin 
-        if (i == 0) begin
-            gen_intermediate_d[0].sew = (is_vw(instr_type_i)) ? increase_sew_size(sew_i) : sew_i;
-            gen_intermediate_d[0].mask = data_vm;
-            gen_intermediate_d[0].instr_type = instr_type_i;
-            gen_intermediate_d[0].intermediate = data_vs2_i;
-            gen_intermediate_d[0].data_vs1 = data_vs1_i;
-        end else begin
-            gen_intermediate_d[i].mask = '0;
-            gen_intermediate_d[i].intermediate = '0;
-            for (int j = 0; j < (VLEN/16); j++) begin
-                case (gen_intermediate_q[i-1].sew) 
-                    SEW_8: begin
-                        if ((j*8) < (VLEN >> i)) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*8) +: 8] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*8) +: 8] = gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                gen_intermediate_d[i].intermediate[(j*8) +: 8] = gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8];
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            trunc_8bits(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] + gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                    VREDAND: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] & gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                    VREDOR:  gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] | gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                    VREDXOR: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] ^ gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
-                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8];
-                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8];
-                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*8) +: 8] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8] : gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8];
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end
-                    end
-                    SEW_16: begin
-                        //if (((j*16) < (VLEN >> i)) || ((i==1) && (is_vw(gen_intermediate_q[i-1].instr_type)) && ((j*8) < (VLEN >> i)))) begin
-                        if ((j*16) < (VLEN >> i)) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {8'b0, gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{8{gen_intermediate_q[i-1].intermediate[2*(j*8) + 7]}}, gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {8'b0, gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{8{gen_intermediate_q[i-1].intermediate[2*(j*8) + 15]}}, gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*16) +: 16] = gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                             trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                    VREDAND: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] & gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                    VREDOR:  gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] | gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                    VREDXOR: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            (gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] ^ gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
-                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16];
-                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
-                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] : gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16];
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end else if (((j*8) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*16) +: 16] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]);
-                                    end
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8)+8 +: 8]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*8)+8 +: 8]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16)+16 +: 16]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*16) +: 16] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*16)+16 +: 16]);
-                                    end
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) +: 8]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*8) + 8 +: 8]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*16) +: 16] = 
-                                                trunc_16bits(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16] + gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end
-                    end
-                    SEW_32: begin
-                        if ((j*32) < (VLEN >> i)) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {16'b0, gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{16{gen_intermediate_q[i-1].intermediate[2*(j*16) + 15]}}, gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {16'b0, gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{16{gen_intermediate_q[i-1].intermediate[2*(j*16) + 31]}}, gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*32) +: 32] = gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                    VREDAND: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] & gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                    VREDOR:  gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] | gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                    VREDXOR: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] ^ gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
-                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32];
-                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
-                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] : gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32];
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end else if (((j*16) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*32) +: 32] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]);
-                                    end
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16)+16 +: 16]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*16)+16 +: 16]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32)+32 +: 32]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*32) +: 32] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*32)+32 +: 32]);
-                                    end
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) +: 16]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*16) + 16 +: 16]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*32) +: 32] = 
-                                                trunc_32bits(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32] + gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end
-                    end
-                    SEW_64: begin
-                        if ((j*64) < (VLEN >> i)) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {32'b0, gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{32{gen_intermediate_q[i-1].intermediate[2*(j*32) + 31]}}, gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = (gen_intermediate_q[i-1].instr_type == VWREDSUMU) ? {32'b0, gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]} : 
-                                                                                    (gen_intermediate_q[i-1].instr_type == VWREDSUM)  ? {{32{gen_intermediate_q[i-1].intermediate[2*(j*32) + 63]}}, gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]} : 
-                                                                                    gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
-                                end else begin
-                                    gen_intermediate_d[i].intermediate[(j*64) +: 64] = gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VREDSUM: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                    VREDAND: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] & gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                    VREDOR:  gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] | gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                    VREDXOR: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                (gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] ^ gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                    VREDMAX: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
-                                    VREDMAXU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64];
-                                    VREDMIN: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                            ($signed(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $signed(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
-                                    VREDMINU: gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                            ($unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]) < $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64])) ?
-                                            gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] : gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64];
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end else if (((j*32) < (VLEN >> i)) && (is_vw(gen_intermediate_q[i-1].instr_type))) begin
-                            if (!gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b0;
-                                gen_intermediate_d[i].intermediate[(j*64) +: 64] = '0;
-                            end else if (gen_intermediate_q[i-1].mask[(j*2)] && !gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64]);
-                                    end
-                                end
-                            end else if (!gen_intermediate_q[i-1].mask[(j*2)] && gen_intermediate_q[i-1].mask[(j*2)+1]) begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                if (i == 1) begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32)+32 +: 32]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*32)+32 +: 32]);
-                                    end
-                                end else begin
-                                    if (gen_intermediate_q[i-1].instr_type == VWREDSUMU) begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*64)+64 +: 64]);
-                                    end else begin
-                                        gen_intermediate_d[i].intermediate[(j*64) +: 64] = $signed(gen_intermediate_q[i-1].intermediate[2*(j*64)+64 +: 64]);
-                                    end
-                                end
-                            end else begin
-                                gen_intermediate_d[i].mask[((j*2) >> 1)] = 1'b1;
-                                case (gen_intermediate_q[i-1].instr_type)
-                                    VWREDSUM: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $signed(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                        end
-                                    end
-                                    VWREDSUMU: begin
-                                        if (i == 1) begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) +: 32]) + $unsigned(gen_intermediate_q[i-1].intermediate[2*(j*32) + 32 +: 32]);
-                                        end else begin
-                                            gen_intermediate_d[i].intermediate[(j*64) +: 64] = 
-                                                trunc_64bits(gen_intermediate_q[i-1].intermediate[2*(j*64) +: 64] + gen_intermediate_q[i-1].intermediate[2*(j*64) + 64 +: 64]);
-                                        end
-                                    end
-                                    default: gen_intermediate_d[i].intermediate = '0;
-                                endcase
-                            end
-                        end
-                    end
-                endcase
+        stage0_q <= stage0_d;
+        for (int s = 1; s <= LANE_STAGES; s++) begin
+            for (int w = 0; w < NUM_DW; w++) begin
+                lane_data_q[s][w] <= lane_data_d[s][w];
+                lane_mask_q[s][w] <= lane_mask_d[s][w];
             end
-            gen_intermediate_d[i].sew = gen_intermediate_q[i-1].sew;
-            gen_intermediate_d[i].instr_type = gen_intermediate_q[i-1].instr_type;
-            gen_intermediate_d[i].data_vs1 = gen_intermediate_q[i-1].data_vs1;
+        end
+        for (int t = 0; t < 3; t++) begin
+            tail_data_q[t] <= tail_data_d[t];
+            tail_mask_q[t] <= tail_mask_d[t];
         end
     end
 end
 
-sew_t sew_to_out;
-logic [NUM_STAGES_LOG-1:0] stage_to_out;
+// Stage 0
+always_comb begin
+    ctrl_d[0].sew      = (is_vw(instr_type_i)) ? increase_sew_size(sew_i) : sew_i;
+    ctrl_d[0].op       = red_op(instr_type_i);
+    ctrl_d[0].data_vs1 = data_vs1_i[63:0];
+    for (int i = 1; i <= STAGE_SEW8; i++) begin
+        ctrl_d[i] = ctrl_q[i-1];
+    end
+    stage0_d.vw        = is_vw(instr_type_i);
+    stage0_d.vw_signed = (instr_type_i == VWREDSUM);
+    stage0_d.data      = data_vs2_i;
+    // Vector Mask Managment for LMUL<1 cases
+    for (int i = 0; i < (VLEN/8); i++) begin
+        if (i < vl_i) begin
+            stage0_d.mask[i] = data_vm_i[i];
+        end else begin
+            stage0_d.mask[i] = 1'b0;
+        end
+    end
+end
+
+// Element c*NUM_WORDS+w in lane c of double word w, mask replicated per byte.
+// Single-width: 64/SEW lanes in the low half, the high half inactive.
+// Widening (SEW is the result width): 128/SEW lanes of extended elements.
+logic [127:0] leaf_data [NUM_WORDS-1:0];
+logic [15:0]  leaf_mask [NUM_WORDS-1:0];
+
+always_comb begin
+    for (int w = 0; w < NUM_WORDS; w++) begin
+        leaf_data[w] = '0;
+        leaf_mask[w] = '0;
+        case (ctrl_q[0].sew)
+            SEW_8: begin // never widening
+                for (int c = 0; c < 8; c++) begin
+                    leaf_data[w][c*8 +: 8] = stage0_q.data[(c*NUM_WORDS + w)*8 +: 8];
+                    leaf_mask[w][c]        = stage0_q.mask[c*NUM_WORDS + w];
+                end
+            end
+            SEW_16: begin
+                if (stage0_q.vw) begin
+                    for (int c = 0; c < 8; c++) begin
+                        leaf_data[w][c*16 +: 16] = {{8{stage0_q.vw_signed & stage0_q.data[(c*NUM_WORDS + w)*8 + 7]}},
+                                                    stage0_q.data[(c*NUM_WORDS + w)*8 +: 8]};
+                        leaf_mask[w][c*2 +: 2]   = {2{stage0_q.mask[c*NUM_WORDS + w]}};
+                    end
+                end else begin
+                    for (int c = 0; c < 4; c++) begin
+                        leaf_data[w][c*16 +: 16] = stage0_q.data[(c*NUM_WORDS + w)*16 +: 16];
+                        leaf_mask[w][c*2 +: 2]   = {2{stage0_q.mask[c*NUM_WORDS + w]}};
+                    end
+                end
+            end
+            SEW_32: begin
+                if (stage0_q.vw) begin
+                    for (int c = 0; c < 4; c++) begin
+                        leaf_data[w][c*32 +: 32] = {{16{stage0_q.vw_signed & stage0_q.data[(c*NUM_WORDS + w)*16 + 15]}},
+                                                    stage0_q.data[(c*NUM_WORDS + w)*16 +: 16]};
+                        leaf_mask[w][c*4 +: 4]   = {4{stage0_q.mask[c*NUM_WORDS + w]}};
+                    end
+                end else begin
+                    for (int c = 0; c < 2; c++) begin
+                        leaf_data[w][c*32 +: 32] = stage0_q.data[(c*NUM_WORDS + w)*32 +: 32];
+                        leaf_mask[w][c*4 +: 4]   = {4{stage0_q.mask[c*NUM_WORDS + w]}};
+                    end
+                end
+            end
+            default: begin // SEW_64
+                if (stage0_q.vw) begin
+                    for (int c = 0; c < 2; c++) begin
+                        leaf_data[w][c*64 +: 64] = {{32{stage0_q.vw_signed & stage0_q.data[(c*NUM_WORDS + w)*32 + 31]}},
+                                                    stage0_q.data[(c*NUM_WORDS + w)*32 +: 32]};
+                        leaf_mask[w][c*8 +: 8]   = {8{stage0_q.mask[c*NUM_WORDS + w]}};
+                    end
+                end else begin
+                    leaf_data[w][63:0] = stage0_q.data[w*64 +: 64];
+                    leaf_mask[w][7:0]  = {8{stage0_q.mask[w]}};
+                end
+            end
+        endcase
+    end
+end
+
+// Lane stages: double word w combines w and w + NUM_WORDS/2^s of the previous stage
+for (genvar s = 1; s <= LANE_STAGES; s++) begin : g_lane
+    for (genvar w = 0; w < NUM_DW; w++) begin : g_dw
+        if (w < (NUM_WORDS >> s)) begin : g_alu
+            logic [127:0] a, b;
+            logic [15:0]  ma, mb;
+            if (s == 1) begin : g_leaf
+                assign a  = leaf_data[w];
+                assign b  = leaf_data[w + NUM_DW];
+                assign ma = leaf_mask[w];
+                assign mb = leaf_mask[w + NUM_DW];
+            end else begin : g_node
+                assign a  = lane_data_q[s-1][w];
+                assign b  = lane_data_q[s-1][w + (NUM_WORDS >> s)];
+                assign ma = lane_mask_q[s-1][w];
+                assign mb = lane_mask_q[s-1][w + (NUM_WORDS >> s)];
+            end
+            // The high 64 bits are only active for widening sums
+            vredtree_alu #(
+                .NB      (16),
+                .NB_FULL (8)
+            ) vredtree_alu_inst (
+                .sew_i   (ctrl_q[s-1].sew),
+                .op_i    (ctrl_q[s-1].op[2:0]),
+                .a_i     (a),
+                .b_i     (b),
+                .ma_i    (ma),
+                .mb_i    (mb),
+                .res_o   (lane_data_d[s][w]),
+                .mask_o  (lane_mask_d[s][w])
+            );
+        end else begin : g_unused
+            assign lane_data_d[s][w] = '0;
+            assign lane_mask_d[s][w] = '0;
+        end
+    end
+end
+
+// Last three stages: block j combines blocks 2j and 2j+1, keeping the low
+// 64, 32 and 16 bits. The input is zero-extended, so when an element is
+// wider than the stage its pair (an empty block) reads as inactive and the
+// element is passed through.
+for (genvar t = 0; t < 3; t++) begin : g_tail
+    localparam int NBO = 8 >> t;                // Bytes kept by this stage
+    logic [127:0]     tin;
+    logic [15:0]      tin_m;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [63:0]      ta, tb;                   // Only the low NBO bytes are used
+    logic [7:0]       tma, tmb;
+    /* verilator lint_on UNUSEDSIGNAL */
+    logic [NBO*8-1:0] tres;
+    logic [NBO-1:0]   tmask;
+
+    if (t == 0) begin : g_in_lane
+        assign tin   = lane_data_q[LANE_STAGES][0];
+        assign tin_m = lane_mask_q[LANE_STAGES][0];
+    end else begin : g_in_tail
+        assign tin   = {64'b0, tail_data_q[t-1]};
+        assign tin_m = {8'b0, tail_mask_q[t-1]};
+    end
+
+    always_comb begin
+        ta  = '0;
+        tb  = '0;
+        tma = '0;
+        tmb = '0;
+        case (ctrl_q[LANE_STAGES+t].sew)
+            SEW_8: begin
+                for (int j = 0; j < 8; j++) begin
+                    ta[j*8 +: 8] = tin[(2*j)*8 +: 8];
+                    tb[j*8 +: 8] = tin[(2*j+1)*8 +: 8];
+                    tma[j]       = tin_m[2*j];
+                    tmb[j]       = tin_m[2*j+1];
+                end
+            end
+            SEW_16: begin
+                for (int j = 0; j < 4; j++) begin
+                    ta[j*16 +: 16] = tin[(2*j)*16 +: 16];
+                    tb[j*16 +: 16] = tin[(2*j+1)*16 +: 16];
+                    tma[j*2 +: 2]  = {2{tin_m[(2*j)*2]}};
+                    tmb[j*2 +: 2]  = {2{tin_m[(2*j+1)*2]}};
+                end
+            end
+            SEW_32: begin
+                for (int j = 0; j < 2; j++) begin
+                    ta[j*32 +: 32] = tin[(2*j)*32 +: 32];
+                    tb[j*32 +: 32] = tin[(2*j+1)*32 +: 32];
+                    tma[j*4 +: 4]  = {4{tin_m[(2*j)*4]}};
+                    tmb[j*4 +: 4]  = {4{tin_m[(2*j+1)*4]}};
+                end
+            end
+            default: begin // SEW_64
+                ta  = tin[63:0];
+                tb  = tin[127:64];
+                tma = {8{tin_m[0]}};
+                tmb = {8{tin_m[8]}};
+            end
+        endcase
+    end
+
+    vredtree_alu #(
+        .NB      (NBO),
+        .NB_FULL (NBO)
+    ) vredtree_alu_inst (
+        .sew_i   (ctrl_q[LANE_STAGES+t].sew),
+        .op_i    (ctrl_q[LANE_STAGES+t].op[2:0]),
+        .a_i     (ta[NBO*8-1:0]),
+        .b_i     (tb[NBO*8-1:0]),
+        .ma_i    (tma[NBO-1:0]),
+        .mb_i    (tmb[NBO-1:0]),
+        .res_o   (tres),
+        .mask_o  (tmask)
+    );
+
+    assign tail_data_d[t] = 64'(tres);
+    assign tail_mask_d[t] = 8'(tmask);
+end
+
+sew_t        sew_to_out;
+logic [1:0]  out_sel;       // Stage read: STAGE_SEW8 - out_sel
+logic        out_m0;        // Block 0 has active elements
+red_op_t     out_op;
+logic [63:0] out_data;
+logic [63:0] out_vs1;
+logic [63:0] out_res;
+logic        out_zero;      // Not a reduction and block 0 active: the whole result is 0
 
 assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : sew_to_out_i;
 
@@ -561,158 +384,74 @@ assign sew_to_out = (is_vw(instr_to_out_i)) ? increase_sew_size(sew_to_out_i) : 
 // the reduction of SEW-wide elements is complete at stage log2(VLEN/SEW). For
 // widening reductions sew_to_out is the result SEW and the operands are half
 // as wide. This equals simd_exe_stages - 2 (see simd_unit).
-localparam int STAGE_SEW8 = $clog2(VLEN / 8);
-
 always_comb begin
     case (sew_to_out)
-        SEW_8:    stage_to_out = trunc_stage_to_out(STAGE_SEW8);
-        SEW_16:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8);
-                  end else begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 1);
-                  end
-        SEW_32:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 1);
-                  end else begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 2);
-                  end
-        SEW_64:   if (is_vw(instr_to_out_i)) begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 2);
-                  end else begin
-                     stage_to_out = trunc_stage_to_out(STAGE_SEW8 - 3);
-                  end
-        default:  stage_to_out = 'd0;
+        SEW_8:   out_sel = 2'd0;
+        SEW_16:  out_sel = (is_vw(instr_to_out_i)) ? 2'd0 : 2'd1;
+        SEW_32:  out_sel = (is_vw(instr_to_out_i)) ? 2'd1 : 2'd2;
+        SEW_64:  out_sel = (is_vw(instr_to_out_i)) ? 2'd2 : 2'd3;
+        default: out_sel = 2'd0;
     endcase
 end
+
+always_comb begin
+    case (out_sel)
+        2'd0: begin
+            out_m0   = tail_mask_q[2][0];
+            out_data = tail_data_q[2];
+            out_op   = ctrl_q[STAGE_SEW8].op;
+            out_vs1  = ctrl_q[STAGE_SEW8].data_vs1;
+        end
+        2'd1: begin
+            out_m0   = tail_mask_q[1][0];
+            out_data = tail_data_q[1];
+            out_op   = ctrl_q[STAGE_SEW8-1].op;
+            out_vs1  = ctrl_q[STAGE_SEW8-1].data_vs1;
+        end
+        2'd2: begin
+            out_m0   = tail_mask_q[0][0];
+            out_data = tail_data_q[0];
+            out_op   = ctrl_q[STAGE_SEW8-2].op;
+            out_vs1  = ctrl_q[STAGE_SEW8-2].data_vs1;
+        end
+        default: begin
+            out_m0   = lane_mask_q[LANE_STAGES][0][0];
+            out_data = lane_data_q[LANE_STAGES][0][63:0];
+            out_op   = ctrl_q[LANE_STAGES].op;
+            out_vs1  = ctrl_q[LANE_STAGES].data_vs1;
+        end
+    endcase
+end
+
+// Result element: op(block 0, vs1[0]), or vs1[0] when no element is active
+vredtree_alu #(
+    .NB      (8),
+    .NB_FULL (8)
+) vredtree_alu_out (
+    .sew_i   (sew_to_out),
+    .op_i    (out_op[2:0]),
+    .a_i     (out_data),
+    .b_i     (out_vs1),
+    .ma_i    ({8{out_m0}}),
+    .mb_i    (8'hFF),
+    .res_o   (out_res),
+    /* verilator lint_off PINCONNECTEMPTY */
+    .mask_o  ()
+    /* verilator lint_on PINCONNECTEMPTY */
+);
+
+assign out_zero = out_m0 && (out_op == RED_NONE);
 
 always_comb begin
     red_data_vd_o = '0;
-    case (sew_to_out)
-        SEW_8: begin
-            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            end else begin
-                case (gen_intermediate_q[stage_to_out].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 8] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[0 +: 8])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[0 +: 8])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-                    default: red_data_vd_o = '0;
-                endcase
-            end
-        end
-        SEW_16: begin
-            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-            end else begin
-                case (gen_intermediate_q[stage_to_out].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 16] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 16])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 16] : gen_intermediate_q[stage_to_out].intermediate[0 +: 16])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 16] : gen_intermediate_q[stage_to_out].intermediate[0 +: 16])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 16])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 16] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:16]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 16]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 16] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 16])};
-                    default: red_data_vd_o = '0;
-                endcase
-            end
-        end
-        SEW_32: begin
-            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-            end else begin
-                case (gen_intermediate_q[stage_to_out].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 32] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 32])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 32] : gen_intermediate_q[stage_to_out].intermediate[0 +: 32])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 32] : gen_intermediate_q[stage_to_out].intermediate[0 +: 32])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 32])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 32] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:32]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 32]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 32] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 32])};
-                    default: red_data_vd_o = '0;
-                endcase
-            end
-        end
-        SEW_64: begin
-            if (!gen_intermediate_q[stage_to_out].mask[0]) begin
-                red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-            end else begin
-                case (gen_intermediate_q[stage_to_out].instr_type)
-                    VREDSUM, VWREDSUM, VWREDSUMU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (gen_intermediate_q[stage_to_out].intermediate[0 +: 64] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 64])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 64] : gen_intermediate_q[stage_to_out].intermediate[0 +: 64])};
-                    VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 64] : gen_intermediate_q[stage_to_out].intermediate[0 +: 64])};
-                    VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[0 +: 64])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 64] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:64]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[0 +: 64]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])) ? gen_intermediate_q[stage_to_out].intermediate[0 +: 64] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 64])};
-                    default: red_data_vd_o = '0;
-                endcase
-            end
-        end
-    endcase
-end
-/*SEW_8: begin
-    if (!gen_intermediate_q[stage_to_out].mask[1] && !gen_intermediate_q[stage_to_out].mask[0]) begin
-        red_data_vd_o = {{data_old_vd[VLEN-1:8]}, gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]};
-    end else if (gen_intermediate_q[stage_to_out].mask[1] && !gen_intermediate_q[stage_to_out].mask[0]) begin
-        case (gen_intermediate_q[stage_to_out].instr_type)
-            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8])};
-            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8])};
-            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            default : red_data_vd_o = '0;
-        endcase
-    end else if (!gen_intermediate_q[stage_to_out].mask[1] && gen_intermediate_q[stage_to_out].mask[0]) begin
-        case (gen_intermediate_q[stage_to_out].instr_type)
-            VREDSUM:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[7:0] ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0])};
-            VREDMAXU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0])};
-            VREDMIN:  red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))   ? gen_intermediate_q[stage_to_out].intermediate[7:0] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDMINU: red_data_vd_o = {{data_old_vd[VLEN-1:8]}, (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            default: red_data_vd_o = '0;
-        endcase
-    end else begin
-        case (gen_intermediate_q[stage_to_out].instr_type)
-            VREDSUM:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
-                                                        + gen_intermediate_q[stage_to_out].intermediate[7:0] 
-                                                        + gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDAND:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
-                                                        & gen_intermediate_q[stage_to_out].intermediate[7:0] 
-                                                        & gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDOR:   red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
-                                                        | gen_intermediate_q[stage_to_out].intermediate[7:0] 
-                                                        | gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDXOR:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]}, (gen_intermediate_q[stage_to_out].intermediate[15:8] 
-                                                        ^ gen_intermediate_q[stage_to_out].intermediate[7:0] 
-                                                        ^ gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])};
-            VREDMAX:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
-                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])    < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0]) :
-                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8]))};
-            VREDMAXU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
-                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])  < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[7:0]) :
-                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].data_vs1[0 +: 8] : gen_intermediate_q[stage_to_out].intermediate[15:8]))};
-            VREDMIN:  red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
-                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[15:8])   < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]) :
-                                                                (($signed(gen_intermediate_q[stage_to_out].intermediate[7:0])    < $signed(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0]  : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))};
-            VREDMINU: red_data_vd_o =  {{data_old_vd[VLEN-1:8]},(($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])) ? 
-                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[15:8]) < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[15:8] : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]) :
-                                                                (($unsigned(gen_intermediate_q[stage_to_out].intermediate[7:0])  < $unsigned(gen_intermediate_q[stage_to_out].data_vs1[0 +: 8])) ? gen_intermediate_q[stage_to_out].intermediate[7:0]  : gen_intermediate_q[stage_to_out].data_vs1[0 +: 8]))};
-            default: red_data_vd_o = '0;
+    if (!out_zero) begin
+        case (sew_to_out)
+            SEW_8:  red_data_vd_o = {data_old_vd[VLEN-1:8],  out_res[7:0]};
+            SEW_16: red_data_vd_o = {data_old_vd[VLEN-1:16], out_res[15:0]};
+            SEW_32: red_data_vd_o = {data_old_vd[VLEN-1:32], out_res[31:0]};
+            SEW_64: red_data_vd_o = {data_old_vd[VLEN-1:64], out_res[63:0]};
         endcase
     end
-end*/
+end
+
 endmodule

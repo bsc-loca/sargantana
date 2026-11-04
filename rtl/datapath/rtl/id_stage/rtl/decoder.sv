@@ -2562,6 +2562,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_X_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2569,6 +2572,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_RTZ_X_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2576,6 +2582,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_RTZ_XU_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2583,6 +2592,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_XU_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2616,6 +2628,9 @@ module decoder
 
                                             end
                                             VS1_VFWCVT_F_X: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2623,6 +2638,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFWCVT_F_XU: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin

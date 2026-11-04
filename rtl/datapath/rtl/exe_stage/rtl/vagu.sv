@@ -548,7 +548,7 @@ always_comb begin
             if (misalign_xcpt_int && make_req) begin
                 vmem_ops_state_d = VL_MISALIGNED;
                 misaligned_addr_d = vaddr_q;
-                acum_velem_incr_d = 'h0;
+                acum_velem_incr_d = acum_velem_incr_q;
             end else begin
                 vaddr_d = trunc_64_sum(vaddr_q + vaddr_incr);
                 vmem_ops_state_d = ((velem_cnt_d >= vl_q) || flush_i) ? SCALAR : VL_STRIDED;
@@ -594,6 +594,8 @@ always_comb begin
                     misaligned_id_d = (misalign_xcpt_int) ? (velem_cnt_q << 3) : misaligned_id_q;
                 end
             endcase
+            // Masked-off elements are never accessed, so they cannot be misaligned
+            misalign_xcpt_int = misalign_xcpt_int & (!masked_op_q || mask_buffer[velem_cnt_q]);
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int;
             memp_instr_o.data_rs1 = vaddr_q;
             load_mask = (memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]))) ? 'h1 : 'h0;
@@ -608,7 +610,7 @@ always_comb begin
             vmem_ops_state_d = (misalign_xcpt_int && load_mask[0]) ? VS_MISALIGNED : ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VS_STRIDED;
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
-            acum_velem_incr_d = (memp_instr_o.instr.valid || misalign_xcpt_int) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
+            acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : (misalign_xcpt_int) ? acum_velem_incr_q : trunc_8_7(acum_velem_incr_q + velem_incr);
             misaligned_prev_state_d = VS_STRIDED;
         end
         VL_INDEXED: begin
@@ -665,6 +667,8 @@ always_comb begin
                     end
                 end
             endcase
+            // Masked-off elements are never accessed, so they cannot be misaligned
+            misalign_xcpt_int = misalign_xcpt_int & mask_buffer[velem_cnt_q];
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int && (((velem_cnt_q + 1'b1) >= vl_q) || (mask_buffer[velem_cnt_q]));
             load_mask = {63'd0, mask_buffer[velem_cnt_q]};
             if (misalign_xcpt_int && load_mask[0]) begin
@@ -678,7 +682,7 @@ always_comb begin
             load_mask = {63'd0, mask_buffer[velem_cnt_q]};
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
-            acum_velem_incr_d = (memp_instr_o.instr.valid || misalign_xcpt_int) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
+            acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : (misalign_xcpt_int) ? acum_velem_incr_q : trunc_8_7(acum_velem_incr_q + velem_incr);
             misaligned_prev_state_d = VL_INDEXED;
         end
         VS_INDEXED: begin
@@ -743,6 +747,8 @@ always_comb begin
                     end
                 end
             endcase
+            // Masked-off elements are never accessed, so they cannot be misaligned
+            misalign_xcpt_int = misalign_xcpt_int & (!masked_op_q || mask_buffer[velem_cnt_q]);
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i && ~misalign_xcpt_int;
             load_mask = (memp_instr_q.instr.valid && ~flush_i && ~stall_i && (!masked_op_q || (mask_buffer[velem_cnt_q]))) ? 'h1 : 'h0;
             if (misalign_xcpt_int && load_mask[0]) begin
@@ -756,7 +762,7 @@ always_comb begin
             vmem_ops_state_d = (misalign_xcpt_int && load_mask[0]) ? VS_MISALIGNED : ((velem_cnt_d == vl_q) || flush_i) ? SCALAR : VS_INDEXED;
             req_tag_d = (memp_instr_o.instr.valid) ? trunc_5_4(req_tag_q + 1'b1) : req_tag_q;
             end_int = (vmem_ops_state_d == SCALAR) ? 1'b1 : 1'b0;
-            acum_velem_incr_d = (memp_instr_o.instr.valid || misalign_xcpt_int) ? 'h0 : trunc_8_7(acum_velem_incr_q + velem_incr);
+            acum_velem_incr_d = (memp_instr_o.instr.valid) ? 'h0 : (misalign_xcpt_int) ? acum_velem_incr_q : trunc_8_7(acum_velem_incr_q + velem_incr);
             misaligned_prev_state_d = VS_INDEXED;
         end
         VL_MISALIGNED: begin
@@ -770,13 +776,17 @@ always_comb begin
             load_mask = 'h1;
             misaligned_counter_d = trunc_5_4(misaligned_counter_q + 1'b1);
             misaligned_id_d = misaligned_id_q + 1'b1;
-            velem_incr = (vmem_ops_state_d != VL_MISALIGNED) ? 1'b1 : 1'b0;
+            // Last byte completes the element and any skipped elements before it
+            velem_incr = (vmem_ops_state_d != VL_MISALIGNED) ? trunc_8_7(acum_velem_incr_q + 1'b1) : 'h0;
+            acum_velem_incr_d = (vmem_ops_state_d != VL_MISALIGNED) ? 'h0 : acum_velem_incr_q;
         end
         VS_MISALIGNED: begin
+            // VSXE/VSSE are not store operations for the dcache, only their element requests are
+            memp_instr_o.instr.instr_type = SB;
             memp_instr_o.instr.mem_size = 4'b0000;
             memp_instr_o.sew = SEW_8;
             memp_instr_o.data_rs1 = trunc_64_sum(misaligned_addr_q + misaligned_counter_q);
-            memp_instr_o.data_rs2 = misaligned_data_q >> misaligned_counter_q;
+            memp_instr_o.data_rs2 = misaligned_data_q >> ({3'b0, misaligned_counter_q} << 3);
             memp_instr_o.instr.valid = memp_instr_q.instr.valid && ~flush_i && ~stall_i;
             vmem_ops_state_d = ((trunc_5_4(misaligned_counter_q + 1'b1) == misaligned_vl_q) || flush_i) ? (((velem_cnt_d == vl_q) || flush_i) ? SCALAR : misaligned_prev_state_q) : VS_MISALIGNED;
             end_int = (vmem_ops_state_d != VS_MISALIGNED) ? 1'b1 : 1'b0;
@@ -784,7 +794,9 @@ always_comb begin
             load_mask = 'h1;
             misaligned_counter_d = trunc_5_4(misaligned_counter_q + 1'b1);
             misaligned_id_d = misaligned_id_q + 1'b1;
-            velem_incr = (vmem_ops_state_d != VL_MISALIGNED) ? 1'b1 : 1'b0;
+            // Last byte completes the element and any skipped elements before it
+            velem_incr = (vmem_ops_state_d != VS_MISALIGNED) ? trunc_8_7(acum_velem_incr_q + 1'b1) : 'h0;
+            acum_velem_incr_d = (vmem_ops_state_d != VS_MISALIGNED) ? 'h0 : acum_velem_incr_q;
         end
         default: begin //SCALAR
             // For scalar instructions, calculate the address and let them pass through
@@ -876,6 +888,12 @@ always_comb begin
         VL_MISALIGNED, VS_MISALIGNED: begin
             memp_instr_o.velem_incr = velem_incr[DCACHE_RESP_DATA_LOG-3:0];
             memp_instr_o.velem_id = misaligned_id_q;
+            case (misaligned_vl_q)
+                4'd2: memp_instr_o.velem_sew = SEW_16;
+                4'd4: memp_instr_o.velem_sew = SEW_32;
+                4'd8: memp_instr_o.velem_sew = SEW_64;
+                default: memp_instr_o.velem_sew = SEW_8;
+            endcase
         end
         default: begin
             memp_instr_o.velem_incr = trunc_max_velem_log_sum(acum_velem_incr_q[MAX_VELEM_LOG:0] + velem_incr[DCACHE_RESP_DATA_LOG-3:0]);

@@ -134,7 +134,8 @@ begin
             instruction_table[tail].ex                  <= instruction_i.ex;
             instruction_table[tail].gl_index            <= instruction_i.gl_index;               
             instruction_table[tail].agu_req_tag         <= instruction_i.agu_req_tag;
-            instruction_table[tail].vmisalign_xcpt      <= instruction_i.vmisalign_xcpt;              
+            instruction_table[tail].vmisalign_xcpt      <= instruction_i.vmisalign_xcpt;
+            instruction_table[tail].velem_sew           <= instruction_i.velem_sew;
             instruction_table[tail].velem_id            <= instruction_i.velem_id;  
             instruction_table[tail].load_mask           <= instruction_i.load_mask;     
             instruction_table[tail].velem_off           <= instruction_i.velem_off; 

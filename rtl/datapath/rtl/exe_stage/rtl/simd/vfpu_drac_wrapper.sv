@@ -974,8 +974,13 @@ always_comb begin
             vector_operation = fpnew_pkg::operation_e'(fpnew_pkg::I2F);
             vector_operation_modifier = 1'b1;
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP32);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+            if (sew == SEW_16) begin
+                vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFWCVT_F_X: begin
             vector_operands[0] = data_vs2;
@@ -984,8 +989,13 @@ always_comb begin
             vector_operation = fpnew_pkg::operation_e'(fpnew_pkg::I2F);
             vector_operation_modifier = 1'b0;
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP32);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+            if (sew == SEW_16) begin
+                vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_dst_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFWCVT_F_F: begin
             vector_operands[0] = data_vs2;
@@ -1004,8 +1014,13 @@ always_comb begin
             vector_operation = fpnew_pkg::operation_e'(fpnew_pkg::F2I);
             vector_operation_modifier = 1'b1;
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+            if (sew == SEW_16) begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFNCVT_X_F: begin
             vector_operands[0] = data_vs2;
@@ -1014,8 +1029,13 @@ always_comb begin
             vector_operation = fpnew_pkg::operation_e'(fpnew_pkg::F2I);
             vector_operation_modifier = 1'b0;
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+            if (sew == SEW_16) begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFNCVT_RTZ_XU_F: begin
             vector_operands[0] = data_vs2;
@@ -1027,8 +1047,13 @@ always_comb begin
             frm = riscv_pkg::FRM_RTZ;
             int_fmt = fpnew_pkg::int_format_e'(INT64);
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+            if (sew == SEW_16) begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFNCVT_RTZ_X_F: begin
             vector_operands[0] = data_vs2;
@@ -1040,8 +1065,13 @@ always_comb begin
             frm = riscv_pkg::FRM_RTZ;
             int_fmt = fpnew_pkg::int_format_e'(INT64);
 
-            vector_src_format = fpnew_pkg::fp_format_e'(FP64);
-            vector_dst_format = fpnew_pkg::fp_format_e'(FP32);
+            if (sew == SEW_16) begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP32);
+                int_fmt = fpnew_pkg::int_format_e'(INT16);
+            end else begin
+                vector_src_format = fpnew_pkg::fp_format_e'(FP64);
+                int_fmt = fpnew_pkg::int_format_e'(INT32);
+            end
         end
         VFNCVT_F_XU: begin
             vector_operands[0] = data_vs2;

@@ -1009,7 +1009,6 @@ vredtree vredtree_inst(
     .data_old_vd   (instruction_i.data_old_vd),
     .data_vm_i     (instruction_i.data_vm),
     .instr_to_out_i(instr_to_out.instr.instr_type),
-    .vl_to_out_i   (instr_to_out.instr.vl),
     .sew_to_out_i  (instr_to_out.instr.sew),
     .red_data_vd_o (red_data_vd)
 );
