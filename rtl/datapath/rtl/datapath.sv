@@ -38,9 +38,15 @@ module datapath
     input logic [2:0]       csr_frm_i, 
     input logic [1:0]       csr_fs_i,  
     input logic [1:0]       csr_vs_i,
+    input logic [15:0]      csr_satp_asid_i,
+    input logic [15:0]      csr_vsatp_asid_i,
+    input logic [13:0]      csr_hgatp_vmid_i,
     input logic [3:0]       csr_m_cmo_i,
     input logic [3:0]       csr_s_cmo_i,
     input logic [3:0]       csr_h_cmo_i,
+    input logic [1:0]       csr_s_pmm_i,
+    input logic [1:0]       csr_h_pmm_i,
+    input logic [1:0]       csr_hstatus_hupmm_i,
     input logic             en_translation_i,
     input logic             en_g_translation_i,
     input logic             en_ld_st_translation_i,
@@ -94,6 +100,8 @@ endfunction
     pipeline_ctrl_t control_int;
     pipeline_flush_t flush_int;
     cu_if_t cu_if_int;
+    if1_cu_t if1_cu_int;
+    if2_cu_t if2_cu_int;
     addrPC_t pc_jump_if_int;
     addrPC_t pc_evec_q;
     addrPC_t pc_next_csr_q;
@@ -332,6 +340,7 @@ endfunction
     reg_t   [drac_pkg::NUM_FP_WB-1:0] fp_write_vaddr;
 
     logic is_vsetvl_to_commit;
+    logic is_vleff_trimmed_to_commit;
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// IO ADDRESS SPACE                                                                             /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,7 +363,9 @@ endfunction
         .rstn_i(rstn_i),
         .miss_icache_i(miss_icache),
         .ready_icache_i(req_icache_ready_i),
-        .if2_cu_valid_i(stage_if_1_if_2_q.valid),
+        //.if2_cu_valid_i(),
+        .if1_cu_i(if1_cu_int),
+        .if2_cu_i(if2_cu_int),
         .id_cu_i(id_cu_int),
         .ir_cu_i(ir_cu_int),
         .cu_ir_o(cu_ir_int),
@@ -397,15 +408,14 @@ endfunction
             pc_jump_if_int = jal_id_if_int.jump_addr;
         end else begin
             pc_jump_if_int = 64'h0;
-            `ifdef ASSERTIONS
-                assert (1 == 0);
-            `endif
         end
     end
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// FETCH                  STAGE                                                                 /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    addrPC_t next_pc_from_f2;
 
     // IF Stage
     if_stage_1 #(
@@ -425,6 +435,8 @@ endfunction
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .pc_jump_i(pc_jump_if_int),
         .retry_fetch_i(retry_fetch),
+        .f2_valid_i(stage_if_2_id_d.valid),
+        .pc_from_f2_i(next_pc_from_f2),
         .req_cpu_icache_o(req_cpu_icache_o),
         .fetch_o(stage_if_1_if_2_d),
         `ifdef SIM_KONATA_DUMP
@@ -433,15 +445,33 @@ endfunction
         .exe_if_branch_pred_i(exe_if_branch_pred_int)
     );
 
+    assign if1_cu_int.branch_pred = stage_if_1_if_2_d.bpred.is_branch && (stage_if_1_if_2_d.bpred.decision == PRED_TAKEN);
+
+    // IF1 redirects fetch to a taken prediction only when the control unit selects
+    // NEXT_PC_SEL_BP_OR_PC_ADD. In other cycles (NEXT_PC_SEL_KEEP_PC for the second compressed
+    // instruction of the fetched word, a jump) fetch does not go to the predicted address, so the
+    // instruction entering IF2 must not be marked as predicted taken: decode and execute trust the
+    // mark and do not redirect, and a compressed jump or taken branch right after another compressed
+    // instruction in the same word was not taken at all (c.addi; c.jr ra: the return fell through).
+    // Gated here, at the register input, because the control unit itself reads IF1's prediction.
+    if_1_if_2_stage_t stage_if_1_if_2_reg_in;
+    always_comb begin
+        stage_if_1_if_2_reg_in = stage_if_1_if_2_d;
+        if (cu_if_int.next_pc != NEXT_PC_SEL_BP_OR_PC_ADD)
+            stage_if_1_if_2_reg_in.bpred.decision = PRED_NOT_TAKEN;
+    end
+
     // Register IF1 to IF2
     register #($bits(if_1_if_2_stage_t)) reg_if_1_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_if),
         .load_i(!control_int.stall_if_2),
-        .input_i(stage_if_1_if_2_d),
+        .input_i(stage_if_1_if_2_reg_in),
         .output_o(stage_if_1_if_2_q)
     );
+
+    logic if2_keep_fetch;
 
     if_stage_2 if_stage_2_inst(
         .clk_i(clk_i),
@@ -454,9 +484,14 @@ endfunction
         .flush_i(flush_int.flush_if),
         .resp_icache_cpu_i(resp_icache_cpu_i),
         .fetch_o(stage_if_2_id_d),
-        .stall_o(miss_icache)
+        .next_pc_o(next_pc_from_f2),
+        .stall_o(miss_icache),
+        .keep_fetch_o(if2_keep_fetch)
     );
 
+    assign if2_cu_int.keep_fetch = if2_keep_fetch & (!if1_cu_int.branch_pred) & !(stage_if_2_id_d.bpred.is_branch && (stage_if_2_id_d.bpred.decision == PRED_TAKEN));
+    assign if2_cu_int.valid_fetch = stage_if_1_if_2_q.valid;
+    assign if2_cu_int.valid_fetch_2 = stage_if_2_id_d.valid;
     // Register IF to ID
     register #($bits(if_id_stage_t)) reg_if_2_inst(
         .clk_i(clk_i),
@@ -472,13 +507,26 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     logic full_vset_queue_int, exception_enable;
     logic [VMAXELEM_LOG:0] vl_id_exe;
+
+    if_id_stage_t predecoded_data;
+
+    logic is_compressed;
+
+    predecoder predecoder_inst(
+        .fetched_i(stage_if_2_id_q),
+        .predecoded_o(predecoded_data),
+        .is_compressed_o(is_compressed)
+    );
+
     // ID Stage
     decoder id_decode_inst(
         .clk_i          (clk_i),
         .rstn_i         (rstn_i),
         .stall_i        (control_int.stall_id),
         .flush_i        (flush_int.flush_id),
-        .decode_i       (stage_if_2_id_q),
+        .from_f2_i      (stage_if_2_id_q),
+        .decode_i       (predecoded_data),
+        .is_compressed_i(is_compressed),
         .priv_lvl_i     (csr_priv_lvl_i),
         .v_mode_i       (csr_v_mode_i),
         .frm_i          (csr_frm_i),
@@ -496,6 +544,8 @@ endfunction
         .recover_commit_exception_i (exception_enable),
         .recover_last_misspredict_i(~correct_branch_pred_wb),
         .vset_index_misspredict_i(vset_index_int_wb),
+        .vleff_update_i (is_vleff_trimmed_to_commit),
+        .vleff_vl_i     (vleff_vl_int),
         .debug_mode_en_i(debug_contr_o.halted),
         .decode_instr_o (decoded_instr),
         .jal_id_if_o    (jal_id_if_int),
@@ -535,6 +585,8 @@ endfunction
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 assign free_list_read_src1_int = (debug_reg_i.rnm_read_en && debug_contr_o.parked)  ? debug_reg_i.rnm_read_reg : stage_iq_ir_q.instr.rs1;
@@ -616,10 +668,11 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .new_register_o         (simd_free_register_to_rename),
         .checkpoint_o           (simd_checkpoint_free_list),
         .out_of_checkpoints_o   (simd_out_of_checkpoints_free_list),
-        .empty_o                (simd_free_list_empty) // TODO not connected
+        .empty_o                (simd_free_list_empty)
     );
     `else
     assign simd_free_register_to_rename = 'h0;
+    assign simd_free_list_empty = 1'b0;
     `endif
 
     free_list #(
@@ -640,7 +693,7 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .new_register_o         (fp_free_register_to_rename),
         .checkpoint_o           (fp_checkpoint_free_list),
         .out_of_checkpoints_o   (fp_out_of_checkpoints_free_list),
-        .empty_o                (fp_free_list_empty) // TODO not connected
+        .empty_o                (fp_free_list_empty)
     );
 
     // Rename Table
@@ -756,18 +809,22 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     );
     
     // Check two structures output the same
-    /*always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
+    `ifdef ASSERTIONS
+    always @(posedge clk_i) assert (out_of_checkpoints_rename == out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (checkpoint_rename == checkpoint_free_list);
     always @(posedge clk_i) assert (simd_out_of_checkpoints_rename == simd_out_of_checkpoints_free_list);
     always @(posedge clk_i) assert (simd_checkpoint_rename == simd_checkpoint_free_list);
     always @(posedge clk_i) assert (fp_out_of_checkpoints_rename == fp_out_of_checkpoints_free_list);
-    always @(posedge clk_i) assert (fp_checkpoint_rename == fp_checkpoint_free_list); */
+    always @(posedge clk_i) assert (fp_checkpoint_rename == fp_checkpoint_free_list);
+    `endif
 
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 
     // Signals for Control Unit
     assign ir_cu_int.valid                   = stage_iq_ir_q.instr.valid;
     assign ir_cu_int.empty_free_list         = free_list_empty;
+    assign ir_cu_int.simd_empty_free_list    = simd_free_list_empty;
+    assign ir_cu_int.fp_empty_free_list      = fp_free_list_empty;
     assign ir_cu_int.out_of_checkpoints      = out_of_checkpoints_rename;
     assign ir_cu_int.simd_out_of_checkpoints = simd_out_of_checkpoints_rename;
     assign ir_cu_int.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
@@ -914,26 +971,33 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
     assign instruction_decode_gl.ex_valid = stage_ir_rr_q.ex.valid | resp_csr_cpu_i.csr_interrupt;
     assign ex_gl_in_int = (!stage_ir_rr_q.ex.valid && resp_csr_cpu_i.csr_interrupt) ? interrupt_ex : stage_ir_rr_q.ex ;
 
-    assign is_csr_int =((stage_ir_rr_q.instr.instr_type == ECALL)      ||
-                        (stage_ir_rr_q.instr.instr_type == SRET)       ||
-                        (stage_ir_rr_q.instr.instr_type == MRET)       ||
-                        (stage_ir_rr_q.instr.instr_type == URET)       ||
-                        (stage_ir_rr_q.instr.instr_type == WFI)        ||
-                        (stage_ir_rr_q.instr.instr_type == EBREAK)     ||
-                        (stage_ir_rr_q.instr.instr_type == FENCE)      ||
-                        (stage_ir_rr_q.instr.instr_type == SFENCE_VMA) ||
-                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA) ||
-                        (stage_ir_rr_q.instr.instr_type == FENCE_I)    ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRW)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRS)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRC)      ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRWI)     ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRSI)     ||
-                        (stage_ir_rr_q.instr.instr_type == CSRRCI)     ||
-                        (stage_ir_rr_q.instr.instr_type == VSETVL)     ||
-                        (stage_ir_rr_q.instr.instr_type == VSETVLI)    ||
-                        (stage_ir_rr_q.instr.instr_type == VSETIVLI)   );
+    assign is_csr_int =((stage_ir_rr_q.instr.instr_type == ECALL)          ||
+                        (stage_ir_rr_q.instr.instr_type == SRET)           ||
+                        (stage_ir_rr_q.instr.instr_type == MRET)           ||
+                        (stage_ir_rr_q.instr.instr_type == URET)           ||
+                        (stage_ir_rr_q.instr.instr_type == WFI)            ||
+                        (stage_ir_rr_q.instr.instr_type == WRS_NTO)        ||
+                        (stage_ir_rr_q.instr.instr_type == WRS_STO)        ||
+                        (stage_ir_rr_q.instr.instr_type == EBREAK)         ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE)          ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_VMA)     ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_VVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == HFENCE_GVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == SINVAL_VMA)     ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_W_INVAL) ||
+                        (stage_ir_rr_q.instr.instr_type == SFENCE_INVAL_IR)||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_VVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == HINVAL_GVMA)    ||
+                        (stage_ir_rr_q.instr.instr_type == FENCE_I)        ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRW)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRS)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRC)          ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRWI)         ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRSI)         ||
+                        (stage_ir_rr_q.instr.instr_type == CSRRCI)         ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVL)         ||
+                        (stage_ir_rr_q.instr.instr_type == VSETVLI)        ||
+                        (stage_ir_rr_q.instr.instr_type == VSETIVLI)       );
     assign csr_addr_int = stage_ir_rr_q.instr.imm[CSR_ADDR_SIZE-1:0];
     assign gl_is_vector_vl_0 = ((((stage_ir_rr_q.instr.unit == UNIT_SIMD) && (stage_ir_rr_q.instr.vregfile_we == 1'b0) &&
                                 (stage_ir_rr_q.instr.regfile_we == 1'b0) && (stage_ir_rr_q.instr.fregfile_we == 1'b0)) || 
@@ -1074,6 +1138,14 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
 
     assign stage_rr_exe_d.data_vm = stage_ir_rr_q.instr.use_mask ? rr_vmask_reg[VMAXELEM-1:0] : '1;
 
+    `else
+    // No vector register file: drive the vector operands. data_vm is the element mask applied by the
+    // mem_unit to every load result, including scalar ones; left undriven (0), every scalar load
+    // returned data_old_vd (also undriven, 0) instead of the loaded value.
+    assign stage_rr_exe_d.data_vm     = '1;
+    assign stage_rr_exe_d.data_old_vd = '0;
+    assign stage_rr_exe_d.data_vs1    = '0;
+    assign stage_rr_exe_d.data_vs2    = '0;
     `endif
 
     // Decide from which Regfile to Read FP
@@ -1268,6 +1340,12 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
         .v_mode_i(csr_v_mode_i),
         .ld_st_priv_lvl_i(csr_ld_st_priv_lvl_i),
         .ld_st_v_mode_i(csr_ld_st_v_mode_i),
+        .csr_satp_asid_i(csr_satp_asid_i),
+        .csr_vsatp_asid_i(csr_vsatp_asid_i),
+        .csr_hgatp_vmid_i(csr_hgatp_vmid_i),
+        .csr_s_pmm_i(csr_s_pmm_i),
+        .csr_h_pmm_i(csr_h_pmm_i),
+        .csr_hstatus_hupmm_i(csr_hstatus_hupmm_i),
 
         `ifdef SIM_COMMIT_LOG
         .store_addr_o(store_addr),
@@ -1582,16 +1660,18 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                         (instruction_to_commit[0].instr_type == EBREAK) );
 
     // tell cu that there is a fence or fence_i
-    assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                  (instruction_to_commit[0].instr_type == FENCE)     || 
-                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
-                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA));
+    assign commit_cu_int.fence = ((instruction_to_commit[0].instr_type == FENCE_I)   ||
+                                  (instruction_to_commit[0].instr_type == FENCE)     ||
+                                  (instruction_to_commit[0].instr_type == SFENCE_VMA)||
+                                  (instruction_to_commit[0].instr_type == HFENCE_VVMA)||
+                                  (instruction_to_commit[0].instr_type == HFENCE_GVMA)||
+                                  (instruction_to_commit[0].instr_type == SFENCE_W_INVAL));
     // tell cu there is a fence i to flush the icache
-    assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   || 
-                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)|| 
-                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)|| 
-                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA));
+    assign commit_cu_int.fence_i = ((instruction_to_commit[0].instr_type == FENCE_I)   ||
+                                    (instruction_to_commit[0].instr_type == SFENCE_VMA)||
+                                    (instruction_to_commit[0].instr_type == HFENCE_VVMA)||
+                                    (instruction_to_commit[0].instr_type == HFENCE_GVMA)||
+                                    (instruction_to_commit[0].instr_type == SFENCE_INVAL_IR));
 
     // tell cu that commit needs to write there is a fence
     assign commit_cu_int.write_enable = instruction_to_commit[0].valid &
@@ -1603,6 +1683,8 @@ assign debug_reg_o.rnm_read_resp = stage_no_stall_rr_q.prs1;
                                          (instruction_to_commit[0].instr_type == CSRRCI));
 
     // tell cu that commit needs to write there is a fence
+    assign is_vleff_trimmed_to_commit = retire_inst_gl[0] & (instruction_to_commit[0].instr_type == VLEFF) & (vleff_vl_int != 'h0);
+
     assign is_vsetvl_to_commit = retire_inst_gl[0] & ((instruction_to_commit[0].instr_type == VSETVL)  ||
                                          (instruction_to_commit[0].instr_type == VSETVLI) ||
                                          (instruction_to_commit[0].instr_type == VSETIVLI));                                       

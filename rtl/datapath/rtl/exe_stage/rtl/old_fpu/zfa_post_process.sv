@@ -39,8 +39,14 @@ import fpnew_pkg::*;
     logic [31:0] abs_result_i_32;
     logic [63:0] abs_result_i_64;
 
-    assign abs_result_i_32 = result_i[31] ? (~result_i[31:0] + 1'b1) : result_i[31:0];
-    assign abs_result_i_64 = result_i[63] ? (~result_i[63:0] + 1'b1) : result_i[63:0];
+    logic [32:0] abs_result_ext_32;
+    logic [64:0] abs_result_ext_64;
+
+    assign abs_result_ext_32 = result_i[31] ? (~result_i[31:0] + 32'h1) : result_i[31:0];
+    assign abs_result_ext_64 = result_i[63] ? (~result_i[63:0] + 64'h1) : result_i[63:0];
+
+    assign abs_result_i_32 = abs_result_ext_32[31:0];
+    assign abs_result_i_64 = abs_result_ext_64[63:0];
 
     // Pass through by default
     fpnew_int2fp # (
@@ -76,7 +82,7 @@ import fpnew_pkg::*;
         // FMINM/FMAXM - return canonical NaN if EITHER operand is NaN
         if (instruction_i.instr.instr_type == FMINM_MAXM) begin
             if (instruction_i.instr.fmt == FP32) begin
-                if (is_nan_f32(instruction_i.data_rs1[31:0]) || is_nan_f32(instruction_i.data_rs2[31:0])) begin
+                if (is_nan_arch_f32(instruction_i.data_rs1) || is_nan_arch_f32(instruction_i.data_rs2)) begin
                     result_o = 64'hFFFFFFFF_7FC00000;
                 end
             end else begin // FP64
@@ -88,11 +94,13 @@ import fpnew_pkg::*;
         // FLEQ/FLTQ
         end else if (instruction_i.instr.instr_type == FLEQ_FLTQ) begin
             if (instruction_i.instr.fmt == FP32) begin
-                if (is_nan_f32(instruction_i.data_rs1[31:0]) || is_nan_f32(instruction_i.data_rs2[31:0])) begin
+                if ((is_qnan_arch_f32(instruction_i.data_rs1) || is_qnan_arch_f32(instruction_i.data_rs2)) &&
+                    (!is_snan_arch_f32(instruction_i.data_rs1) && !is_snan_arch_f32(instruction_i.data_rs2))) begin
                     status_o.NV = 1'b0;
                 end
             end else begin // FP64
-                if (is_nan_f64(instruction_i.data_rs1) || is_nan_f64(instruction_i.data_rs2)) begin
+                if ((is_qnan_f64(instruction_i.data_rs1) || is_qnan_f64(instruction_i.data_rs2)) &&
+                    (!is_snan_f64(instruction_i.data_rs1) && !is_snan_f64(instruction_i.data_rs2))) begin
                     status_o.NV = 1'b0;
                 end
             end
@@ -100,7 +108,11 @@ import fpnew_pkg::*;
         // FROUND/FROUNDNX
         end else if ((instruction_i.instr.instr_type == FROUND) || (instruction_i.instr.instr_type == FROUNDNX)) begin
             if (instruction_i.instr.fmt == FP32) begin
-                if (is_inf_f32(instruction_i.data_rs1[31:0])) begin
+                if (!is_boxed_f32(instruction_i.data_rs1)) begin
+                    result_o = {{32{1'b1}}, FP32_QNAN};
+                    status_o.NX = 1'b0;
+                    status_o.NV = 1'b0;
+                end else if (is_inf_f32(instruction_i.data_rs1[31:0])) begin
                     result_o = {{32{1'b1}}, instruction_i.data_rs1[31:0]};
                     status_o.NX = 1'b0;
                     status_o.NV = 1'b0;

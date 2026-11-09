@@ -1,9 +1,22 @@
-// (c) FER, 2019
-// contact: mario.kovac@fer.hr
-// All rights reserved
-// No part of this code can be used/copied/extended/modified or used in any other way for commercial or non-commercial use without prior written agreement with FER
-// Access to this source or any derivation of it should be given only to persons explicitly approved and under NDA/Confidentiality Agreement
-
+/*
+ * Copyright 2025 BSC*
+ * *Barcelona Supercomputing Center (BSC)
+ * 
+ * SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+ * 
+ * Licensed under the Solderpad Hardware License v 2.1 (the “License”); you
+ * may not use this file except in compliance with the License, or, at your
+ * option, the Apache License version 2.0. You may obtain a copy of the
+ * License at
+ * 
+ * https://solderpad.org/licenses/SHL-2.1/
+ * 
+ * Unless required by applicable law or agreed to in writing, any work
+ * distributed under the License is distributed on an “AS IS” BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 
 module fpu_drac_wrapper
 import drac_pkg::*;
@@ -461,7 +474,7 @@ assign instruction_scalar_o.id              = finish_fp_op_int.instr.id;
 `endif
 assign instruction_scalar_o.branch_taken    = 1'b0;
 assign instruction_scalar_o.result_pc       = 0;
-assign instruction_scalar_o.fp_status       = finish_fp_status_int;
+assign instruction_scalar_o.fp_status       = zfa_post_status;
 assign instruction_scalar_o.ex              = '0;
 assign instruction_scalar_o.mem_type        = NOT_MEM;
 

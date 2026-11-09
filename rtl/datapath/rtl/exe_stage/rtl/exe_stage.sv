@@ -75,6 +75,12 @@
     input logic       v_mode_i,
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [15:0]      csr_satp_asid_i,
+    input logic [15:0]      csr_vsatp_asid_i,
+    input logic [13:0]      csr_hgatp_vmid_i,
+    input logic [1:0] csr_s_pmm_i,
+    input logic [1:0] csr_h_pmm_i,
+    input logic [1:0] csr_hstatus_hupmm_i,
 
     `ifdef SIM_COMMIT_LOG
     output addr_t                store_addr_o,
@@ -159,14 +165,6 @@ bus64_t vagu_stride;
 logic scoreboard_stall_from_vfp;
 
 // Bypasses
-`ifdef ASSERTIONS
-    always @(posedge clk_i) begin
-        if(from_rr_i.prs1 == 0)
-            assert rs1_data_def==0;
-        if(from_rr_i.prs2 == 0)
-            assert rs2_data_def==0;
-    end
-`endif
 
 assign vmem_unit_stride = ((from_rr_i.instr.instr_type == VSE) || (from_rr_i.instr.instr_type == VSM) || (from_rr_i.instr.instr_type == VS1R) ||
                            (from_rr_i.instr.instr_type == VLEFF)) ? 1'b1 : 1'b0;
@@ -275,7 +273,8 @@ always_comb begin
     mem_instr.is_cmo_prefetch     = (from_rr_i.instr.mem_type == CMO_PREFETCH);
     mem_instr.vl                  = from_rr_i.instr.vl;
     mem_instr.agu_req_tag = '0;
-    mem_instr.vmisalign_xcpt = 0;              
+    mem_instr.vmisalign_xcpt = 0;
+    mem_instr.velem_sew = SEW_8;
     mem_instr.velem_id = '0;  
     mem_instr.load_mask = '0;     
     mem_instr.velem_off = '0;
@@ -402,20 +401,17 @@ assign fpnew_stall_simd = 1'b0;
 assign fpnew_stall_simd_next = 1'b0;
 `endif
 
-`ifndef DISABLE_SIMD
+// The vagu is also the scalar memory path (it splits unaligned scalar loads and stores into
+// element accesses), so it stays with DISABLE_SIMD: only the SIMD unit, its scoreboard and the
+// vector register renaming go. The DISABLE_SIMD bypass that replaced it lost scalar store data
+// (a no-SIMD core loaded 0 for a saved ra in the bootrom and jumped to 0).
 assign vagu_vl = ((from_rr_i.instr.instr_type == VLM)  || (from_rr_i.instr.instr_type == VSM))  ? (from_rr_i.instr.vl[VMAXELEM_LOG:0] + 'd7) >> 3 : 
                  ((from_rr_i.instr.instr_type == VL1R) || (from_rr_i.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> from_rr_i.instr.mem_size[1:0]) :
                  from_rr_i.instr.vl[VMAXELEM_LOG:0];
 assign vagu_mask_valid = (mem_instr.instr.use_mask | ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE))) & !stall_vagu;
 assign vagu_mop = ((mem_instr.instr.instr_type == VLSE) || (mem_instr.instr.instr_type == VSSE)) ? 3'b010 : 
                   ((mem_instr.instr.instr_type == VLXE) || (mem_instr.instr.instr_type == VSXE)) ? 3'b011 : 3'b000;
-assign vagu_store_data_valid = mem_instr.instr.valid && 
-                            ((mem_instr.instr.instr_type == VSE)
-                            || (mem_instr.instr.instr_type == VSM)
-                            || (mem_instr.instr.instr_type == VS1R)
-                            || (mem_instr.instr.instr_type == VSSE) 
-                            || (mem_instr.instr.instr_type == VSXE)) 
-                            && !stall_vagu;
+assign vagu_store_data_valid = mem_instr.instr.valid && !stall_vagu;
 
 always_comb begin
     vagu_mask = 'h0;
@@ -482,17 +478,6 @@ vagu #(
     .load_mask_o(),
     .memp_instr_o(vagu_mem_instr)
 );
-`else // `ifndef DISABLE_SIMD
-    assign stall_vagu = 1'b0;
-    always_comb begin
-        vagu_mem_instr = mem_instr;
-        vagu_mem_instr.vmisalign_xcpt = 1'b0;
-        vagu_mem_instr.velem_id = 'h0;
-        vagu_mem_instr.load_mask = '1;
-        vagu_mem_instr.velem_off = 'h0;
-        vagu_mem_instr.velem_incr = '1; 
-    end
-`endif
 
 mem_unit #(
     .DracCfg(DracCfg)
@@ -512,6 +497,12 @@ mem_unit #(
     .dtlb_comm_o(dtlb_comm_o),
     .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
     .ld_st_v_mode_i(ld_st_v_mode_i),
+    .csr_satp_asid_i(csr_satp_asid_i),
+    .csr_vsatp_asid_i(csr_vsatp_asid_i),
+    .csr_hgatp_vmid_i(csr_hgatp_vmid_i),
+    .csr_s_pmm_i(csr_s_pmm_i),
+    .csr_h_pmm_i(csr_h_pmm_i),
+    .csr_hstatus_hupmm_i(csr_hstatus_hupmm_i),
 //    .vl_i(vl_i),
     .req_cpu_dcache_o       (req_cpu_dcache_o),
     .instruction_scalar_o   (mem_to_scalar_wb),

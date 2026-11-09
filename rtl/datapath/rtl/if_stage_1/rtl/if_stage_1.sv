@@ -43,6 +43,8 @@ module if_stage_1
     input logic                 invalidate_buffer_i,
     input logic                 en_translation_i,
     input logic                 en_g_translation_i,
+    // Signals from fetch 2 stage
+    
     // Response packet coming from Icache
     input resp_icache_cpu_t     resp_icache_cpu_i,
     // PC comming from commit/decode/ecall/debug
@@ -51,6 +53,9 @@ module if_stage_1
     input exe_if_branch_pred_t  exe_if_branch_pred_i,
     // Retry requesto to icache
     input logic                 retry_fetch_i,
+    // PC on F1 from F2
+    input logic                 f2_valid_i,
+    input addrPC_t              pc_from_f2_i,
     // Request packet going from Icache
     output req_cpu_icache_t     req_cpu_icache_o,  
     // fetch data output
@@ -76,25 +81,40 @@ module if_stage_1
     logic ex_addr_misaligned_int;
     logic ex_if_addr_fault_int;
     logic ex_if_guest_page_fault_int;
+    logic ex_if_page_fault_int;
 
     // Branch Predictor wires
     logic       branch_predict_is_branch;
+    logic       bp_branch_predict_is_branch;
     logic       branch_predict_taken;
+    logic       bp_branch_predict_taken;
     addrPC_t    branch_predict_addr;
+
+    // Required to predict correctly with the compressed instructions
+    addrPC_t BP_pc;
+
+    next_pc_sel_t last_pc_sel;
+
+    logic last_was_bp;
+    logic bp_followed;
 
     always_comb begin
         priority case (cu_if_i.next_pc)
             NEXT_PC_SEL_KEEP_PC: begin
                 next_pc = pc;
                 `ifdef SIM_KONATA_DUMP
-                next_id = id;
+                if (cu_if_i.keep_fetch) begin
+                    next_id = id + 1;
+                end else begin
+                    next_id = id;
+                end
                 `endif
             end
-            NEXT_PC_SEL_BP_OR_PC_4: begin 
-                if (branch_predict_is_branch && branch_predict_taken) 
+            NEXT_PC_SEL_BP_OR_PC_ADD: begin 
+                if (branch_predict_is_branch && branch_predict_taken && !(last_was_bp && BP_pc[1])) 
                     next_pc = branch_predict_addr;
                 else
-                    next_pc = trunc_pc_sum(pc + 64'h04);
+                    next_pc = trunc_pc_sum({pc[riscv_pkg::XLEN-1:2], 2'b00} + 64'h04);
                 
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
@@ -111,7 +131,7 @@ module if_stage_1
                 `ifdef VERIFICATION
                     $error("next pc not defined error in if stage");
                 `endif
-                next_pc = trunc_pc_sum(pc + 64'h04);
+                next_pc = trunc_pc_sum({pc[riscv_pkg::XLEN-1:2], 2'b00} + 64'h04);
                 `ifdef SIM_KONATA_DUMP
                 next_id = id + 64'h01;
                 `endif
@@ -136,8 +156,7 @@ module if_stage_1
 
     // check addr fault fetch
     always_comb begin
-        if ((!(((&pc[63:VIRT_ADDR_SIZE-1])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-1])==1'b0)) & en_translation_i) | 
-            (!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i)
+        if ((!is_inside_mapped_sections(DracCfg, pc) & !en_translation_i & !en_g_translation_i)
            ) ex_if_addr_fault_int = 1'b1;
         else ex_if_addr_fault_int = 1'b0;
     end
@@ -149,25 +168,51 @@ module if_stage_1
              ex_if_guest_page_fault_int = 1'b1;
         else ex_if_guest_page_fault_int = 1'b0;
     end
-    
-    // check misaligned fetch
+
+    // check instr page fault
+    // Address bits 63:39 must be the same as 38 (39-bit virtual address canonical)
     always_comb begin
-        if (|pc[1:0]) begin
-            ex_addr_misaligned_int = 1'b1;
-        end else begin
+        if ((!(((&pc[63:VIRT_ADDR_SIZE-3])==1'b1) | ((|pc[63:VIRT_ADDR_SIZE-3])==1'b0)) & en_translation_i))
+             ex_if_page_fault_int = 1'b1;
+        else ex_if_page_fault_int = 1'b0;
+    end
+    
+    // check misaligned fetch not needed as C extension disables this exceptions
+    always_comb begin
+    //    if (|pc[1:0]) begin
+    //        ex_addr_misaligned_int = 1'b1;
+    //    end else begin
             ex_addr_misaligned_int = 1'b0;
+    //    end
+    end
+
+    always_ff @(posedge clk_i, negedge rstn_i) begin
+        if (!rstn_i) begin
+            last_pc_sel <= NEXT_PC_SEL_KEEP_PC; // Just any that does not cause an overwrite
+            last_was_bp <= 1'b0;
+        end else if ((!stall_i) && (!stall_debug_i)) begin
+            last_pc_sel <= cu_if_i.next_pc;
+            last_was_bp <= bp_followed;
         end
     end
 
-    // logic for icache access: if not misaligned 
+    assign BP_pc = ((last_pc_sel == NEXT_PC_SEL_BP_OR_PC_ADD) && (!last_was_bp)) ? pc_from_f2_i : pc;
+
+    //logic kill_fetch;
+
+    //assign kill_fetch = (branch_predict_is_branch & branch_predict_taken) & (pc[PHY_VIRT_MAX_ADDR_SIZE-1:2] != BP_pc[PHY_VIRT_MAX_ADDR_SIZE-1:2]) && f2_valid_i;
+
+    // logic for icache access: if not misaligned
+    //assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !ex_if_guest_page_fault_int && !stall_debug_i && !stall_i && !kill_fetch;
     assign req_cpu_icache_o.valid = !ex_addr_misaligned_int && !ex_if_addr_fault_int && !ex_if_guest_page_fault_int && !stall_debug_i && !stall_i;
-    assign req_cpu_icache_o.vaddr = pc[PHY_VIRT_MAX_ADDR_SIZE-1:0];
+    assign req_cpu_icache_o.vaddr = {pc[PHY_VIRT_MAX_ADDR_SIZE-1:2], {2'b00}};
     assign req_cpu_icache_o.invalidate_icache = invalidate_icache_i;
     assign req_cpu_icache_o.invalidate_buffer = invalidate_buffer_i | retry_fetch_i;
     assign req_cpu_icache_o.inval_fetch = /*inval_fetch_i |*/ retry_fetch_i;
     
     // Output fetch
     assign fetch_o.pc_inst = pc;
+    //assign fetch_o.valid   = !stall_debug_i && !stall_i && !kill_fetch;  // valid if the response of the cache is valid or xcpt
     assign fetch_o.valid   = !stall_debug_i && !stall_i;  // valid if the response of the cache is valid or xcpt
     `ifdef SIM_KONATA_DUMP
     assign fetch_o.id = id;
@@ -177,15 +222,23 @@ module if_stage_1
     branch_predictor brach_predictor_inst (
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .pc_fetch_i(pc),
+        .pc_fetch_i(BP_pc),
         .pc_execution_i(exe_if_branch_pred_i.pc_execution),
-        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_result_exe),
+        .branch_addr_result_exec_i(exe_if_branch_pred_i.branch_addr_target_exe),
         .branch_taken_result_exec_i(exe_if_branch_pred_i.branch_taken_result_exe),
         .is_branch_EX_i(exe_if_branch_pred_i.is_branch_exe),
-        .branch_predict_is_branch_o(branch_predict_is_branch),
-        .branch_predict_taken_o(branch_predict_taken),
+        .branch_predict_is_branch_o(bp_branch_predict_is_branch),
+        .branch_predict_taken_o(bp_branch_predict_taken),
         .branch_predict_addr_o(branch_predict_addr)
     );
+
+    assign branch_predict_taken = bp_branch_predict_taken & f2_valid_i & !(last_was_bp && BP_pc[1]) & !stall_i & !stall_debug_i;
+
+    // A taken prediction is only acted on when the control unit selects NEXT_PC_SEL_BP_OR_PC_ADD (see
+    // the IF1/IF2 register input in datapath.sv, which marks the instruction accordingly). last_was_bp
+    // records whether fetch was actually redirected by the predictor.
+    assign bp_followed = branch_predict_is_branch & branch_predict_taken & (cu_if_i.next_pc == NEXT_PC_SEL_BP_OR_PC_ADD);
+    assign branch_predict_is_branch = bp_branch_predict_is_branch & f2_valid_i & !(last_was_bp && BP_pc[1]) & !stall_i & !stall_debug_i;
 
     // exceptions ordering
     always_comb begin
@@ -196,6 +249,10 @@ module if_stage_1
         end else 
         if (ex_if_addr_fault_int) begin
             fetch_o.ex.cause = INSTR_ACCESS_FAULT;
+            fetch_o.ex.valid = 1'b1;
+        end else
+        if (ex_if_page_fault_int) begin
+            fetch_o.ex.cause = INSTR_PAGE_FAULT;
             fetch_o.ex.valid = 1'b1;
         end else
         if (ex_if_guest_page_fault_int) begin
@@ -217,7 +274,7 @@ module if_stage_1
     // Pipeline branch prediction to exe stage
     assign fetch_o.bpred.is_branch = branch_predict_is_branch;
     assign fetch_o.bpred.decision  = (branch_predict_taken & branch_predict_is_branch)? PRED_TAKEN : PRED_NOT_TAKEN;
-    assign fetch_o.bpred.pred_addr = branch_predict_addr;
+    assign fetch_o.bpred.pred_addr = (f2_valid_i) ? branch_predict_addr : '0;
     `ifdef SIM_KONATA_DUMP
     assign id_o = id;
     `endif

@@ -28,7 +28,9 @@ module decoder
     input   logic            rstn_i,
     input   logic            flush_i,
     input   logic            stall_i,
+    input   if_id_stage_t    from_f2_i, // Needed to get the original instruction binary
     input   if_id_stage_t    decode_i,
+    input   logic            is_compressed_i,
     input   logic [1:0]      priv_lvl_i,
     input   logic            v_mode_i,
     input   logic [2:0]      frm_i, // FP rounding Mode from CSR
@@ -45,6 +47,8 @@ module decoder
     input   logic            recover_commit_exception_i,
     input   logic            recover_last_misspredict_i,
     input   logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_misspredict_i,    
+    input   logic            vleff_update_i,
+    input   logic [VMAXELEM_LOG:0] vleff_vl_i,
     input   logic            debug_mode_en_i,
     output  logic [VMAXELEM_LOG:0] vl_short_o,
     output  logic [VTYPE_LENGTH:0] prev_vtype_o,     // First uncommitted vtype
@@ -65,8 +69,11 @@ module decoder
     logic ras_pop_int;
     logic ras_link_rd_int;
     logic ras_link_rs1_int;
+    logic ras_empty;
 
     logic check_frm;
+    logic vector_fp_csr_illegal;
+    logic [4:0] fp_rs2;
 
     vreg_t emul_mask; 
 
@@ -81,14 +88,18 @@ module decoder
     logic v_2sew_en_int;
     logic wide_overlap_1_2;
     logic wide_overlap_2;
+    logic perm_overlap_2;
+    logic perm_overlap_1_2;
 
     bus64_t avl_value_if_zero_int, avl_value_int;
     logic [3:0] rw_cmd_int;
     logic [11:0] vtype_int;
     logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_int;
 
-
-
+    assign vector_fp_csr_illegal = (csr_fs_i == 2'b00) ||
+                                   (frm_i == FRM_INV_1) ||
+                                   (frm_i == FRM_INV_2) ||
+                                   (frm_i == FRM_DYN);
 
     // Truncate Function
     function [63:0] trunc_65_64(input [64:0] val_in);
@@ -108,6 +119,8 @@ module decoder
 
         decode_instr_int.pc    = decode_i.pc_inst;
         decode_instr_int.bpred = decode_i.bpred;
+
+        decode_instr_int.is_compressed = is_compressed_i;
 
         decode_instr_int.valid = decode_i.valid;
         // Registers sources
@@ -159,6 +172,7 @@ module decoder
         decode_instr_int.fmt     = FMT_S;
         decode_instr_int.frm     = op_frm_fp_t'(decode_i.inst.fprtype.rm);
         check_frm              = 1'b0;
+        fp_rs2                 = decode_i.inst.bits[24:20];
 
         decode_instr_int.instr_type = ADD;
         `ifdef SIM_KONATA_DUMP
@@ -175,14 +189,18 @@ module decoder
         decode_instr_int.signed_op = 1'b0;
 
         jal_id_if_o.valid = 1'b0;
-        jal_id_if_o.jump_addr = trunc_65_64(decode_i.pc_inst + 64'h04);
+        // Default redirect target, used when a non-branch was predicted as a taken branch (a phantom:
+        // the predictor's is-branch table is tagged with the virtual PC only, so another address space
+        // or older code at the same VA trains it): fetch continues with the next instruction, which is
+        // 2 bytes ahead for a compressed instruction. pc + 4 skipped the next compressed instruction.
+        jal_id_if_o.jump_addr = trunc_65_64(decode_i.pc_inst + (is_compressed_i ? 64'h02 : 64'h04));
 
         // Signal that tells whether it is a csr or fence
         decode_instr_int.stall_csr_fence = 1'b0;
         decode_instr_int.stall_vset_fence = 1'b0;
 
         `ifdef SIM_COMMIT_LOG
-            decode_instr_int.inst = decode_i.inst;
+            decode_instr_int.inst = from_f2_i.inst;
         `endif
 
         decode_instr_int.mem_type = NOT_MEM;
@@ -213,7 +231,6 @@ module decoder
                     decode_instr_int.instr_type = JAL;
                     decode_instr_int.unit = UNIT_BRANCH;
                     // it is valid if there is no misaligned exception
-                    xcpt_addr_misaligned_int = |imm_value[1:0];
                     jal_id_if_o.jump_addr = trunc_65_64(imm_value+decode_i.pc_inst); 
                     jal_id_if_o.valid = !xcpt_addr_misaligned_int & decode_i.valid &
                                         !((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) & 
@@ -247,7 +264,8 @@ module decoder
                         end
                     end
                     jal_id_if_o.jump_addr = ras_pc_int; 
-                    jal_id_if_o.valid = ras_pop_int && !((((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) &
+                    // TODO: Consider not activating this signal for all JALR
+                    jal_id_if_o.valid = ras_pop_int && !ras_empty && !((((jal_id_if_o.jump_addr == decode_i.bpred.pred_addr) &
                                                         (decode_i.bpred.decision == PRED_TAKEN)) && (!flush_i)) && !stall_i);
 
                     decode_instr_int.bpred.pred_addr = jal_id_if_o.valid ? ras_pc_int : decode_i.bpred.pred_addr;
@@ -734,6 +752,9 @@ module decoder
                                         RS2_CPOPW: begin
                                             decode_instr_int.instr_type = CPOPW;
                                         end
+                                        default: begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     endcase;
                                 end
                                 default: begin
@@ -1182,7 +1203,11 @@ module decoder
                                         decode_instr_int.instr_type = (~decode_i.inst.vtype.vm) ? VMERGE : VMV;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_1_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
@@ -1214,7 +1239,7 @@ module decoder
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_1_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
@@ -1371,13 +1396,21 @@ module decoder
                                     end
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDEUP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDEUP;
+                                        end
                                     end
                                     F6_VSLIDEDOWN: begin
                                         decode_instr_int.instr_type = VSLIDEDOWN;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     F6_VMV1R_VSMUL: begin
                                         decode_instr_int.instr_type = VSMUL;
@@ -1392,7 +1425,7 @@ module decoder
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
@@ -1524,19 +1557,27 @@ module decoder
                                     F6_VSLIDEUP: begin
                                         decode_instr_int.use_vs1 = 1'b0;
                                         decode_instr_int.use_old_vd = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDEUP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDEUP;
+                                        end
                                     end
                                     F6_VSLIDEDOWN: begin
                                         decode_instr_int.instr_type = VSLIDEDOWN;
                                     end
                                     F6_VRGATHER: begin
-                                        decode_instr_int.instr_type = VRGATHER;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VRGATHER;
+                                        end
                                     end
                                     {F6_VROR[5:1], 1'b0}, {F6_VROR[5:1], 1'b1}: begin // VROR on vi has func6 of 5 bits and the bit 0 is part of uimm
                                         decode_instr_int.instr_type = VROR;
                                     end
                                     F6_VWSLL: begin
-                                        if ((!v_2sew_en_int) || (decode_instr_int.vs2[0] && (~vlmul_int[2]))) begin
+                                        if ((!v_2sew_en_int) || (decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             decode_instr_int.instr_type = VWSLL;
@@ -1794,7 +1835,8 @@ module decoder
                                     F6_BITMANIP_VXUNARY0: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs2 = 1'b1;
-                                        if (decode_instr_int.vd == decode_instr_int.vs2) begin
+                                        if ((decode_instr_int.vd == decode_instr_int.vs2) &&
+                                            (decode_i.inst.vtype.vs1 inside {VS1_ZEXT_VF8, VS1_SEXT_VF8, VS1_ZEXT_VF4, VS1_SEXT_VF4, VS1_ZEXT_VF2, VS1_SEXT_VF2})) begin
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end else begin
                                             if (decode_i.inst.vtype.vs1 == VS1_ZEXT_VF8) begin
@@ -1975,7 +2017,11 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.use_vs1 = 1'b1;
                                         decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VCOMPRESS;
+                                        if (perm_overlap_1_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VCOMPRESS;
+                                        end
                                     end
                                     F6_VAADDU: begin
                                         decode_instr_int.regfile_we = 1'b0;
@@ -2025,7 +2071,28 @@ module decoder
                                         decode_instr_int.use_vs2 = 1'b1;
                                         decode_instr_int.instr_type = VREM;
                                     end
-
+                                    `ifndef DISABLE_ZVBC
+                                    F6_VCLMUL: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCLMUL;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmul.vv is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VCLMULH: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.use_vs1 = 1'b1;
+                                        decode_instr_int.use_vs2 = 1'b1;
+                                        decode_instr_int.instr_type = VCLMULH;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmulh.vv is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    `endif // DISABLE_ZVBC
 
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
@@ -2226,7 +2293,11 @@ module decoder
                                     F6_VSLIDE1UP: begin
                                         decode_instr_int.regfile_we = 1'b0;
                                         // decode_instr_int.use_vs2 = 1'b1;
-                                        decode_instr_int.instr_type = VSLIDE1UP;
+                                        if (perm_overlap_2) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end else begin
+                                            decode_instr_int.instr_type = VSLIDE1UP;
+                                        end
                                     end
                                     F6_VSLIDE1DOWN: begin
                                         decode_instr_int.regfile_we = 1'b0;
@@ -2249,6 +2320,25 @@ module decoder
                                         decode_instr_int.regfile_we = 1'b0;
                                         decode_instr_int.instr_type = VASUB;
                                     end
+                                    `ifndef DISABLE_ZVBC
+                                    F6_VCLMUL: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VCLMUL;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmul.vx is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    F6_VCLMULH: begin
+                                        decode_instr_int.regfile_we = 1'b0;
+                                        decode_instr_int.instr_type = VCLMULH;
+                                        if (decode_instr_int.sew != SEW_64) begin
+                                            // vclmulh.vx is only valid for SEW=64
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    `endif // DISABLE_ZVBC
+
                                     default: begin
                                         xcpt_illegal_instruction_int = 1'b1;
                                     end
@@ -2454,8 +2544,9 @@ module decoder
                                                 end else begin
                                                     decode_instr_int.instr_type = VFNCVT_F_F;
 
-                                                    if (sew == SEW_16)
-                                                        xcpt_illegal_instruction_int = 1'b0;
+                                                    if (sew == SEW_16) begin
+                                                        xcpt_illegal_instruction_int = vector_fp_csr_illegal;
+                                                    end
                                                 end
                                             end
                                             VS1_VFNCVT_F_X: begin
@@ -2473,6 +2564,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_X_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2480,6 +2574,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_RTZ_X_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2487,6 +2584,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_RTZ_XU_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2494,6 +2594,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFNCVT_XU_F: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2520,12 +2623,16 @@ module decoder
                                                 end else begin
                                                     decode_instr_int.instr_type = VFWCVT_F_F;
 
-                                                    if (sew == SEW_16)
-                                                        xcpt_illegal_instruction_int = 1'b0;
+                                                    if (sew == SEW_16) begin
+                                                        xcpt_illegal_instruction_int = vector_fp_csr_illegal;
+                                                    end
                                                 end
 
                                             end
                                             VS1_VFWCVT_F_X: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2533,6 +2640,9 @@ module decoder
                                                 end
                                             end
                                             VS1_VFWCVT_F_XU: begin
+                                                if ((sew == SEW_16) && (csr_fs_i != 2'b00)) begin
+                                                    xcpt_illegal_instruction_int = 1'b0;
+                                                end
                                                 if (!v_2sew_en_int) begin
                                                     xcpt_illegal_instruction_int = 1'b1;
                                                 end else begin
@@ -2582,6 +2692,18 @@ module decoder
                                                 xcpt_illegal_instruction_int = 1'b1;
                                             end
                                         endcase
+                                        // Widening/narrowing FP conversions obey the same register
+                                        // alignment as the integer widen/narrow ops: the wide operand
+                                        // (vd for vfwcvt, vs2 for vfncvt) must be aligned to 2*LMUL
+                                        // when LMUL >= 1. vs1 is declared [19:15], so vs1[19:18] is the
+                                        // conversion-kind field: 01 = widening, 10 = narrowing.
+                                        if (!xcpt_illegal_instruction_int) begin
+                                            if ((decode_i.inst.vtype.vs1[19:18] == 2'b01) &&
+                                                ((decode_instr_int.vd[0] && (~vlmul_int[2])) || wide_overlap_2))
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            else if ((decode_i.inst.vtype.vs1[19:18] == 2'b10) && decode_instr_int.vs2[0] && (~vlmul_int[2]))
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                        end
                                     end
                                     F6_VFREDUSUM: begin
                                         decode_instr_int.instr_type = VFREDUSUM;
@@ -2871,6 +2993,7 @@ module decoder
                                     decode_instr_int.instr_type = VSETIVLI;
                                     decode_instr_int.vl = vl_short;
                                     decode_instr_int.use_imm = 1'b1;
+                                    decode_instr_int.use_rs1 = 1'b0;
                                 end else begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
@@ -2963,7 +3086,7 @@ module decoder
                                     end
                                     else
                                     begin
-                                        decode_instr_int.instr_type = CBO_CLEAN;
+                                        decode_instr_int.instr_type = CBO_FLUSH;
                                     end
                                 end
                                 IMM_CBO_ZERO: begin
@@ -2997,7 +3120,7 @@ module decoder
                     
                 end
                 OP_SYSTEM: begin
-                  if(decode_i.inst.common.func3 == F3_HLV_HSV) begin // Hypervisor Virtual-Machine Load and Store Instructions
+                  if((decode_i.inst.common.func3 == F3_HLV_HSV_ZIMOP) && (decode_i.inst.common.func7[31:28] == 4'b0110)) begin // Hypervisor Virtual-Machine Load and Store Instructions
                     if(v_mode_i == 1'b1) begin
                       xcpt_virtual_instruction_int = 1'b1;
                     end else if(((priv_lvl_i == riscv_pkg::PRIV_LVL_U) && (csr_hu_i == 1'b0))) begin
@@ -3013,6 +3136,9 @@ module decoder
                         decode_instr_int.regfile_we = 1'b0;
                         decode_instr_int.use_rs2 = 1'b1;
                         decode_instr_int.mem_size = {1'b0,decode_i.inst.bits[28:26]};
+                        if(decode_i.inst.common.rd != 'h0) begin
+                          xcpt_illegal_instruction_int = 1'b1;
+                        end
                       end else begin
                         decode_instr_int.mem_type = LOAD;
                         decode_instr_int.regfile_we = 1'b1;
@@ -3020,46 +3146,42 @@ module decoder
                       end
                       case (decode_i.inst.common.func7)
                         F7_HLV_B_BU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_B;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_BU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_B;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_BU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_B: begin
                           decode_instr_int.instr_type = HSV_B;
                         end
                         F7_HLV_H_HU_XHU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_H;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_HU;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLVX) begin
-                            decode_instr_int.instr_type = HLVX_HU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_H;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_HU;
+                            RS2_HLVX:       decode_instr_int.instr_type = HLVX_HU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_H: begin
                           decode_instr_int.instr_type = HSV_H;
                         end
                         F7_HLV_W_WU_XWU: begin
-                          if(decode_i.inst.common.rs2 == RS2_HLV_NO_U) begin
-                            decode_instr_int.instr_type = HLV_W;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLV_WITH_U) begin
-                            decode_instr_int.instr_type = HLV_WU;
-                          end
-                          if(decode_i.inst.common.rs2 == RS2_HLVX) begin
-                            decode_instr_int.instr_type = HLVX_WU;
-                          end
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_W;
+                            RS2_HLV_WITH_U: decode_instr_int.instr_type = HLV_WU;
+                            RS2_HLVX:       decode_instr_int.instr_type = HLVX_WU;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_W: begin
                           decode_instr_int.instr_type = HSV_W;
                         end
                         F7_HLV_D: begin
-                          decode_instr_int.instr_type = HLV_D;
+                          case (decode_i.inst.common.rs2)
+                            RS2_HLV_NO_U:   decode_instr_int.instr_type = HLV_D;
+                            default:        xcpt_illegal_instruction_int = 1'b1;
+                          endcase
                         end
                         F7_HSV_D: begin
                           decode_instr_int.instr_type = HSV_D;
@@ -3110,6 +3232,14 @@ module decoder
                                                         decode_instr_int.instr_type = URET;
                                                         decode_instr_int.stall_csr_fence = 1'b1;
                                                     end
+                                                    RS2_WRS_NTO: begin
+                                                        decode_instr_int.instr_type = WRS_NTO;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
+                                                    RS2_WRS_STO: begin
+                                                        decode_instr_int.instr_type = WRS_STO;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
                                                     default: begin
                                                         xcpt_illegal_instruction_int = 1'b1;
                                                     end   
@@ -3127,12 +3257,6 @@ module decoder
                                                     end
                                                     RS2_WFI: begin
                                                         decode_instr_int.instr_type = WFI;
-                                                        decode_instr_int.stall_csr_fence = 1'b1;
-                                                    end
-                                                    RS2_EBREAK_SFENCEVM: begin
-                                                        // SFENCE here is old ISA
-                                                        // TODO (guillemlp): check and delete this option 
-                                                        decode_instr_int.instr_type = SFENCE_VMA;
                                                         decode_instr_int.stall_csr_fence = 1'b1;
                                                     end
                                                     default: begin
@@ -3182,6 +3306,37 @@ module decoder
                                             decode_instr_int.instr_type = HFENCE_GVMA;
                                             decode_instr_int.stall_csr_fence = 1'b1;
                                         end
+                                        F7_SINVAL_VMA:begin
+                                            decode_instr_int.instr_type = SINVAL_VMA;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
+                                        end
+                                        F7_HINVAL_VVMA:begin
+                                            decode_instr_int.instr_type = HINVAL_VVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
+                                        end
+                                        F7_HINVAL_GVMA:begin
+                                            decode_instr_int.instr_type = HINVAL_GVMA;
+                                            decode_instr_int.stall_csr_fence = 1'b0;
+                                        end
+                                        F7_SFENCE_W_INVAL_SFENCE_INVAL_IR: begin
+                                            if (decode_i.inst.itype.rs1 != 'h0) begin
+                                                xcpt_illegal_instruction_int = 1'b1;
+                                            end else begin
+                                                case (decode_i.inst.rtype.rs2)
+                                                    RS2_ECALL_ERET: begin  // rs2 = 5'b00000
+                                                        decode_instr_int.instr_type = SFENCE_W_INVAL;
+                                                        decode_instr_int.stall_csr_fence = 1'b0;
+                                                    end
+                                                    RS2_EBREAK_SFENCEVM: begin  // rs2 = 5'b00001
+                                                        decode_instr_int.instr_type = SFENCE_INVAL_IR;
+                                                        decode_instr_int.stall_csr_fence = 1'b1;
+                                                    end
+                                                    default: begin
+                                                        xcpt_illegal_instruction_int = 1'b1;
+                                                    end
+                                                endcase
+                                            end
+                                        end
                                         default: begin // check illegal instruction
                                             xcpt_illegal_instruction_int = 1'b1;
                                         end
@@ -3203,6 +3358,31 @@ module decoder
                             decode_instr_int.use_rs1 = 1'b1;
                             decode_instr_int.instr_type = CSRRC;
                             decode_instr_int.stall_csr_fence = 1'b1;             
+                        end
+                        F3_HLV_HSV_ZIMOP: begin
+                            if (decode_i.inst.common.func7[31] == 1'b1 && decode_i.inst.common.func7[29:28] == 2'b00) begin
+                                decode_instr_int.use_imm    = 1'b0;
+                                decode_instr_int.regfile_we = 1'b1;
+                                decode_instr_int.unit = UNIT_ALU;
+                                decode_instr_int.stall_csr_fence = 1'b0;
+                                decode_instr_int.use_rs1 = 1'b1;
+                                decode_instr_int.use_rs2 = 1'b0;
+                                decode_instr_int.rs1 = 5'b00000;
+                                decode_instr_int.rs2 = 5'b00000;
+
+                                case (decode_i.inst.common.func7[25])
+                                    1'b0: begin
+                                        if (decode_i.inst.common.rs2[24:22] != 3'b111) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                    1'b1: begin
+                                        decode_instr_int.use_rs2 = 1'b1;
+                                    end
+                                endcase
+                            end else begin
+                                xcpt_illegal_instruction_int = 1'b1;
+                            end
                         end
                         F3_CSRRWI: begin
                             decode_instr_int.instr_type = CSRRWI;
@@ -3261,10 +3441,9 @@ module decoder
                             FMT_D: begin
                                 decode_instr_int.fmt = 2'b01;
                             end
-                            FMT_H: begin
-                                decode_instr_int.fmt = 2'b10;
-                            end
                             default: begin
+                                // Half and quad precision fused operations are
+                                // not implemented by this core.
                                 xcpt_illegal_instruction_int = 1'b1;
                             end
                         endcase
@@ -3326,10 +3505,10 @@ module decoder
                                 decode_instr_int.instr_type = FSQRT;
                                 check_frm = 1'b1;
                                 decode_instr_int.use_fs2 = 1'b0;
-                                // TODO (guillemlp) not sure if the following is required
-                                /*if (decode_i.inst.rtype.rs2 != 5'b0) begin
+                                // rs2 is reserved for FSQRT and must be zero.
+                                if (decode_i.inst.rtype.rs2 != 5'b0) begin
                                     xcpt_illegal_instruction_int = 1'b1;
-                                end*/
+                                end
                             end
                             F5_FP_FSGNJ: begin
                                 decode_instr_int.instr_type = FSGNJ;
@@ -3418,7 +3597,7 @@ module decoder
                                 end
 
                                 // Check through rounding modes if illegal instr
-                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b110], [3'b000:3'b010]})) begin
+                                if (!(decode_i.inst.fprtype.rm inside {[3'b100:3'b101], [3'b000:3'b010]})) begin
                                     xcpt_illegal_instruction_int = 1'b1;
                                 end
                             end
@@ -3487,7 +3666,10 @@ module decoder
                                 decode_instr_int.fmt = FMT_H;
                             end
                             default: begin
-                                xcpt_illegal_instruction_int = 1'b0;
+                                // FMT_Q is not implemented by this core.  It is a
+                                // reserved encoding here and must not be executed
+                                // using the default FP format.
+                                xcpt_illegal_instruction_int = 1'b1;
                             end
                         endcase
 
@@ -3513,6 +3695,74 @@ module decoder
                                 end
                                 default: begin
                                     decode_instr_int.frm = op_frm_fp_t'(decode_i.inst.fprtype.rm);
+                                end
+                            endcase
+                        end
+
+                        // Only the floating-point formats and encodings that
+                        // this core implements may reach the FPU. Everything
+                        // else is a reserved encoding or belongs to an
+                        // extension that is not implemented.
+                        if (decode_i.inst.fprtype.fmt == FMT_H) begin
+                            // Zfhmin half-precision subset: FMV.X.H, FMV.H.X,
+                            // FCVT.S.H, FCVT.H.S, FCVT.D.H and FCVT.H.D.
+                            case (decode_i.inst.fprtype.func5)
+                                F5_FP_FCVT_SD: begin
+                                    if (fp_rs2 > 5'd1) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_F2I_FCLASS: begin
+                                    if ((fp_rs2 != 5'd0) ||
+                                        (decode_i.inst.fprtype.rm != 3'b000)) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_I2F: begin
+                                    if (fp_rs2 != 5'd0) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                default: begin
+                                    xcpt_illegal_instruction_int = 1'b1;
+                                end
+                            endcase
+                        end else begin
+                            case (decode_i.inst.fprtype.func5)
+                                F5_FP_FCVT_SD: begin
+                                    if ((fp_rs2 != 5'd4) && (fp_rs2 != 5'd5)) begin
+                                        if ((fp_rs2[4:2] != 3'b000) ||
+                                            (fp_rs2[1:0] == 2'b11) ||
+                                            (fp_rs2[1:0] == decode_i.inst.fprtype.fmt)) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end
+                                end
+                                F5_FP_FCVT_F2I: begin
+                                    if (fp_rs2 == 5'd8) begin
+                                        if (decode_i.inst.fprtype.fmt != FMT_D) begin
+                                            xcpt_illegal_instruction_int = 1'b1;
+                                        end
+                                    end else if (fp_rs2[4:2] != 3'b000) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FCVT_I2F: begin
+                                    if (fp_rs2[4:2] != 3'b000) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_I2F: begin
+                                    if ((fp_rs2 != 5'd0) && (fp_rs2 != 5'd1)) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                F5_FP_FMV_F2I_FCLASS: begin
+                                    if (fp_rs2 != 5'd0) begin
+                                        xcpt_illegal_instruction_int = 1'b1;
+                                    end
+                                end
+                                default: begin
                                 end
                             endcase
                         end
@@ -3570,6 +3820,8 @@ module decoder
         .recover_commit_exception_i(recover_commit_exception_i),
         .recover_last_misspredict_i(recover_last_misspredict_i),
         .vset_index_misspredict_i(vset_index_misspredict_i),
+        .vleff_update_i(vleff_update_i),
+        .vleff_vl_i(vleff_vl_i),
         
         .vl_o(vl),
         .vl_short_o(vl_short),
@@ -3590,6 +3842,10 @@ module decoder
     assign wide_overlap_1_2 = (vlmul_int[2] && ((decode_instr_int.vd == decode_instr_int.vs1) || 
                                                 (decode_instr_int.vd == decode_instr_int.vs2))) ? 1'b1 : 1'b0;
     assign wide_overlap_2   = (vlmul_int[2] &&  (decode_instr_int.vd == decode_instr_int.vs2))  ? 1'b1 : 1'b0;
+    // RVV permute ops: vd may not overlap a vector source, at any LMUL.
+    assign perm_overlap_2   = (decode_instr_int.vd == decode_instr_int.vs2) ? 1'b1 : 1'b0;
+    assign perm_overlap_1_2 = ((decode_instr_int.vd == decode_instr_int.vs2) ||
+                               (decode_instr_int.vd == decode_instr_int.vs1)) ? 1'b1 : 1'b0;
 
     
 
@@ -3647,10 +3903,12 @@ module decoder
     return_address_stack return_address_stack_inst(
         .rstn_i(rstn_i),
         .clk_i(clk_i),
-        .pc_execution_i(decode_instr_int.pc + 64'h4),
+        .pc_execution_i(decode_instr_int.pc + (is_compressed_i ? 64'h2 : 64'h4)),   // link address: pc + 2 for c.jalr
         .push_i(ras_push_int && !stall_i && !flush_i),
         .pop_i(ras_pop_int && !stall_i && !flush_i),
-        .return_address_o(ras_pc_int));
+        .return_address_o(ras_pc_int),
+        .empty_o(ras_empty)
+    );
 
 endmodule
 //`default_nettype wire

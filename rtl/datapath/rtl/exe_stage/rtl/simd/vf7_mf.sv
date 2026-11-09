@@ -204,124 +204,139 @@ logic   [52:0]  result_mant53       ;
 always_comb begin
     computed_exceptions = 5'b0;
     
+    // --------------------------------------------------------------------
+    // VFREC7/VFRSQRT7 behavior as specified in the RISC-V V spec (v1.0).
+    // The comments below reference the spec "behavior for all classes of
+    // floating-point inputs" tables:
+    //   VFRSQRT7 table (section 13.4)
+    //   VFREC7  table (section 13.5)
+    // --------------------------------------------------------------------
     // Handle special cases
     if (src_is_nan) begin
-        // always canonicalize to QNAN and activate NV as required
+        // VFRSQRT7 table: "qNaN -> canonical NaN"
+        // VFRSQRT7 table: "sNaN -> canonical NaN, NV"
+        // VFREC7  table: "qNaN -> canonical NaN"
+        // VFREC7  table: "sNaN -> canonical NaN, NV"
         computed_result = fp64_mode ? drac_pkg::FP64_QNAN : drac_pkg::FP32_QNAN;
         computed_exceptions[NV_FLAG] = src_is_snan ? 1'b1 : 1'b0;
     end else if (src_is_inf) begin
         if (operation_i == 1'b0) begin // VFREC7
-            // +inf -> +0.0 and -inf -> -0.0
+            // VFREC7 table: "-inf -> -0.0"
+            // VFREC7 table: "+inf -> +0.0"
             computed_result = fp64_mode ?
                 (src_sign ? FP64_NZERO : FP64_ZERO) :
                 (src_sign ? {FP32_QNAN, FP32_NZERO} : {FP32_QNAN, FP32_ZERO}) ;
         end else begin // VFRSQRT7
-            // [-inf, -0.0) -> QNAN and NV
             if (src_sign) begin
+                // VFRSQRT7 table: "-inf <= x < -0.0 -> canonical NaN, NV"
                 computed_result = fp64_mode ? FP64_QNAN : {FP32_QNAN, FP32_QNAN};
                 computed_exceptions[NV_FLAG] = 1'b1;
             end else begin
+                // VFRSQRT7 table: "+inf -> +0.0"
                 computed_result = fp64_mode ? FP64_ZERO : {FP32_QNAN, FP32_ZERO};
             end
         end
     end else if (src_is_zero) begin
-        // -0.0 -> -inf and +0.0 -> +inf and raise of DZ flag
         if (src_sign) begin // negative
+            // VFRSQRT7 table: "-0.0 -> -inf, DZ"
+            // VFREC7  table: "-0.0 -> -inf, DZ"
             computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
         end else begin // positve
+            // VFRSQRT7 table: "+0.0 -> +inf, DZ"
+            // VFREC7  table: "+0.0 -> +inf, DZ"
             computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
         end
         computed_exceptions[DZ_FLAG] = 1'b1;
     end else if (src_sign && operation_i) begin
-        // if VFRSQRT7 and negative result -> QNAN and activate NV
+        // VFRSQRT7 table: "-inf <= x < -0.0 -> canonical NaN, NV"
         computed_result = fp64_mode ? FP64_QNAN : {FP32_QNAN, FP32_QNAN};
         computed_exceptions[NV_FLAG] = 1'b1;
     end else if (src_is_subnormal && (operation_i == 1'b0)) begin // only treat separatelly subnormality for VFREC7
-        if (vfrec7_direct_inf) begin
+        if (vfrec7_direct_inf) begin // subnormal input with sig=00... (|x| < 2^-(B+1))
             if (src_sign) begin
+                // VFREC7 table: "-2^-(B+1) < x < -0.0 (subnormal, sig=00...)
+                //               RUP, RTZ -> greatest-mag. negative finite value, NX, OF"
                 if ((frm_i == fpnew_pkg::RUP) || (frm_i == fpnew_pkg::RTZ)) begin
                     computed_result = fp64_mode ? FP64_MAXNFINITE : {FP32_QNAN, FP32_MAXNFINITE};
                 end else begin
+                    // VFREC7 table: "... RDN, RNE, RMM -> -inf, NX, OF"
                     computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
                 end
             end else begin
+                // VFREC7 table: "+0.0 < x < 2^-(B+1) (subnormal, sig=00...)
+                //               RDN, RTZ -> greatest finite value, NX, OF"
                 if ((frm_i == fpnew_pkg::RDN) || (frm_i == fpnew_pkg::RTZ)) begin
                     computed_result = fp64_mode ? FP64_MAXPFINITE : {FP32_QNAN, FP32_MAXPFINITE};
                 end else begin
+                    // VFREC7 table: "... RUP, RNE, RMM -> +inf, NX, OF"
                     computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
                 end
             end
             computed_exceptions[OF_FLAG] = 1'b1;
             computed_exceptions[NX_FLAG] = 1'b1;
         end else begin
+            // VFREC7 table (subnormal inputs with sig=1... / sig=01..., i.e. |x| >= 2^-(B+1)),
+            // which always produce a normal output:
+            //   "-2^-B+1 < x <= -2^-B (subnormal, sig=1...)    -> -2^B-1 >= y > -2^B (normal)"
+            //   "-2^-B   < x <= -2^-(B+1) (subnormal, sig=01...) -> -2^B >= y > -2^B+1 (normal)"
+            //   "2^-(B+1) <= x < 2^-B (subnormal, sig=01...)    -> 2^B+1 > y >= 2^B (normal)"
+            //   "2^-B     <= x < 2^-B+1 (subnormal, sig=1...)   -> 2^B > y >= 2^B-1 (normal)"
+            // The leading-zero count of these inputs is 0 or 1, so the normalized output
+            // exponent (2*B-1-e') is always 2045..2046 (FP64) / 253..254 (FP32),
+            // i.e. the result is always normal.
             result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
             result_mant = fp64_mode ? {table_result, 45'b0} : {table_result, 16'b0};
-            if (result_exp >= (fp64_mode ? 13'd2047 : 13'd255)) begin
-                computed_result = fp64_mode ?
-                    (src_sign ? FP64_NINF : FP64_PINF) :
-                    (src_sign ? {FP32_QNAN, FP32_NINF} : {FP32_QNAN, FP32_PINF}) ;
-                computed_exceptions[OF_FLAG] = 1'b1;
-            end else if ((result_exp == 13'd0) || result_exp[12]) begin
-                computed_result = fp64_mode ?
-                    (src_sign ? FP64_NZERO : FP32_ZERO) :
-                    (src_sign ? {FP32_QNAN, FP32_NZERO} : {FP32_QNAN, FP32_ZERO}) ;
-                computed_exceptions[UF_FLAG] = 1'b1;
-            end else begin
-                computed_result = fp64_mode ? 
-                    {src_sign, result_exp[10:0], result_mant[51:0]} : 
-                    {src_sign, result_exp[7:0],  result_mant[22:0]} ;
-                computed_exceptions[NX_FLAG] = 1'b1;
-            end
+            computed_result = fp64_mode ?
+                {src_sign, result_exp[10:0], result_mant[51:0]} :
+                {src_sign, result_exp[7:0],  result_mant[22:0]} ;
         end
     end else begin
-        // Normal computation
+        // Normal computation. This branch is reached by:
+        //   - VFREC7:  normal inputs (positive or negative)
+        //   - VFRSQRT7: positive normal and positive subnormal inputs
         if (operation_i) begin
+            // VFRSQRT7 table: "+0.0 < x < +inf -> estimate of 1/sqrt(x)"
+            // output exponent = floor((3*B - 1 - e') / 2)
             if(!normalized_exp[0]) begin
                 result_exp = fp64_mode ? ((13'd3069 - normalized_exp) >> 1) : ((13'd380 - normalized_exp) >> 1);
             end else begin
                 result_exp = fp64_mode ? ((13'd3068 - normalized_exp) >> 1) : ((13'd379 - normalized_exp) >> 1);
             end
         end else begin
+            // VFREC7 table (normal inputs), output exponent = 2*B - 1 - e'
             result_exp = fp64_mode ? (13'd2045 - normalized_exp) : (13'd253 - normalized_exp);
         end
 
         result_mant = {table_result, 45'b0};
 
         if ($signed(result_exp) < 1) begin
-            if (operation_i == 1'b0) begin // VFREC7 --> produce subnormal number
-                result_mant53 = {1'b1, result_mant};
-                result_mant53 = result_mant53 >> ($signed(13'd1) - $signed(result_exp));
-                result_mant = fp64_mode ?
-                    result_mant53[51:0] :
-                    {result_mant53[51 -: 23], 29'd0};
-                computed_result = fp64_mode ?
-                    {src_sign, 11'h000, result_mant[51:0]} :
-                    {src_sign, 8'h00, result_mant[51 -: 23]};
-                computed_exceptions[UF_FLAG] = 1'b1;
-                computed_exceptions[NX_FLAG] = 1'b1;
-            end else begin // VFRSQRT7 --> force to 0
-                if (src_sign) begin
-                    computed_result = fp64_mode ? FP64_NZERO : {FP32_QNAN, FP32_NZERO};
-                end else begin
-                    computed_result = fp64_mode ? FP64_ZERO : {FP32_QNAN, FP32_ZERO};
-                end
-                computed_exceptions[UF_FLAG] = 1'b1;
-            end
-        end
-        else if ($signed(result_exp) > (fp64_mode ? 2046 : 254)) begin
-            if (src_sign) begin
-                computed_result = fp64_mode ? FP64_NINF : {FP32_QNAN, FP32_NINF};
-            end else begin
-                computed_result = fp64_mode ? FP64_PINF : {FP32_QNAN, FP32_PINF};
-            end
-            computed_exceptions[OF_FLAG] = 1'b1;
-            computed_exceptions[NX_FLAG] = 1'b1;
+            // VFREC7 table (normal inputs producing subnormal outputs):
+            //   "-2^B+1 < x <= -2^B (normal) -> -2^-(B+1) >= y > -2^-B (subnormal, sig=01...)"
+            //   "-2^B   < x <= -2^B-1 (normal) -> -2^-B >= y > -2^-B+1 (subnormal, sig=1...)"
+            //   "2^B-1  <= x < 2^B (normal) -> 2^-B+1 > y >= 2^-B (subnormal, sig=1...)"
+            //   "2^B    <= x < 2^B+1 (normal) -> 2^-B > y >= 2^-(B+1) (subnormal, sig=01...)"
+            // This subnormal-output path is only taken by VFREC7: VFRSQRT7 always
+            // produces a normal output (output exponent in 511..1560 (FP64) /
+            // 63..201 (FP32)).
+            result_mant53 = {1'b1, result_mant};
+            result_mant53 = result_mant53 >> ($signed(13'd1) - $signed(result_exp));
+            result_mant = fp64_mode ?
+                result_mant53[51:0] :
+                {result_mant53[51 -: 23], 29'd0};
+            computed_result = fp64_mode ?
+                {src_sign, 11'h000, result_mant[51:0]} :
+                {src_sign, 8'h00, result_mant[51 -: 23]};
         end
         else begin
+            // VFREC7 table: "-2^B-1 < x <= -2^-B+1 (normal) -> -2^-B+1 >= y > -2^B-1 (normal)"
+            // VFREC7 table: "2^-B+1 <= x < 2^B-1 (normal) -> 2^B-1 > y >= 2^-B+1 (normal)"
+            // VFRSQRT7 table: "+0.0 < x < +inf -> estimate of 1/sqrt(x)"
+            // VFREC7 normal inputs and VFRSQRT7 positive inputs produce a normal output
+            // here: the output exponent is at most 2044 (FP64) / 252 (FP32) for VFREC7
+            // and 1560 (FP64) / 201 (FP32) for VFRSQRT7.
             computed_result = fp64_mode ?
                 {src_sign, result_exp[10:0], result_mant[51:0]} :
                 {src_sign, result_exp[7:0], result_mant[51 -: 23]};
-            computed_exceptions[NX_FLAG] = 1'b1;
         end
     end
 end

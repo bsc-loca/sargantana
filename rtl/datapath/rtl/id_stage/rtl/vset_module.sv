@@ -34,6 +34,8 @@ module vset_module
     input logic                     recover_commit_exception_i,
     input logic                     recover_last_misspredict_i,
     input logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_misspredict_i,    
+    input logic                     vleff_update_i,
+    input logic [VMAXELEM_LOG:0]    vleff_vl_i,
 
     output logic [$clog2(VSET_QUEUE_NUM_ENTRIES)-1:0] vset_index_o,
     output logic                    vnarrow_wide_o,
@@ -95,7 +97,9 @@ always_comb begin : vsetvl_ctrl
         end
 
                 
-        if (vtype_i[2] || (vl_d <= (vlmax >> 1))) begin
+        // 2*SEW must fit in ELEN=64; only m1/fractional LMUL exist, so the wide
+        // operand must fit in one register (fractional LMUL or vl <= VLMAX/2)
+        if ((vtype_i[5:3] != 3'b011) && (vtype_i[2] || (vl_d <= (vlmax >> 1)))) begin
             vnarrow_wide_en_d = 1'b1;
         end else begin
             vnarrow_wide_en_d = 1'b0;
@@ -122,6 +126,8 @@ vset_queue vset_queue_inst(
     .vtype_i({vtype_d[63], vtype_d[7:0]}),
     .vnarrow_wide_en_i(vnarrow_wide_en_d),
     .vlmax_i(vlmax[VMAXELEM_LOG:0]),
+    .vleff_update_i(vleff_update_i),
+    .vleff_vl_i(vleff_vl_i),
 
     .sew_o(sew_o),
     .vl_o(vl_q),

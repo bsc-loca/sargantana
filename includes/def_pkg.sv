@@ -80,7 +80,7 @@ package def_pkg;
 
     localparam logic [63:0] ISA_CODE = (RVA <<  0)  // A - Atomic Instructions extension
                                      | (1   <<  1)  // B - Bit Manipulation extension
-                                     | (0   <<  2)  // C - Compressed extension
+                                     | (1   <<  2)  // C - Compressed extension
                                      | (RVD <<  3)  // D - Double precsision floating-point extension
                                      | (RVF <<  5)  // F - Single precsision floating-point extension
                                      | (RVH <<  7)  // H - Hypervisor extension
@@ -127,7 +127,8 @@ package def_pkg;
                                                 | riscv_pkg::HSTATUS_HU
                                                 | riscv_pkg::HSTATUS_VTVM
                                                 | riscv_pkg::HSTATUS_VTW
-                                                | riscv_pkg::HSTATUS_VTSR;
+                                                | riscv_pkg::HSTATUS_VTSR
+                                                | riscv_pkg::HSTATUS_HUPMM;
 
     localparam logic [63:0] VS_DELEG_INTERRUPTS = riscv_pkg::MIP_VSSIP
                                                 | riscv_pkg::MIP_VSTIP

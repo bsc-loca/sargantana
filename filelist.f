@@ -30,9 +30,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/conv_zfa.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fpnew_int2fp.sv
 ./rtl/datapath/rtl/exe_stage/rtl/old_fpu/conv_zfhmin.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp32_to_fp16.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp64_to_fp16.sv
-./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp16_to_fp64.sv
+./rtl/datapath/rtl/exe_stage/rtl/old_fpu/fp_cvt.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_add.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu/alu_shift.sv
@@ -47,10 +45,12 @@
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/functional_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vcomp.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree_alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmul.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vpopc.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/viota.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vperm.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfirst.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vmsb_i_o_f.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vcpop.sv
@@ -59,7 +59,6 @@
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vdiv.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/div_2bits.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/fp32_to_fp64.sv
-./rtl/datapath/rtl/exe_stage/rtl/simd/fp16_to_fp32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_simd.sv
@@ -82,8 +81,10 @@
 ./rtl/datapath/rtl/ir_stage/rtl/free_list.sv
 ./rtl/datapath/rtl/ir_stage/rtl/instruction_queue.sv
 ./rtl/datapath/rtl/ir_stage/rtl/rename_table.sv
+./rtl/datapath/rtl/if_stage_2/rtl/realigner.sv
 ./rtl/datapath/rtl/if_stage_2/rtl/if_stage_2.sv
 ./rtl/datapath/rtl/id_stage/rtl/immediate.sv
+./rtl/datapath/rtl/id_stage/rtl/predecoder.sv
 ./rtl/datapath/rtl/id_stage/rtl/decoder.sv
 ./rtl/datapath/rtl/id_stage/rtl/vset_module.sv
 ./rtl/datapath/rtl/id_stage/rtl/vset_queue.sv
@@ -141,6 +142,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt_radix16_with_sqrt.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_srt.v
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/openc910/C910_RTL_FACTORY/gen_rtl/vfdsu/rtl/ct_vfdsu_top.v
+./rtl/datapath/rtl/exe_stage/rtl/fpu/vendor/cvw/fma/fmalza.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_mf.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vf7_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfpu_drac_wrapper.sv
@@ -148,10 +150,10 @@
 
 ./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/comp_f64.sv
-./rtl/datapath/rtl/exe_stage/rtl/simd/fp16_to_fp32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/conv_zvfhmin.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f32.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/maxmin_f64.sv
+./rtl/datapath/rtl/exe_stage/rtl/simd/vfred_fpadd.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredtree.sv
 ./rtl/datapath/rtl/exe_stage/rtl/simd/vfredoladder.sv
-
+./rtl/datapath/rtl/exe_stage/rtl/simd/vclmul.sv

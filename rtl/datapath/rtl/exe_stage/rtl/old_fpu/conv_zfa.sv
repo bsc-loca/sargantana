@@ -125,33 +125,52 @@ import fpnew_pkg::*;
     end
 
 logic sign;
-logic [31:0] abs_val_32;
 logic [31:0] res_32;
+logic [32:0] res_32_ext;
 integer e;
 
-logic [63:0] abs_val_ext;
+logic [83:0] fcvtmod_fixedpoint;
+logic [31:0] fcvtmod_integer;
+logic [51:0] fcvtmod_fraction;
+fpnew_pkg::status_t fcvtmod_status;
 
 always_comb begin: fcvtmod
-    sign = 1'b0;
-    abs_val_32 = 32'h0;
-    abs_val_ext = '0;
+    sign              = 1'b0;
+    res_32            = 32'h0;
+    res_32_ext        = '0;
+    fcvtmod_fixedpoint = '0;
+    fcvtmod_integer   = 32'h0;
+    fcvtmod_fraction  = 52'h0;
+    fcvtmod_status    = '0;
 
     sign = operand_i[63];
     e = $signed({1'b0, operand_i[62:52]}) - 1023;
 
-    if ((operand_i[62:52] != 11'h7FF) && (e > 0)) begin
-        if (e > 52) begin
-            abs_val_ext = {11'b0, 1'b1, operand_i[51:0]} << (e - 52);
-            abs_val_32   = abs_val_ext[31:0];
-        end else begin
-            abs_val_ext = {11'b0, 1'b1, operand_i[51:0]} >> (32'sd52 - e);
-            abs_val_32   = abs_val_ext[31:0];
+    if (operand_i[62:52] == 11'h7FF) begin
+        fcvtmod_status.NV = 1'b1;
+    end else if (operand_i[62:52] == 11'h0) begin
+        if (|operand_i[51:0]) begin
+            fcvtmod_status.NX = 1'b1;
         end
-    end else if ((operand_i[62:52] != 11'h7FF) && (e == 0)) begin
-        abs_val_32 = 32'd1;
+    end else if (e < 0) begin
+        fcvtmod_status.NX = 1'b1;
+    end else if (e >= 84) begin
+        fcvtmod_status.NV = 1'b1;
+    end else begin
+        fcvtmod_fixedpoint = {31'd0, 1'b1, operand_i[51:0]} << e;
+        fcvtmod_integer    = fcvtmod_fixedpoint[83:52];
+        fcvtmod_fraction   = fcvtmod_fixedpoint[51:0];
+        res_32_ext = (sign == 1'b1) ? (~fcvtmod_integer + 32'h1) : fcvtmod_integer;
+        res_32 = res_32_ext[31:0];
+        if (e > 31) begin
+            fcvtmod_status.NV = 1'b1;
+        end else if (fcvtmod_integer > ((sign == 1'b1) ? 32'h8000_0000 : 32'h7FFF_FFFF)) begin
+            fcvtmod_status.NV = 1'b1;
+        end else if (fcvtmod_fraction != 52'd0) begin
+            fcvtmod_status.NX = 1'b1;
+        end
     end
 
-    res_32 = (sign == 0) ? abs_val_32 : -abs_val_32;
     fcvtmod_result = {{32{res_32[31]}}, res_32};
 end
 
@@ -171,7 +190,7 @@ end
         endcase
     end
 
-    assign status_d    = '0;
+    assign status_d    = (instruction_i.instr.instr_type == FCVTMOD) ? fcvtmod_status : '0;
     assign tag_d       = tag_i;
     assign out_valid_d = valid_i;
 

@@ -264,6 +264,7 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
         .ge_o       ()
     );
 
+`ifdef LEGACY_VFRED
     logic [2:0][63:0] fp32_fpnew_operands;
     always_comb begin
         fp32_fpnew_operands[1] = {32'h0000_0000, fp32srca};
@@ -299,6 +300,19 @@ for (i = 0; i < ((VLEN/32)-1); i++) begin : fp32_adders
            .out_valid_o    (  ),
            .busy_o         (  )
         );
+`else
+    vfred_fpadd #(
+       .FpFormat   ( fpnew_pkg::FP32 )
+    ) f32_fpnew (
+       .clk_i      ( clk_i ),
+       .rstn_i     ( rstn_i ),
+       .srca_i     ( {32'h0000_0000, fp32srca} ),
+       .srcb_i     ( {32'h0000_0000, fp32srcb} ),
+       .rnd_mode_i ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp32_metadata_d[FP32_NODE_LEVEL*DELAY_SUM_FP32].frm)) ),
+       .result_o   ( fp32resdp2 ),
+       .status_o   ( fpnewstatus )
+    );
+`endif
 end
 endgenerate
 
@@ -373,6 +387,7 @@ maxmin_f32 lastfp32comparator (
     .ge_o       ()
 );
 
+`ifdef LEGACY_VFRED
 logic [2:0][63:0] lastfp32_fpnew_operands;
 always_comb begin
     lastfp32_fpnew_operands[1] = {32'h0000_0000, lastfp32srca};
@@ -408,6 +423,19 @@ fpnew_top #(
     .out_valid_o    (  ),
     .busy_o         (  )
 );
+`else
+vfred_fpadd #(
+   .FpFormat   ( fpnew_pkg::FP32 )
+) f32_fpnew_last (
+   .clk_i      ( clk_i ),
+   .rstn_i     ( rstn_i ),
+   .srca_i     ( {32'h0000_0000, lastfp32srca} ),
+   .srcb_i     ( {32'h0000_0000, lastfp32srcb} ),
+   .rnd_mode_i ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp32_metadata_d[($clog2(VLEN/32))*DELAY_SUM_FP32].frm)) ),
+   .result_o   ( lastfp32resdp2 ),
+   .status_o   ( lastfp32fpnewstatus )
+);
+`endif
 
 // --------------------------------------------------------------------------------------
 // for the vector widening reductions for FP64, we must also ensure that
@@ -477,7 +505,8 @@ for (i = 0; i < ((VLEN/32)/2); i++) begin : fp64_wide_adders
         fp64widesignals[(VLEN/32)+i] = fp64wideresdp2;
     end
 
-    logic [2:0][63:0] fp64wide_fpnew_operands;
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] fp64wide_fpnew_operands;
     always_comb begin
         fp64wide_fpnew_operands[1] = fp64widesrca;
         fp64wide_fpnew_operands[2] = fp64widesrcb;
@@ -512,6 +541,19 @@ for (i = 0; i < ((VLEN/32)/2); i++) begin : fp64_wide_adders
        .out_valid_o    (  ),
        .busy_o         (  )
     );
+`else
+    vfred_fpadd #(
+       .FpFormat   ( fpnew_pkg::FP64 )
+    ) fp64_fpnew (
+       .clk_i      ( clk_i ),
+       .rstn_i     ( rstn_i ),
+       .srca_i     ( fp64widesrca ),
+       .srcb_i     ( fp64widesrcb ),
+       .rnd_mode_i ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(frm_i)) ),
+       .result_o   ( fp64wideresdp2 ),
+       .status_o   ( fpnewstatus )
+    );
+ `endif
 end
 endgenerate
 
@@ -620,7 +662,8 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
         .ge_o       ()
     );
 
-    logic [2:0][63:0] fp64_fpnew_operands;
+`ifdef LEGACY_VFRED
+logic [2:0][63:0] fp64_fpnew_operands;
     always_comb begin
         fp64_fpnew_operands[1] = fp64srca;
         fp64_fpnew_operands[2] = fp64srcb;
@@ -655,6 +698,19 @@ for (i = 0; i < ((VLEN/64)-1); i++) begin : fp64_adders
        .out_valid_o    (  ),
        .busy_o         (  )
     );
+`else
+    vfred_fpadd #(
+       .FpFormat   ( fpnew_pkg::FP64 )
+    ) fp64_fpnew (
+       .clk_i      ( clk_i ),
+       .rstn_i     ( rstn_i ),
+       .srca_i     ( fp64srca ),
+       .srcb_i     ( fp64srcb ),
+       .rnd_mode_i ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata_d[FP64_NODE_LEVEL*DELAY_SUM_FP64].frm)) ),
+       .result_o   ( fp64resdp2 ),
+       .status_o   ( fpnewstatus )
+    );
+`endif
 
 end
 endgenerate
@@ -730,6 +786,7 @@ maxmin_f64 lastfp64comparator (
 ); 
 
 // the result of the reduction must be added with the last element of the 2nd operand
+`ifdef LEGACY_VFRED
 logic [2:0][63:0] lastfp64_fpnew_operands;
 always_comb begin
     lastfp64_fpnew_operands[1] = lastfp64srca;
@@ -765,6 +822,19 @@ fpnew_top #(
    .out_valid_o    (  ),
    .busy_o         (  )
 );
+`else
+vfred_fpadd #(
+   .FpFormat   ( fpnew_pkg::FP64 )
+) fp64_fpnew_last (
+   .clk_i      ( clk_i ),
+   .rstn_i     ( rstn_i ),
+   .srca_i     ( lastfp64srca ),
+   .srcb_i     ( lastfp64srcb ),
+   .rnd_mode_i ( fpnew_pkg::roundmode_e'(riscv_pkg::op_frm_fp_t'(fp64_metadata_d[($clog2(VLEN/64))*DELAY_SUM_FP64].frm)) ),
+   .result_o   ( lastfp64resdp2 ),
+   .status_o   ( lastfp64fpnewstatus )
+);
+`endif
 
 // --------------------------------------------------------------------------------------
 
@@ -868,10 +938,13 @@ generate
                 fp32_metadata_d[i].status.NX = fp32_metadata_q[i-1].status.NX || statusred.NX;
                 fp32_metadata_d[i].status.NV = fp32_metadata_q[i-1].status.NV || statusred.NV;
             end else begin // if propagation cycle only maintain the value
-                fp32_metadata_d[i].status.OF = fp32_metadata_d[i-1].status.OF;
-                fp32_metadata_d[i].status.UF = fp32_metadata_d[i-1].status.UF;
-                fp32_metadata_d[i].status.NX = fp32_metadata_d[i-1].status.NX;
-                fp32_metadata_d[i].status.NV = fp32_metadata_d[i-1].status.NV;
+                // from the register, as the FP64 chain does: reading fp32_metadata_d[i-1]
+                // made the flags skip a register per tree level and land on the previous
+                // instruction in synthesis (Verilator simulated it as a register)
+                fp32_metadata_d[i].status.OF = fp32_metadata_q[i-1].status.OF;
+                fp32_metadata_d[i].status.UF = fp32_metadata_q[i-1].status.UF;
+                fp32_metadata_d[i].status.NX = fp32_metadata_q[i-1].status.NX;
+                fp32_metadata_d[i].status.NV = fp32_metadata_q[i-1].status.NV;
             end
         end // always_comb
 

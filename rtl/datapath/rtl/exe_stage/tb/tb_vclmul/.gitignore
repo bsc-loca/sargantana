@@ -1,0 +1,5 @@
+lib_vclmul/
+modelsim.ini
+*.vcd
+transcript
+vsim.wlf

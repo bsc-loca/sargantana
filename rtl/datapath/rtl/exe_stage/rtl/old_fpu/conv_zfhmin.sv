@@ -41,7 +41,6 @@ import fpnew_pkg::*;
 
    logic [15:0] fp16fp32_i;
    logic [31:0] fp16fp32_o;
-   logic        fp16fp32_nv;
    fpnew_pkg::status_t fp16fp32_status;
 
    logic [31:0] fp32fp16_i;
@@ -50,7 +49,6 @@ import fpnew_pkg::*;
 
    logic [15:0] fp16fp64_i;
    logic [63:0] fp16fp64_o;
-   logic        fp16fp64_nv;
    fpnew_pkg::status_t fp16fp64_status;
 
    logic [63:0] fp64fp16_i;
@@ -69,6 +67,9 @@ import fpnew_pkg::*;
    logic is_move_r;
    logic valid_r;
    reg_t tag_r;
+
+   logic fp16_src_boxed;
+   logic fp32_src_boxed;
 
    always_ff @(posedge clk_i or negedge rstn_i) begin
        if (!rstn_i) begin
@@ -93,47 +94,54 @@ import fpnew_pkg::*;
    assign result_move = {{48{(dst_fmt_r == fpnew_pkg::FP64) ? operand_r[15] : 1'b1}}, operand_r[15:0]};
    assign status_move = '0;
 
-   assign fp16fp32_i = operand_r[15:0];
-   assign fp32fp16_i = operand_r[31:0];
+   assign fp16_src_boxed = (operand_r[63:16] == 48'hFFFFFFFFFFFF);
+   assign fp32_src_boxed = (operand_r[63:32] == 32'hFFFFFFFF);
 
-   fp32_to_fp16 fp32_to_fp16_inst (
-                                   .f32(fp32fp16_i),
+   assign fp16fp32_i = fp16_src_boxed ? operand_r[15:0] : drac_pkg::FP16_QNAN;
+   assign fp32fp16_i = fp32_src_boxed ? operand_r[31:0] : drac_pkg::FP32_QNAN;
+
+   assign fp16fp64_i = fp16_src_boxed ? operand_r[15:0] : drac_pkg::FP16_QNAN;
+   assign fp64fp16_i = operand_r[63:0];
+
+   fp_cvt #(
+       .SRC_FMT(fpnew_pkg::FP32),
+       .DST_FMT(fpnew_pkg::FP16)
+   ) fp32_to_fp16_inst (
+                                   .operand_i(fp32fp16_i),
                                    .frm(rnd_mode_r),
-                                   .f16(fp32fp16_o),
+                                   .result_o(fp32fp16_o),
                                    .status_o(fp32fp16_status)
                                    );
 
-   assign fp16fp64_i = operand_r[15:0];
-   assign fp64fp16_i = operand_r[63:0];
-
-   fp64_to_fp16 fp64_to_fp16_inst (
-                                   .f64(fp64fp16_i),
+   fp_cvt #(
+       .SRC_FMT(fpnew_pkg::FP64),
+       .DST_FMT(fpnew_pkg::FP16)
+   ) fp64_to_fp16_inst (
+                                   .operand_i(fp64fp16_i),
                                    .frm(rnd_mode_r),
-                                   .f16(fp64fp16_o),
+                                   .result_o(fp64fp16_o),
                                    .status_o(fp64fp16_status)
                                    );
 
-   fp16_to_fp32 fp16_to_fp32_inst (
-                                   .fp16_i(fp16fp32_i),
-                                   .fp32_o(fp16fp32_o),
-                                   .nv_o(fp16fp32_nv)
+   fp_cvt #(
+       .SRC_FMT(fpnew_pkg::FP16),
+       .DST_FMT(fpnew_pkg::FP32)
+   ) fp16_to_fp32_inst (
+                                   .operand_i(fp16fp32_i),
+                                   .frm(rnd_mode_r),
+                                   .result_o(fp16fp32_o),
+                                   .status_o(fp16fp32_status)
                                    );
 
-   fp16_to_fp64 fp16_to_fp64_inst (
-                                   .fp16_i(fp16fp64_i),
-                                   .fp64_o(fp16fp64_o),
-                                   .nv_o(fp16fp64_nv)
+   fp_cvt #(
+       .SRC_FMT(fpnew_pkg::FP16),
+       .DST_FMT(fpnew_pkg::FP64)
+   ) fp16_to_fp64_inst (
+                                   .operand_i(fp16fp64_i),
+                                   .frm(rnd_mode_r),
+                                   .result_o(fp16fp64_o),
+                                   .status_o(fp16fp64_status)
                                    );
-
-   always_comb begin : s_fp16_to_fp32
-      fp16fp32_status = '0;
-      fp16fp32_status.NV = fp16fp32_nv;
-   end
-
-   always_comb begin: s_fp16_to_fp64
-      fp16fp64_status = '0;
-      fp16fp64_status.NV = fp16fp64_nv;
-   end
 
    always_comb begin : resultSelection
       if ((dst_fmt_r == fpnew_pkg::FP16) && (src_fmt_r == fpnew_pkg::FP64)) begin : fcvt_h_d

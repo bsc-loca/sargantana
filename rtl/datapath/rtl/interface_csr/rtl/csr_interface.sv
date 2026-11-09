@@ -98,9 +98,16 @@ always_comb begin
             SRET,
             MRET,
             WFI,
+            WRS_NTO,
+            WRS_STO,
             SFENCE_VMA,
             HFENCE_VVMA,
             HFENCE_GVMA,
+            SINVAL_VMA,
+            SFENCE_W_INVAL,
+            SFENCE_INVAL_IR,
+            HINVAL_VVMA,
+            HINVAL_GVMA,
             MRTS: begin
                 csr_cmd_int = CSR_CMD_SYS;
                 csr_rw_data_int = 64'b0;
@@ -130,10 +137,7 @@ always_comb begin
                 csr_ena_int = (vleff_vl_i == 'h0) ? 1'b0 : 1'b1;
             end
             default: begin
-                `ifdef ASSERTIONS
-                   assert (1 == 0);
-                `endif
-                 csr_ena_int = 1'b0;
+                csr_ena_int = 1'b0;
             end
         endcase
     end
@@ -160,16 +164,23 @@ assign commit_2_blocked = ((((((!instruction_to_commit_i[0].valid) ||
                                     instruction_to_commit_i[0].ex_valid) ||
                                     csr_ena_int) || (!instruction_to_commit_i[1].valid)) ||
                                     (instruction_to_commit_i[1].valid &
-                                    (((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
+                                    ((((((((((((((((((((((((((((((((instruction_to_commit_i[1].instr_type == ECALL) ||
                                     (instruction_to_commit_i[1].instr_type == SRET)) ||
                                     (instruction_to_commit_i[1].instr_type == MRET)) ||
                                     (instruction_to_commit_i[1].instr_type == URET)) ||
                                     (instruction_to_commit_i[1].instr_type == WFI)) ||
+                                    (instruction_to_commit_i[1].instr_type == WRS_NTO)) ||
+                                    (instruction_to_commit_i[1].instr_type == WRS_STO)) ||
                                     (instruction_to_commit_i[1].instr_type == EBREAK)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE)) ||
                                     (instruction_to_commit_i[1].instr_type == SFENCE_VMA)) ||
                                     (instruction_to_commit_i[1].instr_type == HFENCE_VVMA)) ||
                                     (instruction_to_commit_i[1].instr_type == HFENCE_GVMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == SINVAL_VMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == SFENCE_W_INVAL)) ||
+                                    (instruction_to_commit_i[1].instr_type == SFENCE_INVAL_IR)) ||
+                                    (instruction_to_commit_i[1].instr_type == HINVAL_VVMA)) ||
+                                    (instruction_to_commit_i[1].instr_type == HINVAL_GVMA)) ||
                                     (instruction_to_commit_i[1].instr_type == FENCE_I)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRW)) ||
                                     (instruction_to_commit_i[1].instr_type == CSRRS)) ||

@@ -27,7 +27,9 @@ module control_unit
 
     input logic             miss_icache_i,
     input logic             ready_icache_i,
-    input logic             if2_cu_valid_i,
+    //input logic             if2_cu_valid_i,
+    input if1_cu_t          if1_cu_i,
+    input if2_cu_t          if2_cu_i,
     input id_cu_t           id_cu_i,
     input ir_cu_t           ir_cu_i,
     input rr_cu_t           rr_cu_i,
@@ -157,7 +159,7 @@ module control_unit
         endcase
     end
 
-    assign step_inst_in_if2 = (if2_cu_valid_i && csr_cu_i.debug_step && ((state_debug_q == DEBUG_STATE_RUNNING) || (state_debug_q == DEBUG_STATE_RESUME)));
+    assign step_inst_in_if2 = (if2_cu_i.valid_fetch && csr_cu_i.debug_step && ((state_debug_q == DEBUG_STATE_RUNNING) || (state_debug_q == DEBUG_STATE_RESUME)));
     assign step_inst_in_id = (id_cu_i.valid && csr_cu_i.debug_step && ((state_debug_q == DEBUG_STATE_RUNNING) || (state_debug_q == DEBUG_STATE_RESUME)));
 
     always_ff@(posedge clk_i, negedge rstn_i)
@@ -294,13 +296,18 @@ module control_unit
                      ((id_cu_i.valid && id_cu_i.stall_vset_fence) && !exe_cu_i.clear_vset_fence)                     ||
                      step_inst_in_pipeline                      || 
                      (commit_cu_i.valid && commit_cu_i.fence)   ||
-                     on_halt_state)  begin
+                     on_halt_state                              ||
+                     if2_cu_i.keep_fetch && !if1_cu_i.branch_pred)  begin
                      
             cu_if_o.next_pc = NEXT_PC_SEL_KEEP_PC;
         end else begin
-            cu_if_o.next_pc = NEXT_PC_SEL_BP_OR_PC_4;
+            cu_if_o.next_pc = NEXT_PC_SEL_BP_OR_PC_ADD;
         end
     end
+
+    `ifdef SIM_KONATA_DUMP
+        assign cu_if_o.keep_fetch = if2_cu_i.keep_fetch;
+    `endif
 
     // logic to select which pc to use in fetch
     always_comb begin
@@ -401,19 +408,8 @@ module control_unit
             pipeline_flush_o.flush_exe = 1'b0;
             pipeline_flush_o.kill_exe  = 1'b1;
             flush_csr_fence            = 1'b1;
-        end /*else if (exe_cu_i.valid_1 & ~correct_branch_pred_exe_i) begin
-            if (exe_cu_i.stall) begin
-                pipeline_flush_o.flush_ir  = 1'b1;
-                pipeline_flush_o.flush_rr  = 1'b0;
-                pipeline_flush_o.flush_exe = 1'b0;
-                flush_csr_fence            = 1'b1;
-            end else begin
-                pipeline_flush_o.flush_ir  = 1'b1;
-                pipeline_flush_o.flush_rr  = 1'b1;
-                pipeline_flush_o.flush_exe = 1'b0;
-                flush_csr_fence            = 1'b1;
-            end
-        end */else if (exe_cu_i.stall) begin   
+        end 
+            else if (exe_cu_i.stall) begin   
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
@@ -421,7 +417,7 @@ module control_unit
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i.empty_free_list || ir_cu_i.simd_empty_free_list || ir_cu_i.fp_empty_free_list) begin
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
@@ -450,7 +446,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;              
-        end else if (miss_icache_i) begin
+        end else if (miss_icache_i/* && !(if2_cu_i.valid_fetch_2)*/) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id  = 1'b0;
@@ -487,7 +483,7 @@ module control_unit
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i.empty_free_list || ir_cu_i.simd_empty_free_list || ir_cu_i.fp_empty_free_list) begin
             pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;

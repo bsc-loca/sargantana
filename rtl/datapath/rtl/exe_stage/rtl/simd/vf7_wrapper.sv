@@ -34,6 +34,8 @@ module vf7_wrapper (
     input  drac_pkg::sew_t          sew_i,
     input  logic                    operation_i,    // 0: VFREC7, 1: VFRSQRT7
     input  bus_simd_t               src_i,
+    input  logic [VMAXELEM_LOG:0]   vl_i,           // Current vector length in elements
+    input  bus_mask_t               data_vm_i,      // Vector mask (one bit per element)
     input  fpnew_pkg::roundmode_e   frm_i,          // rounding mode, to be considered in VFREC7 operation
     // outputs
     output bus_simd_t               res_o,
@@ -50,16 +52,23 @@ for (genvar i = 0; (i < (VLEN/32)); i++) begin : GEN_VF7
     bus64_t source_operand;
     bus64_t result;
 
-    always_comb begin
-        source_operand = '0;
-        result = '0;
-        if (sew_i == SEW_64) begin
-            if (i < (VLEN/64)) begin
-                // continous assignment here allowed
+    if (i < (VLEN/64)) begin : GEN_LOW_SECTOR
+        always_comb begin
+            source_operand = '0;
+            result = '0;
+            if (sew_i == SEW_64) begin
                 source_operand = src_i[(i*64) +: 64];
-            end 
-        end else begin
-            source_operand = src_i[i*32 +: 32];
+            end else begin
+                source_operand = {32'd0, src_i[i*32 +: 32]};
+            end
+        end
+    end else begin : GEN_HIGH_SECTOR
+        always_comb begin
+            source_operand = '0;
+            result = '0;
+            if (sew_i != SEW_64) begin
+                source_operand = {32'd0, src_i[i*32 +: 32]};
+            end
         end
     end
 
@@ -80,6 +89,15 @@ endgenerate
 
 fpnew_pkg::status_t accstatus [1:0];
 logic               accvalid  [1:0];
+logic [(VLEN/32)-1:0] activevec;
+
+// An element only contributes to the outgoing flags if it is inside the
+// current vector length and enabled by the vector mask.
+always_comb begin
+    for (int i = 0; i < (VLEN/32); i++) begin
+        activevec[i] = (i < vl_i) && data_vm_i[i];
+    end
+end
 
 // Questa complaining if the ladder is not well separated from the generate block
 always_comb begin
@@ -92,19 +110,23 @@ always_comb begin
     accvalid [1] = '0;
 
     for (int i = 0; i < (VLEN/64); i++) begin
-        accstatus[0].NV |= statusvec[i].NV;
-        accstatus[0].DZ |= statusvec[i].DZ;
-        accstatus[0].OF |= statusvec[i].OF;
-        accstatus[0].UF |= statusvec[i].UF;
-        accstatus[0].NX |= statusvec[i].NX;
+        if (activevec[i]) begin
+            accstatus[0].NV |= statusvec[i].NV;
+            accstatus[0].DZ |= statusvec[i].DZ;
+            accstatus[0].OF |= statusvec[i].OF;
+            accstatus[0].UF |= statusvec[i].UF;
+            accstatus[0].NX |= statusvec[i].NX;
+        end
         accvalid [0]    |= validvec[i];
     end
     for (int i = (VLEN/64); i < (VLEN/32); i++) begin
-        accstatus[1].NV |= statusvec[i].NV;
-        accstatus[1].DZ |= statusvec[i].DZ;
-        accstatus[1].OF |= statusvec[i].OF;
-        accstatus[1].UF |= statusvec[i].UF;
-        accstatus[1].NX |= statusvec[i].NX;
+        if (activevec[i]) begin
+            accstatus[1].NV |= statusvec[i].NV;
+            accstatus[1].DZ |= statusvec[i].DZ;
+            accstatus[1].OF |= statusvec[i].OF;
+            accstatus[1].UF |= statusvec[i].UF;
+            accstatus[1].NX |= statusvec[i].NX;
+        end
         accvalid [1]    |= validvec[i];
     end
 

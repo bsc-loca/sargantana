@@ -9,4 +9,4 @@
 	url = ../mmu.git
 [submodule "rtl/datapath/rtl/exe_stage/rtl/fpu"]
 	path = rtl/datapath/rtl/exe_stage/rtl/fpu
-	url = https://github.com/openhwgroup/cvfpu.git
+	url = https://github.com/bsc-loca/cvfpu.git

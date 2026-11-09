@@ -18,7 +18,7 @@ done < <(find ./ -depth -name "includes" -o -name "rtl")
 rtl_files=""
 while read file; do
     rtl_files=$rtl_files$file$'\n'
-done < <(find   \( ! -iname \tb_* -a ! -iname \wip_* -a ! -iname \*_pkg\* -a ! -path \*/tb* \) -and \( -iname \*.v -o -iname \*.vh -o -iname \*.sv \))
+done < <(find   \( ! -iname \tb_* -a ! -iname \wip_* -a ! -iname \*_pkg\* -a ! -path \*/tb* -a ! -path \*/common_cells/\* -a ! -path \*/fpu/src/\* -a ! -path \*/test/\* \) -and \( -iname \*.v -o -iname \*.vh -o -iname \*.sv \))
 #remove the last character, If not verilator will try to run without file name
 rtl_files=${rtl_files::-1}
 echo "Verilator lint only"
@@ -29,7 +29,7 @@ while read p; do
   #grep for warnings and errors and save it on a variable. Notice that sterr is 
   #required
   echo -e "$GREEN $p $NC"
-  (verilator --lint-only   includes/riscv_pkg.sv includes/drac_pkg.sv $include_dirs "$p"| grep 'warning\|error')2>&1 | tee -a $artifact 
+  (verilator --lint-only   rtl/common_cells/src/cf_math_pkg.sv rtl/datapath/rtl/exe_stage/rtl/fpu/src/fpnew_pkg.sv includes/riscv_pkg.sv rtl/mmu/includes/mmu_pkg.sv includes/drac_pkg.sv $include_dirs "$p"| grep 'warning\|error')2>&1 | tee -a $artifact 
 done <<< "$rtl_files"
 
 #check if there is an artifact, due to errors or warnings

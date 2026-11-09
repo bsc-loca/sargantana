@@ -56,6 +56,12 @@ module mem_unit
 
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [15:0] csr_satp_asid_i,
+    input logic [15:0] csr_vsatp_asid_i,
+    input logic [13:0] csr_hgatp_vmid_i,
+    input logic [1:0] csr_s_pmm_i,
+    input logic [1:0] csr_h_pmm_i,
+    input logic [1:0] csr_hstatus_hupmm_i,
     //input logic [VMAXELEM_LOG:0] vl_i,
     output logic [VMAXELEM_LOG:0] vleff_vl_o,
 
@@ -137,6 +143,10 @@ logic reg_valid_req;
 logic reg_ready_resp;
 logic killed_dcache_req_d;
 logic killed_dcache_req_q;
+logic killed_dcache_req;
+bus64_t     pend_data_rs1_q;
+logic [3:0] pend_mem_size_q;
+logic [1:0] pend_pbmt_q;
 logic req_cpu_dcache_valid_int;
 logic stall_after_flush_lsq;
 
@@ -175,6 +185,7 @@ bus_simd_t vdata_to_wb;
 logic [VMAXELEM_LOG:0] vl_to_dcache;
 logic [VMAXELEM_LOG:0] vl_s1;
 logic [VMAXELEM_LOG:0] vl_to_wb;
+logic [VMAXELEM_LOG:0] vl_scalar;
 logic [VMAXELEM_LOG:0] vleff_vl_int;
 gl_index_t vleff_gl_index;
 
@@ -223,6 +234,9 @@ assign vl_s1 =        ((instruction_s1_q.instr.instr_type == VLM) || (instructio
 assign vl_to_wb =     ((instruction_to_wb.instr.instr_type == VLM) || (instruction_to_wb.instr.instr_type == VSM)) ? (instruction_to_wb.vl[VMAXELEM_LOG:0] + 'd7) >> 3 :
                       ((instruction_to_wb.instr.instr_type == VL1R) || (instruction_to_wb.instr.instr_type == VS1R)) ? trunc_7_vmaxelem_log(VMAXELEM >> instruction_to_wb.sew) :
                         instruction_to_wb.vl[VMAXELEM_LOG:0];
+assign vl_scalar =    ((instruction_to_wb.instr.instr_type == LB) || (instruction_to_wb.instr.instr_type == LH) || (instruction_to_wb.instr.instr_type == LW) || (instruction_to_wb.instr.instr_type == LD) ||
+                      (instruction_to_wb.instr.instr_type == LBU) || (instruction_to_wb.instr.instr_type == LHU) || (instruction_to_wb.instr.instr_type == LWU) ||
+                      (instruction_to_wb.instr.instr_type == FLW) || (instruction_to_wb.instr.instr_type == FLD) || (instruction_to_wb.instr.instr_type == FLH) ) ? 'd8 : vl_to_wb;
 
 assign is_cmo_prefetch = instruction_i.instr.mem_type == CMO_PREFETCH ;
 
@@ -268,6 +282,7 @@ assign instruction_to_lsq.is_cmo          = instruction_i.is_cmo;
 assign instruction_to_lsq.is_cmo_prefetch = instruction_i.is_cmo_prefetch;
 
 assign instruction_to_lsq.vmisalign_xcpt = instruction_i.vmisalign_xcpt;
+assign instruction_to_lsq.velem_sew = instruction_i.velem_sew;
 assign instruction_to_lsq.velem_id = instruction_i.velem_id;
 assign instruction_to_lsq.load_mask = instruction_i.load_mask;
 assign instruction_to_lsq.velem_off = instruction_i.velem_off;
@@ -315,6 +330,12 @@ load_store_queue  #(
     .dtlb_comm_o(dtlb_comm_o),
     .ld_st_priv_lvl_i(ld_st_priv_lvl_i),
     .ld_st_v_mode_i(ld_st_v_mode_i),
+    .csr_satp_asid_i(csr_satp_asid_i),
+    .csr_vsatp_asid_i(csr_vsatp_asid_i),
+    .csr_hgatp_vmid_i(csr_hgatp_vmid_i),
+    .csr_s_pmm_i(csr_s_pmm_i),
+    .csr_h_pmm_i(csr_h_pmm_i),
+    .csr_hstatus_hupmm_i(csr_hstatus_hupmm_i),
     .pmu_load_after_store_o (pmu_load_after_store_o)
 );
 
@@ -382,6 +403,16 @@ always_comb begin
                         req_cpu_dcache_valid_int = 1'b0;
                         mem_commit_stall_s0    = 1'b0;
                         instruction_s1_d        = 'h0;
+                    end else if ((!req_cpu_dcache_o.is_amo_store_or_cmo | req_cpu_dcache_o.is_cmo_prefetch) & amo_on_fly) begin
+                        // A load must not access the L1D while an AMO is in flight. The AMO is
+                        // performed at the L2 and a load sent behind it can hit a stale line, so
+                        // the load is performed before the AMO: this breaks .aq (lock acquire:
+                        // litmus ISA03, the critical section reads stale data) and .aqrl (AMO as a
+                        // full fence: litmus AMO-FENCE, store->load reordering across it). The
+                        // decoder drops the aq/rl bits, so every AMO is treated as .aq.
+                        req_cpu_dcache_valid_int = 1'b0;
+                        mem_commit_stall_s0    = 1'b0;
+                        instruction_s1_d = 'h0;
                     end else if (!req_cpu_dcache_o.is_amo_store_or_cmo | req_cpu_dcache_o.is_cmo_prefetch) begin
                         // If the instruction is not a Store or AMO
                         req_cpu_dcache_valid_int = ~instruction_to_dcache.ex.valid & ~stall_after_flush_lsq; // Don't send new request before sending the killed one
@@ -416,7 +447,8 @@ always_comb begin
                     // Advance LSQ when a transaction is performed OR if the instruction has an exception
                     read_next_lsq = (req_cpu_dcache_valid_int & resp_dcache_cpu_i.ready & ~stall_after_flush_lsq)
                                   | (instruction_to_dcache.ex.valid & (((~store_on_fly) & (~amo_on_fly)) | (mem_gl_index_o == instruction_to_dcache.gl_index)))
-                                  | ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid & req_cpu_dcache_o.is_amo_store_or_cmo & ~instruction_to_dcache.load_mask[0]);
+                                  | ((commit_store_or_amo_i[0] | commit_store_or_amo_i[1]) & ~instruction_to_dcache.ex.valid & req_cpu_dcache_o.is_amo_store_or_cmo & ~instruction_to_dcache.load_mask[0])
+                                                                                           & ~full_pmrq_q & ~vstore_packer_full;
                 end
             end
         endcase
@@ -425,6 +457,20 @@ end
 
 assign killed_dcache_req_d = ~reg_ready_resp & reg_valid_req & ~req_cpu_dcache_valid_int;
 assign req_cpu_dcache_o.valid = req_cpu_dcache_valid_int | killed_dcache_req_d | killed_dcache_req_q;
+
+ assign killed_dcache_req = (killed_dcache_req_d | killed_dcache_req_q) & ~req_cpu_dcache_valid_int;
+
+always_ff @(posedge clk_i, negedge rstn_i) begin
+    if(~rstn_i) begin
+        pend_data_rs1_q <= '0;
+        pend_mem_size_q <= '0;
+        pend_pbmt_q     <= '0;
+    end else if (req_cpu_dcache_valid_int) begin
+        pend_data_rs1_q <= instruction_to_dcache.data_rs1;
+        pend_mem_size_q <= instruction_to_dcache.instr.mem_size;
+        pend_pbmt_q     <= instruction_to_dcache.pbmt;
+    end
+end
 
 // Update State Machine and Stored Instruction
 always_ff @(posedge clk_i, negedge rstn_i) begin
@@ -450,16 +496,18 @@ end
 
 //// Select source to DCACHE interface
 always_comb begin
-    req_cpu_dcache_o.data_rs1            = instruction_to_dcache.data_rs1;
+    req_cpu_dcache_o.data_rs1            = (killed_dcache_req) ? pend_data_rs1_q : instruction_to_dcache.data_rs1;
     req_cpu_dcache_o.data_rs2            = instruction_to_dcache.data_rs2;
-    req_cpu_dcache_o.instr_type          = (killed_dcache_req_d) ? ADD : instruction_to_dcache.instr.instr_type;
-    req_cpu_dcache_o.mem_size            = instruction_to_dcache.instr.mem_size;
+    // A killed request is always sent as a plain load (ADD maps to a dcache load)
+    req_cpu_dcache_o.instr_type          = (killed_dcache_req) ? ADD : instruction_to_dcache.instr.instr_type;
+    req_cpu_dcache_o.mem_size            = (killed_dcache_req) ? pend_mem_size_q : instruction_to_dcache.instr.mem_size;
     req_cpu_dcache_o.rd                  = tag_id;
     req_cpu_dcache_o.is_amo_store_or_cmo = instruction_to_dcache.is_amo_store_or_cmo;
     req_cpu_dcache_o.is_amo              = instruction_to_dcache.is_amo;
     req_cpu_dcache_o.is_cmo              = instruction_to_dcache.is_cmo;
     req_cpu_dcache_o.is_cmo_prefetch     = instruction_to_dcache.is_cmo_prefetch;
     req_cpu_dcache_o.is_store            = instruction_to_dcache.is_store;
+    req_cpu_dcache_o.pbmt                = (killed_dcache_req) ? pend_pbmt_q : instruction_to_dcache.pbmt;
 end
 logic test;
 //// Store in the Pipeline Send the GL index to commit to match the commiting instruction with the Store
@@ -573,11 +621,11 @@ always_comb begin
     if (instruction_s2_q.instr.valid && resp_dcache_cpu_q.valid && (resp_dcache_cpu_q.rd == tag_id_s2_q) || instruction_s1_q.is_cmo_prefetch) begin // Prefetches don't issue responses
         flush_store         = is_STORE_s2_q;
         flush_cmo           = is_CMO_s2_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q; 
+        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q & !instruction_s2_q.is_cmo_prefetch; 
     end else if (instruction_s2_q.instr.valid & instruction_s2_q.ex.valid) begin 
         instruction_to_pmrq =  'h0;
         flush_store         = is_STORE_s2_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q;
+        flush_amo           = is_STORE_AMO_or_CMO_s2_q & !is_STORE_s2_q & !is_CMO_s2_q & !instruction_s1_q.is_cmo_prefetch;
         flush_cmo           = is_CMO_s2_q;
     end else if (instruction_s2_q.instr.valid & io_s2_q & is_STORE_AMO_or_CMO_s2_q) begin
         instruction_to_pmrq =  'h0;
@@ -595,11 +643,11 @@ always_comb begin
     if ((instruction_s1_q.instr.valid && resp_dcache_cpu_i.valid && (resp_dcache_cpu_i.rd == tag_id_s1_q)) || instruction_s1_q.is_cmo_prefetch) begin // Prefetches don't issue responses
         flush_store         = is_STORE_s1_q;
         flush_cmo           = is_CMO_s1_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q;  
+        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q & !instruction_s1_q.is_cmo_prefetch;
     end else if (instruction_s1_q.instr.valid & instruction_s1_q.ex.valid) begin 
         instruction_to_pmrq =  'h0;
         flush_store         = is_STORE_s1_q;
-        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q; 
+        flush_amo           = is_STORE_AMO_or_CMO_s1_q & !is_STORE_s1_q & !is_CMO_s1_q & !instruction_s1_q.is_cmo_prefetch; 
         flush_cmo           = is_CMO_s1_q;
     end else if (instruction_s1_q.instr.valid & io_s1_q & is_STORE_AMO_or_CMO_s1_q) begin
         instruction_to_pmrq =  'h0;
@@ -715,7 +763,8 @@ always_comb begin
         instruction_to_wb.ex              = instruction_from_pmrq.ex;
         instruction_to_wb.gl_index        = instruction_from_pmrq.gl_index;        
         instruction_to_wb.agu_req_tag     = instruction_from_pmrq.agu_req_tag;
-        instruction_to_wb.vmisalign_xcpt  = instruction_from_pmrq.vmisalign_xcpt;  
+        instruction_to_wb.vmisalign_xcpt  = instruction_from_pmrq.vmisalign_xcpt;
+        instruction_to_wb.velem_sew       = instruction_from_pmrq.velem_sew;
         instruction_to_wb.velem_id        = instruction_from_pmrq.velem_id;  
         instruction_to_wb.load_mask       = instruction_from_pmrq.load_mask;     
         instruction_to_wb.velem_off       = instruction_from_pmrq.velem_off; 
@@ -755,7 +804,7 @@ always_comb begin
         4'b0110: data_to_wb = data_word;
         4'b0111: data_to_wb = data_dword;
         4'b1000: data_to_wb = data_qword;
-        4'b1001: data_to_wb = data_8word[VLEN-1:0];
+        4'b1001: data_to_wb = bus_simd_t'(data_8word);
         default: data_to_wb = data_dcache[VLEN-1:0];
     endcase
 end
@@ -767,10 +816,18 @@ assign vlm_inst_wb = (instruction_to_wb.instr.instr_type == VLM) ? 1'b1 : 1'b0;
 //Apply the mask to the vector result
 always_comb begin
     masked_data_to_wb = instruction_to_wb.data_old_vd;
-    vdata_to_wb = (instruction_to_wb.instr.vta) ? '1 : instruction_to_wb.data_old_vd;
+    case (instruction_to_wb.instr.instr_type)
+        LB, LH, LW, LD, LBU, LHU, LWU, FLW, FLD, FLH: begin
+            vdata_to_wb = 'h0;
+        end
+        default: begin
+            vdata_to_wb = (instruction_to_wb.instr.vta) ? '1 : instruction_to_wb.data_old_vd;
+        end
+    endcase
     packed_velems = 'h0;
     for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
-        if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we &&
+        if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && instruction_to_wb.instr.valid && 
+            (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we) &&
             (vload_packer_nelem_q[i] != '1)) begin
             vdata_to_wb = vload_packer_q[i];
         end
@@ -796,7 +853,8 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/8); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_to_wb <= i)) begin
+                // Byte requests split from a misaligned element use the mask and vl of that element
+                if (instruction_to_wb.data_vm[i >> instruction_to_wb.velem_sew] || (vlm_inst_wb && (i < instruction_to_wb.velem_incr)) || (vl_scalar <= (i >> instruction_to_wb.velem_sew))) begin
                     masked_data_to_wb[(8*i)+:8] = vdata_to_wb[(8*i)+:8];
                 end
             end
@@ -821,7 +879,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/16); ++i) begin
-                if ((instruction_to_wb.data_vm[i]) || (vl_to_wb <= i)) begin
+                if ((instruction_to_wb.data_vm[i]) || (vl_scalar <= i)) begin
                     masked_data_to_wb[(16*i)+:16] = vdata_to_wb[(16*i)+:16];
                 end
             end
@@ -846,7 +904,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/32); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_scalar <= i)) begin
                     masked_data_to_wb[(32*i)+:32] = vdata_to_wb[(32*i)+:32];
                 end
             end
@@ -871,7 +929,7 @@ always_comb begin
                 end 
             end
             for (int i = 0; i<(VLEN/64); ++i) begin
-                if (instruction_to_wb.data_vm[i] || (vl_to_wb <= i)) begin
+                if (instruction_to_wb.data_vm[i] || (vl_scalar <= i)) begin
                     masked_data_to_wb[(64*i)+:64] = vdata_to_wb[(64*i)+:64];
                 end
             end
@@ -933,7 +991,9 @@ always_comb begin
         vload_packer_complete = 1'b1;
         vstore_packer_complete = 1'b1;
     end else begin
-        if (instruction_s1_d.instr.valid && instruction_s1_d.instr.vregfile_we && !(instruction_s1_d.velem_incr >= vl_to_dcache)) begin
+        if (instruction_s1_d.instr.valid && 
+        (instruction_s1_d.instr.vregfile_we || instruction_s1_d.instr.regfile_we || instruction_s1_d.instr.fregfile_we) 
+        && !(instruction_s1_d.velem_incr >= vl_to_dcache)) begin
             for (int i = (VECTOR_PACKER_NUM_ENTRIES-1); i>=0; --i) begin
                 if ((vload_packer_id_q[i] == instruction_s1_d.gl_index) && !vload_packer_write_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_write_hit = 1'b1;
@@ -962,9 +1022,8 @@ always_comb begin
             end
         end
         
-        if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
-            vload_packer_complete = 1'b1;
-        end else if (instruction_to_wb.instr.valid && instruction_to_wb.instr.vregfile_we) begin
+        if (instruction_to_wb.instr.valid && (instruction_to_wb.instr.vregfile_we || instruction_to_wb.instr.regfile_we || instruction_to_wb.instr.fregfile_we)) begin
+            // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
             for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                 if ((vload_packer_id_q[i] == instruction_to_wb.gl_index) && !vload_packer_read_hit && (vload_packer_nelem_q[i] != '1)) begin
                     vload_packer_read_hit = 1'b1;
@@ -978,12 +1037,16 @@ always_comb begin
                     end
                 end
             end
+            if (!vload_packer_read_hit && (instruction_to_wb.velem_incr >= vl_to_wb)) begin
+                vload_packer_complete = 1'b1;
+            end
         end
         `ifdef REGISTER_HPDC_OUTPUT
         if (flush_store) begin
-            if ((instruction_s2_q.velem_incr >= instruction_s2_q.vl[VMAXELEM_LOG:0]) || (instruction_s2_q.instr.instr_type == VSM)) begin
+            if (instruction_s2_q.instr.instr_type == VSM) begin
                 vstore_packer_complete = 1'b1;
             end else begin
+                // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s2_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
@@ -996,13 +1059,15 @@ always_comb begin
                         end
                     end
                 end
+                if (!vstore_packer_read_hit && (instruction_s2_q.velem_incr >= instruction_s2_q.vl[VMAXELEM_LOG:0])) begin
+                    vstore_packer_complete = 1'b1;
+                end
             end
         end
         `else
         if (flush_store) begin
-            if (instruction_s1_q.velem_incr >= vl_s1) begin
-                vstore_packer_complete = 1'b1;
-            end else begin
+            begin
+                // Requests of an instruction that owns a packer entry complete through it, so the entry is freed
                 for (int i = 0; i<VECTOR_PACKER_NUM_ENTRIES; ++i) begin
                     if ((vstore_packer_id_q[i] == instruction_s1_q.gl_index) && !vstore_packer_read_hit && (vstore_packer_nelem_q[i] != '1)) begin
                         vstore_packer_read_hit = 1'b1;
@@ -1014,6 +1079,9 @@ always_comb begin
                             vstore_packer_nelem_d[i] = trunc_sum_vmaxelem_log(vstore_packer_nelem_q[i] + instruction_s1_q.velem_incr);
                         end
                     end
+                end
+                if (!vstore_packer_read_hit && (instruction_s1_q.velem_incr >= vl_s1)) begin
+                    vstore_packer_complete = 1'b1;
                 end
             end
         end
@@ -1027,16 +1095,32 @@ logic [63:0] wb_result_boxed;
 
 always_comb begin
     case (instruction_to_wb.instr.instr_type)
-        FLH: wb_result_boxed = {{48{1'b1}}, data_to_wb[15:0]};
-        FLW: wb_result_boxed = {{32{1'b1}}, data_to_wb[31:0]};
-        default: wb_result_boxed = data_to_wb[63:0];
+        FLH: wb_result_boxed = {{48{1'b1}}, masked_data_to_wb[15:0]};
+        FLW: wb_result_boxed = {{32{1'b1}}, masked_data_to_wb[31:0]};
+        default: wb_result_boxed = masked_data_to_wb[63:0];
+    endcase
+end
+
+// Misaligned scalar loads are packed byte by byte, and the bytes may arrive out of order
+// (e.g. crossing a cache line with a miss on the low line), so extend the result once complete
+logic [63:0] wb_result_scalar;
+
+always_comb begin
+    case (instruction_to_wb.instr.instr_type)
+        LB, HLV_B:            wb_result_scalar = {{56{masked_data_to_wb[7]}},  masked_data_to_wb[7:0]};
+        LH, HLV_H:            wb_result_scalar = {{48{masked_data_to_wb[15]}}, masked_data_to_wb[15:0]};
+        LW, HLV_W:            wb_result_scalar = {{32{masked_data_to_wb[31]}}, masked_data_to_wb[31:0]};
+        LBU, HLV_BU:          wb_result_scalar = {56'b0, masked_data_to_wb[7:0]};
+        LHU, HLV_HU, HLVX_HU: wb_result_scalar = {48'b0, masked_data_to_wb[15:0]};
+        LWU, HLV_WU, HLVX_WU: wb_result_scalar = {32'b0, masked_data_to_wb[31:0]};
+        default:              wb_result_scalar = masked_data_to_wb[63:0];
     endcase
 end
 
 
 // Output Instruction
 // Prefetch instructions do not get a response, we can directly commit them
-assign instruction_scalar_o.valid         = (instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we) || instruction_to_wb.is_cmo_prefetch; 
+assign instruction_scalar_o.valid         = (instruction_to_wb.instr.valid && instruction_to_wb.instr.regfile_we && (vload_packer_complete | instruction_to_wb.ex.valid)) || instruction_to_wb.is_cmo_prefetch; 
 assign instruction_scalar_o.pc            = instruction_to_wb.instr.pc;
 assign instruction_scalar_o.bpred         = instruction_to_wb.instr.bpred;
 assign instruction_scalar_o.rs1           = instruction_to_wb.instr.rs1;
@@ -1057,7 +1141,7 @@ assign instruction_scalar_o.chkp          = instruction_to_wb.chkp;
 assign instruction_scalar_o.gl_index      = instruction_to_wb.gl_index;
 assign instruction_scalar_o.branch_taken  = 1'b0;
 assign instruction_scalar_o.result_pc     = 0;
-assign instruction_scalar_o.result        = wb_result_boxed;
+assign instruction_scalar_o.result        = wb_result_scalar;
 assign instruction_scalar_o.ex            = instruction_to_wb.is_cmo_prefetch ? 0 : instruction_to_wb.ex; // CMO prefetch does not propagate
 assign instruction_scalar_o.fp_status     = 'h0;
 assign instruction_scalar_o.mem_type      = instruction_to_wb.instr.mem_type;
@@ -1066,7 +1150,7 @@ assign instruction_scalar_o.sew            = instruction_to_wb.instr.sew;
 assign instruction_scalar_o.lmul          = instruction_to_wb.instr.lmul;
 
 // Output Float Instruction
-assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we; //fp_instr;
+assign instruction_fp_o.valid             = instruction_to_wb.instr.valid && instruction_to_wb.instr.fregfile_we && (vload_packer_complete | instruction_to_wb.ex.valid); //fp_instr;
 assign instruction_fp_o.pc                = instruction_to_wb.instr.pc;
 assign instruction_fp_o.bpred             = instruction_to_wb.instr.bpred;
 assign instruction_fp_o.rs1               = instruction_to_wb.instr.rs1;
@@ -1193,6 +1277,20 @@ assign empty_o  = empty_lsq & ~req_cpu_dcache_o.valid;
 
 assign pmu_exe_load_o  = req_cpu_dcache_o.valid & ~req_cpu_dcache_o.is_amo_store_or_cmo;
 assign pmu_exe_store_o = req_cpu_dcache_o.valid & req_cpu_dcache_o.is_store;
+
+`ifdef SIMULATION
+    // AMOLOAD (simulation only): loads sent to the L1D while an AMO is in flight. Such a load can be
+    // performed before the AMO (litmus ISA03 / AMO-FENCE on the 2x2 FPGA); with the amo_on_fly
+    // load stall above there must be none.
+    longint unsigned amoload_cnt;
+    always_ff @(posedge clk_i) begin
+        if (rstn_i && req_cpu_dcache_valid_int && !req_cpu_dcache_o.is_amo_store_or_cmo && amo_on_fly) begin
+            amoload_cnt++;
+            if (amoload_cnt <= 5) $display("AMOLOAD %0t load sent to the L1D while an AMO is in flight", $time);
+        end
+    end
+    final $display("AMOLOAD summary: %0d loads sent while an AMO was in flight", amoload_cnt);
+`endif
 
 endmodule
 

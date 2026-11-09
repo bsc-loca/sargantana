@@ -47,6 +47,12 @@ module load_store_queue
 
     input logic [1:0] ld_st_priv_lvl_i,
     input logic       ld_st_v_mode_i,
+    input logic [15:0] csr_satp_asid_i,
+    input logic [15:0] csr_vsatp_asid_i,
+    input logic [13:0] csr_hgatp_vmid_i,
+    input logic [1:0] csr_s_pmm_i,
+    input logic [1:0] csr_h_pmm_i,
+    input logic [1:0] csr_hstatus_hupmm_i,
     
     output logic               pmu_load_after_store_o  // Load blocked by ongoing store
 );
@@ -89,6 +95,7 @@ logic [$clog2(LSQ_NUM_ENTRIES):0] num_to_translate;
 
 // FIFO Memory structure
 rr_exe_mem_instr_t control_table[LSQ_NUM_ENTRIES-1:0];
+rr_exe_mem_instr_t translated_instr;
 
 // Internal Control Signals
 logic write_enable;
@@ -100,6 +107,8 @@ logic translate_enable;
 logic translate_incoming;
 gl_index_t ex_gl_index;
 logic ex_reg;
+logic ex_same_vleff;
+logic [63:0] masked_addr;
 
 logic io_address_space;
 
@@ -127,21 +136,67 @@ assign instr_to_translate = translate_incoming ? instruction_i : control_table[t
 // A translation can be done if there is a hit in the dTLB
 assign translate_enable = dtlb_comm_i.tlb_ready & !dtlb_comm_i.resp.miss & instr_to_translate.instr.valid;
 
-rr_exe_mem_instr_t translated_instr;
 
 always_comb begin 
     logic is_load_reserved;
     logic is_hlvx_inst;
+    logic [1:0] active_pmm_mode;
+    logic [63:0] physical_mask;
+    logic [63:0] virtual_mask;
+
     is_load_reserved = (instr_to_translate.instr.instr_type == AMO_LRW) || (instr_to_translate.instr.instr_type == AMO_LRD);
     translated_instr = instr_to_translate;
     is_hlvx_inst     = (instr_to_translate.instr.instr_type == HLVX_HU) || (instr_to_translate.instr.instr_type ==HLVX_WU);
+    
+    active_pmm_mode = riscv_pkg::PMM_DISABLED;
+    if (!is_hlvx_inst) begin
+        if (ld_st_v_mode_i) begin
+            if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_S) begin
+                active_pmm_mode = csr_h_pmm_i;
+            end else begin
+                active_pmm_mode = csr_hstatus_hupmm_i;
+            end
+        end else if (ld_st_priv_lvl_i == riscv_pkg::PRIV_LVL_U) begin
+            active_pmm_mode = csr_s_pmm_i;
+        end
+    end
+
+    unique case (active_pmm_mode)
+        riscv_pkg::PMM_DISABLED: begin
+            virtual_mask = riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_DISABLED;
+        end
+        riscv_pkg::PMM_XLEN_57:  begin
+            virtual_mask = instr_to_translate.data_rs1[riscv_pkg::XLEN-riscv_pkg::PMLEN_7-1] ? riscv_pkg::PMM_VMASK_XLEN_57 : riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_XLEN_57;
+        end
+        riscv_pkg::PMM_XLEN_48:  begin
+            virtual_mask = instr_to_translate.data_rs1[riscv_pkg::XLEN-riscv_pkg::PMLEN_16-1] ? riscv_pkg::PMM_VMASK_XLEN_48 : riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_XLEN_48;
+        end
+        default: begin
+            virtual_mask = riscv_pkg::PMM_VMASK_DISABLED;
+            physical_mask = riscv_pkg::PMM_PMASK_DISABLED;
+        end
+    endcase
+ 
+    if (is_hlvx_inst) begin
+        masked_addr = instr_to_translate.data_rs1;
+    end else if (ld_st_v_mode_i) begin
+        masked_addr = (instr_to_translate.data_rs1 & physical_mask) | virtual_mask;
+    end else begin
+        masked_addr = instr_to_translate.data_rs1 & physical_mask;
+    end
 
     // Translation from TLB
     translated_instr.translated = translate_enable;
-    translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, instr_to_translate.data_rs1[11:0]};
+    translated_instr.data_rs1 = {dtlb_comm_i.resp.ppn, masked_addr[11:0]};
+    translated_instr.pbmt = dtlb_comm_i.resp.pbmt;
     
     // Exception treatment
-    if ((ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index)) begin // a previous request of the same instruction generated an exception
+    ex_same_vleff = (ex_reg == 1'b1) && (translated_instr.gl_index == ex_gl_index) &&
+                    (translated_instr.instr.instr_type == VLEFF) && (translated_instr.velem_id != 'h0);
+    if (ex_same_vleff) begin // a previous request of the same instruction generated an exception
         translated_instr.ex.valid       = 1'b1;
     end else if (instr_to_translate.load_mask == 'h0) begin // Do not generate exceptions for fully masked requests 
         translated_instr.ex = 0;
@@ -160,14 +215,18 @@ always_comb begin
         translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     end else if (dtlb_comm_i.resp.xcpt.store & instr_to_translate.is_amo_store_or_cmo & ~is_load_reserved & ((!instr_to_translate.is_cmo) | (instr_to_translate.instr.instr_type == CBO_ZERO)) ) begin // Page fault store, only CBO Zero 
-        translated_instr.ex.cause       = ST_AMO_PAGE_FAULT;
+        // A walk that failed on a page-table read outside mapped memory is an access fault.
+        translated_instr.ex.cause       = dtlb_comm_i.resp.access_fault ? ST_AMO_ACCESS_FAULT : ST_AMO_PAGE_FAULT;
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
         translated_instr.ex.gva         = '0;
         translated_instr.ex.valid       = 1'b1;
     end else if ((~is_hlvx_inst && dtlb_comm_i.resp.xcpt.load) || (is_hlvx_inst && dtlb_comm_i.resp.xcpt.fetch)) begin // Page fault load
-        translated_instr.ex.cause       = instr_to_translate.is_cmo ? ST_AMO_PAGE_FAULT : LD_PAGE_FAULT;
+        // A walk that failed on a page-table read outside mapped memory is an access fault.
+        translated_instr.ex.cause       = dtlb_comm_i.resp.access_fault
+                                        ? (instr_to_translate.is_cmo ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT)
+                                        : (instr_to_translate.is_cmo ? ST_AMO_PAGE_FAULT   : LD_PAGE_FAULT);
         translated_instr.ex.origin      = instr_to_translate.data_rs1;
         translated_instr.ex.origin2 = '0;
         translated_instr.ex.tinst   = '0;
@@ -194,12 +253,24 @@ always_comb begin
         translated_instr.ex.gva         = ld_st_v_mode_i;
         translated_instr.ex.valid       = 1'b1;
     `ifdef SIM_COMMIT_LOG
-    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT))) ||
+    end else if (((en_ld_st_translation_i) && (masked_addr[VIRT_ADDR_SIZE-1] ? !(&masked_addr[63:VIRT_ADDR_SIZE]) : | masked_addr[63:VIRT_ADDR_SIZE]))) begin
+        translated_instr.ex.cause  = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_PAGE_FAULT : LD_PAGE_FAULT;
+        translated_instr.ex.origin = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva    = ld_st_v_mode_i;
+        translated_instr.ex.valid  = 1'b1;
+    end else if ((~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, masked_addr) || (masked_addr >= PHISIC_MEM_LIMIT))) ||
                   ((en_ld_st_translation_i) && translate_enable && (~is_inside_mapped_sections(DracCfg, translated_instr.data_rs1) || (translated_instr.data_rs1 >= PHISIC_MEM_LIMIT)))) begin // invalid address
-    `else 
-    end else if (((en_ld_st_translation_i) && (instr_to_translate.data_rs1[VIRT_ADDR_SIZE-1] ? !(&instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE]) : | instr_to_translate.data_rs1[63:VIRT_ADDR_SIZE])) ||
-                  (~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, instr_to_translate.data_rs1) || (instr_to_translate.data_rs1 >= PHISIC_MEM_LIMIT)))) begin
+    `else
+    end else if (((en_ld_st_translation_i) && (masked_addr[VIRT_ADDR_SIZE-1] ? !(&masked_addr[63:VIRT_ADDR_SIZE]) : | masked_addr[63:VIRT_ADDR_SIZE]))) begin
+        translated_instr.ex.cause  = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_PAGE_FAULT : LD_PAGE_FAULT;
+        translated_instr.ex.origin = instr_to_translate.data_rs1;
+        translated_instr.ex.origin2 = '0;
+        translated_instr.ex.tinst   = '0;
+        translated_instr.ex.gva    = ld_st_v_mode_i;
+        translated_instr.ex.valid  = 1'b1;
+    end else if ((~(en_ld_st_translation_i|en_ld_st_g_translation_i) && (~is_inside_mapped_sections(DracCfg, masked_addr) || (masked_addr >= PHISIC_MEM_LIMIT)))) begin
     `endif
         translated_instr.ex.cause  = (instr_to_translate.is_amo_store_or_cmo && ~is_load_reserved) ? ST_AMO_ACCESS_FAULT : LD_ACCESS_FAULT;
         translated_instr.ex.origin = instr_to_translate.data_rs1;
@@ -223,7 +294,7 @@ always_ff @(posedge clk_i, negedge rstn_i) begin
         if ((translated_instr.ex.valid == 1'b1) && (translated_instr.instr.instr_type == VLEFF) && (translated_instr.velem_id != 'h0)) begin
             ex_gl_index <= translated_instr.gl_index;
             ex_reg <= 1'b1;
-        end else if ((translated_instr.instr.valid == 1'b1) && (translated_instr.gl_index != ex_gl_index)) begin
+        end else if ((translated_instr.instr.valid == 1'b1) && !ex_same_vleff) begin
             ex_gl_index <= 'h0;
             ex_reg <= 1'b0;
         end
@@ -328,8 +399,8 @@ always_comb begin
 end
 
 
-// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1.
-assign io_address_space = is_inside_IO_sections(DracCfg, control_table[head].data_rs1);
+// If the memory access is not using the virtualization and it is on the IO addr space, the io_address_space is 1 or Svpbmt IO (pbmt=10) override.
+assign io_address_space = is_inside_IO_sections(DracCfg, control_table[head].data_rs1) | (control_table[head].pbmt == 2'b10);
 
 always_comb begin
     blocked_store_o = 1'b1;
@@ -368,12 +439,12 @@ assign dtlb_comm_o.vs_enable = en_ld_st_translation_i && ld_st_v_mode_i;
 assign dtlb_comm_o.g_enable  = en_ld_st_g_translation_i && ld_st_v_mode_i;
 assign dtlb_comm_o.priv_lvl = ld_st_priv_lvl_i;
 assign dtlb_comm_o.req.valid = (num_to_translate > 0) || translate_incoming;
-assign dtlb_comm_o.req.vpn = instr_to_translate.data_rs1[PHY_VIRT_MAX_ADDR_SIZE-1:12];
+assign dtlb_comm_o.req.vpn = masked_addr[PHY_VIRT_MAX_ADDR_SIZE-1:12];
 assign dtlb_comm_o.req.passthrough = 1'b0;
 assign dtlb_comm_o.req.instruction = 1'b0;
-assign dtlb_comm_o.req.asid = '0;
-assign dtlb_comm_o.req.vmid = '0;
-assign dtlb_comm_o.req.store = instr_to_translate.is_amo_store_or_cmo; // TODO: Check this, might not be exactly right...
+assign dtlb_comm_o.req.asid = (en_ld_st_translation_i && ld_st_v_mode_i) ? csr_vsatp_asid_i[drac_pkg::ASID_SIZE-1:0] : csr_satp_asid_i[drac_pkg::ASID_SIZE-1:0];
+assign dtlb_comm_o.req.vmid = (en_ld_st_g_translation_i && ld_st_v_mode_i) ? csr_hgatp_vmid_i[drac_pkg::ASID_SIZE-2-1:0] : '0;
+assign dtlb_comm_o.req.store = instr_to_translate.is_store | instr_to_translate.is_amo | instr_to_translate.is_cmo | (instr_to_translate.instr.instr_type == CMO_PREFETCH_W);
 
 assign empty_int = (num_to_exe == '0) && st_buff_empty && (num_to_translate == '0);
 `ifdef SARG_BYPASS_LSQ
@@ -407,6 +478,20 @@ store_buffer store_buffer_inst(
     .collision_o(st_buff_collision)
 );
 
+
+`ifdef SIMULATION
+    // AMOBYPASS (simulation only): loads issued while an AMO waits in the store buffer, i.e. performed
+    // before an older AMO (litmus ISA03 / AMO-FENCE on the 2x2 FPGA). With the AMO collision in
+    // store_buffer there must be none.
+    longint unsigned amobypass_cnt;
+    always_ff @(posedge clk_i) begin
+        if (rstn_i && read_enable && is_next_load && !st_buff_collision && store_buffer_inst.has_amo_dbg) begin
+            amobypass_cnt++;
+            if (amobypass_cnt <= 5) $display("AMOBYPASS %0t load issued past an AMO waiting in the store buffer", $time);
+        end
+    end
+    final $display("AMOBYPASS summary: %0d loads issued past an AMO in the store buffer", amobypass_cnt);
+`endif
 
 endmodule
 

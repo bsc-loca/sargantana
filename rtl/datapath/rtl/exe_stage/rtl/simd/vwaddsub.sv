@@ -29,16 +29,22 @@ module vwaddsub
     output bus64_t              data_vd_o       // 64-bit result
 );
 
-function [15:0] trunc_16bits(input [16:0] val_in);
-    trunc_16bits = val_in[15:0];
+// The narrow operands are sign- or zero-extended explicitly, and every sum is
+// computed at the result width. The previous form, e.g.
+//   data_vd_o[63:0] = $signed(data_vs2_i[31:0]) + $signed(data_vs1_i[31:0]);
+// relies on a signed expression being sign-extended to the width of its
+// target; simulators do that, but Vivado 2024.2 synthesised these sums
+// zero-extended (vwadd e32 of -1 + -1 gave 0x00000000fffffffe on the FPGA).
+function automatic logic [15:0] ext8(input logic [7:0] x, input logic sgn);
+    ext8 = {{8{sgn & x[7]}}, x};
 endfunction
 
-function [31:0] trunc_32bits(input [32:0] val_in);
-    trunc_32bits = val_in[31:0];
+function automatic logic [31:0] ext16(input logic [15:0] x, input logic sgn);
+    ext16 = {{16{sgn & x[15]}}, x};
 endfunction
 
-function [63:0] trunc_64bits(input [64:0] val_in);
-    trunc_64bits = val_in[63:0];
+function automatic logic [63:0] ext32(input logic [31:0] x, input logic sgn);
+    ext32 = {{32{sgn & x[31]}}, x};
 endfunction
 
 always_comb begin
@@ -46,61 +52,41 @@ always_comb begin
         SEW_8: 
             for (int i = 0; i < 4; i++) begin
                 case(instr_type_i)
-                    VWADD:  data_vd_o[16*i +: 16] = $signed(data_vs2_i[8*i +: 8]) + $signed(data_vs1_i[8*i +: 8]);
-                    VWADDU: data_vd_o[16*i +: 16] = $unsigned(data_vs2_i[8*i +: 8]) + $unsigned(data_vs1_i[8*i +: 8]);
-                    VWSUB:  data_vd_o[16*i +: 16] = $signed(data_vs2_i[8*i +: 8]) - $signed(data_vs1_i[8*i +: 8]);
-                    VWSUBU: data_vd_o[16*i +: 16] = $unsigned(data_vs2_i[8*i +: 8]) - $unsigned(data_vs1_i[8*i +: 8]);
-
-                    VWADDW:  data_vd_o[16*i +: 16] = trunc_16bits($signed(data_vs2_i[16*i +: 16]) + $signed({{8{data_vs1_i[(8*i)+7]}},data_vs1_i[8*i +: 8]}));
-                    VWADDUW: data_vd_o[16*i +: 16] = trunc_16bits($unsigned(data_vs2_i[16*i +: 16]) + $unsigned(data_vs1_i[8*i +: 8]));
-                    VWSUBW:  data_vd_o[16*i +: 16] = trunc_16bits($signed(data_vs2_i[16*i +: 16]) - $signed({{8{data_vs1_i[(8*i)+7]}},data_vs1_i[8*i +: 8]}));
-                    VWSUBUW: data_vd_o[16*i +: 16] = trunc_16bits($unsigned(data_vs2_i[16*i +: 16]) - $unsigned(data_vs1_i[8*i +: 8]));
-
+                    VWADD:   data_vd_o[16*i +: 16] = ext8(data_vs2_i[8*i +: 8], 1'b1) + ext8(data_vs1_i[8*i +: 8], 1'b1);
+                    VWADDU:  data_vd_o[16*i +: 16] = ext8(data_vs2_i[8*i +: 8], 1'b0) + ext8(data_vs1_i[8*i +: 8], 1'b0);
+                    VWSUB:   data_vd_o[16*i +: 16] = ext8(data_vs2_i[8*i +: 8], 1'b1) - ext8(data_vs1_i[8*i +: 8], 1'b1);
+                    VWSUBU:  data_vd_o[16*i +: 16] = ext8(data_vs2_i[8*i +: 8], 1'b0) - ext8(data_vs1_i[8*i +: 8], 1'b0);
+                    VWADDW:  data_vd_o[16*i +: 16] = data_vs2_i[16*i +: 16] + ext8(data_vs1_i[8*i +: 8], 1'b1);
+                    VWADDUW: data_vd_o[16*i +: 16] = data_vs2_i[16*i +: 16] + ext8(data_vs1_i[8*i +: 8], 1'b0);
+                    VWSUBW:  data_vd_o[16*i +: 16] = data_vs2_i[16*i +: 16] - ext8(data_vs1_i[8*i +: 8], 1'b1);
+                    VWSUBUW: data_vd_o[16*i +: 16] = data_vs2_i[16*i +: 16] - ext8(data_vs1_i[8*i +: 8], 1'b0);
                     default: data_vd_o[16*i +: 16] = 16'b0;
                 endcase
             end
         SEW_16: 
             for (int i = 0; i < 2; i++) begin
                 case(instr_type_i)
-                    VWADD: data_vd_o[32*i +: 32] = $signed(data_vs2_i[16*i +: 16]) + $signed(data_vs1_i[16*i +: 16]);
-                    VWADDU: data_vd_o[32*i +: 32] = $unsigned(data_vs2_i[16*i +: 16]) + $unsigned(data_vs1_i[16*i +: 16]);
-                    VWSUB:  data_vd_o[32*i +: 32] = $signed(data_vs2_i[16*i +: 16]) - $signed(data_vs1_i[16*i +: 16]);
-                    VWSUBU: data_vd_o[32*i +: 32] = $unsigned(data_vs2_i[16*i +: 16]) - $unsigned(data_vs1_i[16*i +: 16]);
-
-                    VWADDW: data_vd_o[32*i +: 32] = trunc_32bits($signed(data_vs2_i[32*i +: 32]) + $signed({{16{data_vs1_i[(16*i)+15]}},data_vs1_i[16*i +: 16]}));
-                    VWADDUW: data_vd_o[32*i +: 32] = trunc_32bits($unsigned(data_vs2_i[32*i +: 32]) + $unsigned(data_vs1_i[16*i +: 16]));
-                    VWSUBW:  data_vd_o[32*i +: 32] = trunc_32bits($signed(data_vs2_i[32*i +: 32]) - $signed({{16{data_vs1_i[(16*i)+15]}},data_vs1_i[16*i +: 16]}));
-                    VWSUBUW: data_vd_o[32*i +: 32] = trunc_32bits($unsigned(data_vs2_i[32*i +: 32]) - $unsigned(data_vs1_i[16*i +: 16]));
-
+                    VWADD:   data_vd_o[32*i +: 32] = ext16(data_vs2_i[16*i +: 16], 1'b1) + ext16(data_vs1_i[16*i +: 16], 1'b1);
+                    VWADDU:  data_vd_o[32*i +: 32] = ext16(data_vs2_i[16*i +: 16], 1'b0) + ext16(data_vs1_i[16*i +: 16], 1'b0);
+                    VWSUB:   data_vd_o[32*i +: 32] = ext16(data_vs2_i[16*i +: 16], 1'b1) - ext16(data_vs1_i[16*i +: 16], 1'b1);
+                    VWSUBU:  data_vd_o[32*i +: 32] = ext16(data_vs2_i[16*i +: 16], 1'b0) - ext16(data_vs1_i[16*i +: 16], 1'b0);
+                    VWADDW:  data_vd_o[32*i +: 32] = data_vs2_i[32*i +: 32] + ext16(data_vs1_i[16*i +: 16], 1'b1);
+                    VWADDUW: data_vd_o[32*i +: 32] = data_vs2_i[32*i +: 32] + ext16(data_vs1_i[16*i +: 16], 1'b0);
+                    VWSUBW:  data_vd_o[32*i +: 32] = data_vs2_i[32*i +: 32] - ext16(data_vs1_i[16*i +: 16], 1'b1);
+                    VWSUBUW: data_vd_o[32*i +: 32] = data_vs2_i[32*i +: 32] - ext16(data_vs1_i[16*i +: 16], 1'b0);
                     default: data_vd_o[32*i +: 32] = 32'b0;
                 endcase
             end
-        SEW_32: 
+        default: // SEW_32, and SEW_64 as before
             case(instr_type_i)
-                VWADD:  data_vd_o[63:0] = $signed(data_vs2_i[31:0]) + $signed(data_vs1_i[31:0]);
-                VWADDU: data_vd_o[63:0] = $unsigned(data_vs2_i[31:0]) + $unsigned(data_vs1_i[31:0]);
-                VWSUB:  data_vd_o[63:0] = $signed(data_vs2_i[31:0]) - $signed(data_vs1_i[31:0]);
-                VWSUBU: data_vd_o[63:0] = $unsigned(data_vs2_i[31:0]) - $unsigned(data_vs1_i[31:0]);
-
-                VWADDW:  data_vd_o[63:0] = trunc_64bits($signed(data_vs2_i[63:0]) + $signed({{32{data_vs1_i[31]}},data_vs1_i[31:0]}));
-                VWADDUW: data_vd_o[63:0] = trunc_64bits($unsigned(data_vs2_i[63:0]) + $unsigned(data_vs1_i[31:0]));
-                VWSUBW:  data_vd_o[63:0] = trunc_64bits($signed(data_vs2_i[63:0]) - $signed({{32{data_vs1_i[31]}},data_vs1_i[31:0]}));
-                VWSUBUW: data_vd_o[63:0] = trunc_64bits($unsigned(data_vs2_i[63:0]) - $unsigned(data_vs1_i[31:0]));
-
-                default: data_vd_o[63:0] = 64'b0;
-            endcase
-        default:
-            case(instr_type_i)
-                VWADD:  data_vd_o[63:0] = $signed(data_vs2_i[31:0]) + $signed(data_vs1_i[31:0]);
-                VWADDU: data_vd_o[63:0] = $unsigned(data_vs2_i[31:0]) + $unsigned(data_vs1_i[31:0]);
-                VWSUB:  data_vd_o[63:0] = $signed(data_vs2_i[31:0]) - $signed(data_vs1_i[31:0]);
-                VWSUBU: data_vd_o[63:0] = $unsigned(data_vs2_i[31:0]) - $unsigned(data_vs1_i[31:0]);
-
-                VWADDW:  data_vd_o[63:0] = trunc_64bits($signed(data_vs2_i[63:0]) + $signed({{32{data_vs1_i[31]}},data_vs1_i[31:0]}));
-                VWADDUW: data_vd_o[63:0] = trunc_64bits($unsigned(data_vs2_i[63:0]) + $unsigned(data_vs1_i[31:0]));
-                VWSUBW:  data_vd_o[63:0] = trunc_64bits($signed(data_vs2_i[63:0]) - $signed({{32{data_vs1_i[31]}},data_vs1_i[31:0]}));
-                VWSUBUW: data_vd_o[63:0] = trunc_64bits($unsigned(data_vs2_i[63:0]) - $unsigned(data_vs1_i[31:0]));
-
+                VWADD:   data_vd_o[63:0] = ext32(data_vs2_i[31:0], 1'b1) + ext32(data_vs1_i[31:0], 1'b1);
+                VWADDU:  data_vd_o[63:0] = ext32(data_vs2_i[31:0], 1'b0) + ext32(data_vs1_i[31:0], 1'b0);
+                VWSUB:   data_vd_o[63:0] = ext32(data_vs2_i[31:0], 1'b1) - ext32(data_vs1_i[31:0], 1'b1);
+                VWSUBU:  data_vd_o[63:0] = ext32(data_vs2_i[31:0], 1'b0) - ext32(data_vs1_i[31:0], 1'b0);
+                VWADDW:  data_vd_o[63:0] = data_vs2_i[63:0] + ext32(data_vs1_i[31:0], 1'b1);
+                VWADDUW: data_vd_o[63:0] = data_vs2_i[63:0] + ext32(data_vs1_i[31:0], 1'b0);
+                VWSUBW:  data_vd_o[63:0] = data_vs2_i[63:0] - ext32(data_vs1_i[31:0], 1'b1);
+                VWSUBUW: data_vd_o[63:0] = data_vs2_i[63:0] - ext32(data_vs1_i[31:0], 1'b0);
                 default: data_vd_o[63:0] = 64'b0;
             endcase
     endcase

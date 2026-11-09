@@ -136,8 +136,12 @@ assign instruction_o.fp_status     = 'h0;
 
 // Target 
 
-assign result = (branch_taken) ? target : trunc_65_64(instruction_i.instr.pc + 4);
-assign instruction_o.result     = trunc_65_64(instruction_i.instr.pc + 4);
+// TODO: Addition to PC needs to be +2 if the instruction is compressed
+
+assign result = (branch_taken) ? target : (instruction_i.instr.is_compressed) ? trunc_65_64(instruction_i.instr.pc + 2) : trunc_65_64(instruction_i.instr.pc + 4);
+assign instruction_o.result     = (instruction_i.instr.is_compressed) ? trunc_65_64(instruction_i.instr.pc + 2) : trunc_65_64(instruction_i.instr.pc + 4);
+//assign result = (branch_taken) ? target : trunc_65_64(instruction_i.instr.pc + 4);
+//assign instruction_o.result     = trunc_65_64(instruction_i.instr.pc + 4);
 assign instruction_o.result_pc  = target;
         
 // Exceptions
@@ -149,7 +153,7 @@ always_comb begin
     instruction_o.ex.tinst  = 0;
     instruction_o.ex.gva    = 0;
     instruction_o.ex.valid  = 0;
-    if(instruction_i.instr.valid) begin // Check exceptions in exe stage
+/*    if(instruction_i.instr.valid) begin // Check exceptions in exe stage
         if ((result[1:0] != 0) && (instruction_i.instr.unit == UNIT_BRANCH) &&
              ((instruction_i.instr.instr_type == JALR) ||
                (((instruction_i.instr.instr_type == BLT)  || 
@@ -166,8 +170,8 @@ always_comb begin
             instruction_o.ex.gva    = v_mode_i;
             instruction_o.ex.valid = 1;
         end
-    end 
-end
+    end
+*/end
 
 endmodule
 

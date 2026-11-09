@@ -313,7 +313,7 @@ control_unit module_inst (
             //incorrect_result += (pipeline_flush_o.flush_wb!=0);
 
             // --- cu_if_o ---
-            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_4);
+            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_ADD);
             //incorrect_result += (cu_if_o.invalidate_icache!=0);
 
             // --- invalidate_icache_o ---
@@ -602,7 +602,7 @@ control_unit module_inst (
             //incorrect_result += (pipeline_flush_o.flush_wb!=0);
 
             // --- cu_if_o ---
-            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_4);
+            incorrect_result += (cu_if_o.next_pc!=NEXT_PC_SEL_BP_OR_PC_ADD);
             //incorrect_result += (cu_if_o.invalidate_icache!=0);
 
             // --- invalidate_icache_o ---
