@@ -48,8 +48,8 @@ always_comb begin
                         data_vd_i[(i*8)+:8] = data_old_vd[(i*8)+:8];
                     end else begin
                         data_vd_i[(i*8)+:8] = count[7:0];
-                        count = trunc_64bits(count + data_vs2_i[i]);
-                    end                       
+                    end
+                    count = trunc_64bits(count + data_vs2_i[i]);
                 end                
             end
             SEW_16 : begin
@@ -58,8 +58,8 @@ always_comb begin
                         data_vd_i[(i*16)+:16] = data_old_vd[(i*16)+:16];
                     end else begin
                         data_vd_i[(i*16)+:16] = count[15:0];
-                        count = trunc_64bits(count + data_vs2_i[i]);
-                    end      
+                    end
+                    count = trunc_64bits(count + data_vs2_i[i]);
                 end
             end
             SEW_32 : begin
@@ -68,8 +68,8 @@ always_comb begin
                         data_vd_i[(i*32)+:32] = data_old_vd[(i*32)+:32];
                     end else begin
                         data_vd_i[(i*32)+:32] = count[31:0];
-                        count = trunc_64bits(count + data_vs2_i[i]);
-                    end       
+                    end
+                    count = trunc_64bits(count + data_vs2_i[i]);
                 end
             end
 
@@ -79,8 +79,8 @@ always_comb begin
                         data_vd_i[(i*64)+:64] = data_old_vd[(i*64)+:64];
                     end else begin
                         data_vd_i[(i*64)+:64] = count[63:0];
-                        count = trunc_64bits(count + data_vs2_i[i]);
-                    end  
+                    end
+                    count = trunc_64bits(count + data_vs2_i[i]);
                 end
             end
             default : begin
